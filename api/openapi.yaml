@@ -450,6 +450,32 @@ paths:
   /projects/{key}/tickets:
     parameters:
       - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listTickets
+      tags: [tickets]
+      description: The project's tickets the caller may see, filtered and sorted; pages follow next_cursor.
+      parameters:
+        - { name: status_id, in: query, schema: { type: integer, format: int64 } }
+        - { name: category, in: query, schema: { $ref: "#/components/schemas/StatusCategory" } }
+        - { name: open, in: query, schema: { type: boolean }, description: Only To do and In progress statuses. }
+        - { name: type, in: query, schema: { $ref: "#/components/schemas/TicketType" } }
+        - { name: client_id, in: query, schema: { type: integer, format: int64 } }
+        - { name: core, in: query, schema: { type: boolean }, description: Only core work (no client). }
+        - { name: assignee_id, in: query, schema: { type: integer, format: int64 } }
+        - { name: mine, in: query, schema: { type: boolean }, description: Only tickets assigned to the caller. }
+        - { name: node_id, in: query, schema: { type: integer, format: int64 }, description: Tickets on this node or its sub-nodes. }
+        - { name: q, in: query, schema: { type: string, maxLength: 200 }, description: Words in the title, or a ticket key. }
+        - { name: missing, in: query, schema: { type: string, enum: [reason, menus] } }
+        - { name: sort, in: query, schema: { type: string, enum: [updated, created, key, priority, due] } }
+        - { name: limit, in: query, schema: { type: integer, format: int32, minimum: 1, maximum: 1000 } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: One page of tickets.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TicketPage" }
+        default: { $ref: "#/components/responses/Problem" }
     post:
       operationId: createTicket
       tags: [tickets]
@@ -988,3 +1014,30 @@ components:
       required: [status_id]
       properties:
         status_id: { type: integer, format: int64 }
+    TicketSummary:
+      type: object
+      required: [id, key, title, type, priority, due_date, status_id, requester_name, node_names, missing_reason, updated_at]
+      properties:
+        id: { type: integer, format: int64 }
+        key: { type: string }
+        title: { type: string }
+        type: { $ref: "#/components/schemas/TicketType" }
+        priority: { $ref: "#/components/schemas/Priority" }
+        due_date: { type: string, format: date, nullable: true }
+        status_id: { type: integer, format: int64 }
+        client: { $ref: "#/components/schemas/Ref" }
+        assignee: { $ref: "#/components/schemas/Ref" }
+        requester_name: { type: string }
+        node_names:
+          type: array
+          items: { type: string }
+        missing_reason: { type: boolean }
+        updated_at: { type: string, format: date-time }
+    TicketPage:
+      type: object
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/TicketSummary" }
+        next_cursor: { type: string, nullable: true }

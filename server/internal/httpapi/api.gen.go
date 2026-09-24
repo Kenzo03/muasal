@@ -159,6 +159,51 @@ func (e TicketType) Valid() bool {
 	}
 }
 
+// Defines values for ListTicketsParamsMissing.
+const (
+	ListTicketsParamsMissingMenus  ListTicketsParamsMissing = "menus"
+	ListTicketsParamsMissingReason ListTicketsParamsMissing = "reason"
+)
+
+// Valid indicates whether the value is a known member of the ListTicketsParamsMissing enum.
+func (e ListTicketsParamsMissing) Valid() bool {
+	switch e {
+	case ListTicketsParamsMissingMenus:
+		return true
+	case ListTicketsParamsMissingReason:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListTicketsParamsSort.
+const (
+	ListTicketsParamsSortCreated  ListTicketsParamsSort = "created"
+	ListTicketsParamsSortDue      ListTicketsParamsSort = "due"
+	ListTicketsParamsSortKey      ListTicketsParamsSort = "key"
+	ListTicketsParamsSortPriority ListTicketsParamsSort = "priority"
+	ListTicketsParamsSortUpdated  ListTicketsParamsSort = "updated"
+)
+
+// Valid indicates whether the value is a known member of the ListTicketsParamsSort enum.
+func (e ListTicketsParamsSort) Valid() bool {
+	switch e {
+	case ListTicketsParamsSortCreated:
+		return true
+	case ListTicketsParamsSortDue:
+		return true
+	case ListTicketsParamsSortKey:
+		return true
+	case ListTicketsParamsSortPriority:
+		return true
+	case ListTicketsParamsSortUpdated:
+		return true
+	default:
+		return false
+	}
+}
+
 // Attachment defines model for Attachment.
 type Attachment struct {
 	ContentType string    `json:"content_type"`
@@ -536,6 +581,12 @@ type TicketCreate struct {
 	Type     TicketType `json:"type"`
 }
 
+// TicketPage defines model for TicketPage.
+type TicketPage struct {
+	Items      []TicketSummary `json:"items"`
+	NextCursor *string         `json:"next_cursor"`
+}
+
 // TicketRequester defines model for TicketRequester.
 type TicketRequester struct {
 	Id   int64               `json:"id"`
@@ -548,6 +599,23 @@ type TicketRequester struct {
 
 // TicketRequesterKind defines model for TicketRequester.Kind.
 type TicketRequesterKind string
+
+// TicketSummary defines model for TicketSummary.
+type TicketSummary struct {
+	Assignee      *Ref                `json:"assignee,omitempty"`
+	Client        *Ref                `json:"client,omitempty"`
+	DueDate       *openapi_types.Date `json:"due_date"`
+	Id            int64               `json:"id"`
+	Key           string              `json:"key"`
+	MissingReason bool                `json:"missing_reason"`
+	NodeNames     []string            `json:"node_names"`
+	Priority      Priority            `json:"priority"`
+	RequesterName string              `json:"requester_name"`
+	StatusId      int64               `json:"status_id"`
+	Title         string              `json:"title"`
+	Type          TicketType          `json:"type"`
+	UpdatedAt     time.Time           `json:"updated_at"`
+}
 
 // TicketType defines model for TicketType.
 type TicketType string
@@ -620,6 +688,40 @@ type ListContactsParams struct {
 	Q        *string `form:"q,omitempty" json:"q,omitempty"`
 	ClientId *int64  `form:"client_id,omitempty" json:"client_id,omitempty"`
 }
+
+// ListTicketsParams defines parameters for ListTickets.
+type ListTicketsParams struct {
+	StatusId *int64          `form:"status_id,omitempty" json:"status_id,omitempty"`
+	Category *StatusCategory `form:"category,omitempty" json:"category,omitempty"`
+
+	// Open Only To do and In progress statuses.
+	Open     *bool       `form:"open,omitempty" json:"open,omitempty"`
+	Type     *TicketType `form:"type,omitempty" json:"type,omitempty"`
+	ClientId *int64      `form:"client_id,omitempty" json:"client_id,omitempty"`
+
+	// Core Only core work (no client).
+	Core       *bool  `form:"core,omitempty" json:"core,omitempty"`
+	AssigneeId *int64 `form:"assignee_id,omitempty" json:"assignee_id,omitempty"`
+
+	// Mine Only tickets assigned to the caller.
+	Mine *bool `form:"mine,omitempty" json:"mine,omitempty"`
+
+	// NodeId Tickets on this node or its sub-nodes.
+	NodeId *int64 `form:"node_id,omitempty" json:"node_id,omitempty"`
+
+	// Q Words in the title
+	Q       *string                   `form:"q,omitempty" json:"q,omitempty"`
+	Missing *ListTicketsParamsMissing `form:"missing,omitempty" json:"missing,omitempty"`
+	Sort    *ListTicketsParamsSort    `form:"sort,omitempty" json:"sort,omitempty"`
+	Limit   *int32                    `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor  *string                   `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ListTicketsParamsMissing defines parameters for ListTickets.
+type ListTicketsParamsMissing string
+
+// ListTicketsParamsSort defines parameters for ListTickets.
+type ListTicketsParamsSort string
 
 // UpdateTicketParams defines parameters for UpdateTicket.
 type UpdateTicketParams struct {
@@ -775,6 +877,9 @@ type ServerInterface interface {
 
 	// (PUT /projects/{key}/statuses)
 	SetStatuses(w http.ResponseWriter, r *http.Request, key string)
+
+	// (GET /projects/{key}/tickets)
+	ListTickets(w http.ResponseWriter, r *http.Request, key string, params ListTicketsParams)
 
 	// (POST /projects/{key}/tickets)
 	CreateTicket(w http.ResponseWriter, r *http.Request, key string)
@@ -1454,6 +1559,217 @@ func (siw *ServerInterfaceWrapper) SetStatuses(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// ListTickets operation middleware
+func (siw *ServerInterfaceWrapper) ListTickets(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListTicketsParams
+
+	// ------------- Optional query parameter "status_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status_id", r.URL.Query(), &params.StatusId, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "category" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "category", r.URL.Query(), &params.Category, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "category"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "category", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "open" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "open", r.URL.Query(), &params.Open, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "open"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "open", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "type", r.URL.Query(), &params.Type, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "client_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "client_id", r.URL.Query(), &params.ClientId, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "client_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "client_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "core" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "core", r.URL.Query(), &params.Core, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "core"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "core", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "assignee_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "assignee_id", r.URL.Query(), &params.AssigneeId, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "assignee_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "assignee_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "mine" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "mine", r.URL.Query(), &params.Mine, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "mine"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "mine", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "node_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "node_id", r.URL.Query(), &params.NodeId, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "node_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "node_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "missing" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "missing", r.URL.Query(), &params.Missing, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "missing"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "missing", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListTickets(w, r, key, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateTicket operation middleware
 func (siw *ServerInterfaceWrapper) CreateTicket(w http.ResponseWriter, r *http.Request) {
 
@@ -1736,6 +2052,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/statuses", wrapper.GetStatuses)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/projects/{key}/statuses", wrapper.SetStatuses)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/assignees", wrapper.ListAssignees)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/tickets", wrapper.ListTickets)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/tickets", wrapper.CreateTicket)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/tickets/{key}", wrapper.GetTicket)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/tickets/{key}", wrapper.UpdateTicket)

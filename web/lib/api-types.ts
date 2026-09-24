@@ -356,7 +356,8 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /** @description The project's tickets the caller may see, filtered and sorted; pages follow next_cursor. */
+        get: operations["listTickets"];
         put?: never;
         /** @description Members and project admins. The ticket starts in the default status unless an open status_id is given. */
         post: operations["createTicket"];
@@ -809,6 +810,29 @@ export interface components {
         TransitionRequest: {
             /** Format: int64 */
             status_id: number;
+        };
+        TicketSummary: {
+            /** Format: int64 */
+            id: number;
+            key: string;
+            title: string;
+            type: components["schemas"]["TicketType"];
+            priority: components["schemas"]["Priority"];
+            /** Format: date */
+            due_date: string | null;
+            /** Format: int64 */
+            status_id: number;
+            client?: components["schemas"]["Ref"];
+            assignee?: components["schemas"]["Ref"];
+            requester_name: string;
+            node_names: string[];
+            missing_reason: boolean;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        TicketPage: {
+            items: components["schemas"]["TicketSummary"][];
+            next_cursor: string | null;
         };
     };
     responses: {
@@ -1549,6 +1573,49 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RefList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listTickets: {
+        parameters: {
+            query?: {
+                status_id?: number;
+                category?: components["schemas"]["StatusCategory"];
+                /** @description Only To do and In progress statuses. */
+                open?: boolean;
+                type?: components["schemas"]["TicketType"];
+                client_id?: number;
+                /** @description Only core work (no client). */
+                core?: boolean;
+                assignee_id?: number;
+                /** @description Only tickets assigned to the caller. */
+                mine?: boolean;
+                /** @description Tickets on this node or its sub-nodes. */
+                node_id?: number;
+                /** @description Words in the title */
+                q?: string;
+                missing?: "reason" | "menus";
+                sort?: "updated" | "created" | "key" | "priority" | "due";
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of tickets. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketPage"];
                 };
             };
             default: components["responses"]["Problem"];
