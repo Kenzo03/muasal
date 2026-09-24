@@ -25,3 +25,9 @@ export const getProject = cache(async (key: string) => {
   const { data } = await (await serverApi()).GET("/projects/{key}", { params: { path: { key } } });
   return data;
 });
+
+/** The projects the user may open, with their role in each. One API call per request. */
+export const getProjects = cache(async () => {
+  const { data } = await (await serverApi()).GET("/projects");
+  return data?.items ?? [];
+});

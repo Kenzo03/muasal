@@ -1,39 +1,46 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { getMe, serverApi } from "@/lib/server-api";
+import Icon from "@/components/Icon";
+import PageBar from "@/components/PageBar";
+import { getMe, getProjects } from "@/lib/server-api";
+import { button, panel } from "@/lib/ui";
 
 export default async function Home() {
   const me = await getMe();
   if (!me) redirect("/login");
   const t = await getTranslations("home");
-  const { data } = await (await serverApi()).GET("/projects");
-  const projects = data?.items ?? [];
+  const projects = await getProjects();
   return (
-    <main className="mx-auto max-w-4xl p-8">
-      <p className="text-neutral-600">{t("signedInAs", { name: me.name })}</p>
-      <div className="mt-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">{t("projects")}</h1>
+    <>
+      <PageBar>
+        <h1 className="text-base font-semibold">{t("projects")}</h1>
+        <p className="text-[13px] text-muted">{t("signedInAs", { name: me.name })}</p>
         {me.is_admin && (
-          <Link className="rounded bg-neutral-900 px-4 py-2 text-sm text-white" href="/projects/new">
+          <Link href="/projects/new" className={`${button.primary} ml-auto`}>
+            <Icon name="plus" />
             {t("newProject")}
           </Link>
         )}
-      </div>
-      {projects.length === 0 ? (
-        <p className="mt-4 text-neutral-600">{me.is_admin ? t("noProjectsAdmin") : t("noProjects")}</p>
-      ) : (
-        <ul className="mt-4 divide-y rounded-lg border bg-white">
-          {projects.map((p) => (
-            <li key={p.id}>
-              <Link className="flex items-baseline gap-3 p-4 hover:bg-neutral-50" href={`/p/${p.key}/board`}>
-                <span className="font-mono text-sm text-neutral-500">{p.key}</span>
-                <span>{p.name}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </main>
+      </PageBar>
+      <main className="mx-auto max-w-4xl p-4 md:p-6">
+        {projects.length === 0 ? (
+          <p className="text-muted">{me.is_admin ? t("noProjectsAdmin") : t("noProjects")}</p>
+        ) : (
+          <ul className={`${panel} divide-y divide-line-soft`}>
+            {projects.map((p) => (
+              <li key={p.id}>
+                <Link href={`/p/${p.key}/board`} className="flex items-center gap-3 px-4 py-3 text-ink no-underline hover:bg-paper hover:text-ink">
+                  <span className="rounded-[3px] bg-accent-soft px-1.5 font-mono text-xs font-semibold leading-5 text-accent-strong">{p.key}</span>
+                  <span className="font-medium">{p.name}</span>
+                  {p.description && <span className="min-w-0 truncate text-[13px] text-muted">{p.description}</span>}
+                  <Icon name="chevronRight" className="ml-auto size-4 text-muted" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </main>
+    </>
   );
 }

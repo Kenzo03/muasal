@@ -23,7 +23,13 @@
     "users": "Pengguna",
     "clients": "Klien",
     "profile": "Profil",
-    "signOut": "Keluar"
+    "signOut": "Keluar",
+    "switchProject": "Ganti proyek",
+    "projects": "Proyek",
+    "allProjects": "Semua proyek",
+    "newTicket": "Tiket baru",
+    "language": "Bahasa",
+    "account": "Akun {name}"
   },
   "home": {
     "signedInAs": "Masuk sebagai {name}",
@@ -322,7 +328,11 @@
     "reporter": "Pelapor",
     "created": "Dibuat",
     "updated": "Diubah",
-    "missingClose": "Tambahkan alasan dan minimal satu menu sebelum menutup."
+    "missingClose": "Tambahkan alasan dan minimal satu menu sebelum menutup.",
+    "details": "Rincian tiket",
+    "people": "Orang dan tanggal",
+    "path": "Jejak",
+    "closed": "Ditutup"
   },
   "activity": {
     "title": "Aktivitas",

@@ -88,7 +88,7 @@ export default function StatusesForm({ projectKey, statuses }: { projectKey: str
       </table>
       <button
         type="button"
-        onClick={() => setRows((rs) => [...rs, { name: "", category: "in_progress", color: "#6B7280", is_default: false }])}
+        onClick={() => setRows((rs) => [...rs, { name: "", category: "in_progress", color: "#7D746C", is_default: false }])}
         className="self-start rounded border px-3 py-1 text-sm"
       >
         {t("add")}
