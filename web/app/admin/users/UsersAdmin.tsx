@@ -2,18 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { Avatar } from "@/components/Chips";
 import { api } from "@/lib/api";
+import { utc } from "@/lib/format";
 import { problemKey, type Problem, type User } from "@/lib/problem";
-
-// Deterministic on server and browser, so hydration matches (profile timezones arrive in a later iteration).
-function utc(iso: string) {
-  return `${iso.slice(0, 16).replace("T", " ")} UTC`;
-}
+import { button, chip, cx, field, panel, table } from "@/lib/ui";
 
 export default function UsersAdmin({ users, meId }: { users: User[]; meId: number }) {
   const t = useTranslations("users");
   const tErr = useTranslations("errors");
+  const locale = useLocale();
   const router = useRouter();
   const [link, setLink] = useState<{ name: string; url: string } | null>(null);
   const [error, setError] = useState("");
@@ -50,66 +49,74 @@ export default function UsersAdmin({ users, meId }: { users: User[]; meId: numbe
     router.refresh();
   }
 
-  const input = "rounded border px-3 py-2";
   return (
-    <div className="flex flex-col gap-6">
-      <form onSubmit={create} className="flex flex-wrap items-end gap-3 rounded-lg border bg-white p-4">
-        <label className="flex flex-col gap-1 text-sm">
+    <div className="flex flex-col gap-4">
+      <form onSubmit={create} className={cx(panel, "flex flex-wrap items-end gap-3 p-4")}>
+        <label className={field.label}>
           {t("name")}
-          <input name="name" required maxLength={200} className={input} />
+          <input name="name" required maxLength={200} className={field.input} />
         </label>
-        <label className="flex flex-col gap-1 text-sm">
+        <label className={field.label}>
           {t("email")}
-          <input name="email" type="email" required className={input} />
+          <input name="email" type="email" required className={cx(field.input, "w-72")} />
         </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input name="is_admin" type="checkbox" />
+        <label className="flex h-[34px] items-center gap-2 text-[13px]">
+          <input name="is_admin" type="checkbox" className="size-4 accent-accent" />
           {t("admin")}
         </label>
-        <button className="rounded bg-neutral-900 px-4 py-2 text-white">{t("create")}</button>
+        <button className={cx(button.primary, "h-[34px]")}>{t("create")}</button>
       </form>
-      {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+      {error && <p role="alert" className={field.error}>{error}</p>}
       {link && (
-        <p role="status" className="rounded border border-amber-300 bg-amber-50 p-3 text-sm">
+        <p role="status" className="rounded border border-warn-line bg-warn-soft p-3 text-[13px] text-warn">
           {t("linkFor", { name: link.name })}{" "}
-          <code data-testid="setup-link" className="break-all">{link.url}</code>
+          <code data-testid="setup-link" className="break-all font-mono text-ink">{link.url}</code>
         </p>
       )}
-      <table className="w-full border-collapse bg-white text-left text-sm">
-        <thead>
-          <tr className="border-b">
-            <th className="p-2">{t("name")}</th>
-            <th className="p-2">{t("email")}</th>
-            <th className="p-2">{t("admin")}</th>
-            <th className="p-2">{t("status")}</th>
-            <th className="p-2">{t("lastLogin")}</th>
-            <th className="p-2" />
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((u) => (
-            <tr key={u.id} className="border-b">
-              <td className="p-2">{u.name}</td>
-              <td className="p-2">{u.email}</td>
-              <td className="p-2">{u.is_admin ? "✓" : ""}</td>
-              <td className="p-2">{u.disabled ? t("disabled") : t("active")}</td>
-              <td className="p-2">{u.last_login_at ? utc(u.last_login_at) : t("never")}</td>
-              <td className="flex gap-3 p-2">
-                {u.id !== meId && (
-                  <>
-                    <button type="button" className="underline" onClick={() => setDisabled(u, !u.disabled)}>
-                      {u.disabled ? t("enable") : t("disable")}
-                    </button>
-                    <button type="button" className="underline" onClick={() => resetPassword(u)}>
-                      {t("resetPassword")}
-                    </button>
-                  </>
-                )}
-              </td>
+      <div className={table.wrap}>
+        <table className={table.table}>
+          <thead className={table.head}>
+            <tr>
+              <th className={table.th}>{t("name")}</th>
+              <th className={table.th}>{t("email")}</th>
+              <th className={table.th}>{t("admin")}</th>
+              <th className={table.th}>{t("status")}</th>
+              <th className={table.th}>{t("lastLogin")}</th>
+              <th className={table.th} />
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {users.map((u) => (
+              <tr key={u.id} className={table.row}>
+                <td className={table.td}>
+                  <span className="flex items-center gap-2">
+                    <Avatar name={u.name} />
+                    {u.name}
+                  </span>
+                </td>
+                <td className={table.td}>{u.email}</td>
+                <td className={table.td}>{u.is_admin && <span className={cx(chip, "bg-accent-soft text-accent-strong")}>{t("admin")}</span>}</td>
+                <td className={table.td}>
+                  <span className={cx(chip, u.disabled ? "bg-well text-muted" : "bg-ok-soft text-ok")}>{u.disabled ? t("disabled") : t("active")}</span>
+                </td>
+                <td className={cx(table.td, "whitespace-nowrap text-muted")}>{u.last_login_at ? utc(u.last_login_at, locale) : t("never")}</td>
+                <td className={cx(table.td, "whitespace-nowrap text-right")}>
+                  {u.id !== meId && (
+                    <span className="inline-flex gap-3">
+                      <button type="button" className={button.quiet} onClick={() => setDisabled(u, !u.disabled)}>
+                        {u.disabled ? t("enable") : t("disable")}
+                      </button>
+                      <button type="button" className={button.quiet} onClick={() => resetPassword(u)}>
+                        {t("resetPassword")}
+                      </button>
+                    </span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

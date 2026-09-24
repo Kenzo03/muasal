@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import PageBar from "@/components/PageBar";
 import { getMe, serverApi } from "@/lib/server-api";
 import UsersAdmin from "./UsersAdmin";
 
@@ -8,15 +8,15 @@ export default async function UsersPage() {
   const me = await getMe();
   if (!me) redirect("/login");
   const t = await getTranslations("users");
-  if (!me.is_admin) {
-    return <main className="p-8">{t("adminsOnly")}</main>;
-  }
-  const { data } = await (await serverApi()).GET("/admin/users");
+  const { data } = me.is_admin ? await (await serverApi()).GET("/admin/users") : { data: undefined };
   return (
-    <main className="mx-auto max-w-5xl p-8">
-      <Link className="text-sm underline" href="/">{t("back")}</Link>
-      <h1 className="mb-6 mt-2 text-2xl font-semibold">{t("title")}</h1>
-      <UsersAdmin users={data?.items ?? []} meId={me.id} />
-    </main>
+    <>
+      <PageBar>
+        <h1 className="text-base font-semibold">{t("title")}</h1>
+      </PageBar>
+      <main className="mx-auto max-w-6xl p-4 md:p-5">
+        {me.is_admin ? <UsersAdmin users={data?.items ?? []} meId={me.id} /> : <p className="text-muted">{t("adminsOnly")}</p>}
+      </main>
+    </>
   );
 }

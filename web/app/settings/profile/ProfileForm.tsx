@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { problemKey, type User } from "@/lib/problem";
+import { button, field } from "@/lib/ui";
 
 export default function ProfileForm({ me }: { me: User }) {
   const t = useTranslations("profile");
@@ -37,41 +38,44 @@ export default function ProfileForm({ me }: { me: User }) {
     router.refresh();
   }
 
-  const input = "rounded border px-3 py-2";
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
-      <label className="flex flex-col gap-1 text-sm">
+    <form onSubmit={onSubmit} className="flex flex-col gap-3.5">
+      <label className={field.label}>
         {t("name")}
-        <input name="name" defaultValue={me.name} required maxLength={200} className={input} />
+        <input name="name" defaultValue={me.name} required maxLength={200} className={field.input} />
       </label>
-      <label className="flex flex-col gap-1 text-sm">
-        {t("language")}
-        <select name="locale" defaultValue={me.locale} className={input}>
-          <option value="id">Bahasa Indonesia</option>
-          <option value="en">English</option>
-        </select>
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        {t("timezone")}
-        <select name="timezone" defaultValue={me.timezone} className={input}>
-          {zones.map((z) => (
-            <option key={z} value={z}>{z}</option>
-          ))}
-        </select>
-      </label>
-      <fieldset className="flex flex-col gap-4 border-t pt-4">
-        <legend className="text-sm font-medium">{t("passwordTitle")}</legend>
-        <label className="flex flex-col gap-1 text-sm">
-          {t("currentPassword")}
-          <input name="current_password" type="password" autoComplete="current-password" className={input} />
+      <div className="grid gap-3.5 sm:grid-cols-2">
+        <label className={field.label}>
+          {t("language")}
+          <select name="locale" defaultValue={me.locale} className={field.input}>
+            <option value="id">Bahasa Indonesia</option>
+            <option value="en">English</option>
+          </select>
         </label>
-        <label className="flex flex-col gap-1 text-sm">
+        <label className={field.label}>
+          {t("timezone")}
+          <select name="timezone" defaultValue={me.timezone} className={field.input}>
+            {zones.map((z) => (
+              <option key={z} value={z}>{z}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <fieldset className="flex flex-col gap-3.5 border-t border-line-soft pt-3.5">
+        <legend className="mb-1 text-sm font-semibold">{t("passwordTitle")}</legend>
+        <label className={field.label}>
+          {t("currentPassword")}
+          <input name="current_password" type="password" autoComplete="current-password" className={field.input} />
+        </label>
+        <label className={field.label}>
           {t("newPassword")}
-          <input name="new_password" type="password" minLength={12} autoComplete="new-password" className={input} />
+          <input name="new_password" type="password" minLength={12} autoComplete="new-password" className={field.input} />
         </label>
       </fieldset>
-      {status && <p role="status" className="text-sm">{status}</p>}
-      <button className="rounded bg-neutral-900 px-4 py-2 text-white">{t("save")}</button>
+      <div className="flex items-center gap-3">
+        <button className={button.primary}>{t("save")}</button>
+        {status && <p role="status" className="text-[13px] text-muted">{status}</p>}
+      </div>
     </form>
   );
 }

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { problemKey } from "@/lib/problem";
+import { button, cx, field } from "@/lib/ui";
 
 export default function SetupForm({ token }: { token: string }) {
   const t = useTranslations("setup");
@@ -34,25 +35,25 @@ export default function SetupForm({ token }: { token: string }) {
 
   if (done) {
     return (
-      <div className="flex flex-col gap-4">
-        <p role="status">{t("done")}</p>
-        <Link className="underline" href="/login">{t("toLogin")}</Link>
+      <div className="flex flex-col gap-3">
+        <p role="status" className="text-sm text-ok">{t("done")}</p>
+        <Link className={cx(button.primary, "h-9 w-full")} href="/login">{t("toLogin")}</Link>
       </div>
     );
   }
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
-      <label className="flex flex-col gap-1 text-sm">
+    <form onSubmit={onSubmit} className="flex flex-col gap-3.5">
+      <label className={field.label}>
         {t("password")}
-        <input name="password" type="password" required minLength={12} autoComplete="new-password" className="rounded border px-3 py-2" />
+        <input name="password" type="password" required minLength={12} autoComplete="new-password" className={field.input} />
       </label>
-      <label className="flex flex-col gap-1 text-sm">
+      <label className={field.label}>
         {t("confirm")}
-        <input name="confirm" type="password" required minLength={12} autoComplete="new-password" className="rounded border px-3 py-2" />
+        <input name="confirm" type="password" required minLength={12} autoComplete="new-password" className={field.input} />
       </label>
-      <p className="text-xs text-neutral-500">{t("hint")}</p>
-      {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
-      <button disabled={busy} className="rounded bg-neutral-900 px-4 py-2 text-white disabled:opacity-50">
+      <p className={field.hint}>{t("hint")}</p>
+      {error && <p role="alert" className={field.error}>{error}</p>}
+      <button disabled={busy} className={cx(button.primary, "mt-1 h-9 w-full")}>
         {t("submit")}
       </button>
     </form>
