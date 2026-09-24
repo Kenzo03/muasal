@@ -64,7 +64,7 @@ muasal/
 │   └── internal/
 │       ├── config/config.go (+ config_test.go)    settings from the environment
 │       ├── migrate/migrate.go (+ migrate_test.go) goose runner + least-privilege app role
-│       ├── testdb/testdb.go                       throwaway migrated database per test
+│       ├── testdb/testdb.go (+ testdb_test.go)    throwaway migrated database and app role per test
 │       ├── db/generate.go  queries/*.sql          sqlc input; the other *.go files are generated
 │       ├── auth/password.go policy.go token.go limiter.go (+ tests), common-passwords.txt, common-passwords.LICENSE
 │       └── httpapi/generate.go oapi-codegen.yaml api.gen.go (generated) problem.go server.go
@@ -731,7 +731,7 @@ git commit -m "feat(api): OpenAPI contract, generated Go server types, problem h
 - Create: `server/internal/db/queries/users.sql`, `sessions.sql`, `setup_tokens.sql`, `audit.sql`
 - Generate: `server/internal/db/db.go`, `models.go`, `*.sql.go`
 - Create: `server/internal/migrate/migrate.go`, `server/internal/testdb/testdb.go`
-- Test: `server/internal/migrate/migrate_test.go`
+- Test: `server/internal/migrate/migrate_test.go`, `server/internal/testdb/testdb_test.go`
 
 **Interfaces:**
 - Consumes: nothing from earlier tasks.
@@ -1072,6 +1072,9 @@ func ensureAppRole(ctx context.Context, conn *pgx.Conn, appURL string) error {
 	}
 	ident := pgx.Identifier{role}.Sanitize()
 	literal := "'" + strings.ReplaceAll(password, "'", "''") + "'"
+	// ponytail: roles are server-wide and this runs outside the advisory lock, so
+	// concurrent runs for one role fail (23505 or "tuple concurrently updated").
+	// One app replica migrates today; add a retry here before running several.
 	_, err = conn.Exec(ctx, "CREATE ROLE "+ident+" LOGIN PASSWORD "+literal)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "42710" { // duplicate_object: the role exists already
@@ -1118,13 +1121,14 @@ import (
 // DB is a throwaway database that is dropped when the test ends.
 type DB struct {
 	OwnerURL string        // owner role: runs migrations
-	AppURL   string        // least-privilege app role
+	AppURL   string        // least-privilege app role, one per database
 	Pool     *pgxpool.Pool // connected as the app role
 }
 
 // New creates a database on the server named by TEST_DATABASE_URL (a role that
-// may CREATE DATABASE), migrates it and connects as the app role. Without
-// TEST_DATABASE_URL the test is skipped; `make testdb` starts a server.
+// may CREATE DATABASE and CREATE ROLE), migrates it and connects as its app
+// role. Without TEST_DATABASE_URL the test is skipped; `make testdb` starts a
+// server.
 func New(t *testing.T) DB {
 	t.Helper()
 	base := os.Getenv("TEST_DATABASE_URL")
@@ -1141,12 +1145,15 @@ func New(t *testing.T) DB {
 		t.Fatal(err)
 	}
 	d := DB{OwnerURL: withDatabase(base, name)}
-	d.AppURL = withUser(d.OwnerURL, "app", "app-test-password")
+	// Roles are server-wide: parallel tests sharing one app role collide when
+	// migrate.Up creates or alters it, so each database gets its own.
+	d.AppURL = withUser(d.OwnerURL, name, "app-test-password")
 	t.Cleanup(func() {
 		if d.Pool != nil {
 			d.Pool.Close()
 		}
 		_, _ = admin.Exec(context.Background(), "DROP DATABASE "+name+" WITH (FORCE)")
+		_, _ = admin.Exec(context.Background(), "DROP ROLE IF EXISTS "+name)
 		_ = admin.Close(context.Background())
 	})
 	if err := migrate.Up(ctx, d.OwnerURL, d.AppURL); err != nil {
@@ -1171,15 +1178,39 @@ func withUser(raw, user, password string) string {
 }
 ```
 
+`server/internal/testdb/testdb_test.go` (CI found the race: its PostgreSQL is fresh, so two packages' first `CREATE ROLE` collided):
+
+```go
+package testdb_test
+
+import (
+	"fmt"
+	"testing"
+
+	"github.com/kenzo03/muasal/server/internal/testdb"
+)
+
+// go test runs packages in parallel against one server, and roles are
+// server-wide, so New must not share a role between databases.
+func TestNewIsSafeInParallel(t *testing.T) {
+	for i := range 8 {
+		t.Run(fmt.Sprint(i), func(t *testing.T) {
+			t.Parallel()
+			testdb.New(t)
+		})
+	}
+}
+```
+
 - [ ] **Step 7: Start a test database and run the test**
 
 ```bash
 make testdb
 cd server && go get github.com/pressly/goose/v3@v3.28.0 && go mod tidy
-TEST_DATABASE_URL='postgres://owner:owner@localhost:55432/postgres?sslmode=disable' go test ./internal/migrate/ -v
+TEST_DATABASE_URL='postgres://owner:owner@localhost:55432/postgres?sslmode=disable' go test ./internal/migrate/ ./internal/testdb/ -v
 ```
 
-Expected: `--- PASS: TestUpIsIdempotentAndTheAuditLogIsAppendOnly` and `ok`. If `make testdb` fails because the container already runs, skip it.
+Expected: `--- PASS: TestUpIsIdempotentAndTheAuditLogIsAppendOnly`, `--- PASS: TestNewIsSafeInParallel` and `ok` twice. If `make testdb` fails because the container already runs, skip it.
 
 - [ ] **Step 8: Commit**
 

@@ -18,13 +18,14 @@ import (
 // DB is a throwaway database that is dropped when the test ends.
 type DB struct {
 	OwnerURL string        // owner role: runs migrations
-	AppURL   string        // least-privilege app role
+	AppURL   string        // least-privilege app role, one per database
 	Pool     *pgxpool.Pool // connected as the app role
 }
 
 // New creates a database on the server named by TEST_DATABASE_URL (a role that
-// may CREATE DATABASE), migrates it and connects as the app role. Without
-// TEST_DATABASE_URL the test is skipped; `make testdb` starts a server.
+// may CREATE DATABASE and CREATE ROLE), migrates it and connects as its app
+// role. Without TEST_DATABASE_URL the test is skipped; `make testdb` starts a
+// server.
 func New(t *testing.T) DB {
 	t.Helper()
 	base := os.Getenv("TEST_DATABASE_URL")
@@ -41,12 +42,15 @@ func New(t *testing.T) DB {
 		t.Fatal(err)
 	}
 	d := DB{OwnerURL: withDatabase(base, name)}
-	d.AppURL = withUser(d.OwnerURL, "app", "app-test-password")
+	// Roles are server-wide: parallel tests sharing one app role collide when
+	// migrate.Up creates or alters it, so each database gets its own.
+	d.AppURL = withUser(d.OwnerURL, name, "app-test-password")
 	t.Cleanup(func() {
 		if d.Pool != nil {
 			d.Pool.Close()
 		}
 		_, _ = admin.Exec(context.Background(), "DROP DATABASE "+name+" WITH (FORCE)")
+		_, _ = admin.Exec(context.Background(), "DROP ROLE IF EXISTS "+name)
 		_ = admin.Close(context.Background())
 	})
 	if err := migrate.Up(ctx, d.OwnerURL, d.AppURL); err != nil {
