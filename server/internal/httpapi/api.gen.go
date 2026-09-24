@@ -52,6 +52,37 @@ func (e ProjectRole) Valid() bool {
 	}
 }
 
+// Client defines model for Client.
+type Client struct {
+	Aliases  []string `json:"aliases"`
+	Archived bool     `json:"archived"`
+
+	// Code Example: CLA
+	Code *string `json:"code"`
+	Id   int64   `json:"id"`
+	Name string  `json:"name"`
+}
+
+// ClientCreate defines model for ClientCreate.
+type ClientCreate struct {
+	Aliases *[]string `json:"aliases,omitempty"`
+	Code    *string   `json:"code,omitempty"`
+	Name    string    `json:"name"`
+}
+
+// ClientList defines model for ClientList.
+type ClientList struct {
+	Items []Client `json:"items"`
+}
+
+// ClientUpdate defines model for ClientUpdate.
+type ClientUpdate struct {
+	Aliases  *[]string `json:"aliases,omitempty"`
+	Archived *bool     `json:"archived,omitempty"`
+	Code     *string   `json:"code,omitempty"`
+	Name     *string   `json:"name,omitempty"`
+}
+
 // CreatedUser defines model for CreatedUser.
 type CreatedUser struct {
 	SetupLink SetupLink `json:"setup_link"`
@@ -103,6 +134,11 @@ type Project struct {
 	Key  string      `json:"key"`
 	Name string      `json:"name"`
 	Role ProjectRole `json:"role"`
+}
+
+// ProjectClientsUpdate defines model for ProjectClientsUpdate.
+type ProjectClientsUpdate struct {
+	ClientIds []int64 `json:"client_ids"`
 }
 
 // ProjectCreate defines model for ProjectCreate.
@@ -192,6 +228,12 @@ type LoginJSONRequestBody = LoginRequest
 // SetupPasswordJSONRequestBody defines body for SetupPassword for application/json ContentType.
 type SetupPasswordJSONRequestBody = SetupRequest
 
+// CreateClientJSONRequestBody defines body for CreateClient for application/json ContentType.
+type CreateClientJSONRequestBody = ClientCreate
+
+// UpdateClientJSONRequestBody defines body for UpdateClient for application/json ContentType.
+type UpdateClientJSONRequestBody = ClientUpdate
+
 // UpdateMeJSONRequestBody defines body for UpdateMe for application/json ContentType.
 type UpdateMeJSONRequestBody = MeUpdate
 
@@ -200,6 +242,9 @@ type CreateProjectJSONRequestBody = ProjectCreate
 
 // UpdateProjectJSONRequestBody defines body for UpdateProject for application/json ContentType.
 type UpdateProjectJSONRequestBody = ProjectUpdate
+
+// SetProjectClientsJSONRequestBody defines body for SetProjectClients for application/json ContentType.
+type SetProjectClientsJSONRequestBody = ProjectClientsUpdate
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -225,6 +270,15 @@ type ServerInterface interface {
 	// (POST /auth/setup)
 	SetupPassword(w http.ResponseWriter, r *http.Request)
 
+	// (GET /clients)
+	ListClients(w http.ResponseWriter, r *http.Request)
+
+	// (POST /clients)
+	CreateClient(w http.ResponseWriter, r *http.Request)
+
+	// (PATCH /clients/{id})
+	UpdateClient(w http.ResponseWriter, r *http.Request, id int64)
+
 	// (GET /me)
 	GetMe(w http.ResponseWriter, r *http.Request)
 
@@ -242,6 +296,12 @@ type ServerInterface interface {
 
 	// (PATCH /projects/{key})
 	UpdateProject(w http.ResponseWriter, r *http.Request, key string)
+
+	// (GET /projects/{key}/clients)
+	ListProjectClients(w http.ResponseWriter, r *http.Request, key string)
+
+	// (PUT /projects/{key}/clients)
+	SetProjectClients(w http.ResponseWriter, r *http.Request, key string)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -375,6 +435,60 @@ func (siw *ServerInterfaceWrapper) SetupPassword(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// ListClients operation middleware
+func (siw *ServerInterfaceWrapper) ListClients(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListClients(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateClient operation middleware
+func (siw *ServerInterfaceWrapper) CreateClient(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateClient(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateClient operation middleware
+func (siw *ServerInterfaceWrapper) UpdateClient(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateClient(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMe operation middleware
 func (siw *ServerInterfaceWrapper) GetMe(w http.ResponseWriter, r *http.Request) {
 
@@ -474,6 +588,58 @@ func (siw *ServerInterfaceWrapper) UpdateProject(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateProject(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListProjectClients operation middleware
+func (siw *ServerInterfaceWrapper) ListProjectClients(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProjectClients(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetProjectClients operation middleware
+func (siw *ServerInterfaceWrapper) SetProjectClients(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetProjectClients(w, r, key)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -616,6 +782,11 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects", wrapper.CreateProject)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}", wrapper.GetProject)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/projects/{key}", wrapper.UpdateProject)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/clients", wrapper.ListProjectClients)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/projects/{key}/clients", wrapper.SetProjectClients)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/clients", wrapper.ListClients)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/clients", wrapper.CreateClient)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/clients/{id}", wrapper.UpdateClient)
 
 	return m
 }
