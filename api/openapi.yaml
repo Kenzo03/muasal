@@ -600,6 +600,50 @@ paths:
       responses:
         "204": { description: Deleted. }
         default: { $ref: "#/components/responses/Problem" }
+  /tickets/{key}/attachments:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: uploadAttachment
+      tags: [tickets]
+      description: Members and project admins. Up to 25 MB; images, PDF, Office and OpenDocument files, text, CSV, logs and ZIP.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "201":
+          description: The stored file.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Attachment" }
+        default: { $ref: "#/components/responses/Problem" }
+  /attachments/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    get:
+      operationId: downloadAttachment
+      tags: [tickets]
+      description: Anyone who can see the ticket. Images display inline; other files download.
+      responses:
+        "200":
+          description: The file.
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        default: { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: deleteAttachment
+      tags: [tickets]
+      description: The uploader or a project admin.
+      responses:
+        "204": { description: Removed from the ticket. }
+        default: { $ref: "#/components/responses/Problem" }
 components:
   responses:
     Problem:
