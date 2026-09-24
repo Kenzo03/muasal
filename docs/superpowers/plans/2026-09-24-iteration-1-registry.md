@@ -5590,11 +5590,13 @@ test("an admin builds the HRIS tree and a member scoped to one client sees only 
   await page.getByRole("button", { name: "Buat pengguna" }).click();
   const budiLink = await page.getByTestId("setup-link").textContent();
 
-  // Two clients.
+  // Two clients. The form is scoped: the users page also has a "Nama" field,
+  // and it is still on screen while the navigation runs.
   await page.getByRole("link", { name: "Klien", exact: true }).click();
+  const newClient = page.getByRole("form", { name: "Buat klien" });
   for (const name of [clientA, clientB]) {
-    await page.getByLabel("Nama").fill(name);
-    await page.getByRole("button", { name: "Buat klien" }).click();
+    await newClient.getByLabel("Nama").fill(name);
+    await newClient.getByRole("button", { name: "Buat klien" }).click();
     await expect(page.getByRole("cell", { name, exact: true })).toBeVisible();
   }
 
@@ -5665,7 +5667,8 @@ make e2e
 
 On this Mac the stack answers on port 8080, so run `cd web && E2E_BASE_URL=http://localhost:8080 npx playwright test` instead of `make e2e`.
 
-Expected: `2 passed`.
+Expected: `2 passed`. A suite run signs in 4 times from one address, so more than about five runs a minute trip the
+20-per-minute sign-in limit (FSD §15.1): the login page then says "Terlalu banyak percobaan masuk". Wait a minute.
 
 - [ ] **Step 4: Run every check CI runs**
 

@@ -1,25 +1,8 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { setPassword, signIn } from "./helpers";
 
-// The test runs in the default UI language, Indonesian: after sign-in the UI
-// follows the user's profile language, and new users start with `id`.
 const adminPassword = "e2e-admin-passphrase-1";
 const userPassword = "e2e-budi-passphrase-2";
-
-async function setPassword(page: Page, link: string, password: string) {
-  await page.goto(link);
-  await page.getByLabel("Kata sandi baru").fill(password);
-  await page.getByLabel("Ulangi kata sandi").fill(password);
-  await page.getByRole("button", { name: "Simpan kata sandi" }).click();
-  await expect(page.getByRole("status")).toHaveText("Kata sandi tersimpan. Silakan masuk.");
-}
-
-async function signIn(page: Page, email: string, password: string) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Kata sandi").fill(password);
-  await page.getByRole("button", { name: "Masuk" }).click();
-  await expect(page).toHaveURL(/\/$/);
-}
 
 // FSD §21 Iteration 0 exit check: a user signs in on the compose stack.
 test("an admin creates a user who sets a password and signs in", async ({ page, browser }) => {
