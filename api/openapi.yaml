@@ -133,6 +133,63 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/SetupLink" }
         default: { $ref: "#/components/responses/Problem" }
+  /projects:
+    get:
+      operationId: listProjects
+      tags: [projects]
+      responses:
+        "200":
+          description: The projects the user belongs to; system admins see every project.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProjectList" }
+        default: { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createProject
+      tags: [projects]
+      description: System admins only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProjectCreate" }
+      responses:
+        "201":
+          description: The new project.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+        default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getProject
+      tags: [projects]
+      description: Members only; everyone else gets 404.
+      responses:
+        "200":
+          description: The project and the caller's role in it.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+        default: { $ref: "#/components/responses/Problem" }
+    patch:
+      operationId: updateProject
+      tags: [projects]
+      description: Project admins only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProjectUpdate" }
+      responses:
+        "200":
+          description: The updated project.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+        default: { $ref: "#/components/responses/Problem" }
 components:
   responses:
     Problem:
@@ -233,3 +290,36 @@ components:
         field: { type: string }
         code: { type: string }
         message: { type: string }
+    ProjectRole:
+      type: string
+      enum: [admin, member, viewer]
+    Project:
+      type: object
+      required: [id, key, name, description, role, created_at]
+      properties:
+        id: { type: integer, format: int64 }
+        key: { type: string, example: HRIS }
+        name: { type: string }
+        description: { type: string }
+        role: { $ref: "#/components/schemas/ProjectRole" }
+        created_at: { type: string, format: date-time }
+    ProjectList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Project" }
+    ProjectCreate:
+      type: object
+      required: [key, name]
+      properties:
+        key: { type: string, maxLength: 10, description: "2–10 capital letters or digits, starting with a letter; lower case is accepted" }
+        name: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 2000 }
+    ProjectUpdate:
+      type: object
+      properties:
+        key: { type: string, maxLength: 10 }
+        name: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 2000 }

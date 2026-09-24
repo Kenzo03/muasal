@@ -1,0 +1,192 @@
+package httpapi
+
+import (
+	"errors"
+	"net/http"
+	"regexp"
+	"strings"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/kenzo03/muasal/server/internal/access"
+	"github.com/kenzo03/muasal/server/internal/db"
+)
+
+var projectKeyRe = regexp.MustCompile(`^[A-Z][A-Z0-9]{1,9}$`)
+
+// projectCtx is a request's project and the caller's standing in it.
+type projectCtx struct {
+	user    *db.User
+	project db.Project
+	scope   access.Scope
+}
+
+// projectFor resolves {key} for the signed-in user. A missing project and one
+// the user does not belong to both answer 404, so projects never reveal
+// themselves (R-AC-7); a role below need answers 403.
+func (s *Server) projectFor(w http.ResponseWriter, r *http.Request, key, need string) (projectCtx, bool) {
+	u := s.requireUser(w, r)
+	if u == nil {
+		return projectCtx{}, false
+	}
+	p, err := s.q.GetProjectByKey(r.Context(), key)
+	if errors.Is(err, pgx.ErrNoRows) {
+		writeProblem(w, http.StatusNotFound, "not_found", "Project not found")
+		return projectCtx{}, false
+	}
+	if err != nil {
+		s.fail(w, r, err)
+		return projectCtx{}, false
+	}
+	pc, ok := s.memberOf(w, r, u, p)
+	if ok && !pc.scope.Allows(need) {
+		writeProblem(w, http.StatusForbidden, "forbidden", "Your project role does not allow this")
+		return projectCtx{}, false
+	}
+	return pc, ok
+}
+
+// memberOf reads u's scope in p and answers 404 when u is not a member.
+func (s *Server) memberOf(w http.ResponseWriter, r *http.Request, u *db.User, p db.Project) (projectCtx, bool) {
+	scope, member, err := access.ForProject(r.Context(), s.q, u, p.ID)
+	if err != nil {
+		s.fail(w, r, err)
+		return projectCtx{}, false
+	}
+	if !member {
+		writeProblem(w, http.StatusNotFound, "not_found", "Project not found")
+		return projectCtx{}, false
+	}
+	return projectCtx{user: u, project: p, scope: scope}, true
+}
+
+func (s *Server) ListProjects(w http.ResponseWriter, r *http.Request) {
+	u := s.requireUser(w, r)
+	if u == nil {
+		return
+	}
+	rows, err := s.q.ListProjects(r.Context(), db.ListProjectsParams{UserID: u.ID, IsAdmin: u.IsAdmin})
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	items := make([]Project, len(rows))
+	for i, row := range rows {
+		role := access.Admin
+		if !u.IsAdmin {
+			role = *row.Role
+		}
+		items[i] = toAPIProject(row.Project, role)
+	}
+	writeJSON(w, http.StatusOK, ProjectList{Items: items})
+}
+
+func (s *Server) CreateProject(w http.ResponseWriter, r *http.Request) {
+	admin := s.requireAdmin(w, r)
+	if admin == nil {
+		return
+	}
+	var in ProjectCreate
+	if !decodeJSON(w, r, &in) {
+		return
+	}
+	key := strings.ToUpper(strings.TrimSpace(in.Key))
+	if fields := validateProject(&key, &in.Name, in.Description); len(fields) > 0 {
+		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields", fields...)
+		return
+	}
+	ctx := r.Context()
+	var p db.Project
+	err := s.inTx(ctx, func(q *db.Queries) error {
+		var err error
+		if p, err = q.CreateProject(ctx, db.CreateProjectParams{
+			Key: key, Name: strings.TrimSpace(in.Name), Description: strings.TrimSpace(deref(in.Description)),
+		}); err != nil {
+			return err
+		}
+		return audit(ctx, q, webMeta(r).inProject(p.ID), &admin.ID, "project", p.ID, "create", projectAudit(p))
+	})
+	if isUniqueViolation(err) {
+		projectKeyTaken(w)
+		return
+	}
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, toAPIProject(p, access.Admin))
+}
+
+func (s *Server) GetProject(w http.ResponseWriter, r *http.Request, key string) {
+	if pc, ok := s.projectFor(w, r, key, access.Viewer); ok {
+		writeJSON(w, http.StatusOK, toAPIProject(pc.project, pc.scope.Role))
+	}
+}
+
+func (s *Server) UpdateProject(w http.ResponseWriter, r *http.Request, key string) {
+	pc, ok := s.projectFor(w, r, key, access.Admin)
+	if !ok {
+		return
+	}
+	var in ProjectUpdate
+	if !decodeJSON(w, r, &in) {
+		return
+	}
+	if in.Key != nil {
+		in.Key = ptr(strings.ToUpper(strings.TrimSpace(*in.Key)))
+	}
+	if fields := validateProject(in.Key, in.Name, in.Description); len(fields) > 0 {
+		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields", fields...)
+		return
+	}
+	ctx := r.Context()
+	var updated db.Project
+	err := s.inTx(ctx, func(q *db.Queries) error {
+		var err error
+		if updated, err = q.UpdateProject(ctx, db.UpdateProjectParams{
+			ID: pc.project.ID, Key: in.Key, Name: trimmed(in.Name), Description: trimmed(in.Description),
+		}); err != nil {
+			return err
+		}
+		return audit(ctx, q, webMeta(r).inProject(pc.project.ID), &pc.user.ID, "project", pc.project.ID, "update",
+			changed(projectAudit(pc.project), projectAudit(updated)))
+	})
+	if isUniqueViolation(err) {
+		projectKeyTaken(w)
+		return
+	}
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, toAPIProject(updated, pc.scope.Role))
+}
+
+func validateProject(key, name, description *string) []FieldError {
+	var f []FieldError
+	if key != nil && !projectKeyRe.MatchString(*key) {
+		f = append(f, FieldError{Field: "key", Code: "invalid", Message: "Use 2 to 10 capital letters or digits, starting with a letter"})
+	}
+	if name != nil {
+		if n := strings.TrimSpace(*name); n == "" || len(n) > 200 {
+			f = append(f, FieldError{Field: "name", Code: "required", Message: "Enter a name of at most 200 characters"})
+		}
+	}
+	if description != nil && len(*description) > 2000 {
+		f = append(f, FieldError{Field: "description", Code: "invalid", Message: "Use at most 2,000 characters"})
+	}
+	return f
+}
+
+func projectKeyTaken(w http.ResponseWriter) {
+	const msg = "Another project already uses this key"
+	writeProblem(w, http.StatusConflict, "project_key_taken", msg, FieldError{Field: "key", Code: "project_key_taken", Message: msg})
+}
+
+func projectAudit(p db.Project) map[string]any {
+	return map[string]any{"key": p.Key, "name": p.Name, "description": p.Description}
+}
+
+func toAPIProject(p db.Project, role string) Project {
+	return Project{Id: p.ID, Key: p.Key, Name: p.Name, Description: p.Description, Role: ProjectRole(role), CreatedAt: p.CreatedAt}
+}

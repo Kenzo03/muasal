@@ -3,11 +3,14 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/netip"
+	"reflect"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/kenzo03/muasal/server/internal/auth"
@@ -80,6 +83,13 @@ type auditMeta struct {
 	via       string
 	requestID *string
 	ip        *netip.Addr
+	projectID *int64 // lets project admins search their project's history (FSD §5.1)
+}
+
+// inProject tags the event with its project.
+func (m auditMeta) inProject(id int64) auditMeta {
+	m.projectID = &id
+	return m
 }
 
 var systemMeta = auditMeta{via: "system"}
@@ -98,7 +108,7 @@ func audit(ctx context.Context, q *db.Queries, m auditMeta, actorID *int64, enti
 		return err
 	}
 	return q.InsertAuditEvent(ctx, db.InsertAuditEventParams{
-		ActorID: actorID, Via: m.via, Entity: entity, EntityID: entityID,
+		ActorID: actorID, Via: m.via, Entity: entity, EntityID: entityID, ProjectID: m.projectID,
 		Action: action, Changes: b, RequestID: m.requestID, Ip: m.ip,
 	})
 }
@@ -109,3 +119,38 @@ func (s *Server) fail(w http.ResponseWriter, r *http.Request, err error) {
 }
 
 func ptr[T any](v T) *T { return &v }
+
+// changed keeps the fields whose values differ, as {"field": {"old": …, "new": …}} (FSD §16).
+func changed(before, after map[string]any) map[string]any {
+	out := map[string]any{}
+	for k, v := range after {
+		if !reflect.DeepEqual(before[k], v) {
+			out[k] = map[string]any{"old": before[k], "new": v}
+		}
+	}
+	return out
+}
+
+// constraintOf names the database constraint err violated, or "".
+func constraintOf(err error) string {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		return pgErr.ConstraintName
+	}
+	return ""
+}
+
+func deref[T any](p *T) (v T) {
+	if p != nil {
+		v = *p
+	}
+	return v
+}
+
+// orEmpty keeps a JSON array [] instead of null.
+func orEmpty[T any](s []T) []T {
+	if s == nil {
+		return []T{}
+	}
+	return s
+}
