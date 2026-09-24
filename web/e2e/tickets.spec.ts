@@ -52,7 +52,7 @@ test("a PM logs a client request in one form and moves it on the board", async (
   await expect(rina).toHaveURL(new RegExp(`/t/${key}-1$`));
   await expect(rina.getByRole("heading", { name: "Skip supervisor approval for overtime" })).toBeVisible();
   await expect(rina.getByText("Budi (HR Manager)")).toBeVisible();
-  await expect(rina.getByRole("listitem").filter({ hasText: /^Overtime Approval$/ })).toBeVisible();
+  await expect(rina.getByRole("listitem").filter({ hasText: /Overtime Approval$/ })).toBeVisible(); // the chip shows the path, HR › Overtime Approval
   await expect(rina.getByText("Tambahkan alasan dan minimal satu menu sebelum menutup.")).toHaveCount(0);
 
   // AC-TK-10: a new comment is Internal by default.
