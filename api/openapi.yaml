@@ -1,0 +1,235 @@
+openapi: 3.0.3
+info:
+  title: Muasal API
+  version: 0.1.0
+  license:
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+servers:
+  - url: /api/v1
+paths:
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginRequest" }
+      responses:
+        "200":
+          description: Signed in; the `sid` session cookie is set.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        default: { $ref: "#/components/responses/Problem" }
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      responses:
+        "204": { description: Signed out; the session is revoked. }
+        default: { $ref: "#/components/responses/Problem" }
+  /auth/setup:
+    post:
+      operationId: setupPassword
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SetupRequest" }
+      responses:
+        "204": { description: Password set; every session of the user is revoked. }
+        default: { $ref: "#/components/responses/Problem" }
+  /me:
+    get:
+      operationId: getMe
+      tags: [me]
+      responses:
+        "200":
+          description: The signed-in user.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        default: { $ref: "#/components/responses/Problem" }
+    patch:
+      operationId: updateMe
+      tags: [me]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MeUpdate" }
+      responses:
+        "200":
+          description: The updated profile.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        default: { $ref: "#/components/responses/Problem" }
+  /admin/users:
+    get:
+      operationId: listUsers
+      tags: [admin]
+      responses:
+        "200":
+          description: Every user.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserList" }
+        default: { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createUser
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserCreate" }
+      responses:
+        "201":
+          description: The user, with a one-time setup link.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CreatedUser" }
+        default: { $ref: "#/components/responses/Problem" }
+  /admin/users/{id}:
+    patch:
+      operationId: updateUser
+      tags: [admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserUpdate" }
+      responses:
+        "200":
+          description: The updated user.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        default: { $ref: "#/components/responses/Problem" }
+  /admin/users/{id}/setup-link:
+    post:
+      operationId: createSetupLink
+      tags: [admin]
+      description: Resets the password; the old one stops working and every session ends.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        "201":
+          description: A new one-time setup link.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SetupLink" }
+        default: { $ref: "#/components/responses/Problem" }
+components:
+  responses:
+    Problem:
+      description: An error, as RFC 9457 problem details.
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+  schemas:
+    Locale:
+      type: string
+      enum: [id, en]
+    User:
+      type: object
+      required: [id, email, name, is_admin, locale, timezone, disabled, has_password, created_at, last_login_at]
+      properties:
+        id: { type: integer, format: int64 }
+        email: { type: string }
+        name: { type: string }
+        is_admin: { type: boolean }
+        locale: { $ref: "#/components/schemas/Locale" }
+        timezone: { type: string, example: Asia/Jakarta }
+        disabled: { type: boolean }
+        has_password: { type: boolean }
+        created_at: { type: string, format: date-time }
+        last_login_at: { type: string, format: date-time, nullable: true }
+    UserList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/User" }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, maxLength: 320 }
+        password: { type: string, maxLength: 1024 }
+    SetupRequest:
+      type: object
+      required: [token, password]
+      properties:
+        token: { type: string }
+        password: { type: string, maxLength: 1024 }
+    MeUpdate:
+      type: object
+      properties:
+        name: { type: string, maxLength: 200 }
+        locale: { $ref: "#/components/schemas/Locale" }
+        timezone: { type: string }
+        current_password: { type: string, maxLength: 1024 }
+        new_password: { type: string, maxLength: 1024 }
+    UserCreate:
+      type: object
+      required: [email, name]
+      properties:
+        email: { type: string, maxLength: 320 }
+        name: { type: string, maxLength: 200 }
+        is_admin: { type: boolean }
+        locale: { $ref: "#/components/schemas/Locale" }
+        timezone: { type: string }
+    UserUpdate:
+      type: object
+      properties:
+        name: { type: string, maxLength: 200 }
+        is_admin: { type: boolean }
+        locale: { $ref: "#/components/schemas/Locale" }
+        timezone: { type: string }
+        disabled: { type: boolean }
+    SetupLink:
+      type: object
+      required: [url, expires_at]
+      properties:
+        url: { type: string }
+        expires_at: { type: string, format: date-time }
+    CreatedUser:
+      type: object
+      required: [user, setup_link]
+      properties:
+        user: { $ref: "#/components/schemas/User" }
+        setup_link: { $ref: "#/components/schemas/SetupLink" }
+    Problem:
+      type: object
+      required: [type, title, status, code]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        code: { type: string }
+        errors:
+          type: array
+          items: { $ref: "#/components/schemas/FieldError" }
+    FieldError:
+      type: object
+      required: [field, code, message]
+      properties:
+        field: { type: string }
+        code: { type: string }
+        message: { type: string }
