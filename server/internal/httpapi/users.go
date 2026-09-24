@@ -12,8 +12,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/muasal/muasal/server/internal/auth"
-	"github.com/muasal/muasal/server/internal/db"
+	"github.com/kenzo03/muasal/server/internal/auth"
+	"github.com/kenzo03/muasal/server/internal/db"
 )
 
 const setupLinkTTL = 72 * time.Hour // FSD §15.1

@@ -13,11 +13,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/muasal/muasal/server/internal/auth"
-	"github.com/muasal/muasal/server/internal/config"
-	"github.com/muasal/muasal/server/internal/db"
-	"github.com/muasal/muasal/server/internal/httpapi"
-	"github.com/muasal/muasal/server/internal/testdb"
+	"github.com/kenzo03/muasal/server/internal/auth"
+	"github.com/kenzo03/muasal/server/internal/config"
+	"github.com/kenzo03/muasal/server/internal/db"
+	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/muasal/server/internal/testdb"
 )
 
 const (

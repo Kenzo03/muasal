@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/muasal/muasal/server/internal/migrate"
-	"github.com/muasal/muasal/server/internal/testdb"
+	"github.com/kenzo03/muasal/server/internal/migrate"
+	"github.com/kenzo03/muasal/server/internal/testdb"
 )
 
 func TestUpIsIdempotentAndTheAuditLogIsAppendOnly(t *testing.T) {

@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/muasal/muasal/server/internal/migrate"
+	"github.com/kenzo03/muasal/server/internal/migrate"
 )
 
 // DB is a throwaway database that is dropped when the test ends.

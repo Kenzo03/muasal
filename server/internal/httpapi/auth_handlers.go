@@ -8,8 +8,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/muasal/muasal/server/internal/auth"
-	"github.com/muasal/muasal/server/internal/db"
+	"github.com/kenzo03/muasal/server/internal/auth"
+	"github.com/kenzo03/muasal/server/internal/db"
 )
 
 // dummyHash makes sign-in for an unknown email as slow as for a known one.

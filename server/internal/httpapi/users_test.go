@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/muasal/muasal/server/internal/httpapi"
+	"github.com/kenzo03/muasal/server/internal/httpapi"
 )
 
 func setupToken(t *testing.T, link string) string {

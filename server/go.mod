@@ -1,4 +1,4 @@
-module github.com/muasal/muasal/server
+module github.com/kenzo03/muasal/server
 
 go 1.27.1
 

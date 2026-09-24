@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/muasal/muasal/server/internal/config"
+	"github.com/kenzo03/muasal/server/internal/config"
 )
 
 func TestRunWithoutACommandPrintsUsage(t *testing.T) {

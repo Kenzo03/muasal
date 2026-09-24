@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Product name Muasal; license Apache-2.0; repo root `muasal/`; images `muasal-web` and `muasal-app`; database `muasal`.
-- Go module path `github.com/muasal/muasal/server`.
+- Go module path `github.com/kenzo03/muasal/server`.
 - API base `/api/v1`; JSON; snake_case fields; RFC 3339 timestamps in UTC.
 - Errors are RFC 9457 `application/problem+json` with a stable `code` and optional `errors: [{field, code, message}]`; the UI translates the codes.
 - Session cookie `sid`: HttpOnly, SameSite=Lax, Secure when `PUBLIC_URL` is https; 12 h idle timeout, 7 d absolute; a 256-bit random token stored only as its SHA-256; a new token at every sign-in; all sessions revoked on disable, password reset and setup; other sessions revoked on password change.
@@ -57,7 +57,7 @@ muasal/
 │   ├── compose.yaml                    caddy, web, app, db
 │   ├── Caddyfile                       /api/* → app, everything else → web
 │   └── .env.example                    copied to deploy/.env (git-ignored)
-├── server/                             Go module github.com/muasal/muasal/server
+├── server/                             Go module github.com/kenzo03/muasal/server
 │   ├── Dockerfile  go.mod  go.sum  sqlc.yaml
 │   ├── cmd/app/main.go (+ main_test.go)          serve | migrate up | admin create-admin | healthcheck
 │   ├── migrations/embed.go  00001_init.sql       goose SQL, embedded in the binary
@@ -215,12 +215,12 @@ e2e:
 
 ```bash
 mkdir -p server && cd server
-go mod init github.com/muasal/muasal/server
+go mod init github.com/kenzo03/muasal/server
 go mod edit -go=1.27.1
 cat go.mod
 ```
 
-Expected: `module github.com/muasal/muasal/server` and `go 1.27.1`.
+Expected: `module github.com/kenzo03/muasal/server` and `go 1.27.1`.
 
 - [ ] **Step 4: Write the failing config test**
 
@@ -318,7 +318,7 @@ func (c Config) SecureCookies() bool { return strings.HasPrefix(c.PublicURL, "ht
 - [ ] **Step 7: Run the tests to verify they pass**
 
 Run: `cd server && go test ./internal/config/`
-Expected: `ok  github.com/muasal/muasal/server/internal/config`
+Expected: `ok  github.com/kenzo03/muasal/server/internal/config`
 
 - [ ] **Step 8: Commit**
 
@@ -712,7 +712,7 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) bool {
 - [ ] **Step 6: Run the tests to verify they pass**
 
 Run: `cd server && go mod tidy && go test ./internal/httpapi/`
-Expected: `ok  github.com/muasal/muasal/server/internal/httpapi`
+Expected: `ok  github.com/kenzo03/muasal/server/internal/httpapi`
 
 - [ ] **Step 7: Commit**
 
@@ -979,8 +979,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/muasal/muasal/server/internal/migrate"
-	"github.com/muasal/muasal/server/internal/testdb"
+	"github.com/kenzo03/muasal/server/internal/migrate"
+	"github.com/kenzo03/muasal/server/internal/testdb"
 )
 
 func TestUpIsIdempotentAndTheAuditLogIsAppendOnly(t *testing.T) {
@@ -1004,7 +1004,7 @@ func TestUpIsIdempotentAndTheAuditLogIsAppendOnly(t *testing.T) {
 - [ ] **Step 5: Run it to verify it fails**
 
 Run: `cd server && go test ./internal/migrate/`
-Expected: FAIL to compile: `package github.com/muasal/muasal/server/internal/testdb is not in std` (or "no required module provides package").
+Expected: FAIL to compile: `package github.com/kenzo03/muasal/server/internal/testdb is not in std` (or "no required module provides package").
 
 - [ ] **Step 6: Implement the migration runner and the test-database helper**
 
@@ -1029,7 +1029,7 @@ import (
 	"github.com/pressly/goose/v3"
 	"github.com/pressly/goose/v3/lock"
 
-	"github.com/muasal/muasal/server/migrations"
+	"github.com/kenzo03/muasal/server/migrations"
 )
 
 // Up applies pending migrations as the owner role under an advisory lock, then
@@ -1112,7 +1112,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/muasal/muasal/server/internal/migrate"
+	"github.com/kenzo03/muasal/server/internal/migrate"
 )
 
 // DB is a throwaway database that is dropped when the test ends.
@@ -1563,11 +1563,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/muasal/muasal/server/internal/auth"
-	"github.com/muasal/muasal/server/internal/config"
-	"github.com/muasal/muasal/server/internal/db"
-	"github.com/muasal/muasal/server/internal/httpapi"
-	"github.com/muasal/muasal/server/internal/testdb"
+	"github.com/kenzo03/muasal/server/internal/auth"
+	"github.com/kenzo03/muasal/server/internal/config"
+	"github.com/kenzo03/muasal/server/internal/db"
+	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/muasal/server/internal/testdb"
 )
 
 const (
@@ -1796,9 +1796,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/muasal/muasal/server/internal/auth"
-	"github.com/muasal/muasal/server/internal/config"
-	"github.com/muasal/muasal/server/internal/db"
+	"github.com/kenzo03/muasal/server/internal/auth"
+	"github.com/kenzo03/muasal/server/internal/config"
+	"github.com/kenzo03/muasal/server/internal/db"
 )
 
 // Server implements the generated ServerInterface.
@@ -1911,8 +1911,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/muasal/muasal/server/internal/auth"
-	"github.com/muasal/muasal/server/internal/db"
+	"github.com/kenzo03/muasal/server/internal/auth"
+	"github.com/kenzo03/muasal/server/internal/db"
 )
 
 type ctxKey int
@@ -2082,8 +2082,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/muasal/muasal/server/internal/auth"
-	"github.com/muasal/muasal/server/internal/db"
+	"github.com/kenzo03/muasal/server/internal/auth"
+	"github.com/kenzo03/muasal/server/internal/db"
 )
 
 // dummyHash makes sign-in for an unknown email as slow as for a known one.
@@ -2254,7 +2254,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/muasal/muasal/server/internal/httpapi"
+	"github.com/kenzo03/muasal/server/internal/httpapi"
 )
 
 func setupToken(t *testing.T, link string) string {
@@ -2439,8 +2439,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/muasal/muasal/server/internal/auth"
-	"github.com/muasal/muasal/server/internal/db"
+	"github.com/kenzo03/muasal/server/internal/auth"
+	"github.com/kenzo03/muasal/server/internal/db"
 )
 
 const setupLinkTTL = 72 * time.Hour // FSD §15.1
@@ -2821,7 +2821,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/muasal/muasal/server/internal/config"
+	"github.com/kenzo03/muasal/server/internal/config"
 )
 
 func TestRunWithoutACommandPrintsUsage(t *testing.T) {
@@ -2882,9 +2882,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/muasal/muasal/server/internal/config"
-	"github.com/muasal/muasal/server/internal/httpapi"
-	"github.com/muasal/muasal/server/internal/migrate"
+	"github.com/kenzo03/muasal/server/internal/config"
+	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/muasal/server/internal/migrate"
 )
 
 const usage = `usage:
@@ -4315,7 +4315,7 @@ cd server && go generate ./... && git diff --exit-code && cd ..
 cd web && npm run gen:api && git diff --exit-code && cd ..
 ```
 
-Expected: both `git diff --exit-code` calls print nothing and exit 0, which is what CI checks. Then create the GitHub repository (the `muasal` organization handle was free on 23 Sep 2026), push, and confirm the `server`, `web` and `e2e` jobs pass.
+Expected: both `git diff --exit-code` calls print nothing and exit 0, which is what CI checks. Then push to the GitHub repository (https://github.com/Kenzo03/muasal) and confirm the `server`, `web` and `e2e` jobs pass.
 
 - [ ] **Step 3: Commit**
 

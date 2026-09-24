@@ -16,7 +16,7 @@ import (
 	"github.com/pressly/goose/v3"
 	"github.com/pressly/goose/v3/lock"
 
-	"github.com/muasal/muasal/server/migrations"
+	"github.com/kenzo03/muasal/server/migrations"
 )
 
 // Up applies pending migrations as the owner role under an advisory lock, then

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/muasal/muasal/server/internal/auth"
-	"github.com/muasal/muasal/server/internal/db"
+	"github.com/kenzo03/muasal/server/internal/auth"
+	"github.com/kenzo03/muasal/server/internal/db"
 )
 
 type ctxKey int

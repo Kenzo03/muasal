@@ -17,9 +17,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/muasal/muasal/server/internal/config"
-	"github.com/muasal/muasal/server/internal/httpapi"
-	"github.com/muasal/muasal/server/internal/migrate"
+	"github.com/kenzo03/muasal/server/internal/config"
+	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/muasal/server/internal/migrate"
 )
 
 const usage = `usage:
