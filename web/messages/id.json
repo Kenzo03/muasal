@@ -1,0 +1,68 @@
+{
+  "login": {
+    "title": "Masuk ke Muasal",
+    "email": "Email",
+    "password": "Kata sandi",
+    "submit": "Masuk",
+    "failed": "Email atau kata sandi salah",
+    "locked": "Terlalu banyak percobaan, coba lagi dalam 15 menit",
+    "rateLimited": "Terlalu banyak percobaan masuk dari jaringan ini. Tunggu satu menit."
+  },
+  "setup": {
+    "title": "Atur kata sandi",
+    "password": "Kata sandi baru",
+    "confirm": "Ulangi kata sandi",
+    "hint": "Minimal 12 karakter",
+    "mismatch": "Kata sandi tidak sama",
+    "submit": "Simpan kata sandi",
+    "done": "Kata sandi tersimpan. Silakan masuk.",
+    "toLogin": "Ke halaman masuk"
+  },
+  "home": {
+    "signedInAs": "Masuk sebagai {name}",
+    "profile": "Profil",
+    "users": "Pengguna",
+    "signOut": "Keluar"
+  },
+  "profile": {
+    "title": "Profil",
+    "name": "Nama",
+    "language": "Bahasa",
+    "timezone": "Zona waktu",
+    "passwordTitle": "Ganti kata sandi",
+    "currentPassword": "Kata sandi saat ini",
+    "newPassword": "Kata sandi baru",
+    "save": "Simpan",
+    "saved": "Tersimpan",
+    "back": "Kembali"
+  },
+  "users": {
+    "title": "Pengguna",
+    "name": "Nama",
+    "email": "Email",
+    "admin": "Admin",
+    "status": "Status",
+    "lastLogin": "Terakhir masuk",
+    "never": "Belum pernah",
+    "active": "Aktif",
+    "disabled": "Nonaktif",
+    "create": "Buat pengguna",
+    "linkFor": "Tautan pengaturan untuk {name} (berlaku 72 jam):",
+    "disable": "Nonaktifkan",
+    "enable": "Aktifkan",
+    "resetPassword": "Reset kata sandi",
+    "adminsOnly": "Hanya admin yang dapat mengelola pengguna.",
+    "back": "Kembali"
+  },
+  "errors": {
+    "generic": "Terjadi kesalahan. Coba lagi.",
+    "setup_link_invalid": "Tautan ini sudah kedaluwarsa atau sudah dipakai. Minta tautan baru ke admin.",
+    "password_too_short": "Gunakan minimal 12 karakter",
+    "password_too_common": "Kata sandi ini terlalu umum; pilih yang lain",
+    "wrong_password": "Kata sandi saat ini salah",
+    "email_taken": "Pengguna dengan email ini sudah ada",
+    "invalid": "Periksa isian ini",
+    "required": "Isian ini wajib diisi",
+    "cannot_change_self": "Anda tidak dapat menonaktifkan diri sendiri atau mencabut peran admin Anda"
+  }
+}

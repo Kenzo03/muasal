@@ -1,0 +1,68 @@
+{
+  "login": {
+    "title": "Sign in to Muasal",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "failed": "Email or password is wrong",
+    "locked": "Too many attempts, try again in 15 minutes",
+    "rateLimited": "Too many sign-in attempts from this network. Wait a minute."
+  },
+  "setup": {
+    "title": "Set your password",
+    "password": "New password",
+    "confirm": "Repeat the password",
+    "hint": "At least 12 characters",
+    "mismatch": "The passwords do not match",
+    "submit": "Save password",
+    "done": "Password saved. You can sign in now.",
+    "toLogin": "Go to sign in"
+  },
+  "home": {
+    "signedInAs": "Signed in as {name}",
+    "profile": "Profile",
+    "users": "Users",
+    "signOut": "Sign out"
+  },
+  "profile": {
+    "title": "Profile",
+    "name": "Name",
+    "language": "Language",
+    "timezone": "Timezone",
+    "passwordTitle": "Change password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "save": "Save",
+    "saved": "Saved",
+    "back": "Back"
+  },
+  "users": {
+    "title": "Users",
+    "name": "Name",
+    "email": "Email",
+    "admin": "Admin",
+    "status": "Status",
+    "lastLogin": "Last sign-in",
+    "never": "Never",
+    "active": "Active",
+    "disabled": "Disabled",
+    "create": "Create user",
+    "linkFor": "Setup link for {name} (valid 72 hours):",
+    "disable": "Disable",
+    "enable": "Enable",
+    "resetPassword": "Reset password",
+    "adminsOnly": "Only admins can manage users.",
+    "back": "Back"
+  },
+  "errors": {
+    "generic": "Something went wrong. Try again.",
+    "setup_link_invalid": "This link has expired or was already used. Ask your admin for a new one.",
+    "password_too_short": "Use at least 12 characters",
+    "password_too_common": "This password is too common; choose another",
+    "wrong_password": "The current password is wrong",
+    "email_taken": "A user with this email already exists",
+    "invalid": "Check this field",
+    "required": "This field is required",
+    "cannot_change_self": "You cannot disable yourself or remove your own admin role"
+  }
+}
