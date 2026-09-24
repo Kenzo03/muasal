@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
@@ -31,11 +32,11 @@ function subtree(id: number, children: Children): Set<number> {
   return out;
 }
 
-type Props = { projectKey: string; nodes: Node[]; clients: Client[]; canEdit: boolean };
+type Props = { projectKey: string; nodes: Node[]; clients: Client[]; canEdit: boolean; showArchived: boolean };
 
 // The module tree screen (FSD §7.3): the tree on the left, the selected node on the right.
-// ponytail: moves use a parent picker and up/down buttons; drag-and-drop arrives with dnd-kit and the board.
-export default function ModuleTree({ projectKey, nodes, clients, canEdit }: Props) {
+// ponytail: moves use a parent picker and up/down buttons; add tree drag-and-drop if admins ask for it.
+export default function ModuleTree({ projectKey, nodes, clients, canEdit, showArchived }: Props) {
   const t = useTranslations("modules");
   const problemText = useProblemText();
   const router = useRouter();
@@ -137,6 +138,7 @@ export default function ModuleTree({ projectKey, nodes, clients, canEdit }: Prop
                 </button>
                 <span className="text-xs text-neutral-500">{t(n.type)}</span>
                 {badge(n)}
+                {n.archived && <span className={chip}>{t("archivedBadge")}</span>}
               </div>
               {open && level(n.id, depth + 1)}
             </li>
@@ -148,7 +150,26 @@ export default function ModuleTree({ projectKey, nodes, clients, canEdit }: Prop
 
   const action = "rounded border px-3 py-1 disabled:opacity-40";
   function details(n: Node) {
-    const siblings = children.get(n.parent_id) ?? [];
+    // R-MR-4: an archived node can only be restored.
+    if (n.archived) {
+      return (
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-neutral-600">{pathOf(n)}</p>
+          <ReadOnlyNode node={n} />
+          {canEdit && (
+            <button
+              type="button"
+              onClick={() => run(api.PATCH("/nodes/{id}", { params: { path: { id: n.id } }, body: { archived: false } }))}
+              className={`${action} self-start`}
+            >
+              {t("restore")}
+            </button>
+          )}
+        </div>
+      );
+    }
+    // Positions count live siblings only, as the server does.
+    const siblings = (children.get(n.parent_id) ?? []).filter((s) => !s.archived);
     const index = siblings.findIndex((s) => s.id === n.id);
     const blocked = subtree(n.id, children);
     const move = (parentId: number | null, position?: number) =>
@@ -185,6 +206,13 @@ export default function ModuleTree({ projectKey, nodes, clients, canEdit }: Prop
               <button type="button" disabled={index === siblings.length - 1} onClick={() => move(n.parent_id, index + 1)} className={action}>
                 {t("moveDown")}
               </button>
+              <button
+                type="button"
+                onClick={() => run(api.PATCH("/nodes/{id}", { params: { path: { id: n.id } }, body: { archived: true } }), () => setSelectedId(null))}
+                className={action}
+              >
+                {t("archive")}
+              </button>
               <button type="button" onClick={remove} className={`${action} border-red-300 text-red-700`}>
                 {t("delete")}
               </button>
@@ -204,7 +232,7 @@ export default function ModuleTree({ projectKey, nodes, clients, canEdit }: Prop
                 <select name="parent" defaultValue={n.parent_id ?? ""} className="rounded border px-2 py-1">
                   <option value="">{t("topLevel")}</option>
                   {nodes
-                    .filter((x) => !blocked.has(x.id))
+                    .filter((x) => !blocked.has(x.id) && !x.archived)
                     .map((x) => (
                       <option key={x.id} value={x.id}>{pathOf(x)}</option>
                     ))}
@@ -230,6 +258,11 @@ export default function ModuleTree({ projectKey, nodes, clients, canEdit }: Prop
             <button type="button" onClick={() => { select(null); setCreatingUnder(null); }} className="rounded bg-neutral-900 px-3 py-2 text-sm text-white">
               {t("addTop")}
             </button>
+          )}
+          {canEdit && (
+            <Link href={showArchived ? "?" : "?archived=1"} className="text-sm underline">
+              {showArchived ? t("hideArchived") : t("showArchived")}
+            </Link>
           )}
         </div>
         {nodes.length === 0 ? <p className="text-sm text-neutral-600">{canEdit ? t("emptyAdmin") : t("empty")}</p> : level(null, 0)}

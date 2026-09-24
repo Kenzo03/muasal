@@ -78,8 +78,9 @@ func TestLinkingClientsToAProject(t *testing.T) {
 	if code := e.call(admin, http.MethodPut, "/projects/HRIS/clients", map[string]any{"client_ids": []int64{a.ID, b.ID, 999999}}, &prob); code != http.StatusUnprocessableEntity || firstError(prob).Code != "unknown_client" {
 		t.Fatalf("unknown client: %d %+v", code, prob)
 	}
-	if code := e.call(budi, http.MethodGet, "/projects/HRIS/clients", nil, nil); code != http.StatusForbidden {
-		t.Fatalf("a member reads the links: %d", code)
+	var mine httpapi.ClientList
+	if code := e.call(budi, http.MethodGet, "/projects/HRIS/clients", nil, &mine); code != http.StatusOK || len(mine.Items) != 1 || mine.Items[0].Name != "Client B" {
+		t.Fatalf("a member reads the links in their scope: %d %+v", code, mine)
 	}
 	if code := e.call(admin, http.MethodGet, "/projects/HRIS/clients", nil, &list); code != http.StatusOK || len(list.Items) != 2 {
 		t.Fatalf("failed updates must change nothing: %d %+v", code, list)

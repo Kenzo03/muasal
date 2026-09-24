@@ -26,7 +26,7 @@ export default async function Home() {
         <ul className="mt-4 divide-y rounded-lg border bg-white">
           {projects.map((p) => (
             <li key={p.id}>
-              <Link className="flex items-baseline gap-3 p-4 hover:bg-neutral-50" href={`/p/${p.key}/modules`}>
+              <Link className="flex items-baseline gap-3 p-4 hover:bg-neutral-50" href={`/p/${p.key}/board`}>
                 <span className="font-mono text-sm text-neutral-500">{p.key}</span>
                 <span>{p.name}</span>
               </Link>

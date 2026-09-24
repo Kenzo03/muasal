@@ -22,3 +22,11 @@ export function useProblemText() {
     return t.has(key) ? t(key) : t("generic");
   };
 }
+export type Status = components["schemas"]["Status"];
+export type Ticket = components["schemas"]["Ticket"];
+export type TicketSummary = components["schemas"]["TicketSummary"];
+export type TicketType = components["schemas"]["TicketType"];
+export type Priority = components["schemas"]["Priority"];
+export type ActivityItem = components["schemas"]["ActivityItem"];
+export type Ref = components["schemas"]["Ref"];
+export type Contact = components["schemas"]["Contact"];

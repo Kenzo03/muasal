@@ -9,6 +9,18 @@ import (
 	"time"
 )
 
+type Attachment struct {
+	ID          int64
+	TicketID    int64
+	UploaderID  int64
+	Filename    string
+	ContentType string
+	SizeBytes   int64
+	Sha256      []byte
+	CreatedAt   time.Time
+	DeletedAt   *time.Time
+}
+
 type AuditEvent struct {
 	ID         int64
 	OccurredAt time.Time
@@ -29,6 +41,17 @@ type Client struct {
 	Code       *string
 	Aliases    []string
 	ArchivedAt *time.Time
+}
+
+type Comment struct {
+	ID        int64
+	TicketID  int64
+	AuthorID  int64
+	Internal  bool
+	Body      string
+	CreatedAt time.Time
+	EditedAt  *time.Time
+	DeletedAt *time.Time
 }
 
 type Contact struct {
@@ -80,6 +103,7 @@ type Project struct {
 	Name        string
 	Description string
 	CreatedAt   time.Time
+	TicketSeq   int64
 }
 
 type ProjectClient struct {
@@ -102,6 +126,43 @@ type SetupToken struct {
 	UserID    int64
 	ExpiresAt time.Time
 	UsedAt    *time.Time
+}
+
+type Status struct {
+	ID        int64
+	ProjectID int64
+	Name      string
+	Category  string
+	Position  int32
+	Color     string
+	IsDefault bool
+}
+
+type Ticket struct {
+	ID                 int64
+	ProjectID          int64
+	Number             int64
+	Key                string
+	Type               string
+	Title              string
+	Description        string
+	Reason             string
+	StatusID           int64
+	ClientID           *int64
+	RequesterContactID *int64
+	RequesterUserID    *int64
+	ReporterID         int64
+	AssigneeID         *int64
+	Priority           string
+	DueDate            *time.Time
+	Version            int32
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
+type TicketNode struct {
+	TicketID int64
+	NodeID   int64
 }
 
 type User struct {

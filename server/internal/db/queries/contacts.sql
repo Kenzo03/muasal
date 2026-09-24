@@ -14,6 +14,7 @@ WHERE (sqlc.arg('is_admin')::boolean
                           SELECT mc.client_id FROM membership_clients mc WHERE mc.user_id = sqlc.arg('user_id')))
   AND (sqlc.narg('id')::bigint IS NULL OR c.id = sqlc.narg('id')::bigint)
   AND (sqlc.narg('client_id')::bigint IS NULL OR c.client_id = sqlc.narg('client_id')::bigint)
+  AND (NOT sqlc.arg('internal')::boolean OR c.client_id IS NULL)
   AND c.name ILIKE '%' || sqlc.arg('q')::text || '%'
 ORDER BY lower(c.name), c.id
 LIMIT 50;

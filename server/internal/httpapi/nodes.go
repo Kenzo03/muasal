@@ -19,13 +19,14 @@ var (
 )
 
 // ListNodes returns the project's tree as a flat list with parent ids (FSD §7.1).
-func (s *Server) ListNodes(w http.ResponseWriter, r *http.Request, key string) {
+func (s *Server) ListNodes(w http.ResponseWriter, r *http.Request, key string, params ListNodesParams) {
 	pc, ok := s.projectFor(w, r, key, access.Viewer)
 	if !ok {
 		return
 	}
 	rows, err := s.q.ListNodes(r.Context(), db.ListNodesParams{
 		ProjectID: pc.project.ID, AllClients: pc.scope.AllClients, ClientIds: orEmpty(pc.scope.ClientIDs),
+		IncludeArchived: deref(params.Archived) && pc.scope.Allows(access.Admin), // archived nodes are for restoring (R-MR-4)
 	})
 	if err != nil {
 		s.fail(w, r, err)
@@ -40,7 +41,7 @@ func (s *Server) ListNodes(w http.ResponseWriter, r *http.Request, key string) {
 		items[i] = Node{
 			Id: n.ID, ParentId: n.ParentID, Type: NodeType(n.Type), Name: n.Name, Code: n.Code,
 			Aliases: orEmpty(n.Aliases), Description: n.Description, ClientSpecific: n.ClientSpecific,
-			Clients: clients, Position: n.Position,
+			Clients: clients, Position: n.Position, Archived: n.Archived,
 		}
 	}
 	writeJSON(w, http.StatusOK, NodeList{Items: items})
@@ -133,6 +134,28 @@ func (s *Server) UpdateNode(w http.ResponseWriter, r *http.Request, id int64) {
 		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields", fields...)
 		return
 	}
+	if in.Archived != nil && *in.Archived && n.ArchivedAt == nil {
+		live, err := s.q.CountLiveChildren(r.Context(), id)
+		if err != nil {
+			s.fail(w, r, err)
+			return
+		}
+		if live > 0 {
+			writeProblem(w, http.StatusConflict, "node_has_children", "Archive or move its sub-items first")
+			return
+		}
+	}
+	if in.Archived != nil && !*in.Archived && n.ArchivedAt != nil && n.ParentID != nil {
+		parent, err := s.q.GetNode(r.Context(), *n.ParentID)
+		if err != nil {
+			s.fail(w, r, err)
+			return
+		}
+		if parent.ArchivedAt != nil {
+			writeProblem(w, http.StatusConflict, "parent_archived", "Restore its parent first")
+			return
+		}
+	}
 	ctx := r.Context()
 	var out Node
 	err := s.inTx(ctx, func(q *db.Queries) error {
@@ -142,7 +165,7 @@ func (s *Server) UpdateNode(w http.ResponseWriter, r *http.Request, id int64) {
 		}
 		updated, err := q.UpdateNode(ctx, db.UpdateNodeParams{
 			ID: id, Name: trimmed(in.Name), Type: (*string)(in.Type), Code: trimmed(in.Code), Aliases: aliases,
-			Description: trimmed(in.Description), ClientSpecific: in.ClientSpecific,
+			Description: trimmed(in.Description), ClientSpecific: in.ClientSpecific, Archived: in.Archived,
 		})
 		if err != nil {
 			return err
@@ -343,6 +366,8 @@ func nodeConflict(w http.ResponseWriter, err error) bool {
 	case "node_clients_linked":
 		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields",
 			FieldError{Field: "client_ids", Code: "client_not_linked", Message: "Link this client to the project first"})
+	case "ticket_nodes_node_fk":
+		writeProblem(w, http.StatusConflict, "node_linked", "Tickets link to this item; archive it instead")
 	case "nodes_parent_fk":
 		writeProblem(w, http.StatusConflict, "node_has_children", "Delete or move its sub-items first")
 	default:
@@ -355,7 +380,7 @@ func toAPINode(n db.Node, clients []db.ListNodeClientsRow) Node {
 	out := Node{
 		Id: n.ID, ParentId: n.ParentID, Type: NodeType(n.Type), Name: n.Name, Code: n.Code,
 		Aliases: orEmpty(n.Aliases), Description: n.Description, ClientSpecific: n.ClientSpecific,
-		Clients: make([]NodeClient, len(clients)), Position: n.Position,
+		Clients: make([]NodeClient, len(clients)), Position: n.Position, Archived: n.ArchivedAt != nil,
 	}
 	for i, c := range clients {
 		out.Clients[i] = NodeClient{Id: c.ID, Name: c.Name}
@@ -371,5 +396,6 @@ func nodeAudit(n db.Node, clients []db.ListNodeClientsRow) map[string]any {
 	return map[string]any{
 		"parent_id": n.ParentID, "position": n.Position, "type": n.Type, "name": n.Name, "code": n.Code,
 		"aliases": n.Aliases, "description": n.Description, "client_specific": n.ClientSpecific, "client_ids": ids,
+		"archived": n.ArchivedAt != nil,
 	}
 }

@@ -1,0 +1,110 @@
+package httpapi_test
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"slices"
+	"testing"
+
+	"github.com/kenzo03/muasal/server/internal/db"
+	"github.com/kenzo03/muasal/server/internal/httpapi"
+)
+
+func ticketKeys(page httpapi.TicketPage) []string {
+	keys := []string{}
+	for _, t := range page.Items {
+		keys = append(keys, t.Key)
+	}
+	return keys
+}
+
+func TestTicketListFiltersSortsAndScopes(t *testing.T) {
+	e := newEnv(t)
+	ctx := context.Background()
+	w := newHRIS(e)
+	admin, au := e.signedIn("admin@example.com", true)
+	leave := e.seedNode(w.p, &w.hr, "menu", "Leave Request")
+	t1 := e.seedTicket(w.p, au, "Overtime rules for Client A", &w.a, w.ot)  // HRIS-1
+	t2 := e.seedTicket(w.p, au, "Leave balance on the payslip", nil, leave) // HRIS-2, core work
+	e.seedTicket(w.p, au, "Client B payroll export", &w.b)                  // HRIS-3, hidden from the PM
+	var st httpapi.StatusList
+	e.call(admin, http.MethodGet, "/projects/HRIS/statuses", nil, &st)
+	if _, err := e.q.SetTicketStatus(ctx, db.SetTicketStatusParams{ID: t1.ID, StatusID: st.Items[1].Id}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.q.UpdateTicket(ctx, db.UpdateTicketParams{
+		ID: t2.ID, Version: 1, Type: "feature", Title: t2.Title, Reason: "Employees ask about it every month.",
+		RequesterUserID: &au.ID, AssigneeID: &w.pmUser.ID, Priority: "urgent",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	list := func(c *http.Client, query string) []string {
+		t.Helper()
+		var page httpapi.TicketPage
+		if code := e.call(c, http.MethodGet, "/projects/HRIS/tickets"+query, nil, &page); code != http.StatusOK {
+			t.Fatalf("%s: %d", query, code)
+		}
+		return ticketKeys(page)
+	}
+	for query, want := range map[string][]string{
+		"":                                   {"HRIS-2", "HRIS-1"}, // latest update first; HRIS-3 is out of scope
+		"?sort=key":                          {"HRIS-1", "HRIS-2"},
+		"?sort=priority":                     {"HRIS-2", "HRIS-1"},
+		"?mine=true":                         {"HRIS-2"},
+		"?core=true":                         {"HRIS-2"},
+		fmt.Sprintf("?client_id=%d", w.a.ID): {"HRIS-1"},
+		"?type=feature":                      {"HRIS-2"},
+		fmt.Sprintf("?status_id=%d", st.Items[1].Id): {"HRIS-1"},
+		"?category=todo":                    {"HRIS-2"},
+		fmt.Sprintf("?node_id=%d", w.hr.ID): {"HRIS-2", "HRIS-1"}, // sub-nodes count (AC-MR-4)
+		fmt.Sprintf("?node_id=%d", w.ot.ID): {"HRIS-1"},
+		"?missing=reason":                   {"HRIS-1"},
+		"?missing=menus":                    {},
+		"?q=payslip":                        {"HRIS-2"},
+		"?q=hris-1":                         {"HRIS-1"},
+	} {
+		if got := list(w.pm, query); !slices.Equal(got, want) {
+			t.Errorf("%q: %v, want %v", query, got, want)
+		}
+	}
+	if got := list(admin, ""); !slices.Equal(got, []string{"HRIS-2", "HRIS-1", "HRIS-3"}) {
+		t.Errorf("admin: %v", got)
+	}
+	var page httpapi.TicketPage
+	e.call(w.pm, http.MethodGet, "/projects/HRIS/tickets?sort=key", nil, &page)
+	first, second := page.Items[0], page.Items[1]
+	if first.Client == nil || first.Client.Name != "Client A" || !slices.Equal(first.NodeNames, []string{"Overtime Approval"}) ||
+		!first.MissingReason || second.Assignee == nil || second.Assignee.Name != "pm@example.com" || second.MissingReason ||
+		second.Priority != httpapi.PriorityUrgent {
+		t.Fatalf("rows: %+v %+v", first, second)
+	}
+}
+
+func TestTicketListPagesByCursor(t *testing.T) {
+	e := newEnv(t)
+	p := e.seedProject("HRIS")
+	admin, au := e.signedIn("admin@example.com", true)
+	for i := 1; i <= 5; i++ {
+		e.seedTicket(p, au, fmt.Sprintf("Ticket number %d", i), nil)
+	}
+	var got [][]string
+	path := "/projects/HRIS/tickets?sort=key&limit=2"
+	for {
+		var page httpapi.TicketPage
+		if code := e.call(admin, http.MethodGet, path, nil, &page); code != http.StatusOK {
+			t.Fatalf("page: %d", code)
+		}
+		got = append(got, ticketKeys(page))
+		if page.NextCursor == nil {
+			break
+		}
+		path = "/projects/HRIS/tickets?sort=key&limit=2&cursor=" + *page.NextCursor
+	}
+	if fmt.Sprint(got) != "[[HRIS-1 HRIS-2] [HRIS-3 HRIS-4] [HRIS-5]]" {
+		t.Fatalf("pages: %v", got)
+	}
+	if code := e.call(admin, http.MethodGet, "/projects/HRIS/tickets?cursor=nope", nil, nil); code != http.StatusBadRequest {
+		t.Fatalf("bad cursor: %d", code)
+	}
+}

@@ -1,6 +1,7 @@
 package httpapi_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"slices"
@@ -21,28 +22,35 @@ import (
 //	  budi   member, Client B
 //	  citra  viewer, Clients A and C
 //	plus admin, a system admin who belongs to no project.
+//
+//	Tickets: HRIS-1 core, HRIS-2 Client A, HRIS-3 Client B (with a file),
+//	HRIS-4 Client C, PAY-1 Client C.
 
 var suiteUsers = []string{"admin", "hana", "ani", "budi", "citra", "dodi"}
 
 type world struct {
-	as       map[string]*http.Client
-	clients  map[string]db.Client
-	nodes    map[string]db.Node
-	contacts map[string]int64
+	as         map[string]*http.Client
+	users      map[string]db.User
+	clients    map[string]db.Client
+	nodes      map[string]db.Node
+	contacts   map[string]int64
+	fileB      int64 // an attachment of HRIS-3
+	inProgress int64 // HRIS's "In progress" status
 }
 
 func seedWorld(e *env) world {
-	w := world{as: map[string]*http.Client{}, clients: map[string]db.Client{}, nodes: map[string]db.Node{}, contacts: map[string]int64{}}
+	w := world{as: map[string]*http.Client{}, users: map[string]db.User{}, clients: map[string]db.Client{},
+		nodes: map[string]db.Node{}, contacts: map[string]int64{}}
 	for _, name := range []string{"A", "B", "C"} {
 		w.clients[name] = e.seedClient("Client " + name)
 	}
 	a, b, c := w.clients["A"], w.clients["B"], w.clients["C"]
 	hris := e.seedProject("HRIS", a, b, c)
 	pay := e.seedProject("PAY", a, c)
-	u := map[string]db.User{}
 	for _, name := range suiteUsers {
-		w.as[name], u[name] = e.signedIn(name+"@example.com", name == "admin")
+		w.as[name], w.users[name] = e.signedIn(name+"@example.com", name == "admin")
 	}
+	u := w.users
 	e.seedMember(u["hana"], hris, "admin")
 	e.seedMember(u["ani"], hris, "member")
 	e.seedMember(u["budi"], hris, "member", b)
@@ -72,10 +80,23 @@ func seedWorld(e *env) world {
 	w.contacts["Andi"] = e.seedContact("Andi", &a)
 	w.contacts["Bayu"] = e.seedContact("Bayu", &b)
 	w.contacts["Cahya"] = e.seedContact("Cahya", &c)
+
+	e.seedTicket(hris, u["hana"], "Core fix", nil)
+	e.seedTicket(hris, u["hana"], "Client A request", &a)
+	e.seedTicket(hris, u["hana"], "Client B request", &b)
+	e.seedTicket(hris, u["hana"], "Client C request", &c)
+	e.seedTicket(pay, u["dodi"], "PAY Client C request", &c)
+	_, file, _ := upload(e, w.as["hana"], "HRIS-3", "b.txt", []byte("for Client B"))
+	w.fileB = file.Id
+	statuses, err := e.q.ListStatuses(context.Background(), hris.ID)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	w.inProgress = statuses[1].ID
 	return w
 }
 
-// listed returns the sorted keys (projects) or names of a list response.
+// listed returns the sorted keys (projects, tickets) or names of a list response.
 func listed(e *env, c *http.Client, path string) ([]string, int) {
 	var list struct {
 		Items []struct{ Key, Name string } `json:"items"`
@@ -101,6 +122,9 @@ func TestPermissionSuiteReads(t *testing.T) {
 	allContacts := []string{"Andi", "Bayu", "Cahya", "Dewi"}
 	abc := []string{"Client A", "Client B", "Client C"}
 	hrisMembers := []string{"ani@example.com", "budi@example.com", "citra@example.com", "hana@example.com"}
+	hrisTickets := []string{"HRIS-1", "HRIS-2", "HRIS-3", "HRIS-4"}
+	assignees := []string{"ani@example.com", "budi@example.com", "hana@example.com"}
+	statuses := []string{"Cancelled", "Done", "In progress", "In review", "To do"}
 	for _, c := range []struct {
 		path string
 		see  map[string][]string // these users get exactly these rows
@@ -121,10 +145,23 @@ func TestPermissionSuiteReads(t *testing.T) {
 		}, nil},
 		{"/clients", map[string][]string{"admin": abc, "hana": abc},
 			map[string]int{"ani": 403, "budi": 403, "citra": 403, "dodi": 403}},
-		{"/projects/HRIS/clients", map[string][]string{"admin": abc, "hana": abc},
-			map[string]int{"ani": 403, "budi": 403, "citra": 403, "dodi": 404}},
+		{"/projects/HRIS/clients", map[string][]string{
+			"admin": abc, "hana": abc, "ani": abc, "budi": {"Client B"}, "citra": {"Client A", "Client C"},
+		}, map[string]int{"dodi": 404}},
 		{"/projects/HRIS/members", map[string][]string{"admin": hrisMembers, "hana": hrisMembers},
 			map[string]int{"ani": 403, "budi": 403, "citra": 403, "dodi": 404}},
+		{"/projects/HRIS/tickets", map[string][]string{
+			"admin": hrisTickets, "hana": hrisTickets, "ani": hrisTickets,
+			"budi": {"HRIS-1", "HRIS-3"}, "citra": {"HRIS-1", "HRIS-2", "HRIS-4"},
+		}, map[string]int{"dodi": 404}},
+		{"/projects/PAY/tickets", map[string][]string{"admin": {"PAY-1"}, "citra": {"PAY-1"}, "dodi": {"PAY-1"}},
+			map[string]int{"hana": 404, "ani": 404, "budi": 404}},
+		{"/projects/HRIS/assignees", map[string][]string{
+			"admin": assignees, "hana": assignees, "ani": assignees, "budi": assignees, "citra": assignees,
+		}, map[string]int{"dodi": 404}},
+		{"/projects/HRIS/statuses", map[string][]string{
+			"admin": statuses, "hana": statuses, "ani": statuses, "budi": statuses, "citra": statuses,
+		}, map[string]int{"dodi": 404}},
 	} {
 		for _, user := range suiteUsers {
 			got, code := listed(e, w.as[user], c.path)
@@ -137,13 +174,22 @@ func TestPermissionSuiteReads(t *testing.T) {
 			}
 		}
 	}
-	for _, user := range suiteUsers {
-		want := http.StatusOK
-		if user == "dodi" {
-			want = http.StatusNotFound
-		}
-		if code := e.call(w.as[user], http.MethodGet, "/projects/HRIS", nil, nil); code != want {
-			t.Errorf("GET /projects/HRIS as %s: %d, want %d", user, code, want)
+	// Single things: the users who may open them get 200, everyone else 404.
+	for path, see := range map[string][]string{
+		"/projects/HRIS":                        {"admin", "hana", "ani", "budi", "citra"},
+		"/tickets/HRIS-2":                       {"admin", "hana", "ani", "citra"},
+		"/tickets/HRIS-2/activity":              {"admin", "hana", "ani", "citra"},
+		"/tickets/HRIS-3":                       {"admin", "hana", "ani", "budi"},
+		fmt.Sprintf("/attachments/%d", w.fileB): {"admin", "hana", "ani", "budi"},
+	} {
+		for _, user := range suiteUsers {
+			want := http.StatusNotFound
+			if slices.Contains(see, user) {
+				want = http.StatusOK
+			}
+			if code := e.call(w.as[user], http.MethodGet, path, nil, nil); code != want {
+				t.Errorf("GET %s as %s: %d, want %d", path, user, code, want)
+			}
 		}
 	}
 	// R-MR-8: a client-specific menu names only in-scope clients.
@@ -172,33 +218,51 @@ func TestPermissionSuiteWrites(t *testing.T) {
 	contact := func(name string) string { return fmt.Sprintf("/contacts/%d", w.contacts[name]) }
 	client := func(name string) string { return fmt.Sprintf("/clients/%d", w.clients[name].ID) }
 	menu := map[string]any{"type": "menu", "name": "X"}
+	coreTicket := map[string]any{"title": "Core clean-up", "type": "bug", "node_ids": []int64{}}
+	aTicket := map[string]any{"title": "Client A change", "type": "bug", "node_ids": []int64{}, "client_id": w.clients["A"].ID}
+	edit := map[string]any{"title": "Taken over", "type": "bug", "node_ids": []int64{}, "requester_user_id": w.users["budi"].ID}
+	ifMatch := map[string]string{"If-Match": `"1"`}
 	for _, c := range []struct {
 		user, method, path string
+		headers            map[string]string
 		body               any
 		want               int
 	}{
-		{"hana", http.MethodPost, "/projects", map[string]any{"key": "NEW", "name": "New"}, 403},
-		{"ani", http.MethodPatch, "/projects/HRIS", map[string]any{"name": "X"}, 403},
-		{"dodi", http.MethodPatch, "/projects/HRIS", map[string]any{"name": "X"}, 404},
-		{"ani", http.MethodPut, "/projects/HRIS/clients", map[string]any{"client_ids": []int64{}}, 403},
-		{"ani", http.MethodPut, "/projects/HRIS/members", map[string]any{"members": []any{}}, 403},
-		{"hana", http.MethodPatch, client("A"), map[string]any{"name": "X"}, 403},
-		{"ani", http.MethodPost, "/clients", map[string]any{"name": "X"}, 403},
-		{"ani", http.MethodPost, "/projects/HRIS/nodes", menu, 403},
-		{"dodi", http.MethodPost, "/projects/HRIS/nodes", menu, 404},
-		{"ani", http.MethodPatch, node("Leave Request"), map[string]any{"name": "X"}, 403},
-		{"budi", http.MethodPatch, node("Overtime Approval"), map[string]any{"name": "X"}, 404}, // hidden by scope
-		{"budi", http.MethodDelete, node("OT Rules"), nil, 404},                                 // under a hidden menu
-		{"dodi", http.MethodDelete, node("Leave Request"), nil, 404},
-		{"budi", http.MethodPatch, contact("Andi"), map[string]any{"name": "X"}, 404},
-		{"citra", http.MethodPatch, contact("Andi"), map[string]any{"name": "X"}, 403}, // a viewer for Client A
-		{"budi", http.MethodPost, "/contacts", map[string]any{"name": "X", "client_id": w.clients["A"].ID}, 422},
-		{"dodi", http.MethodPost, "/contacts", map[string]any{"name": "X", "client_id": w.clients["B"].ID}, 422}, // B is no PAY client
+		{"hana", http.MethodPost, "/projects", nil, map[string]any{"key": "NEW", "name": "New"}, 403},
+		{"ani", http.MethodPatch, "/projects/HRIS", nil, map[string]any{"name": "X"}, 403},
+		{"dodi", http.MethodPatch, "/projects/HRIS", nil, map[string]any{"name": "X"}, 404},
+		{"ani", http.MethodPut, "/projects/HRIS/clients", nil, map[string]any{"client_ids": []int64{}}, 403},
+		{"ani", http.MethodPut, "/projects/HRIS/members", nil, map[string]any{"members": []any{}}, 403},
+		{"ani", http.MethodPut, "/projects/HRIS/statuses", nil, map[string]any{"statuses": []any{}}, 403},
+		{"hana", http.MethodPatch, client("A"), nil, map[string]any{"name": "X"}, 403},
+		{"ani", http.MethodPost, "/clients", nil, map[string]any{"name": "X"}, 403},
+		{"ani", http.MethodPost, "/projects/HRIS/nodes", nil, menu, 403},
+		{"dodi", http.MethodPost, "/projects/HRIS/nodes", nil, menu, 404},
+		{"ani", http.MethodPatch, node("Leave Request"), nil, map[string]any{"name": "X"}, 403},
+		{"budi", http.MethodPatch, node("Overtime Approval"), nil, map[string]any{"name": "X"}, 404}, // hidden by scope
+		{"budi", http.MethodDelete, node("OT Rules"), nil, nil, 404},                                 // under a hidden menu
+		{"dodi", http.MethodDelete, node("Leave Request"), nil, nil, 404},
+		{"budi", http.MethodPatch, contact("Andi"), nil, map[string]any{"name": "X"}, 404},
+		{"citra", http.MethodPatch, contact("Andi"), nil, map[string]any{"name": "X"}, 403}, // a viewer for Client A
+		{"budi", http.MethodPost, "/contacts", nil, map[string]any{"name": "X", "client_id": w.clients["A"].ID}, 422},
+		{"dodi", http.MethodPost, "/contacts", nil, map[string]any{"name": "X", "client_id": w.clients["B"].ID}, 422}, // B is no PAY client
+		{"budi", http.MethodPost, "/projects/HRIS/tickets", nil, aTicket, 422},                                        // Client A is outside budi's scope
+		{"citra", http.MethodPost, "/projects/HRIS/tickets", nil, coreTicket, 403},
+		{"dodi", http.MethodPost, "/projects/HRIS/tickets", nil, coreTicket, 404},
+		{"budi", http.MethodPut, "/tickets/HRIS-2", ifMatch, edit, 404},
+		{"citra", http.MethodPost, "/tickets/HRIS-2/transition", nil, map[string]any{"status_id": w.inProgress}, 403},
+		{"dodi", http.MethodPost, "/tickets/HRIS-1/transition", nil, map[string]any{"status_id": w.inProgress}, 404},
+		{"citra", http.MethodPost, "/tickets/HRIS-2/comments", nil, map[string]any{"body": "Seen"}, 403},
+		{"budi", http.MethodPost, "/tickets/HRIS-2/comments", nil, map[string]any{"body": "Hi"}, 404},
+		{"citra", http.MethodDelete, fmt.Sprintf("/attachments/%d", w.fileB), nil, nil, 404},
 		// Allowed, as controls: the suite must not pass by refusing everything.
-		{"hana", http.MethodPatch, node("Leave Request"), map[string]any{"name": "Leave Requests"}, 200},
-		{"citra", http.MethodPatch, contact("Cahya"), map[string]any{"name": "Cahya", "client_id": w.clients["C"].ID}, 200},
+		{"hana", http.MethodPatch, node("Leave Request"), nil, map[string]any{"name": "Leave Requests"}, 200},
+		{"citra", http.MethodPatch, contact("Cahya"), nil, map[string]any{"name": "Cahya", "client_id": w.clients["C"].ID}, 200},
+		{"budi", http.MethodPost, "/projects/HRIS/tickets", nil, coreTicket, 201},
+		{"ani", http.MethodPost, "/tickets/HRIS-3/comments", nil, map[string]any{"body": "Checked"}, 201},
+		{"budi", http.MethodPost, "/tickets/HRIS-3/transition", nil, map[string]any{"status_id": w.inProgress}, 200},
 	} {
-		if code := e.call(w.as[c.user], c.method, c.path, c.body, nil); code != c.want {
+		if code, _ := e.callWith(w.as[c.user], c.method, c.path, c.headers, c.body, nil); code != c.want {
 			t.Errorf("%s %s as %s: %d, want %d", c.method, c.path, c.user, code, c.want)
 		}
 	}

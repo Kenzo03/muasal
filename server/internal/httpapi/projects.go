@@ -139,6 +139,11 @@ func (s *Server) UpdateProject(w http.ResponseWriter, r *http.Request, key strin
 		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields", fields...)
 		return
 	}
+	if in.Key != nil && *in.Key != pc.project.Key && pc.project.TicketSeq > 0 {
+		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields",
+			FieldError{Field: "key", Code: "project_key_fixed", Message: "The key cannot change once the project has tickets"})
+		return
+	}
 	ctx := r.Context()
 	var updated db.Project
 	err := s.inTx(ctx, func(q *db.Queries) error {

@@ -163,7 +163,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** @description Project admins only. */
+        /** @description Every member; members see only the clients in their scope. */
         get: operations["listProjectClients"];
         /** @description Project admins only. Replaces the linked clients; removing one that menus or member scopes use answers 409 client_in_use. */
         put: operations["setProjectClients"];
@@ -306,6 +306,199 @@ export interface paths {
         head?: never;
         /** @description Project admins only. Edits fields, and moves the node when `move` is present. */
         patch: operations["updateNode"];
+        trace?: never;
+    };
+    "/projects/{key}/statuses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description Every member; the board, the list and the ticket page need them. */
+        get: operations["getStatuses"];
+        /** @description Project admins only. Replaces the ordered list; tickets of a removed status move as `move_to` says. */
+        put: operations["setStatuses"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{key}/assignees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description Members who can own tickets (not viewers). */
+        get: operations["listAssignees"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{key}/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description The project's tickets the caller may see, filtered and sorted; pages follow next_cursor. */
+        get: operations["listTickets"];
+        put?: never;
+        /** @description Members and project admins. The ticket starts in the default status unless an open status_id is given. */
+        post: operations["createTicket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tickets/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get: operations["getTicket"];
+        /** @description Members and project admins. Replaces every editable field; a stale If-Match answers 412. */
+        put: operations["updateTicket"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tickets/{key}/transition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Members and project admins. Moves among open statuses; closing answers 422 close_unavailable until the close dialog ships. */
+        post: operations["transitionTicket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tickets/{key}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get: operations["getTicketActivity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tickets/{key}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Members and project admins. Internal unless internal is false. */
+        post: operations["createComment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/comments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description The author only. Readers then see "Comment deleted". */
+        delete: operations["deleteComment"];
+        options?: never;
+        head?: never;
+        /** @description The author only. The history keeps the earlier text. */
+        patch: operations["updateComment"];
+        trace?: never;
+    };
+    "/tickets/{key}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Members and project admins. Up to 25 MB; images, PDF, Office and OpenDocument files, text, CSV, logs and ZIP. */
+        post: operations["uploadAttachment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/attachments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        /** @description Anyone who can see the ticket. Images display inline; other files download. */
+        get: operations["downloadAttachment"];
+        put?: never;
+        post?: never;
+        /** @description The uploader or a project admin. */
+        delete: operations["deleteAttachment"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
 }
@@ -508,6 +701,7 @@ export interface components {
             clients: components["schemas"]["NodeClient"][];
             /** Format: int32 */
             position: number;
+            archived: boolean;
         };
         NodeList: {
             items: components["schemas"]["Node"][];
@@ -534,6 +728,8 @@ export interface components {
             client_specific?: boolean;
             client_ids?: number[];
             move?: components["schemas"]["NodeMove"];
+            /** @description Archive (true) or restore (false); a linked node is archived */
+            archived?: boolean;
         };
         NodeMove: {
             /**
@@ -546,6 +742,226 @@ export interface components {
              * @description Index among the new siblings; omitted puts the node last.
              */
             position?: number;
+        };
+        Ref: {
+            /** Format: int64 */
+            id: number;
+            name: string;
+        };
+        RefList: {
+            items: components["schemas"]["Ref"][];
+        };
+        /** @enum {string} */
+        StatusCategory: "todo" | "in_progress" | "done" | "cancelled";
+        Status: {
+            /** Format: int64 */
+            id: number;
+            name: string;
+            category: components["schemas"]["StatusCategory"];
+            /** @example #2563EB */
+            color: string;
+            /** Format: int32 */
+            position: number;
+            is_default: boolean;
+        };
+        StatusList: {
+            items: components["schemas"]["Status"][];
+        };
+        StatusInput: {
+            /**
+             * Format: int64
+             * @description An existing status; omitted adds one.
+             */
+            id?: number;
+            name: string;
+            category: components["schemas"]["StatusCategory"];
+            /** @example #2563EB */
+            color: string;
+            is_default?: boolean;
+        };
+        StatusMove: {
+            /**
+             * Format: int64
+             * @description A removed status.
+             */
+            from: number;
+            /**
+             * Format: int64
+             * @description A kept status of the same open or closed kind.
+             */
+            to: number;
+        };
+        StatusesUpdate: {
+            statuses: components["schemas"]["StatusInput"][];
+            move_to?: components["schemas"]["StatusMove"][];
+        };
+        /** @enum {string} */
+        TicketType: "bug" | "change_request" | "feature";
+        /** @enum {string} */
+        Priority: "low" | "medium" | "high" | "urgent";
+        TicketRequester: {
+            /** @enum {string} */
+            kind: "contact" | "user";
+            /** Format: int64 */
+            id: number;
+            name: string;
+            /** @example HR Manager */
+            title: string | null;
+        };
+        NodeRef: {
+            /** Format: int64 */
+            id: number;
+            name: string;
+            archived: boolean;
+        };
+        Attachment: {
+            /** Format: int64 */
+            id: number;
+            filename: string;
+            content_type: string;
+            /** Format: int64 */
+            size_bytes: number;
+            uploader: components["schemas"]["Ref"];
+            /** Format: date-time */
+            created_at: string;
+        };
+        Ticket: {
+            /** Format: int64 */
+            id: number;
+            /** @example HRIS-231 */
+            key: string;
+            project_key: string;
+            title: string;
+            type: components["schemas"]["TicketType"];
+            description: string;
+            reason: string;
+            status: components["schemas"]["Status"];
+            client?: components["schemas"]["Ref"];
+            requester: components["schemas"]["TicketRequester"];
+            reporter: components["schemas"]["Ref"];
+            assignee?: components["schemas"]["Ref"];
+            priority: components["schemas"]["Priority"];
+            /** Format: date */
+            due_date: string | null;
+            nodes: components["schemas"]["NodeRef"][];
+            attachments: components["schemas"]["Attachment"][];
+            /** Format: int32 */
+            version: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        TicketCreate: {
+            type: components["schemas"]["TicketType"];
+            title: string;
+            /**
+             * Format: int64
+             * @description Omitted for core work (all clients).
+             */
+            client_id?: number;
+            /** Format: int64 */
+            requester_contact_id?: number;
+            /**
+             * Format: int64
+             * @description Without a requester the reporter is the requester.
+             */
+            requester_user_id?: number;
+            node_ids: number[];
+            reason?: string;
+            description?: string;
+            /** Format: int64 */
+            assignee_id?: number;
+            priority?: components["schemas"]["Priority"];
+            /** Format: date */
+            due_date?: string;
+            /**
+             * Format: int64
+             * @description An open status; omitted means the project's default.
+             */
+            status_id?: number;
+        };
+        /** @description Replaces every editable field; send the current value of each field you keep. */
+        TicketUpdate: {
+            type: components["schemas"]["TicketType"];
+            title: string;
+            /**
+             * Format: int64
+             * @description Omitted for core work (all clients).
+             */
+            client_id?: number;
+            /** Format: int64 */
+            requester_contact_id?: number;
+            /**
+             * Format: int64
+             * @description One of the two requester fields is required.
+             */
+            requester_user_id?: number;
+            node_ids: number[];
+            reason?: string;
+            description?: string;
+            /** Format: int64 */
+            assignee_id?: number;
+            priority?: components["schemas"]["Priority"];
+            /** Format: date */
+            due_date?: string;
+        };
+        TransitionRequest: {
+            /** Format: int64 */
+            status_id: number;
+        };
+        TicketSummary: {
+            /** Format: int64 */
+            id: number;
+            key: string;
+            title: string;
+            type: components["schemas"]["TicketType"];
+            priority: components["schemas"]["Priority"];
+            /** Format: date */
+            due_date: string | null;
+            /** Format: int64 */
+            status_id: number;
+            client?: components["schemas"]["Ref"];
+            assignee?: components["schemas"]["Ref"];
+            requester_name: string;
+            node_names: string[];
+            missing_reason: boolean;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        TicketPage: {
+            items: components["schemas"]["TicketSummary"][];
+            next_cursor: string | null;
+        };
+        ActivityItem: {
+            /** @enum {string} */
+            kind: "comment" | "event";
+            /** Format: date-time */
+            at: string;
+            actor?: components["schemas"]["Ref"];
+            /** Format: int64 */
+            comment_id?: number;
+            internal?: boolean;
+            /** @description A comment's text; absent when deleted */
+            body?: string;
+            deleted?: boolean;
+            edited?: boolean;
+            /** @example transition */
+            action?: string;
+            changes?: {
+                [key: string]: unknown;
+            };
+        };
+        ActivityList: {
+            items: components["schemas"]["ActivityItem"][];
+        };
+        CommentInput: {
+            body: string;
+            /** @description Defaults to true; false marks the comment client-safe. */
+            internal?: boolean;
+        };
+        CommentUpdate: {
+            body: string;
         };
     };
     responses: {
@@ -1049,6 +1465,8 @@ export interface operations {
             query?: {
                 q?: string;
                 client_id?: number;
+                /** @description Only internal people (no client). */
+                internal?: boolean;
             };
             header?: never;
             path?: never;
@@ -1122,7 +1540,10 @@ export interface operations {
     };
     listNodes: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Project admins only; also list archived nodes. */
+                archived?: boolean;
+            };
             header?: never;
             path: {
                 key: string;
@@ -1214,6 +1635,400 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Node"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getStatuses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project's statuses in order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatusList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    setStatuses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StatusesUpdate"];
+            };
+        };
+        responses: {
+            /** @description The statuses now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatusList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listAssignees: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Assignable members by name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listTickets: {
+        parameters: {
+            query?: {
+                status_id?: number;
+                category?: components["schemas"]["StatusCategory"];
+                /** @description Only To do and In progress statuses. */
+                open?: boolean;
+                type?: components["schemas"]["TicketType"];
+                client_id?: number;
+                /** @description Only core work (no client). */
+                core?: boolean;
+                assignee_id?: number;
+                /** @description Only tickets assigned to the caller. */
+                mine?: boolean;
+                /** @description Tickets on this node or its sub-nodes. */
+                node_id?: number;
+                /** @description Words in the title */
+                q?: string;
+                missing?: "reason" | "menus";
+                sort?: "updated" | "created" | "key" | "priority" | "due";
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of tickets. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketCreate"];
+            };
+        };
+        responses: {
+            /** @description The new ticket; ETag carries its version. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ticket"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The ticket; ETag carries its version. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ticket"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateTicket: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketUpdate"];
+            };
+        };
+        responses: {
+            /** @description The updated ticket; ETag carries its new version. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ticket"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    transitionTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description The ticket in its new status. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ticket"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getTicketActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Comments and history, oldest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommentInput"];
+            };
+        };
+        responses: {
+            /** @description The comment. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityItem"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommentUpdate"];
+            };
+        };
+        responses: {
+            /** @description The comment. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityItem"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    uploadAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The stored file. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Attachment"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    downloadAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed from the ticket. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

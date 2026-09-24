@@ -35,7 +35,10 @@ type env struct {
 
 func newEnv(t *testing.T) *env {
 	d := testdb.New(t)
-	cfg := config.Config{DatabaseURL: d.AppURL, PublicURL: origin, ListenAddr: ":0"}
+	cfg := config.Config{
+		DatabaseURL: d.AppURL, PublicURL: origin, ListenAddr: ":0",
+		AttachmentsDir: t.TempDir(), AttachmentMaxBytes: 64 << 10,
+	}
 	api := httpapi.New(cfg, d.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	srv := httptest.NewServer(api.Handler())
 	t.Cleanup(srv.Close)

@@ -196,7 +196,7 @@ paths:
     get:
       operationId: listProjectClients
       tags: [projects]
-      description: Project admins only.
+      description: Every member; members see only the clients in their scope.
       responses:
         "200":
           description: The clients linked to the project.
@@ -305,6 +305,7 @@ paths:
       parameters:
         - { name: q, in: query, required: false, schema: { type: string, maxLength: 200 } }
         - { name: client_id, in: query, required: false, schema: { type: integer, format: int64 } }
+        - { name: internal, in: query, schema: { type: boolean }, description: Only internal people (no client). }
       responses:
         "200":
           description: Matching contacts, by name.
@@ -354,6 +355,8 @@ paths:
       operationId: listNodes
       tags: [nodes]
       description: The tree as a flat list. Client-specific menus outside the caller's scope, and what is under them, are left out.
+      parameters:
+        - { name: archived, in: query, schema: { type: boolean }, description: Project admins only; also list archived nodes. }
       responses:
         "200":
           description: Live nodes; siblings in position order.
@@ -402,6 +405,247 @@ paths:
       description: Project admins only. A node with sub-nodes answers 409 node_has_children.
       responses:
         "204": { description: Deleted. }
+        default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/statuses:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getStatuses
+      tags: [projects]
+      description: Every member; the board, the list and the ticket page need them.
+      responses:
+        "200":
+          description: The project's statuses in order.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StatusList" }
+        default: { $ref: "#/components/responses/Problem" }
+    put:
+      operationId: setStatuses
+      tags: [projects]
+      description: Project admins only. Replaces the ordered list; tickets of a removed status move as `move_to` says.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StatusesUpdate" }
+      responses:
+        "200":
+          description: The statuses now.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StatusList" }
+        default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/assignees:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listAssignees
+      tags: [projects]
+      description: Members who can own tickets (not viewers).
+      responses:
+        "200":
+          description: Assignable members by name.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RefList" }
+        default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/tickets:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listTickets
+      tags: [tickets]
+      description: The project's tickets the caller may see, filtered and sorted; pages follow next_cursor.
+      parameters:
+        - { name: status_id, in: query, schema: { type: integer, format: int64 } }
+        - { name: category, in: query, schema: { $ref: "#/components/schemas/StatusCategory" } }
+        - { name: open, in: query, schema: { type: boolean }, description: Only To do and In progress statuses. }
+        - { name: type, in: query, schema: { $ref: "#/components/schemas/TicketType" } }
+        - { name: client_id, in: query, schema: { type: integer, format: int64 } }
+        - { name: core, in: query, schema: { type: boolean }, description: Only core work (no client). }
+        - { name: assignee_id, in: query, schema: { type: integer, format: int64 } }
+        - { name: mine, in: query, schema: { type: boolean }, description: Only tickets assigned to the caller. }
+        - { name: node_id, in: query, schema: { type: integer, format: int64 }, description: Tickets on this node or its sub-nodes. }
+        - { name: q, in: query, schema: { type: string, maxLength: 200 }, description: Words in the title, or a ticket key. }
+        - { name: missing, in: query, schema: { type: string, enum: [reason, menus] } }
+        - { name: sort, in: query, schema: { type: string, enum: [updated, created, key, priority, due] } }
+        - { name: limit, in: query, schema: { type: integer, format: int32, minimum: 1, maximum: 1000 } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: One page of tickets.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TicketPage" }
+        default: { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createTicket
+      tags: [tickets]
+      description: Members and project admins. The ticket starts in the default status unless an open status_id is given.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TicketCreate" }
+      responses:
+        "201":
+          description: The new ticket; ETag carries its version.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Ticket" }
+        default: { $ref: "#/components/responses/Problem" }
+  /tickets/{key}:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string, example: HRIS-231 } }
+    get:
+      operationId: getTicket
+      tags: [tickets]
+      responses:
+        "200":
+          description: The ticket; ETag carries its version.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Ticket" }
+        default: { $ref: "#/components/responses/Problem" }
+    put:
+      operationId: updateTicket
+      tags: [tickets]
+      description: Members and project admins. Replaces every editable field; a stale If-Match answers 412.
+      parameters:
+        - { name: If-Match, in: header, required: true, schema: { type: string, example: '"7"' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TicketUpdate" }
+      responses:
+        "200":
+          description: The updated ticket; ETag carries its new version.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Ticket" }
+        default: { $ref: "#/components/responses/Problem" }
+  /tickets/{key}/transition:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: transitionTicket
+      tags: [tickets]
+      description: Members and project admins. Moves among open statuses; closing answers 422 close_unavailable until the close dialog ships.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TransitionRequest" }
+      responses:
+        "200":
+          description: The ticket in its new status.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Ticket" }
+        default: { $ref: "#/components/responses/Problem" }
+  /tickets/{key}/activity:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getTicketActivity
+      tags: [tickets]
+      responses:
+        "200":
+          description: Comments and history, oldest first.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ActivityList" }
+        default: { $ref: "#/components/responses/Problem" }
+  /tickets/{key}/comments:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: createComment
+      tags: [tickets]
+      description: Members and project admins. Internal unless internal is false.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CommentInput" }
+      responses:
+        "201":
+          description: The comment.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ActivityItem" }
+        default: { $ref: "#/components/responses/Problem" }
+  /comments/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    patch:
+      operationId: updateComment
+      tags: [tickets]
+      description: The author only. The history keeps the earlier text.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CommentUpdate" }
+      responses:
+        "200":
+          description: The comment.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ActivityItem" }
+        default: { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: deleteComment
+      tags: [tickets]
+      description: The author only. Readers then see "Comment deleted".
+      responses:
+        "204": { description: Deleted. }
+        default: { $ref: "#/components/responses/Problem" }
+  /tickets/{key}/attachments:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: uploadAttachment
+      tags: [tickets]
+      description: Members and project admins. Up to 25 MB; images, PDF, Office and OpenDocument files, text, CSV, logs and ZIP.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "201":
+          description: The stored file.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Attachment" }
+        default: { $ref: "#/components/responses/Problem" }
+  /attachments/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    get:
+      operationId: downloadAttachment
+      tags: [tickets]
+      description: Anyone who can see the ticket. Images display inline; other files download.
+      responses:
+        "200":
+          description: The file.
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        default: { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: deleteAttachment
+      tags: [tickets]
+      description: The uploader or a project admin.
+      responses:
+        "204": { description: Removed from the ticket. }
         default: { $ref: "#/components/responses/Problem" }
 components:
   responses:
@@ -656,7 +900,7 @@ components:
         name: { type: string }
     Node:
       type: object
-      required: [id, parent_id, type, name, code, aliases, description, client_specific, clients, position]
+      required: [id, parent_id, type, name, code, aliases, description, client_specific, clients, position, archived]
       properties:
         id: { type: integer, format: int64 }
         parent_id: { type: integer, format: int64, nullable: true }
@@ -673,6 +917,7 @@ components:
           description: The node's clients within the caller's scope.
           items: { $ref: "#/components/schemas/NodeClient" }
         position: { type: integer, format: int32 }
+        archived: { type: boolean }
     NodeList:
       type: object
       required: [items]
@@ -713,8 +958,225 @@ components:
           type: array
           items: { type: integer, format: int64 }
         move: { $ref: "#/components/schemas/NodeMove" }
+        archived: { type: boolean, description: Archive (true) or restore (false); a linked node is archived, never deleted. }
     NodeMove:
       type: object
       properties:
         parent_id: { type: integer, format: int64, nullable: true, description: Omitted or null moves to the top level. }
         position: { type: integer, format: int32, minimum: 0, description: Index among the new siblings; omitted puts the node last. }
+    Ref:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+    RefList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Ref" }
+    StatusCategory:
+      type: string
+      enum: [todo, in_progress, done, cancelled]
+    Status:
+      type: object
+      required: [id, name, category, color, position, is_default]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        category: { $ref: "#/components/schemas/StatusCategory" }
+        color: { type: string, example: "#2563EB" }
+        position: { type: integer, format: int32 }
+        is_default: { type: boolean }
+    StatusList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Status" }
+    StatusInput:
+      type: object
+      required: [name, category, color]
+      properties:
+        id: { type: integer, format: int64, description: An existing status; omitted adds one. }
+        name: { type: string, maxLength: 50 }
+        category: { $ref: "#/components/schemas/StatusCategory" }
+        color: { type: string, example: "#2563EB" }
+        is_default: { type: boolean }
+    StatusMove:
+      type: object
+      required: [from, to]
+      properties:
+        from: { type: integer, format: int64, description: A removed status. }
+        to: { type: integer, format: int64, description: A kept status of the same open or closed kind. }
+    StatusesUpdate:
+      type: object
+      required: [statuses]
+      properties:
+        statuses:
+          type: array
+          items: { $ref: "#/components/schemas/StatusInput" }
+        move_to:
+          type: array
+          items: { $ref: "#/components/schemas/StatusMove" }
+    TicketType:
+      type: string
+      enum: [bug, change_request, feature]
+    Priority:
+      type: string
+      enum: [low, medium, high, urgent]
+    TicketRequester:
+      type: object
+      required: [kind, id, name, title]
+      properties:
+        kind: { type: string, enum: [contact, user] }
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        title: { type: string, nullable: true, example: HR Manager }
+    NodeRef:
+      type: object
+      required: [id, name, archived]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        archived: { type: boolean }
+    Attachment:
+      type: object
+      required: [id, filename, content_type, size_bytes, uploader, created_at]
+      properties:
+        id: { type: integer, format: int64 }
+        filename: { type: string }
+        content_type: { type: string }
+        size_bytes: { type: integer, format: int64 }
+        uploader: { $ref: "#/components/schemas/Ref" }
+        created_at: { type: string, format: date-time }
+    Ticket:
+      type: object
+      required: [id, key, project_key, title, type, description, reason, status, requester, reporter, priority, due_date, nodes, attachments, version, created_at, updated_at]
+      properties:
+        id: { type: integer, format: int64 }
+        key: { type: string, example: HRIS-231 }
+        project_key: { type: string }
+        title: { type: string }
+        type: { $ref: "#/components/schemas/TicketType" }
+        description: { type: string }
+        reason: { type: string }
+        status: { $ref: "#/components/schemas/Status" }
+        client: { $ref: "#/components/schemas/Ref" }
+        requester: { $ref: "#/components/schemas/TicketRequester" }
+        reporter: { $ref: "#/components/schemas/Ref" }
+        assignee: { $ref: "#/components/schemas/Ref" }
+        priority: { $ref: "#/components/schemas/Priority" }
+        due_date: { type: string, format: date, nullable: true }
+        nodes:
+          type: array
+          items: { $ref: "#/components/schemas/NodeRef" }
+        attachments:
+          type: array
+          items: { $ref: "#/components/schemas/Attachment" }
+        version: { type: integer, format: int32 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    TicketCreate:
+      type: object
+      required: [type, title, node_ids]
+      properties:
+        type: { $ref: "#/components/schemas/TicketType" }
+        title: { type: string, maxLength: 200 }
+        client_id: { type: integer, format: int64, description: Omitted for core work (all clients). }
+        requester_contact_id: { type: integer, format: int64 }
+        requester_user_id: { type: integer, format: int64, description: Without a requester the reporter is the requester. }
+        node_ids:
+          type: array
+          items: { type: integer, format: int64 }
+        reason: { type: string, maxLength: 2000 }
+        description: { type: string, maxLength: 50000 }
+        assignee_id: { type: integer, format: int64 }
+        priority: { $ref: "#/components/schemas/Priority" }
+        due_date: { type: string, format: date }
+        status_id: { type: integer, format: int64, description: An open status; omitted means the project's default. }
+    TicketUpdate:
+      type: object
+      description: Replaces every editable field; send the current value of each field you keep.
+      required: [type, title, node_ids]
+      properties:
+        type: { $ref: "#/components/schemas/TicketType" }
+        title: { type: string, maxLength: 200 }
+        client_id: { type: integer, format: int64, description: Omitted for core work (all clients). }
+        requester_contact_id: { type: integer, format: int64 }
+        requester_user_id: { type: integer, format: int64, description: One of the two requester fields is required. }
+        node_ids:
+          type: array
+          items: { type: integer, format: int64 }
+        reason: { type: string, maxLength: 2000 }
+        description: { type: string, maxLength: 50000 }
+        assignee_id: { type: integer, format: int64 }
+        priority: { $ref: "#/components/schemas/Priority" }
+        due_date: { type: string, format: date }
+    TransitionRequest:
+      type: object
+      required: [status_id]
+      properties:
+        status_id: { type: integer, format: int64 }
+    TicketSummary:
+      type: object
+      required: [id, key, title, type, priority, due_date, status_id, requester_name, node_names, missing_reason, updated_at]
+      properties:
+        id: { type: integer, format: int64 }
+        key: { type: string }
+        title: { type: string }
+        type: { $ref: "#/components/schemas/TicketType" }
+        priority: { $ref: "#/components/schemas/Priority" }
+        due_date: { type: string, format: date, nullable: true }
+        status_id: { type: integer, format: int64 }
+        client: { $ref: "#/components/schemas/Ref" }
+        assignee: { $ref: "#/components/schemas/Ref" }
+        requester_name: { type: string }
+        node_names:
+          type: array
+          items: { type: string }
+        missing_reason: { type: boolean }
+        updated_at: { type: string, format: date-time }
+    TicketPage:
+      type: object
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/TicketSummary" }
+        next_cursor: { type: string, nullable: true }
+    ActivityItem:
+      type: object
+      required: [kind, at]
+      properties:
+        kind: { type: string, enum: [comment, event] }
+        at: { type: string, format: date-time }
+        actor: { $ref: "#/components/schemas/Ref" }
+        comment_id: { type: integer, format: int64 }
+        internal: { type: boolean }
+        body: { type: string, description: A comment's text; absent when deleted, except for system admins. }
+        deleted: { type: boolean }
+        edited: { type: boolean }
+        action: { type: string, example: transition }
+        changes: { type: object, additionalProperties: true }
+    ActivityList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ActivityItem" }
+    CommentInput:
+      type: object
+      required: [body]
+      properties:
+        body: { type: string, maxLength: 20000 }
+        internal: { type: boolean, description: Defaults to true; false marks the comment client-safe. }
+    CommentUpdate:
+      type: object
+      required: [body]
+      properties:
+        body: { type: string, maxLength: 20000 }

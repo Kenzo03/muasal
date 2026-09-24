@@ -34,4 +34,7 @@ export default async function globalSetup() {
   const tree = createAdmin("Tree Admin");
   process.env.E2E_TREE_ADMIN_EMAIL = tree.email;
   process.env.E2E_TREE_ADMIN_LINK = tree.link;
+  const tickets = createAdmin("Ticket Admin");
+  process.env.E2E_TICKET_ADMIN_EMAIL = tickets.email;
+  process.env.E2E_TICKET_ADMIN_LINK = tickets.link;
 }

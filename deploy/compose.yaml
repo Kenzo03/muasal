@@ -30,6 +30,7 @@ services:
       DATABASE_URL: postgres://app:${DB_APP_PASSWORD}@db:5432/muasal?sslmode=disable
       MIGRATE_DATABASE_URL: postgres://owner:${DB_OWNER_PASSWORD}@db:5432/muasal?sslmode=disable
       PUBLIC_URL: ${PUBLIC_URL}
+    volumes: [attachments:/data/attachments]
     healthcheck:
       test: ["CMD", "/app", "healthcheck"]
       interval: 5s
@@ -60,3 +61,4 @@ networks:
 volumes:
   caddy_data: {}
   pgdata: {}
+  attachments: {}

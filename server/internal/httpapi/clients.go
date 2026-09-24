@@ -125,11 +125,14 @@ func (s *Server) UpdateClient(w http.ResponseWriter, r *http.Request, id int64) 
 }
 
 func (s *Server) ListProjectClients(w http.ResponseWriter, r *http.Request, key string) {
-	pc, ok := s.projectFor(w, r, key, access.Admin)
+	pc, ok := s.projectFor(w, r, key, access.Viewer)
 	if !ok {
 		return
 	}
-	rows, err := s.q.ListProjectClients(r.Context(), pc.project.ID)
+	// Members pick from these on the ticket form, so they see their scope only (AC-TK-4).
+	rows, err := s.q.ListProjectClients(r.Context(), db.ListProjectClientsParams{
+		ProjectID: pc.project.ID, AllClients: pc.scope.AllClients, ClientIds: orEmpty(pc.scope.ClientIDs),
+	})
 	if err != nil {
 		s.fail(w, r, err)
 		return
@@ -156,7 +159,7 @@ func (s *Server) SetProjectClients(w http.ResponseWriter, r *http.Request, key s
 	ctx := r.Context()
 	var rows []db.Client
 	err := s.inTx(ctx, func(q *db.Queries) error {
-		before, err := q.ListProjectClients(ctx, pc.project.ID)
+		before, err := q.ListProjectClients(ctx, db.ListProjectClientsParams{ProjectID: pc.project.ID, AllClients: true})
 		if err != nil {
 			return err
 		}
@@ -166,15 +169,15 @@ func (s *Server) SetProjectClients(w http.ResponseWriter, r *http.Request, key s
 		if err := q.LinkClients(ctx, db.LinkClientsParams{ProjectID: pc.project.ID, ClientIds: in.ClientIds}); err != nil {
 			return err
 		}
-		if rows, err = q.ListProjectClients(ctx, pc.project.ID); err != nil {
+		if rows, err = q.ListProjectClients(ctx, db.ListProjectClientsParams{ProjectID: pc.project.ID, AllClients: true}); err != nil {
 			return err
 		}
 		return audit(ctx, q, webMeta(r).inProject(pc.project.ID), &pc.user.ID, "project", pc.project.ID, "set_clients",
 			changed(map[string]any{"client_ids": idsOf(before)}, map[string]any{"client_ids": idsOf(rows)}))
 	})
 	switch constraintOf(err) {
-	case "membership_clients_linked", "node_clients_linked":
-		writeProblem(w, http.StatusConflict, "client_in_use", "A client you removed is still used by menus or member scopes in this project")
+	case "membership_clients_linked", "node_clients_linked", "tickets_client_linked":
+		writeProblem(w, http.StatusConflict, "client_in_use", "A client you removed is still used by tickets, menus or member scopes in this project")
 		return
 	case "project_clients_client_fk":
 		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields",

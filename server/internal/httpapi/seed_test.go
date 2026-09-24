@@ -2,6 +2,7 @@ package httpapi_test
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/kenzo03/muasal/server/internal/db"
@@ -103,4 +104,37 @@ func firstError(p httpapi.Problem) httpapi.FieldError {
 		return httpapi.FieldError{}
 	}
 	return (*p.Errors)[0]
+}
+
+// seedTicket files a ticket in the project's default status, requested by its reporter.
+func (e *env) seedTicket(p db.Project, reporter db.User, title string, client *db.Client, nodes ...db.Node) db.Ticket {
+	e.t.Helper()
+	ctx := context.Background()
+	status, err := e.q.GetDefaultStatus(ctx, p.ID)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	n, err := e.q.NextTicketNumber(ctx, p.ID)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	params := db.CreateTicketParams{
+		ProjectID: p.ID, Number: n, Key: fmt.Sprintf("%s-%d", p.Key, n), Type: "change_request", Title: title,
+		StatusID: status.ID, RequesterUserID: &reporter.ID, ReporterID: reporter.ID, Priority: "medium",
+	}
+	if client != nil {
+		params.ClientID = &client.ID
+	}
+	t, err := e.q.CreateTicket(ctx, params)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	ids := make([]int64, len(nodes))
+	for i, n := range nodes {
+		ids[i] = n.ID
+	}
+	if err := e.q.AddTicketNodes(ctx, db.AddTicketNodesParams{TicketID: t.ID, NodeIds: ids}); err != nil {
+		e.t.Fatal(err)
+	}
+	return t
 }

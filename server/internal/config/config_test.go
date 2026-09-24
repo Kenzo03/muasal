@@ -30,3 +30,14 @@ func TestHTTPPublicURLMeansInsecureCookies(t *testing.T) {
 		t.Fatalf("want insecure cookies for http, got secure=%v err=%v", c.SecureCookies(), err)
 	}
 }
+
+func TestAttachmentsDefaultToTheDataVolume(t *testing.T) {
+	c, err := Load(env(map[string]string{"DATABASE_URL": "postgres://x", "PUBLIC_URL": "http://localhost"}))
+	if err != nil || c.AttachmentsDir != "/data/attachments" || c.AttachmentMaxBytes != 25<<20 {
+		t.Fatalf("attachments: %q %d %v", c.AttachmentsDir, c.AttachmentMaxBytes, err)
+	}
+	c, _ = Load(env(map[string]string{"DATABASE_URL": "postgres://x", "PUBLIC_URL": "http://localhost", "ATTACHMENTS_DIR": "/srv/files"}))
+	if c.AttachmentsDir != "/srv/files" {
+		t.Fatalf("ATTACHMENTS_DIR: %q", c.AttachmentsDir)
+	}
+}
