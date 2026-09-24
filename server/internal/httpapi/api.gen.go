@@ -114,6 +114,37 @@ type MeUpdate struct {
 	Timezone        *string `json:"timezone,omitempty"`
 }
 
+// Member defines model for Member.
+type Member struct {
+	AllClients bool        `json:"all_clients"`
+	ClientIds  []int64     `json:"client_ids"`
+	Email      string      `json:"email"`
+	Name       string      `json:"name"`
+	Role       ProjectRole `json:"role"`
+	UserId     int64       `json:"user_id"`
+}
+
+// MemberInput defines model for MemberInput.
+type MemberInput struct {
+	// AllClients Project admins always have all clients.
+	AllClients bool `json:"all_clients"`
+
+	// ClientIds The clients a scoped member sees; ignored with all_clients.
+	ClientIds *[]int64    `json:"client_ids,omitempty"`
+	Email     string      `json:"email"`
+	Role      ProjectRole `json:"role"`
+}
+
+// MemberList defines model for MemberList.
+type MemberList struct {
+	Items []Member `json:"items"`
+}
+
+// MembersUpdate defines model for MembersUpdate.
+type MembersUpdate struct {
+	Members []MemberInput `json:"members"`
+}
+
 // Problem defines model for Problem.
 type Problem struct {
 	Code   string        `json:"code"`
@@ -246,6 +277,9 @@ type UpdateProjectJSONRequestBody = ProjectUpdate
 // SetProjectClientsJSONRequestBody defines body for SetProjectClients for application/json ContentType.
 type SetProjectClientsJSONRequestBody = ProjectClientsUpdate
 
+// SetProjectMembersJSONRequestBody defines body for SetProjectMembers for application/json ContentType.
+type SetProjectMembersJSONRequestBody = MembersUpdate
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
@@ -302,6 +336,12 @@ type ServerInterface interface {
 
 	// (PUT /projects/{key}/clients)
 	SetProjectClients(w http.ResponseWriter, r *http.Request, key string)
+
+	// (GET /projects/{key}/members)
+	ListProjectMembers(w http.ResponseWriter, r *http.Request, key string)
+
+	// (PUT /projects/{key}/members)
+	SetProjectMembers(w http.ResponseWriter, r *http.Request, key string)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -649,6 +689,58 @@ func (siw *ServerInterfaceWrapper) SetProjectClients(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// ListProjectMembers operation middleware
+func (siw *ServerInterfaceWrapper) ListProjectMembers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProjectMembers(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetProjectMembers operation middleware
+func (siw *ServerInterfaceWrapper) SetProjectMembers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetProjectMembers(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -787,6 +879,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/clients", wrapper.ListClients)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/clients", wrapper.CreateClient)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/clients/{id}", wrapper.UpdateClient)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/members", wrapper.ListProjectMembers)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/projects/{key}/members", wrapper.SetProjectMembers)
 
 	return m
 }

@@ -267,6 +267,36 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Client" }
         default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/members:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listProjectMembers
+      tags: [projects]
+      description: Project admins only.
+      responses:
+        "200":
+          description: The project's members and their client scopes.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MemberList" }
+        default: { $ref: "#/components/responses/Problem" }
+    put:
+      operationId: setProjectMembers
+      tags: [projects]
+      description: Project admins only. Replaces every membership of the project at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MembersUpdate" }
+      responses:
+        "200":
+          description: The members now.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MemberList" }
+        default: { $ref: "#/components/responses/Problem" }
 components:
   responses:
     Problem:
@@ -445,3 +475,40 @@ components:
         client_ids:
           type: array
           items: { type: integer, format: int64 }
+    Member:
+      type: object
+      required: [user_id, name, email, role, all_clients, client_ids]
+      properties:
+        user_id: { type: integer, format: int64 }
+        name: { type: string }
+        email: { type: string }
+        role: { $ref: "#/components/schemas/ProjectRole" }
+        all_clients: { type: boolean }
+        client_ids:
+          type: array
+          items: { type: integer, format: int64 }
+    MemberList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Member" }
+    MemberInput:
+      type: object
+      required: [email, role, all_clients]
+      properties:
+        email: { type: string, maxLength: 320 }
+        role: { $ref: "#/components/schemas/ProjectRole" }
+        all_clients: { type: boolean, description: Project admins always have all clients. }
+        client_ids:
+          type: array
+          description: The clients a scoped member sees; ignored with all_clients.
+          items: { type: integer, format: int64 }
+    MembersUpdate:
+      type: object
+      required: [members]
+      properties:
+        members:
+          type: array
+          items: { $ref: "#/components/schemas/MemberInput" }

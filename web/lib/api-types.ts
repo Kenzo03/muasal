@@ -211,6 +211,26 @@ export interface paths {
         patch: operations["updateClient"];
         trace?: never;
     };
+    "/projects/{key}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description Project admins only. */
+        get: operations["listProjectMembers"];
+        /** @description Project admins only. Replaces every membership of the project at once. */
+        put: operations["setProjectMembers"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -339,6 +359,29 @@ export interface components {
         };
         ProjectClientsUpdate: {
             client_ids: number[];
+        };
+        Member: {
+            /** Format: int64 */
+            user_id: number;
+            name: string;
+            email: string;
+            role: components["schemas"]["ProjectRole"];
+            all_clients: boolean;
+            client_ids: number[];
+        };
+        MemberList: {
+            items: components["schemas"]["Member"][];
+        };
+        MemberInput: {
+            email: string;
+            role: components["schemas"]["ProjectRole"];
+            /** @description Project admins always have all clients. */
+            all_clients: boolean;
+            /** @description The clients a scoped member sees; ignored with all_clients. */
+            client_ids?: number[];
+        };
+        MembersUpdate: {
+            members: components["schemas"]["MemberInput"][];
         };
     };
     responses: {
@@ -782,6 +825,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Client"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listProjectMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project's members and their client scopes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    setProjectMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MembersUpdate"];
+            };
+        };
+        responses: {
+            /** @description The members now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberList"];
                 };
             };
             default: components["responses"]["Problem"];
