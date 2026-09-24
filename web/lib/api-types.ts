@@ -268,6 +268,46 @@ export interface paths {
         patch: operations["updateContact"];
         trace?: never;
     };
+    "/projects/{key}/nodes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description The tree as a flat list. Client-specific menus outside the caller's scope, and what is under them, are left out. */
+        get: operations["listNodes"];
+        put?: never;
+        /** @description Project admins only. The node goes last among its siblings. */
+        post: operations["createNode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nodes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Project admins only. A node with sub-nodes answers 409 node_has_children. */
+        delete: operations["deleteNode"];
+        options?: never;
+        head?: never;
+        /** @description Project admins only. Edits fields, and moves the node when `move` is present. */
+        patch: operations["updateNode"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -444,6 +484,68 @@ export interface components {
             title?: string;
             email?: string;
             phone?: string;
+        };
+        /** @enum {string} */
+        NodeType: "module" | "menu";
+        NodeClient: {
+            /** Format: int64 */
+            id: number;
+            name: string;
+        };
+        Node: {
+            /** Format: int64 */
+            id: number;
+            /** Format: int64 */
+            parent_id: number | null;
+            type: components["schemas"]["NodeType"];
+            name: string;
+            /** @example HR.ATT.OT_APPROVAL */
+            code: string | null;
+            aliases: string[];
+            description: string;
+            client_specific: boolean;
+            /** @description The node's clients within the caller's scope. */
+            clients: components["schemas"]["NodeClient"][];
+            /** Format: int32 */
+            position: number;
+        };
+        NodeList: {
+            items: components["schemas"]["Node"][];
+        };
+        NodeCreate: {
+            /** Format: int64 */
+            parent_id?: number;
+            type: components["schemas"]["NodeType"];
+            name: string;
+            code?: string;
+            aliases?: string[];
+            description?: string;
+            client_specific?: boolean;
+            client_ids?: number[];
+        };
+        NodeUpdate: {
+            name?: string;
+            type?: components["schemas"]["NodeType"];
+            /** @description An empty code clears it. */
+            code?: string;
+            aliases?: string[];
+            description?: string;
+            /** @description When present */
+            client_specific?: boolean;
+            client_ids?: number[];
+            move?: components["schemas"]["NodeMove"];
+        };
+        NodeMove: {
+            /**
+             * Format: int64
+             * @description Omitted or null moves to the top level.
+             */
+            parent_id?: number | null;
+            /**
+             * Format: int32
+             * @description Index among the new siblings; omitted puts the node last.
+             */
+            position?: number;
         };
     };
     responses: {
@@ -1013,6 +1115,104 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Contact"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listNodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Live nodes; siblings in position order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createNode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NodeCreate"];
+            };
+        };
+        responses: {
+            /** @description The new node. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Node"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteNode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateNode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NodeUpdate"];
+            };
+        };
+        responses: {
+            /** @description The updated node. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Node"];
                 };
             };
             default: components["responses"]["Problem"];

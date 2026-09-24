@@ -32,6 +32,24 @@ func (e Locale) Valid() bool {
 	}
 }
 
+// Defines values for NodeType.
+const (
+	NodeTypeMenu   NodeType = "menu"
+	NodeTypeModule NodeType = "module"
+)
+
+// Valid indicates whether the value is a known member of the NodeType enum.
+func (e NodeType) Valid() bool {
+	switch e {
+	case NodeTypeMenu:
+		return true
+	case NodeTypeModule:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProjectRole.
 const (
 	ProjectRoleAdmin  ProjectRole = "admin"
@@ -172,6 +190,75 @@ type MembersUpdate struct {
 	Members []MemberInput `json:"members"`
 }
 
+// Node defines model for Node.
+type Node struct {
+	Aliases        []string `json:"aliases"`
+	ClientSpecific bool     `json:"client_specific"`
+
+	// Clients The node's clients within the caller's scope.
+	Clients []NodeClient `json:"clients"`
+
+	// Code Example: HR.ATT.OT_APPROVAL
+	Code        *string  `json:"code"`
+	Description string   `json:"description"`
+	Id          int64    `json:"id"`
+	Name        string   `json:"name"`
+	ParentId    *int64   `json:"parent_id"`
+	Position    int32    `json:"position"`
+	Type        NodeType `json:"type"`
+}
+
+// NodeClient defines model for NodeClient.
+type NodeClient struct {
+	Id   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
+// NodeCreate defines model for NodeCreate.
+type NodeCreate struct {
+	Aliases        *[]string `json:"aliases,omitempty"`
+	ClientIds      *[]int64  `json:"client_ids,omitempty"`
+	ClientSpecific *bool     `json:"client_specific,omitempty"`
+	Code           *string   `json:"code,omitempty"`
+	Description    *string   `json:"description,omitempty"`
+	Name           string    `json:"name"`
+	ParentId       *int64    `json:"parent_id,omitempty"`
+	Type           NodeType  `json:"type"`
+}
+
+// NodeList defines model for NodeList.
+type NodeList struct {
+	Items []Node `json:"items"`
+}
+
+// NodeMove defines model for NodeMove.
+type NodeMove struct {
+	// ParentId Omitted or null moves to the top level.
+	ParentId *int64 `json:"parent_id,omitempty"`
+
+	// Position Index among the new siblings; omitted puts the node last.
+	Position *int32 `json:"position,omitempty"`
+}
+
+// NodeType defines model for NodeType.
+type NodeType string
+
+// NodeUpdate defines model for NodeUpdate.
+type NodeUpdate struct {
+	Aliases   *[]string `json:"aliases,omitempty"`
+	ClientIds *[]int64  `json:"client_ids,omitempty"`
+
+	// ClientSpecific When present
+	ClientSpecific *bool `json:"client_specific,omitempty"`
+
+	// Code An empty code clears it.
+	Code        *string   `json:"code,omitempty"`
+	Description *string   `json:"description,omitempty"`
+	Move        *NodeMove `json:"move,omitempty"`
+	Name        *string   `json:"name,omitempty"`
+	Type        *NodeType `json:"type,omitempty"`
+}
+
 // Problem defines model for Problem.
 type Problem struct {
 	Code   string        `json:"code"`
@@ -307,6 +394,9 @@ type UpdateContactJSONRequestBody = ContactInput
 // UpdateMeJSONRequestBody defines body for UpdateMe for application/json ContentType.
 type UpdateMeJSONRequestBody = MeUpdate
 
+// UpdateNodeJSONRequestBody defines body for UpdateNode for application/json ContentType.
+type UpdateNodeJSONRequestBody = NodeUpdate
+
 // CreateProjectJSONRequestBody defines body for CreateProject for application/json ContentType.
 type CreateProjectJSONRequestBody = ProjectCreate
 
@@ -318,6 +408,9 @@ type SetProjectClientsJSONRequestBody = ProjectClientsUpdate
 
 // SetProjectMembersJSONRequestBody defines body for SetProjectMembers for application/json ContentType.
 type SetProjectMembersJSONRequestBody = MembersUpdate
+
+// CreateNodeJSONRequestBody defines body for CreateNode for application/json ContentType.
+type CreateNodeJSONRequestBody = NodeCreate
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -367,6 +460,12 @@ type ServerInterface interface {
 	// (PATCH /me)
 	UpdateMe(w http.ResponseWriter, r *http.Request)
 
+	// (DELETE /nodes/{id})
+	DeleteNode(w http.ResponseWriter, r *http.Request, id int64)
+
+	// (PATCH /nodes/{id})
+	UpdateNode(w http.ResponseWriter, r *http.Request, id int64)
+
 	// (GET /projects)
 	ListProjects(w http.ResponseWriter, r *http.Request)
 
@@ -390,6 +489,12 @@ type ServerInterface interface {
 
 	// (PUT /projects/{key}/members)
 	SetProjectMembers(w http.ResponseWriter, r *http.Request, key string)
+
+	// (GET /projects/{key}/nodes)
+	ListNodes(w http.ResponseWriter, r *http.Request, key string)
+
+	// (POST /projects/{key}/nodes)
+	CreateNode(w http.ResponseWriter, r *http.Request, key string)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -691,6 +796,58 @@ func (siw *ServerInterfaceWrapper) UpdateMe(w http.ResponseWriter, r *http.Reque
 	handler.ServeHTTP(w, r)
 }
 
+// DeleteNode operation middleware
+func (siw *ServerInterfaceWrapper) DeleteNode(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteNode(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateNode operation middleware
+func (siw *ServerInterfaceWrapper) UpdateNode(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateNode(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListProjects operation middleware
 func (siw *ServerInterfaceWrapper) ListProjects(w http.ResponseWriter, r *http.Request) {
 
@@ -875,6 +1032,58 @@ func (siw *ServerInterfaceWrapper) SetProjectMembers(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// ListNodes operation middleware
+func (siw *ServerInterfaceWrapper) ListNodes(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListNodes(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateNode operation middleware
+func (siw *ServerInterfaceWrapper) CreateNode(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateNode(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -1018,6 +1227,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/contacts", wrapper.ListContacts)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/contacts", wrapper.CreateContact)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/contacts/{id}", wrapper.UpdateContact)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/nodes", wrapper.ListNodes)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/nodes", wrapper.CreateNode)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/nodes/{id}", wrapper.DeleteNode)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/nodes/{id}", wrapper.UpdateNode)
 
 	return m
 }

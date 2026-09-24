@@ -347,6 +347,62 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Contact" }
         default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/nodes:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listNodes
+      tags: [nodes]
+      description: The tree as a flat list. Client-specific menus outside the caller's scope, and what is under them, are left out.
+      responses:
+        "200":
+          description: Live nodes; siblings in position order.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NodeList" }
+        default: { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createNode
+      tags: [nodes]
+      description: Project admins only. The node goes last among its siblings.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NodeCreate" }
+      responses:
+        "201":
+          description: The new node.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Node" }
+        default: { $ref: "#/components/responses/Problem" }
+  /nodes/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    patch:
+      operationId: updateNode
+      tags: [nodes]
+      description: Project admins only. Edits fields, and moves the node when `move` is present.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NodeUpdate" }
+      responses:
+        "200":
+          description: The updated node.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Node" }
+        default: { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: deleteNode
+      tags: [nodes]
+      description: Project admins only. A node with sub-nodes answers 409 node_has_children.
+      responses:
+        "204": { description: Deleted. }
+        default: { $ref: "#/components/responses/Problem" }
 components:
   responses:
     Problem:
@@ -589,3 +645,76 @@ components:
         title: { type: string, maxLength: 200 }
         email: { type: string, maxLength: 320 }
         phone: { type: string, maxLength: 50 }
+    NodeType:
+      type: string
+      enum: [module, menu]
+    NodeClient:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+    Node:
+      type: object
+      required: [id, parent_id, type, name, code, aliases, description, client_specific, clients, position]
+      properties:
+        id: { type: integer, format: int64 }
+        parent_id: { type: integer, format: int64, nullable: true }
+        type: { $ref: "#/components/schemas/NodeType" }
+        name: { type: string }
+        code: { type: string, nullable: true, example: HR.ATT.OT_APPROVAL }
+        aliases:
+          type: array
+          items: { type: string }
+        description: { type: string }
+        client_specific: { type: boolean }
+        clients:
+          type: array
+          description: The node's clients within the caller's scope.
+          items: { $ref: "#/components/schemas/NodeClient" }
+        position: { type: integer, format: int32 }
+    NodeList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Node" }
+    NodeCreate:
+      type: object
+      required: [type, name]
+      properties:
+        parent_id: { type: integer, format: int64 }
+        type: { $ref: "#/components/schemas/NodeType" }
+        name: { type: string, maxLength: 200 }
+        code: { type: string, maxLength: 100 }
+        aliases:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 100 }
+        description: { type: string, maxLength: 5000 }
+        client_specific: { type: boolean }
+        client_ids:
+          type: array
+          items: { type: integer, format: int64 }
+    NodeUpdate:
+      type: object
+      properties:
+        name: { type: string, maxLength: 200 }
+        type: { $ref: "#/components/schemas/NodeType" }
+        code: { type: string, maxLength: 100, description: An empty code clears it. }
+        aliases:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 100 }
+        description: { type: string, maxLength: 5000 }
+        client_specific: { type: boolean, description: When present, client_ids replaces the node's clients. }
+        client_ids:
+          type: array
+          items: { type: integer, format: int64 }
+        move: { $ref: "#/components/schemas/NodeMove" }
+    NodeMove:
+      type: object
+      properties:
+        parent_id: { type: integer, format: int64, nullable: true, description: Omitted or null moves to the top level. }
+        position: { type: integer, format: int32, minimum: 0, description: Index among the new siblings; omitted puts the node last. }
