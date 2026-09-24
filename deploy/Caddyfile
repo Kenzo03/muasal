@@ -1,0 +1,11 @@
+{$PUBLIC_URL} {
+	handle /api/* {
+		reverse_proxy app:8080 {
+			flush_interval -1
+		}
+	}
+	handle {
+		encode zstd gzip
+		reverse_proxy web:3000
+	}
+}

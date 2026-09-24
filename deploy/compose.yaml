@@ -1,0 +1,62 @@
+name: muasal
+services:
+  caddy:
+    image: caddy:2
+    # Caddy listens on the port in PUBLIC_URL, so the container port matches the host port.
+    ports: ["${HTTP_PORT:-80}:${HTTP_PORT:-80}"]
+    environment:
+      PUBLIC_URL: ${PUBLIC_URL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on: [web, app]
+    networks: [edge, app]
+    restart: unless-stopped
+
+  web:
+    build: ../web
+    image: muasal-web:${VERSION:-dev}
+    environment:
+      API_INTERNAL_URL: http://app:8080
+      NEXT_TELEMETRY_DISABLED: "1"
+    networks: [app]
+    restart: unless-stopped
+
+  app:
+    build: ../server
+    image: muasal-app:${VERSION:-dev}
+    command: ["serve"]
+    environment:
+      DATABASE_URL: postgres://app:${DB_APP_PASSWORD}@db:5432/muasal?sslmode=disable
+      MIGRATE_DATABASE_URL: postgres://owner:${DB_OWNER_PASSWORD}@db:5432/muasal?sslmode=disable
+      PUBLIC_URL: ${PUBLIC_URL}
+    healthcheck:
+      test: ["CMD", "/app", "healthcheck"]
+      interval: 5s
+      retries: 30
+    depends_on:
+      db: { condition: service_healthy }
+    networks: [app]
+    restart: unless-stopped
+
+  db:
+    image: pgvector/pgvector:0.8.6-pg18-trixie
+    environment:
+      POSTGRES_DB: muasal
+      POSTGRES_USER: owner
+      POSTGRES_PASSWORD: ${DB_OWNER_PASSWORD}
+    volumes: [pgdata:/var/lib/postgresql]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "owner", "-d", "muasal"]
+      interval: 5s
+      retries: 20
+    networks: [app]
+    restart: unless-stopped
+
+networks:
+  edge: {}
+  app: { internal: true } # no route to the internet
+
+volumes:
+  caddy_data: {}
+  pgdata: {}
