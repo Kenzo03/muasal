@@ -3,9 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { Avatar, ClientChip, PriorityChip, TypeIcon } from "@/components/Chips";
+import Icon from "@/components/Icon";
 import { api } from "@/lib/api";
+import { day } from "@/lib/format";
 import { useProblemText, type Status, type TicketSummary } from "@/lib/problem";
+import { cx, field } from "@/lib/ui";
 
 type Props = { projectKey: string; statuses: Status[]; tickets: TicketSummary[]; canEdit: boolean; today: string };
 
@@ -17,6 +21,7 @@ export default function Board({ projectKey, statuses, tickets, canEdit, today }:
   const t = useTranslations("board");
   const tTypes = useTranslations("ticketTypes");
   const tPri = useTranslations("priorities");
+  const locale = useLocale();
   const problemText = useProblemText();
   const router = useRouter();
   const [items, setItems] = useState(tickets);
@@ -43,7 +48,7 @@ export default function Board({ projectKey, statuses, tickets, canEdit, today }:
 
   return (
     <div className="flex flex-col gap-2">
-      {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+      {error && <p role="alert" className={field.error}>{error}</p>}
       <div className="flex gap-3 overflow-x-auto pb-2">
         {statuses.map((s) => {
           const cards = items.filter((x) => x.status_id === s.id);
@@ -52,7 +57,7 @@ export default function Board({ projectKey, statuses, tickets, canEdit, today }:
             <section
               key={s.id}
               aria-label={s.name}
-              className="flex w-72 shrink-0 flex-col gap-2 rounded-lg bg-neutral-100 p-2"
+              className="flex w-[270px] shrink-0 flex-col gap-1.5 self-start rounded-md bg-well p-2"
               onDragOver={droppable ? (e) => e.preventDefault() : undefined}
               onDrop={
                 droppable
@@ -64,43 +69,63 @@ export default function Board({ projectKey, statuses, tickets, canEdit, today }:
                   : undefined
               }
             >
-              <h2 className="flex items-center gap-2 text-sm font-medium">
-                <span className="h-2 w-2 rounded-full" style={{ background: s.color }} />
-                {s.name}
-                <span className="text-neutral-500">{cards.length}</span>
+              <h2
+                className="flex h-8 items-center gap-2 border-t-[3px] px-1 pt-1 text-xs font-semibold uppercase tracking-[0.04em]"
+                style={{ borderTopColor: s.color }}
+              >
+                <span className="truncate">{s.name}</span>
+                <span className="rounded-[3px] bg-white px-1.5 font-mono text-[11px] leading-5 text-muted">{cards.length}</span>
                 {droppable && (
-                  <Link href={`/p/${projectKey}/tickets/new?status_id=${s.id}`} aria-label={t("addHere", { status: s.name })} className="ml-auto px-1">+</Link>
+                  <Link
+                    href={`/p/${projectKey}/tickets/new?status_id=${s.id}`}
+                    aria-label={t("addHere", { status: s.name })}
+                    className="ml-auto inline-flex size-6 items-center justify-center rounded text-muted hover:bg-white hover:text-ink"
+                  >
+                    <Icon name="plus" />
+                  </Link>
                 )}
               </h2>
-              {closing(s) && <p className="text-xs text-neutral-500">{t("closedLater")}</p>}
+              {closing(s) && <p className="px-1 text-xs text-muted">{t("closedLater")}</p>}
               {cards.map((c) => (
                 <article
                   key={c.id}
                   draggable={canEdit}
                   onDragStart={() => setDragging(c.id)}
                   onDragEnd={() => setDragging(null)}
-                  className="rounded bg-white p-2 text-sm shadow-sm"
+                  className={cx("flex flex-col gap-1.5 rounded border border-line bg-white px-2.5 py-2", canEdit && "cursor-grab")}
                 >
-                  <div className="flex items-center gap-2 text-xs text-neutral-500">
-                    <span className="font-mono">{c.key}</span>
-                    <span>{tTypes(c.type)}</span>
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <TypeIcon type={c.type} label={tTypes(c.type)} />
+                    <span className="font-mono font-semibold">{c.key}</span>
                     {(c.missing_reason || c.node_names.length === 0) && (
-                      <span title={t("missing")} aria-label={t("missing")} className="text-amber-600">●</span>
+                      <span role="img" title={t("missing")} aria-label={t("missing")} className="size-[7px] rounded-full bg-[#D97706]" />
                     )}
-                    <span className="ml-auto">{tPri(c.priority)}</span>
+                    <span className="ml-auto">
+                      <PriorityChip priority={c.priority} label={tPri(c.priority)} />
+                    </span>
                   </div>
-                  <Link href={`/t/${c.key}`} className="mt-1 block font-medium hover:underline">{c.title}</Link>
-                  <div className="mt-1 flex flex-wrap gap-2 text-xs">
-                    <span className="rounded bg-neutral-100 px-1.5">{c.client?.name ?? t("noClient")}</span>
-                    {c.assignee && <span>{c.assignee.name}</span>}
-                    {c.due_date && <span className={c.due_date < today ? "text-red-700" : ""}>{c.due_date}</span>}
+                  <Link href={`/t/${c.key}`} className="text-[13px] font-medium leading-snug text-ink no-underline hover:text-ink hover:underline">
+                    {c.title}
+                  </Link>
+                  {c.node_names.length > 0 && (
+                    <span className="truncate font-mono text-[11px] text-muted">
+                      {c.node_names[0]}
+                      {c.node_names.length > 1 ? ` +${c.node_names.length - 1}` : ""}
+                    </span>
+                  )}
+                  <div className="flex items-center gap-1.5 text-xs text-muted">
+                    <ClientChip client={c.client} coreLabel={t("noClient")} />
+                    {c.due_date && (
+                      <span className={c.due_date < today ? "font-medium text-danger" : ""}>{day(c.due_date, locale, c.due_date.slice(0, 4) !== today.slice(0, 4))}</span>
+                    )}
+                    {c.assignee && <Avatar name={c.assignee.name} className="ml-auto size-5 bg-well text-[9px] text-ink" />}
                   </div>
                   {canEdit && (
                     <select
                       aria-label={t("moveTo", { key: c.key })}
                       value={c.status_id}
                       onChange={(e) => move(c.id, Number(e.target.value))}
-                      className="mt-2 w-full rounded border px-1 py-0.5 text-xs"
+                      className="mt-0.5 h-7 w-full rounded border border-line-soft bg-paper px-1 text-xs text-muted"
                     >
                       {statuses.map((o) => (
                         <option key={o.id} value={o.id} disabled={closing(o)}>{o.name}</option>
