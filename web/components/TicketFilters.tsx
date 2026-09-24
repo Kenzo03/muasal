@@ -1,5 +1,7 @@
 import { getTranslations } from "next-intl/server";
+import Icon from "@/components/Icon";
 import type { Client, Status } from "@/lib/problem";
+import { button, field } from "@/lib/ui";
 
 type Props = {
   action: string;
@@ -13,16 +15,16 @@ type Props = {
 export default async function TicketFilters({ action, values, clients, statuses }: Props) {
   const t = await getTranslations("ticketFilters");
   const tTypes = await getTranslations("ticketTypes");
-  const input = "rounded border px-2 py-1";
+  const pick = "flex items-center gap-1.5 text-[13px] text-muted";
   return (
-    <form method="get" action={action} aria-label={t("label")} className="flex flex-wrap items-end gap-3 text-sm">
-      <label className="flex flex-col gap-1">
-        {t("q")}
-        <input name="q" defaultValue={values.q} placeholder={t("qPlaceholder")} className={input} />
+    <form method="get" action={action} aria-label={t("label")} className="flex flex-wrap items-center gap-2">
+      <label className="flex h-8 items-center gap-1.5 rounded border border-line bg-white px-2 text-muted focus-within:outline-2 focus-within:outline-accent">
+        <Icon name="search" />
+        <input name="q" defaultValue={values.q} aria-label={t("q")} placeholder={t("qPlaceholder")} className="w-40 bg-transparent text-[13px] text-ink outline-none placeholder:text-muted" />
       </label>
-      <label className="flex flex-col gap-1">
+      <label className={pick}>
         {t("client")}
-        <select name="client" defaultValue={values.client ?? ""} className={input}>
+        <select name="client" defaultValue={values.client ?? ""} className={field.compact}>
           <option value="">{t("allClients")}</option>
           <option value="core">{t("core")}</option>
           {clients.map((c) => (
@@ -30,44 +32,44 @@ export default async function TicketFilters({ action, values, clients, statuses 
           ))}
         </select>
       </label>
-      <label className="flex flex-col gap-1">
+      <label className={pick}>
         {t("type")}
-        <select name="type" defaultValue={values.type ?? ""} className={input}>
+        <select name="type" defaultValue={values.type ?? ""} className={field.compact}>
           <option value="">{t("anyType")}</option>
           {(["bug", "change_request", "feature"] as const).map((ty) => (
             <option key={ty} value={ty}>{tTypes(ty)}</option>
           ))}
         </select>
       </label>
-      <label className="flex flex-col gap-1">
+      <label className={pick}>
         {t("assignee")}
-        <select name="assignee" defaultValue={values.assignee ?? ""} className={input}>
+        <select name="assignee" defaultValue={values.assignee ?? ""} className={field.compact}>
           <option value="">{t("anyone")}</option>
           <option value="me">{t("mine")}</option>
         </select>
       </label>
       {statuses && (
         <>
-          <label className="flex flex-col gap-1">
+          <label className={pick}>
             {t("status")}
-            <select name="status" defaultValue={values.status ?? ""} className={input}>
+            <select name="status" defaultValue={values.status ?? ""} className={field.compact}>
               <option value="">{t("anyStatus")}</option>
               {statuses.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
           </label>
-          <label className="flex flex-col gap-1">
+          <label className={pick}>
             {t("missing")}
-            <select name="missing" defaultValue={values.missing ?? ""} className={input}>
+            <select name="missing" defaultValue={values.missing ?? ""} className={field.compact}>
               <option value="">{t("nothingMissing")}</option>
               <option value="reason">{t("missingReason")}</option>
               <option value="menus">{t("missingMenus")}</option>
             </select>
           </label>
-          <label className="flex flex-col gap-1">
+          <label className={pick}>
             {t("sort")}
-            <select name="sort" defaultValue={values.sort ?? "updated"} className={input}>
+            <select name="sort" defaultValue={values.sort ?? "updated"} className={field.compact}>
               <option value="updated">{t("sortUpdated")}</option>
               <option value="created">{t("sortCreated")}</option>
               <option value="key">{t("sortKey")}</option>
@@ -77,8 +79,8 @@ export default async function TicketFilters({ action, values, clients, statuses 
           </label>
         </>
       )}
-      <button className="rounded bg-neutral-900 px-3 py-1 text-white">{t("apply")}</button>
-      <a href={action} className="underline">{t("reset")}</a>
+      <button className={button.secondary}>{t("apply")}</button>
+      <a href={action} className={button.quiet}>{t("reset")}</a>
     </form>
   );
 }

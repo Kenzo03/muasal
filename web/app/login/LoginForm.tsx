@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
+import { button, cx, field } from "@/lib/ui";
 
 const messageFor: Record<string, string> = { account_locked: "locked", rate_limited: "rateLimited" };
 
@@ -31,17 +32,17 @@ export default function LoginForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
-      <label className="flex flex-col gap-1 text-sm">
+    <form onSubmit={onSubmit} className="flex flex-col gap-3.5">
+      <label className={field.label}>
         {t("email")}
-        <input name="email" type="email" required autoComplete="username" className="rounded border px-3 py-2" />
+        <input name="email" type="email" required autoComplete="username" className={field.input} />
       </label>
-      <label className="flex flex-col gap-1 text-sm">
+      <label className={field.label}>
         {t("password")}
-        <input name="password" type="password" required autoComplete="current-password" className="rounded border px-3 py-2" />
+        <input name="password" type="password" required autoComplete="current-password" className={field.input} />
       </label>
-      {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
-      <button disabled={busy} className="rounded bg-neutral-900 px-4 py-2 text-white disabled:opacity-50">
+      {error && <p role="alert" className={field.error}>{error}</p>}
+      <button disabled={busy} className={cx(button.primary, "mt-1 h-9 w-full")}>
         {t("submit")}
       </button>
     </form>

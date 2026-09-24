@@ -1,1 +1,60 @@
 @import "tailwindcss";
+
+/* The Terakota design (canvas "Muasal UI design", direction B3): dense, warm,
+   4px corners, IBM Plex. Components use these tokens as bg-*, text-* and
+   border-* utilities; ticket data colors (statuses) arrive as inline styles. */
+@theme {
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, monospace;
+
+  --color-ink: #211c19;
+  --color-muted: #6a5f58;
+  --color-ground: #f3efea;
+  --color-well: #e9e3db;
+  --color-line: #ddd4ca;
+  --color-line-soft: #ede7df;
+  --color-field: #c9beb6;
+  --color-paper: #fbf9f6;
+
+  --color-bar: #221e1c;
+  --color-bar-raised: #2e2926;
+  --color-bar-line: #453d38;
+  --color-bar-muted: #c9beb6;
+  --color-bar-accent: #f0a184;
+
+  --color-accent: #b5482a;
+  --color-accent-strong: #8a3417;
+  --color-accent-soft: #f7e4dc;
+  --color-link: #9a3b20;
+  --color-link-hover: #7a2e18;
+
+  --color-warn: #6b3f00;
+  --color-warn-soft: #fbefd9;
+  --color-warn-line: #d9a55b;
+  --color-ok: #25573b;
+  --color-ok-soft: #d6eadd;
+  --color-danger: #9a2a12;
+  --color-danger-soft: #f9ddd3;
+  --color-danger-line: #e8c4b8;
+}
+
+@layer base {
+  body {
+    background: var(--color-ground);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  a {
+    color: var(--color-link);
+  }
+  a:hover {
+    color: var(--color-link-hover);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+}

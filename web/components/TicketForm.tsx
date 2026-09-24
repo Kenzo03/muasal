@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import Icon from "@/components/Icon";
 import { api } from "@/lib/api";
 import {
   problemKey, useProblemText,
   type Client, type Contact, type Node, type Priority, type Ref, type Ticket, type TicketType,
 } from "@/lib/problem";
+import { button, cx, field } from "@/lib/ui";
 
 type Props = {
   projectKey: string;
@@ -23,6 +25,17 @@ type Props = {
 const types: TicketType[] = ["change_request", "bug", "feature"];
 const priorities: Priority[] = ["low", "medium", "high", "urgent"];
 const lastClientKey = (projectKey: string) => `muasal:last-client:${projectKey}`;
+
+// One labeled row of the form: the label on the left, the field on the right.
+function Row({ label, htmlFor, id, children }: { label: string; htmlFor?: string; id?: string; children: React.ReactNode }) {
+  const text = "text-sm font-semibold md:pt-1.5";
+  return (
+    <div className="grid gap-x-5 gap-y-1.5 md:grid-cols-[170px_minmax(0,1fr)] md:items-start">
+      {htmlFor ? <label htmlFor={htmlFor} className={text}>{label}</label> : <span id={id} className={text}>{label}</span>}
+      <div className="flex min-w-0 flex-col gap-2">{children}</div>
+    </div>
+  );
+}
 
 // The one form a PM fills while the client is on the phone (FSD §8.3):
 // Client → Requested by → Title → Affected menus → Reason → Type → Description, and More.
@@ -160,154 +173,184 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
     router.push(`/t/${data.key}`);
   }
 
-  const input = "rounded border px-3 py-2";
+  const radio = "size-4 accent-accent";
   return (
-    <form aria-label={ticket ? t("editTitle", { key: ticket.key }) : t("newTitle")} onSubmit={submit} className="flex flex-col gap-4">
-      <label className="flex flex-col gap-1 text-sm">
-        {t("client")}
-        <select
-          value={clientId ?? ""}
-          onChange={(e) => {
-            setClientId(e.target.value ? Number(e.target.value) : null);
-            setContactId(null);
-          }}
-          className={input}
-        >
-          <option value="">{t("core")}</option>
-          {clients.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-      </label>
-      <fieldset className="flex flex-col gap-2 text-sm">
-        <legend className="mb-1">{t("requestedBy")}</legend>
-        <label className="flex items-center gap-2">
-          <input type="radio" name="requester" checked={requester === "user"} onChange={() => setRequester("user")} />
-          {userRequester?.name ?? t("me")}
-        </label>
-        <label className="flex items-center gap-2">
-          <input type="radio" name="requester" checked={requester === "contact"} onChange={() => setRequester("contact")} />
-          {t("contact")}
-        </label>
-        {requester === "contact" && (
-          <div className="ml-6 flex flex-col gap-2">
-            <label className="flex flex-col gap-1">
-              {t("contactSelect")}
-              <select value={contactId ?? ""} onChange={(e) => setContactId(e.target.value ? Number(e.target.value) : null)} className={input}>
-                <option value="">{t("chooseContact")}</option>
-                {contacts.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                    {c.title ? ` (${c.title})` : ""}
-                    {c.client_name ? ` · ${c.client_name}` : ""}
-                  </option>
+    <form aria-label={ticket ? t("editTitle", { key: ticket.key }) : t("newTitle")} onSubmit={submit} className="flex flex-col">
+      <div className="flex flex-col gap-4 p-5">
+        <Row label={t("client")} htmlFor="tf-client">
+          <select
+            id="tf-client"
+            value={clientId ?? ""}
+            onChange={(e) => {
+              setClientId(e.target.value ? Number(e.target.value) : null);
+              setContactId(null);
+            }}
+            className={field.input}
+          >
+            <option value="">{t("core")}</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </Row>
+        <Row label={t("requestedBy")} id="tf-requester">
+          <div role="radiogroup" aria-labelledby="tf-requester" className="flex flex-wrap gap-x-5 gap-y-2 text-sm md:pt-1.5">
+            <label className="flex items-center gap-2">
+              <input type="radio" name="requester" checked={requester === "user"} onChange={() => setRequester("user")} className={radio} />
+              {userRequester?.name ?? t("me")}
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="radio" name="requester" checked={requester === "contact"} onChange={() => setRequester("contact")} className={radio} />
+              {t("contact")}
+            </label>
+          </div>
+          {requester === "contact" && (
+            <>
+              <div className="flex flex-wrap items-center gap-3">
+                <select
+                  aria-label={t("contactSelect")}
+                  value={contactId ?? ""}
+                  onChange={(e) => setContactId(e.target.value ? Number(e.target.value) : null)}
+                  className={cx(field.input, "min-w-0 flex-1")}
+                >
+                  <option value="">{t("chooseContact")}</option>
+                  {contacts.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                      {c.title ? ` (${c.title})` : ""}
+                      {c.client_name ? ` · ${c.client_name}` : ""}
+                    </option>
+                  ))}
+                </select>
+                {!adding && (
+                  <button type="button" onClick={() => setAdding(true)} className={button.quiet}>{t("addContact")}</button>
+                )}
+              </div>
+              {adding && (
+                <div className="flex flex-wrap items-end gap-3 rounded border border-line-soft bg-paper p-3">
+                  <label className={field.label}>
+                    {t("contactName")}
+                    <input value={newName} onChange={(e) => setNewName(e.target.value)} maxLength={200} className={field.input} />
+                  </label>
+                  <label className={field.label}>
+                    {t("contactTitle")}
+                    <input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} maxLength={200} className={field.input} />
+                  </label>
+                  <button type="button" onClick={addContact} disabled={!newName.trim()} className={button.secondary}>
+                    {t("saveContact")}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </Row>
+        <Row label={t("title")} htmlFor="tf-title">
+          <input id="tf-title" name="title" defaultValue={ticket?.title} required minLength={5} maxLength={200} className={field.input} />
+        </Row>
+        <Row label={t("menus")} id="tf-menus">
+          <fieldset className="flex flex-col gap-2">
+            <legend className="sr-only">{t("menus")}</legend>
+            <label className="flex h-[34px] items-center gap-2 rounded border border-field bg-white px-2.5 text-muted focus-within:outline-2 focus-within:outline-accent">
+              <Icon name="search" />
+              <input
+                value={menuFilter}
+                onChange={(e) => setMenuFilter(e.target.value)}
+                aria-label={t("menusFilter")}
+                placeholder={t("menusFilter")}
+                className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted"
+              />
+            </label>
+            <div className="flex max-h-48 flex-col overflow-y-auto rounded border border-line-soft text-[13px]">
+              {menuChoices.map((n) => (
+                <label key={n.id} className={cx("flex items-center gap-2 border-b border-line-soft px-2.5 py-1.5 last:border-0", nodeIds.has(n.id) && "bg-accent-soft")}>
+                  <input type="checkbox" checked={nodeIds.has(n.id)} onChange={(e) => toggleNode(n.id, e.target.checked)} className="size-4 accent-accent" />
+                  {pathOf(n)}
+                  {n.code && <span className="ml-auto font-mono text-[11px] text-muted">{n.code}</span>}
+                </label>
+              ))}
+            </div>
+            <p className={field.hint}>{t("menusHint")}</p>
+            {warnings.map((n) => (
+              <p key={n.id} className="flex items-center gap-1.5 text-xs text-warn">
+                <Icon name="warning" className="size-3.5" />
+                {t("menuForOtherClients", { menu: n.name, clients: n.clients.map((c) => c.name).join(", ") })}
+              </p>
+            ))}
+          </fieldset>
+        </Row>
+        <Row label={t("reason")} htmlFor="tf-reason">
+          <textarea id="tf-reason" name="reason" defaultValue={ticket?.reason} maxLength={2000} rows={3} aria-describedby="reason-hint" className={field.textarea} />
+          <p id="reason-hint" className={field.hint}>{t("reasonHint")}</p>
+        </Row>
+        <Row label={t("type")} id="tf-type">
+          <div role="radiogroup" aria-labelledby="tf-type" className="flex flex-wrap">
+            {types.map((ty, i) => (
+              <label
+                key={ty}
+                className={cx(
+                  "flex h-[34px] cursor-pointer items-center gap-2 border border-field px-3 text-[13px] has-[:checked]:z-10 has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:font-semibold has-[:checked]:text-accent-strong",
+                  i === 0 ? "rounded-l" : "-ml-px",
+                  i === types.length - 1 && "rounded-r",
+                )}
+              >
+                <input type="radio" name="type" value={ty} defaultChecked={(ticket?.type ?? "change_request") === ty} className={radio} />
+                {tTypes(ty)}
+              </label>
+            ))}
+          </div>
+        </Row>
+        <Row label={t("description")} htmlFor="tf-description">
+          <textarea id="tf-description" name="description" defaultValue={ticket?.description} maxLength={50000} rows={5} className={field.textarea} />
+        </Row>
+        <details className="group" open={Boolean(ticket?.assignee || ticket?.due_date)}>
+          <summary className="flex cursor-pointer items-center gap-1.5 text-sm font-semibold">
+            <Icon name="chevronRight" className="size-4 text-muted transition-transform group-open:rotate-90" />
+            {t("more")}
+          </summary>
+          <div className="mt-3 grid gap-3 md:ml-[190px] md:grid-cols-3">
+            <label className={field.label}>
+              {t("assignee")}
+              <select name="assignee_id" defaultValue={ticket?.assignee?.id ?? ""} className={field.input}>
+                <option value="">{t("nobody")}</option>
+                {assignees.map((a) => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
                 ))}
               </select>
             </label>
-            {adding ? (
-              <div className="flex flex-wrap items-end gap-2">
-                <label className="flex flex-col gap-1">
-                  {t("contactName")}
-                  <input value={newName} onChange={(e) => setNewName(e.target.value)} maxLength={200} className={input} />
-                </label>
-                <label className="flex flex-col gap-1">
-                  {t("contactTitle")}
-                  <input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} maxLength={200} className={input} />
-                </label>
-                <button type="button" onClick={addContact} disabled={!newName.trim()} className="rounded border px-3 py-2">
-                  {t("saveContact")}
-                </button>
-              </div>
-            ) : (
-              <button type="button" onClick={() => setAdding(true)} className="self-start underline">{t("addContact")}</button>
-            )}
-          </div>
-        )}
-      </fieldset>
-      <label className="flex flex-col gap-1 text-sm">
-        {t("title")}
-        <input name="title" defaultValue={ticket?.title} required minLength={5} maxLength={200} className={input} />
-      </label>
-      <fieldset className="flex flex-col gap-2 text-sm">
-        <legend className="mb-1">{t("menus")}</legend>
-        <input value={menuFilter} onChange={(e) => setMenuFilter(e.target.value)} aria-label={t("menusFilter")} placeholder={t("menusFilter")} className={input} />
-        <div className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded border p-2">
-          {menuChoices.map((n) => (
-            <label key={n.id} className="flex items-center gap-2">
-              <input type="checkbox" checked={nodeIds.has(n.id)} onChange={(e) => toggleNode(n.id, e.target.checked)} />
-              {pathOf(n)}
+            <label className={field.label}>
+              {t("priority")}
+              <select name="priority" defaultValue={ticket?.priority ?? "medium"} className={field.input}>
+                {priorities.map((p) => (
+                  <option key={p} value={p}>{tPri(p)}</option>
+                ))}
+              </select>
             </label>
-          ))}
-        </div>
-        <p className="text-xs text-neutral-500">{t("menusHint")}</p>
-        {warnings.map((n) => (
-          <p key={n.id} className="text-xs text-amber-700">
-            {t("menuForOtherClients", { menu: n.name, clients: n.clients.map((c) => c.name).join(", ") })}
+            <label className={field.label}>
+              {t("due")}
+              <input type="date" name="due_date" defaultValue={ticket?.due_date ?? ""} className={field.input} />
+            </label>
+          </div>
+        </details>
+        {error && (
+          <p role="alert" className={field.error}>
+            {error}{" "}
+            {stale && (
+              <button type="button" onClick={() => router.refresh()} className={button.quiet}>{t("reload")}</button>
+            )}
           </p>
-        ))}
-      </fieldset>
-      <label className="flex flex-col gap-1 text-sm">
-        {t("reason")}
-        <textarea name="reason" defaultValue={ticket?.reason} maxLength={2000} rows={3} aria-describedby="reason-hint" className={input} />
-      </label>
-      <p id="reason-hint" className="-mt-3 text-xs text-neutral-500">{t("reasonHint")}</p>
-      <label className="flex flex-col gap-1 text-sm">
-        {t("type")}
-        <select name="type" defaultValue={ticket?.type ?? "change_request"} className={input}>
-          {types.map((ty) => (
-            <option key={ty} value={ty}>{tTypes(ty)}</option>
-          ))}
-        </select>
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        {t("description")}
-        <textarea name="description" defaultValue={ticket?.description} maxLength={50000} rows={5} className={input} />
-      </label>
-      <details className="text-sm" open={Boolean(ticket?.assignee || ticket?.due_date)}>
-        <summary className="cursor-pointer">{t("more")}</summary>
-        <div className="mt-3 flex flex-wrap gap-4">
-          <label className="flex flex-col gap-1">
-            {t("assignee")}
-            <select name="assignee_id" defaultValue={ticket?.assignee?.id ?? ""} className={input}>
-              <option value="">{t("nobody")}</option>
-              {assignees.map((a) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1">
-            {t("priority")}
-            <select name="priority" defaultValue={ticket?.priority ?? "medium"} className={input}>
-              {priorities.map((p) => (
-                <option key={p} value={p}>{tPri(p)}</option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1">
-            {t("due")}
-            <input type="date" name="due_date" defaultValue={ticket?.due_date ?? ""} className={input} />
-          </label>
-        </div>
-      </details>
-      {error && (
-        <p role="alert" className="text-sm text-red-700">
-          {error}{" "}
-          {stale && (
-            <button type="button" onClick={() => router.refresh()} className="underline">{t("reload")}</button>
-          )}
-        </p>
-      )}
-      {notice && <p role="status" className="text-sm">{notice}</p>}
-      <div className="flex gap-3">
+        )}
+        {notice && <p role="status" className="text-sm text-ok">{notice}</p>}
+      </div>
+      <div className="flex flex-wrap items-center gap-2 rounded-b border-t border-line-soft bg-paper px-5 py-3">
         {ticket ? (
           <>
-            <button className="rounded bg-neutral-900 px-4 py-2 text-white">{t("save")}</button>
-            <button type="button" onClick={onCancel} className="rounded border px-4 py-2">{t("cancel")}</button>
+            <button className={button.primary}>{t("save")}</button>
+            <button type="button" onClick={onCancel} className={button.secondary}>{t("cancel")}</button>
           </>
         ) : (
           <>
-            <button value="create" className="rounded bg-neutral-900 px-4 py-2 text-white">{t("create")}</button>
-            <button value="another" className="rounded border px-4 py-2">{t("createAnother")}</button>
+            <button value="create" className={button.primary}>{t("create")}</button>
+            <button value="another" className={button.secondary}>{t("createAnother")}</button>
           </>
         )}
       </div>

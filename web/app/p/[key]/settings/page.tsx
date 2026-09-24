@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import PageBar from "@/components/PageBar";
 import { getProject, serverApi } from "@/lib/server-api";
 import ProjectClients from "./ProjectClients";
 import ProjectForm from "./ProjectForm";
@@ -11,7 +12,21 @@ export default async function SettingsPage({ params }: { params: Promise<{ key: 
   const project = await getProject(key);
   if (!project) notFound();
   const t = await getTranslations("settings");
-  if (project.role !== "admin") return <p>{t("adminsOnly")}</p>;
+  const tp = await getTranslations("project");
+  const bar = (
+    <PageBar>
+      <h1 className="text-base font-semibold">{tp("settings")}</h1>
+      <span className="text-[13px] text-muted">{project.name}</span>
+    </PageBar>
+  );
+  if (project.role !== "admin") {
+    return (
+      <>
+        {bar}
+        <main className="p-4 text-muted md:p-5">{t("adminsOnly")}</main>
+      </>
+    );
+  }
   const api = await serverApi();
   const path = { params: { path: { key } } };
   const [all, linked, members, statuses] = await Promise.all([
@@ -22,11 +37,14 @@ export default async function SettingsPage({ params }: { params: Promise<{ key: 
   ]);
   const linkedClients = linked.data?.items ?? [];
   return (
-    <div className="flex flex-col gap-8">
-      <ProjectForm project={project} />
-      <StatusesForm projectKey={key} statuses={statuses.data?.items ?? []} />
-      <ProjectClients projectKey={key} all={all.data?.items ?? []} linked={linkedClients} />
-      <ProjectMembers projectKey={key} members={members.data?.items ?? []} clients={linkedClients} />
-    </div>
+    <>
+      {bar}
+      <main className="mx-auto flex max-w-5xl flex-col gap-4 p-4 md:p-5">
+        <ProjectForm project={project} />
+        <StatusesForm projectKey={key} statuses={statuses.data?.items ?? []} />
+        <ProjectClients projectKey={key} all={all.data?.items ?? []} linked={linkedClients} />
+        <ProjectMembers projectKey={key} members={members.data?.items ?? []} clients={linkedClients} />
+      </main>
+    </>
   );
 }

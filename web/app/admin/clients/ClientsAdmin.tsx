@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { ClientChip } from "@/components/Chips";
 import { api } from "@/lib/api";
 import { useProblemText, type Client } from "@/lib/problem";
+import { button, chip, cx, field, panel, table } from "@/lib/ui";
 
 type ClientPatch = { name?: string; code?: string; aliases?: string[]; archived?: boolean };
 
@@ -38,83 +40,88 @@ export default function ClientsAdmin({ clients }: { clients: Client[] }) {
     router.refresh();
   }
 
-  const input = "rounded border px-3 py-2";
   return (
-    <div className="flex flex-col gap-6">
-      <form aria-label={t("create")} onSubmit={create} className="flex flex-wrap items-end gap-3 rounded-lg border bg-white p-4">
-        <label className="flex flex-col gap-1 text-sm">
+    <div className="flex flex-col gap-4">
+      <form aria-label={t("create")} onSubmit={create} className={cx(panel, "flex flex-wrap items-end gap-3 p-4")}>
+        <label className={field.label}>
           {t("name")}
-          <input name="name" required maxLength={200} className={input} />
+          <input name="name" required maxLength={200} className={field.input} />
         </label>
-        <label className="flex flex-col gap-1 text-sm">
+        <label className={field.label}>
           {t("code")}
-          <input name="code" maxLength={20} className={`${input} w-28 font-mono`} />
+          <input name="code" maxLength={20} className={cx(field.input, "w-28 font-mono")} />
         </label>
-        <label className="flex flex-col gap-1 text-sm">
+        <label className={field.label}>
           {t("aliases")}
-          <input name="aliases" className={input} />
+          <input name="aliases" className={cx(field.input, "w-64")} />
         </label>
-        <button className="rounded bg-neutral-900 px-4 py-2 text-white">{t("create")}</button>
+        <button className={cx(button.primary, "h-[34px]")}>{t("create")}</button>
       </form>
-      {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
-      <table className="w-full border-collapse bg-white text-left text-sm">
-        <thead>
-          <tr className="border-b">
-            <th className="p-2">{t("name")}</th>
-            <th className="p-2">{t("code")}</th>
-            <th className="p-2">{t("aliasesTitle")}</th>
-            <th className="p-2">{t("status")}</th>
-            <th className="p-2" />
-          </tr>
-        </thead>
-        <tbody>
-          {clients.map((c) =>
-            editing === c.id ? (
-              <tr key={c.id} className="border-b">
-                <td colSpan={5} className="p-2">
-                  <form
-                    aria-label={t("editTitle", { name: c.name })}
-                    className="flex flex-wrap items-end gap-3"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const form = new FormData(e.currentTarget);
-                      update(c, { name: String(form.get("name")), code: String(form.get("code")), aliases: aliasList(form.get("aliases")) });
-                    }}
-                  >
-                    <label className="flex flex-col gap-1 text-sm">
-                      {t("name")}
-                      <input name="name" defaultValue={c.name} required maxLength={200} className={input} />
-                    </label>
-                    <label className="flex flex-col gap-1 text-sm">
-                      {t("code")}
-                      <input name="code" defaultValue={c.code ?? ""} maxLength={20} className={`${input} w-28 font-mono`} />
-                    </label>
-                    <label className="flex flex-col gap-1 text-sm">
-                      {t("aliases")}
-                      <input name="aliases" defaultValue={c.aliases.join(", ")} className={input} />
-                    </label>
-                    <button className="rounded bg-neutral-900 px-4 py-2 text-white">{t("save")}</button>
-                    <button type="button" onClick={() => setEditing(null)} className="rounded border px-4 py-2">{t("cancel")}</button>
-                  </form>
-                </td>
-              </tr>
-            ) : (
-              <tr key={c.id} className="border-b">
-                <td className="p-2">{c.name}</td>
-                <td className="p-2 font-mono">{c.code ?? ""}</td>
-                <td className="p-2">{c.aliases.join(", ")}</td>
-                <td className="p-2">{c.archived ? t("archived") : t("active")}</td>
-                <td className="flex gap-3 p-2">
-                  <button type="button" className="underline" onClick={() => setEditing(c.id)}>{t("edit")}</button>
-                  <button type="button" className="underline" onClick={() => update(c, { archived: !c.archived })}>
-                    {c.archived ? t("restore") : t("archive")}
-                  </button>
-                </td>
-              </tr>
-            ),
-          )}
-        </tbody>
-      </table>
+      {error && <p role="alert" className={field.error}>{error}</p>}
+      <div className={table.wrap}>
+        <table className={table.table}>
+          <thead className={table.head}>
+            <tr>
+              <th className={table.th}>{t("name")}</th>
+              <th className={table.th}>{t("code")}</th>
+              <th className={table.th}>{t("aliasesTitle")}</th>
+              <th className={table.th}>{t("status")}</th>
+              <th className={table.th} />
+            </tr>
+          </thead>
+          <tbody>
+            {clients.map((c) =>
+              editing === c.id ? (
+                <tr key={c.id} className={table.row}>
+                  <td colSpan={5} className={table.td}>
+                    <form
+                      aria-label={t("editTitle", { name: c.name })}
+                      className="flex flex-wrap items-end gap-3"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const form = new FormData(e.currentTarget);
+                        update(c, { name: String(form.get("name")), code: String(form.get("code")), aliases: aliasList(form.get("aliases")) });
+                      }}
+                    >
+                      <label className={field.label}>
+                        {t("name")}
+                        <input name="name" defaultValue={c.name} required maxLength={200} className={field.input} />
+                      </label>
+                      <label className={field.label}>
+                        {t("code")}
+                        <input name="code" defaultValue={c.code ?? ""} maxLength={20} className={cx(field.input, "w-28 font-mono")} />
+                      </label>
+                      <label className={field.label}>
+                        {t("aliases")}
+                        <input name="aliases" defaultValue={c.aliases.join(", ")} className={cx(field.input, "w-64")} />
+                      </label>
+                      <button className={cx(button.primary, "h-[34px]")}>{t("save")}</button>
+                      <button type="button" onClick={() => setEditing(null)} className={cx(button.secondary, "h-[34px]")}>{t("cancel")}</button>
+                    </form>
+                  </td>
+                </tr>
+              ) : (
+                <tr key={c.id} className={table.row}>
+                  <td className={table.td}><ClientChip client={c} coreLabel="" /></td>
+                  <td className={cx(table.td, "font-mono")}>{c.code ?? ""}</td>
+                  <td className={table.td}>{c.aliases.join(", ")}</td>
+                  <td className={table.td}>
+                    <span className={cx(chip, c.archived ? "bg-well text-muted" : "bg-ok-soft text-ok")}>{c.archived ? t("archived") : t("active")}</span>
+                  </td>
+                  <td className={cx(table.td, "whitespace-nowrap text-right")}>
+                    <span className="inline-flex gap-3">
+                      <button type="button" className={button.quiet} onClick={() => setEditing(c.id)}>{t("edit")}</button>
+                      <button type="button" className={button.quiet} onClick={() => update(c, { archived: !c.archived })}>
+                        {c.archived ? t("restore") : t("archive")}
+                      </button>
+                    </span>
+                  </td>
+                </tr>
+              ),
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

@@ -23,7 +23,13 @@
     "users": "Users",
     "clients": "Clients",
     "profile": "Profile",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "switchProject": "Switch project",
+    "projects": "Projects",
+    "allProjects": "All projects",
+    "newTicket": "New ticket",
+    "language": "Language",
+    "account": "Account of {name}"
   },
   "home": {
     "signedInAs": "Signed in as {name}",
@@ -322,7 +328,11 @@
     "reporter": "Reporter",
     "created": "Created",
     "updated": "Updated",
-    "missingClose": "Add a reason and at least one menu before closing."
+    "missingClose": "Add a reason and at least one menu before closing.",
+    "details": "Ticket details",
+    "people": "People and dates",
+    "path": "Path",
+    "closed": "Closed"
   },
   "activity": {
     "title": "Activity",

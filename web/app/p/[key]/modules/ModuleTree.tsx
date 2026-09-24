@@ -4,8 +4,11 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { ClientChip } from "@/components/Chips";
+import Icon from "@/components/Icon";
 import { api } from "@/lib/api";
 import { useProblemText, type Client, type Node, type Problem } from "@/lib/problem";
+import { button, chip, cx, field, panel } from "@/lib/ui";
 import NodeForm, { ReadOnlyNode } from "./NodeForm";
 
 type Children = Map<number | null, Node[]>;
@@ -97,10 +100,12 @@ export default function ModuleTree({ projectKey, nodes, clients, canEdit, showAr
     router.refresh();
   }
 
-  const chip = "rounded bg-neutral-100 px-2 py-0.5 text-xs";
   function badge(n: Node) {
-    if (n.type === "module") return hasSpecific.has(n.id) ? <span className={chip}>{t("hasClientSpecific")}</span> : null;
-    return <span className={chip}>{n.client_specific ? n.clients.map((c) => c.name).join(", ") : t("shared")}</span>;
+    if (n.type === "module") {
+      return hasSpecific.has(n.id) ? <span className={cx(chip, "bg-accent-soft text-accent-strong")}>{t("hasClientSpecific")}</span> : null;
+    }
+    if (!n.client_specific) return <span className={cx(chip, "bg-ground text-[#4A423C]")}>{t("shared")}</span>;
+    return n.clients.map((c) => <ClientChip key={c.id} client={c} coreLabel="" />);
   }
 
   function level(parentId: number | null, depth: number): React.ReactNode {
@@ -111,34 +116,44 @@ export default function ModuleTree({ projectKey, nodes, clients, canEdit, showAr
         {list.map((n) => {
           const hasKids = (children.get(n.id)?.length ?? 0) > 0;
           const open = shown !== null || !collapsed.has(n.id);
+          const current = n.id === selectedId;
           return (
             <li key={n.id}>
               {/* R-MR-1: indentation stops growing after six levels. */}
-              <div className="flex items-center gap-2 py-1" style={{ paddingLeft: `${Math.min(depth, 6) * 1.25}rem` }}>
+              <div
+                className={cx("flex min-h-8 items-center gap-1.5 pr-3", current && "bg-accent-soft")}
+                style={{ paddingLeft: `${0.75 + Math.min(depth, 6) * 1.25}rem` }}
+              >
                 {hasKids ? (
                   <button
                     type="button"
                     aria-expanded={open}
                     aria-label={t(open ? "collapse" : "expand", { name: n.name })}
                     onClick={() => toggle(n.id)}
-                    className="w-5 text-neutral-500"
+                    className="inline-flex size-5 shrink-0 cursor-pointer items-center justify-center rounded text-muted hover:bg-well"
                   >
-                    {open ? "▾" : "▸"}
+                    <Icon name={open ? "chevron" : "chevronRight"} className="size-3.5" />
                   </button>
                 ) : (
-                  <span className="w-5" />
+                  <span className="size-5 shrink-0" />
                 )}
+                <Icon name={n.type === "module" ? "folder" : "screen"} className={cx("size-4", current ? "text-accent-strong" : "text-muted")} />
+                <span className="sr-only">{t(n.type)}</span>
                 <button
                   type="button"
                   onClick={() => select(n.id)}
-                  aria-current={n.id === selectedId ? "true" : undefined}
-                  className={n.id === selectedId ? "font-semibold underline" : "hover:underline"}
+                  aria-current={current ? "true" : undefined}
+                  className={cx(
+                    "cursor-pointer truncate text-left hover:underline",
+                    n.type === "module" && "font-semibold",
+                    current && "font-semibold text-accent-strong",
+                    n.archived && "text-muted",
+                  )}
                 >
                   {n.name}
                 </button>
-                <span className="text-xs text-neutral-500">{t(n.type)}</span>
                 {badge(n)}
-                {n.archived && <span className={chip}>{t("archivedBadge")}</span>}
+                {n.archived && <span className={cx(chip, "bg-well text-muted")}>{t("archivedBadge")}</span>}
               </div>
               {open && level(n.id, depth + 1)}
             </li>
@@ -148,19 +163,19 @@ export default function ModuleTree({ projectKey, nodes, clients, canEdit, showAr
     );
   }
 
-  const action = "rounded border px-3 py-1 disabled:opacity-40";
   function details(n: Node) {
+    const path = <p className="text-xs text-muted">{pathOf(n)}</p>;
     // R-MR-4: an archived node can only be restored.
     if (n.archived) {
       return (
         <div className="flex flex-col gap-4">
-          <p className="text-sm text-neutral-600">{pathOf(n)}</p>
+          {path}
           <ReadOnlyNode node={n} />
           {canEdit && (
             <button
               type="button"
               onClick={() => run(api.PATCH("/nodes/{id}", { params: { path: { id: n.id } }, body: { archived: false } }))}
-              className={`${action} self-start`}
+              className={cx(button.secondary, "self-start")}
             >
               {t("restore")}
             </button>
@@ -181,7 +196,7 @@ export default function ModuleTree({ projectKey, nodes, clients, canEdit, showAr
     };
     return (
       <div className="flex flex-col gap-4">
-        <p className="text-sm text-neutral-600">{pathOf(n)}</p>
+        {path}
         {!canEdit ? (
           <ReadOnlyNode node={n} />
         ) : (
@@ -196,24 +211,25 @@ export default function ModuleTree({ projectKey, nodes, clients, canEdit, showAr
                 router.refresh();
               }}
             />
-            <div className="flex flex-wrap gap-2 border-t pt-4 text-sm">
-              <button type="button" onClick={() => { setCreatingUnder(n.id); setError(""); }} className={action}>
+            <div className="flex flex-wrap gap-2 border-t border-line-soft pt-4">
+              <button type="button" onClick={() => { setCreatingUnder(n.id); setError(""); }} className={button.secondary}>
+                <Icon name="plus" />
                 {t("addChild")}
               </button>
-              <button type="button" disabled={index <= 0} onClick={() => move(n.parent_id, index - 1)} className={action}>
+              <button type="button" disabled={index <= 0} onClick={() => move(n.parent_id, index - 1)} className={button.secondary}>
                 {t("moveUp")}
               </button>
-              <button type="button" disabled={index === siblings.length - 1} onClick={() => move(n.parent_id, index + 1)} className={action}>
+              <button type="button" disabled={index === siblings.length - 1} onClick={() => move(n.parent_id, index + 1)} className={button.secondary}>
                 {t("moveDown")}
               </button>
               <button
                 type="button"
                 onClick={() => run(api.PATCH("/nodes/{id}", { params: { path: { id: n.id } }, body: { archived: true } }), () => setSelectedId(null))}
-                className={action}
+                className={button.secondary}
               >
                 {t("archive")}
               </button>
-              <button type="button" onClick={remove} className={`${action} border-red-300 text-red-700`}>
+              <button type="button" onClick={remove} className={cx(button.danger, "ml-auto")}>
                 {t("delete")}
               </button>
             </div>
@@ -225,11 +241,11 @@ export default function ModuleTree({ projectKey, nodes, clients, canEdit, showAr
                 const v = String(new FormData(e.currentTarget).get("parent"));
                 move(v === "" ? null : Number(v));
               }}
-              className="flex items-end gap-2 text-sm"
+              className="flex flex-wrap items-end gap-2"
             >
-              <label className="flex flex-col gap-1">
+              <label className={cx(field.label, "min-w-0 flex-1")}>
                 {t("moveTo")}
-                <select name="parent" defaultValue={n.parent_id ?? ""} className="rounded border px-2 py-1">
+                <select name="parent" defaultValue={n.parent_id ?? ""} className={field.input}>
                   <option value="">{t("topLevel")}</option>
                   {nodes
                     .filter((x) => !blocked.has(x.id) && !x.archived)
@@ -238,7 +254,7 @@ export default function ModuleTree({ projectKey, nodes, clients, canEdit, showAr
                     ))}
                 </select>
               </label>
-              <button className={action}>{t("move")}</button>
+              <button className={cx(button.secondary, "h-[34px]")}>{t("move")}</button>
             </form>
           </>
         )}
@@ -247,28 +263,37 @@ export default function ModuleTree({ projectKey, nodes, clients, canEdit, showAr
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-2">
-      <section aria-label={t("tree")} className="rounded-lg border bg-white p-4">
-        <div className="mb-3 flex items-end gap-3">
-          <label className="flex flex-1 flex-col gap-1 text-sm">
-            {t("filter")}
-            <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder={t("filterPlaceholder")} className="rounded border px-3 py-2" />
+    <div className="grid items-start gap-4 md:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
+      <section aria-label={t("tree")} className={panel}>
+        <div className="flex flex-wrap items-center gap-2 border-b border-line-soft p-3">
+          <label className="flex h-8 min-w-40 flex-1 items-center gap-1.5 rounded border border-line bg-white px-2 text-muted focus-within:outline-2 focus-within:outline-accent">
+            <Icon name="search" />
+            <input
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              aria-label={t("filter")}
+              placeholder={t("filterPlaceholder")}
+              className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-muted"
+            />
           </label>
           {canEdit && (
-            <button type="button" onClick={() => { select(null); setCreatingUnder(null); }} className="rounded bg-neutral-900 px-3 py-2 text-sm text-white">
-              {t("addTop")}
-            </button>
-          )}
-          {canEdit && (
-            <Link href={showArchived ? "?" : "?archived=1"} className="text-sm underline">
+            <Link href={showArchived ? "?" : "?archived=1"} className={button.quiet}>
               {showArchived ? t("hideArchived") : t("showArchived")}
             </Link>
           )}
+          {canEdit && (
+            <button type="button" onClick={() => { select(null); setCreatingUnder(null); }} className={button.primary}>
+              <Icon name="plus" />
+              {t("addTop")}
+            </button>
+          )}
         </div>
-        {nodes.length === 0 ? <p className="text-sm text-neutral-600">{canEdit ? t("emptyAdmin") : t("empty")}</p> : level(null, 0)}
+        <div className="py-1.5 text-[13px]">
+          {nodes.length === 0 ? <p className="px-3 py-2 text-muted">{canEdit ? t("emptyAdmin") : t("empty")}</p> : level(null, 0)}
+        </div>
       </section>
-      <section aria-label={t("details")} className="rounded-lg border bg-white p-4">
-        {error && <p role="alert" className="mb-3 text-sm text-red-700">{error}</p>}
+      <section aria-label={t("details")} className={cx(panel, "p-4")}>
+        {error && <p role="alert" className={cx(field.error, "mb-3")}>{error}</p>}
         {creatingUnder !== undefined ? (
           <NodeForm
             key={`new-${creatingUnder}`}
@@ -286,7 +311,7 @@ export default function ModuleTree({ projectKey, nodes, clients, canEdit, showAr
         ) : selected ? (
           details(selected)
         ) : (
-          <p className="text-sm text-neutral-600">{t("pick")}</p>
+          <p className="text-[13px] text-muted">{t("pick")}</p>
         )}
       </section>
     </div>

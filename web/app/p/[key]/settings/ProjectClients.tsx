@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { useProblemText, type Client } from "@/lib/problem";
+import { button, cx, field, panel } from "@/lib/ui";
 
 // Which clients the project serves. Project admins may also create a client
 // here, since /admin/clients is for system admins (FSD §5.1).
@@ -48,29 +49,36 @@ export default function ProjectClients({ projectKey, all, linked }: { projectKey
   }
 
   return (
-    <section aria-labelledby="clients-title" className="flex flex-col gap-4 rounded-lg border bg-white p-4">
-      <h2 id="clients-title" className="font-medium">{t("clientsTitle")}</h2>
-      <p className="text-sm text-neutral-600">{t("clientsHint")}</p>
+    <section aria-labelledby="clients-title" className={cx(panel, "flex flex-col gap-3 p-4")}>
+      <div>
+        <h2 id="clients-title" className="text-sm font-semibold">{t("clientsTitle")}</h2>
+        <p className={field.hint}>{t("clientsHint")}</p>
+      </div>
       <form aria-label={t("clientsTitle")} onSubmit={save} className="flex flex-col gap-3">
-        {choices.length === 0 && <p className="text-sm text-neutral-600">{t("noClients")}</p>}
-        <div className="flex flex-wrap gap-4">
+        {choices.length === 0 && <p className="text-[13px] text-muted">{t("noClients")}</p>}
+        <div className="flex flex-wrap gap-2">
           {choices.map((c) => (
-            <label key={c.id} className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={checked.has(c.id)} onChange={(e) => toggle(c.id, e.target.checked)} />
+            <label
+              key={c.id}
+              className="flex h-8 items-center gap-2 rounded border border-line px-2.5 text-[13px] has-[:checked]:border-accent has-[:checked]:bg-accent-soft"
+            >
+              <input type="checkbox" checked={checked.has(c.id)} onChange={(e) => toggle(c.id, e.target.checked)} className="size-4 accent-accent" />
               {c.name}
-              {c.archived && <span className="text-xs text-neutral-500">({t("archived")})</span>}
+              {c.archived && <span className="text-xs text-muted">({t("archived")})</span>}
             </label>
           ))}
         </div>
-        <button className="self-start rounded bg-neutral-900 px-4 py-2 text-white">{t("saveClients")}</button>
-        {status && <p role="status" className="text-sm">{status}</p>}
+        <div className="flex items-center gap-3">
+          <button className={button.primary}>{t("saveClients")}</button>
+          {status && <p role="status" className="text-[13px] text-muted">{status}</p>}
+        </div>
       </form>
-      <form aria-label={t("newClient")} onSubmit={create} className="flex items-end gap-3 border-t pt-4">
-        <label className="flex flex-col gap-1 text-sm">
+      <form aria-label={t("newClient")} onSubmit={create} className="flex flex-wrap items-end gap-2 border-t border-line-soft pt-3">
+        <label className={field.label}>
           {t("newClient")}
-          <input name="name" required maxLength={200} className="rounded border px-3 py-2" />
+          <input name="name" required maxLength={200} className={field.input} />
         </label>
-        <button className="rounded border px-4 py-2">{t("createClient")}</button>
+        <button className={cx(button.secondary, "h-[34px]")}>{t("createClient")}</button>
       </form>
     </section>
   );

@@ -1,21 +1,37 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { Avatar, ClientChip, PriorityChip, StatusDot, TypeIcon } from "@/components/Chips";
+import Icon from "@/components/Icon";
+import PageBar from "@/components/PageBar";
 import TicketForm from "@/components/TicketForm";
 import { api } from "@/lib/api";
-import { utc } from "@/lib/format";
+import { day, utc } from "@/lib/format";
 import { useProblemText, type Client, type Node, type Ref, type Status, type Ticket } from "@/lib/problem";
+import { button, cx, field, panel, sectionTitle } from "@/lib/ui";
 
-type Props = { ticket: Ticket; statuses: Status[]; clients: Client[]; nodes: Node[]; assignees: Ref[]; canEdit: boolean };
+type Props = {
+  ticket: Ticket;
+  statuses: Status[];
+  clients: Client[];
+  nodes: Node[];
+  assignees: Ref[];
+  canEdit: boolean;
+  activity: React.ReactNode;
+  attachments: React.ReactNode;
+};
 
 const closing = (s: Status) => s.category === "done" || s.category === "cancelled";
 
-export default function TicketView({ ticket, statuses, clients, nodes, assignees, canEdit }: Props) {
+export default function TicketView({ ticket, statuses, clients, nodes, assignees, canEdit, activity, attachments }: Props) {
   const t = useTranslations("ticket");
+  const tp = useTranslations("project");
   const tTypes = useTranslations("ticketTypes");
   const tPri = useTranslations("priorities");
+  const locale = useLocale();
   const problemText = useProblemText();
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -37,89 +53,135 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
     router.refresh();
   }
 
+  const block = "flex flex-col gap-1.5 border-b border-line-soft px-4 py-3.5 last:border-0";
   return (
-    <div className="mt-2">
-      <div className="flex flex-wrap items-baseline gap-3">
-        <span className="font-mono text-neutral-500">{ticket.key}</span>
-        <h1 className="text-2xl font-semibold">{ticket.title}</h1>
-      </div>
-      <div className="mt-3 flex flex-wrap items-center gap-4 text-sm">
-        <label className="flex items-center gap-2">
-          {t("status")}
-          <select
-            value={ticket.status.id}
-            disabled={!canEdit}
-            onChange={(e) => transition(Number(e.target.value))}
-            className="rounded border px-2 py-1"
-          >
-            {statuses.map((s) => (
-              <option key={s.id} value={s.id} disabled={closing(s)}>{s.name}</option>
-            ))}
-          </select>
-        </label>
-        <span>{tTypes(ticket.type)}</span>
-        <span className="rounded bg-neutral-100 px-2">{ticket.client?.name ?? t("core")}</span>
-        <span>{tPri(ticket.priority)}</span>
-        <span>{t("assignee")}: {ticket.assignee?.name ?? t("nobody")}</span>
-        {ticket.due_date && <span>{t("due")}: {ticket.due_date}</span>}
+    <>
+      <PageBar>
+        <nav aria-label={t("path")} className="flex items-center gap-1.5 text-[13px] text-muted">
+          <Link href={`/p/${ticket.project_key}/board`}>{ticket.project_key}</Link>
+          <Icon name="chevronRight" className="size-3.5" />
+          <Link href={`/p/${ticket.project_key}/tickets`}>{tp("tickets")}</Link>
+          <Icon name="chevronRight" className="size-3.5" />
+          <span className="font-mono font-semibold text-ink">{ticket.key}</span>
+        </nav>
         {canEdit && !editing && (
-          <button type="button" onClick={() => setEditing(true)} className="underline">{t("edit")}</button>
+          <button type="button" onClick={() => setEditing(true)} className={cx(button.secondary, "ml-auto")}>
+            <Icon name="edit" />
+            {t("edit")}
+          </button>
         )}
-      </div>
-      {error && <p role="alert" className="mt-2 text-sm text-red-700">{error}</p>}
-      {(!ticket.reason || ticket.nodes.length === 0) && (
-        <p className="mt-3 rounded border border-amber-300 bg-amber-50 p-2 text-sm">{t("missingClose")}</p>
-      )}
-      {editing ? (
-        <div className="mt-4 rounded-lg border bg-white p-4">
-          <TicketForm
-            projectKey={ticket.project_key}
-            ticket={ticket}
-            clients={clients}
-            nodes={nodes}
-            assignees={assignees}
-            onSaved={() => {
-              setEditing(false);
-              router.refresh();
-            }}
-            onCancel={() => setEditing(false)}
-          />
-        </div>
-      ) : (
-        <div className="mt-6 grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-          <div className="flex flex-col gap-4">
-            <section>
-              <h2 className="text-sm font-medium text-neutral-500">{t("description")}</h2>
-              <p className="whitespace-pre-wrap">{ticket.description || t("none")}</p>
-            </section>
-            <section>
-              <h2 className="text-sm font-medium text-neutral-500">{t("reason")}</h2>
-              <p className="whitespace-pre-wrap">{ticket.reason || t("none")}</p>
-            </section>
-            <section>
-              <h2 className="text-sm font-medium text-neutral-500">{t("menus")}</h2>
-              <ul className="mt-1 flex flex-wrap gap-2">
-                {ticket.nodes.map((n) => (
-                  <li key={n.id} title={pathOf(n.id)} className="rounded bg-neutral-100 px-2 py-0.5 text-sm">
-                    {n.name}
-                    {n.archived ? ` (${t("archived")})` : ""}
-                  </li>
+      </PageBar>
+      <main className="flex flex-col gap-4 px-4 py-4 md:px-5">
+        <div className="flex flex-col gap-2.5">
+          <div className="flex flex-wrap items-center gap-2 text-[13px]">
+            <span className="font-mono font-semibold text-muted">{ticket.key}</span>
+            <label className="flex h-8 items-center gap-2 rounded border border-line bg-white pl-2.5 focus-within:outline-2 focus-within:outline-accent">
+              <StatusDot color={ticket.status.color} />
+              <span className="sr-only">{t("status")}</span>
+              <select
+                value={ticket.status.id}
+                disabled={!canEdit}
+                onChange={(e) => transition(Number(e.target.value))}
+                className="h-full cursor-pointer bg-transparent pr-2 font-semibold outline-none disabled:cursor-default"
+              >
+                {statuses.map((s) => (
+                  <option key={s.id} value={s.id} disabled={closing(s)}>{s.name}</option>
                 ))}
-              </ul>
-            </section>
+              </select>
+            </label>
+            <span className="flex items-center gap-1.5">
+              <TypeIcon type={ticket.type} label={tTypes(ticket.type)} />
+              {tTypes(ticket.type)}
+            </span>
+            <ClientChip client={ticket.client} coreLabel={t("core")} />
+            <PriorityChip priority={ticket.priority} label={tPri(ticket.priority)} />
+            {ticket.assignee && (
+              <span className="flex items-center gap-1.5">
+                <Avatar name={ticket.assignee.name} className="size-5 bg-well text-[9px] text-ink" />
+                {ticket.assignee.name}
+              </span>
+            )}
+            {ticket.due_date && (
+              <span className="text-muted">
+                {t("due")} {day(ticket.due_date, locale)}
+              </span>
+            )}
           </div>
-          <dl className="grid grid-cols-[auto_1fr] content-start gap-x-3 gap-y-2 text-sm">
-            <dt className="text-neutral-500">{t("requestedBy")}</dt>
-            <dd>{ticket.requester.name}{ticket.requester.title ? ` (${ticket.requester.title})` : ""}</dd>
-            <dt className="text-neutral-500">{t("reporter")}</dt>
-            <dd>{ticket.reporter.name}</dd>
-            <dt className="text-neutral-500">{t("created")}</dt>
-            <dd>{utc(ticket.created_at)}</dd>
-            <dt className="text-neutral-500">{t("updated")}</dt>
-            <dd>{utc(ticket.updated_at)}</dd>
-          </dl>
+          <h1 className="text-2xl font-semibold leading-tight">{ticket.title}</h1>
         </div>
-      )}
-    </div>
+        {error && <p role="alert" className={field.error}>{error}</p>}
+        {!closing(ticket.status) && (!ticket.reason || ticket.nodes.length === 0) && (
+          <p className="flex items-center gap-2 rounded border border-warn-line bg-warn-soft px-3 py-2 text-[13px] text-warn">
+            <Icon name="warning" />
+            {t("missingClose")}
+          </p>
+        )}
+        {editing ? (
+          <div className={panel}>
+            <TicketForm
+              projectKey={ticket.project_key}
+              ticket={ticket}
+              clients={clients}
+              nodes={nodes}
+              assignees={assignees}
+              onSaved={() => {
+                setEditing(false);
+                router.refresh();
+              }}
+              onCancel={() => setEditing(false)}
+            />
+          </div>
+        ) : (
+          <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="flex min-w-0 flex-col gap-4">
+              <section aria-label={t("details")} className={panel}>
+                <div className={block}>
+                  <h2 className={sectionTitle}>{t("description")}</h2>
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed">{ticket.description || <span className="text-muted">{t("none")}</span>}</p>
+                </div>
+                <div className={block}>
+                  <h2 className={sectionTitle}>{t("reason")}</h2>
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed">{ticket.reason || <span className="text-muted">{t("none")}</span>}</p>
+                </div>
+                <div className={block}>
+                  <h2 className={sectionTitle}>{t("menus")}</h2>
+                  {ticket.nodes.length === 0 ? (
+                    <p className="text-sm text-muted">{t("none")}</p>
+                  ) : (
+                    <ul className="flex flex-wrap gap-1.5">
+                      {ticket.nodes.map((n) => (
+                        <li key={n.id} className="inline-flex h-7 items-center gap-1.5 rounded border border-line bg-ground px-2.5 text-[13px]">
+                          <Icon name="screen" className="size-3.5 text-muted" />
+                          {pathOf(n.id) || n.name}
+                          {n.archived ? ` (${t("archived")})` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </section>
+              {activity}
+            </div>
+            <aside className="flex flex-col gap-4">
+              <section aria-label={t("people")} className={cx(panel, "px-4 py-3.5")}>
+                <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3.5 gap-y-2.5 text-[13px] leading-snug">
+                  <dt className="text-muted">{t("requestedBy")}</dt>
+                  <dd>{ticket.requester.name}{ticket.requester.title ? ` (${ticket.requester.title})` : ""}</dd>
+                  <dt className="text-muted">{t("reporter")}</dt>
+                  <dd>{ticket.reporter.name}</dd>
+                  <dt className="text-muted">{t("assignee")}</dt>
+                  <dd>{ticket.assignee?.name ?? t("nobody")}</dd>
+                  <dt className="text-muted">{t("created")}</dt>
+                  <dd>{utc(ticket.created_at, locale)}</dd>
+                  <dt className="text-muted">{t("updated")}</dt>
+                  <dd>{utc(ticket.updated_at, locale)}</dd>
+                </dl>
+              </section>
+              {attachments}
+            </aside>
+          </div>
+        )}
+      </main>
+    </>
   );
 }

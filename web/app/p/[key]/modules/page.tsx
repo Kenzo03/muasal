@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
+import PageBar from "@/components/PageBar";
 import { getProject, serverApi } from "@/lib/server-api";
 import ModuleTree from "./ModuleTree";
 
@@ -12,6 +14,7 @@ export default async function ModulesPage({
   const { key } = await params;
   const project = await getProject(key);
   if (!project) notFound();
+  const t = await getTranslations("modules");
   const api = await serverApi();
   const path = { params: { path: { key } } };
   const canEdit = project.role === "admin";
@@ -21,5 +24,15 @@ export default async function ModulesPage({
     (await api.GET("/projects/{key}/nodes", { params: { path: { key }, query: { archived: showArchived || undefined } } })).data?.items ?? [];
   // Only project admins pick clients for menus; the link list is theirs to read.
   const clients = canEdit ? ((await api.GET("/projects/{key}/clients", path)).data?.items ?? []) : [];
-  return <ModuleTree projectKey={key} nodes={nodes} clients={clients} canEdit={canEdit} showArchived={showArchived} />;
+  return (
+    <>
+      <PageBar>
+        <h1 className="text-base font-semibold">{t("tree")}</h1>
+        <span className="text-[13px] text-muted">{project.name}</span>
+      </PageBar>
+      <main className="px-4 py-4 md:px-5">
+        <ModuleTree projectKey={key} nodes={nodes} clients={clients} canEdit={canEdit} showArchived={showArchived} />
+      </main>
+    </>
+  );
 }

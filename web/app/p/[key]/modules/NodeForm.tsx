@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { ClientChip } from "@/components/Chips";
 import { api } from "@/lib/api";
 import { useProblemText, type Client, type Node } from "@/lib/problem";
+import { button, chip, cx, field } from "@/lib/ui";
 
 type Props = {
   projectKey: string;
@@ -50,64 +52,71 @@ export default function NodeForm({ projectKey, node, parentId, parentPath, clien
     }
   }
 
-  const input = "rounded border px-3 py-2";
   const title = node ? t("editTitle", { name: node.name }) : t("newTitle");
   return (
     <form aria-label={title} onSubmit={onSubmit} className="flex flex-col gap-3">
-      <h2 className="font-medium">{title}</h2>
-      {parentPath && <p className="text-sm text-neutral-600">{t("under", { path: parentPath })}</p>}
-      <label className="flex flex-col gap-1 text-sm">
-        {t("name")}
-        <input name="name" defaultValue={node?.name} required maxLength={200} className={input} />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        {t("type")}
-        <select name="type" value={type} onChange={(e) => setType(e.target.value === "menu" ? "menu" : "module")} className={input}>
-          <option value="module">{t("module")}</option>
-          <option value="menu">{t("menu")}</option>
-        </select>
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        {t("code")}
-        <input name="code" defaultValue={node?.code ?? ""} maxLength={100} className={`${input} font-mono`} />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        {t("aliases")}
-        <input name="aliases" defaultValue={node?.aliases.join(", ")} className={input} />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
+      <div>
+        <h2 className="text-base font-semibold">{title}</h2>
+        {parentPath && <p className="text-xs text-muted">{t("under", { path: parentPath })}</p>}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className={field.label}>
+          {t("name")}
+          <input name="name" defaultValue={node?.name} required maxLength={200} className={field.input} />
+        </label>
+        <label className={field.label}>
+          {t("type")}
+          <select name="type" value={type} onChange={(e) => setType(e.target.value === "menu" ? "menu" : "module")} className={field.input}>
+            <option value="module">{t("module")}</option>
+            <option value="menu">{t("menu")}</option>
+          </select>
+        </label>
+        <label className={field.label}>
+          {t("code")}
+          <input name="code" defaultValue={node?.code ?? ""} maxLength={100} className={cx(field.input, "font-mono")} />
+        </label>
+        <label className={field.label}>
+          {t("aliases")}
+          <input name="aliases" defaultValue={node?.aliases.join(", ")} className={field.input} />
+        </label>
+      </div>
+      <label className={field.label}>
         {t("description")}
-        <textarea name="description" defaultValue={node?.description} maxLength={5000} rows={3} className={input} />
+        <textarea name="description" defaultValue={node?.description} maxLength={5000} rows={3} className={field.textarea} />
       </label>
       {type === "menu" && (
-        <fieldset className="flex flex-col gap-2 text-sm">
-          <legend className="mb-1">{t("scope")}</legend>
-          <label className="flex items-center gap-2">
-            <input type="radio" name="scope" checked={!specific} onChange={() => setSpecific(false)} />
-            {t("shared")}
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="radio" name="scope" checked={specific} onChange={() => setSpecific(true)} />
-            {t("clientSpecific")}
-          </label>
+        <fieldset className="flex flex-col gap-2 text-[13px]">
+          <legend className="mb-1 font-medium">{t("scope")}</legend>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            <label className="flex items-center gap-2">
+              <input type="radio" name="scope" checked={!specific} onChange={() => setSpecific(false)} className="size-4 accent-accent" />
+              {t("shared")}
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="radio" name="scope" checked={specific} onChange={() => setSpecific(true)} className="size-4 accent-accent" />
+              {t("clientSpecific")}
+            </label>
+          </div>
           {specific &&
             (clients.length === 0 ? (
-              <p className="text-neutral-600">{t("noLinkedClients")}</p>
+              <p className="text-muted">{t("noLinkedClients")}</p>
             ) : (
-              clients.map((c) => (
-                <label key={c.id} className="ml-6 flex items-center gap-2">
-                  <input type="checkbox" name="client_ids" value={c.id} defaultChecked={node?.clients.some((x) => x.id === c.id)} />
-                  {c.name}
-                </label>
-              ))
+              <div className="flex flex-wrap gap-x-4 gap-y-2 rounded border border-line-soft bg-paper p-2.5">
+                {clients.map((c) => (
+                  <label key={c.id} className="flex items-center gap-2">
+                    <input type="checkbox" name="client_ids" value={c.id} defaultChecked={node?.clients.some((x) => x.id === c.id)} className="size-4 accent-accent" />
+                    {c.name}
+                  </label>
+                ))}
+              </div>
             ))}
         </fieldset>
       )}
-      {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
-      <div className="flex gap-3">
-        <button className="rounded bg-neutral-900 px-4 py-2 text-white">{t("save")}</button>
+      {error && <p role="alert" className={field.error}>{error}</p>}
+      <div className="flex gap-2">
+        <button className={button.primary}>{t("save")}</button>
         {onCancel && (
-          <button type="button" onClick={onCancel} className="rounded border px-4 py-2">
+          <button type="button" onClick={onCancel} className={button.secondary}>
             {t("cancel")}
           </button>
         )}
@@ -121,15 +130,22 @@ export function ReadOnlyNode({ node }: { node: Node }) {
   const t = useTranslations("modules");
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="font-medium">{node.name}</h2>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-        <dt className="text-neutral-500">{t("type")}</dt>
-        <dd>{t(node.type)}</dd>
-        <dt className="text-neutral-500">{t("code")}</dt>
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-lg font-semibold">{node.name}</h2>
+        <span className="text-[13px] text-muted">{t(node.type)}</span>
+        {node.type === "menu" &&
+          (node.client_specific ? (
+            node.clients.map((c) => <ClientChip key={c.id} client={c} coreLabel="" />)
+          ) : (
+            <span className={cx(chip, "bg-ground text-[#4A423C]")}>{t("shared")}</span>
+          ))}
+      </div>
+      <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-[13px]">
+        <dt className="text-muted">{t("code")}</dt>
         <dd className="font-mono">{node.code ?? "—"}</dd>
-        <dt className="text-neutral-500">{t("aliasesTitle")}</dt>
+        <dt className="text-muted">{t("aliasesTitle")}</dt>
         <dd>{node.aliases.join(", ") || "—"}</dd>
-        <dt className="text-neutral-500">{t("description")}</dt>
+        <dt className="text-muted">{t("description")}</dt>
         <dd className="whitespace-pre-wrap">{node.description || "—"}</dd>
       </dl>
     </div>

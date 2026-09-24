@@ -1,7 +1,8 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import PageBar from "@/components/PageBar";
 import { getMe } from "@/lib/server-api";
+import { panel } from "@/lib/ui";
 import ProfileForm from "./ProfileForm";
 
 export default async function ProfilePage() {
@@ -9,10 +10,16 @@ export default async function ProfilePage() {
   if (!me) redirect("/login");
   const t = await getTranslations("profile");
   return (
-    <main className="mx-auto max-w-md p-8">
-      <Link className="text-sm underline" href="/">{t("back")}</Link>
-      <h1 className="mb-6 mt-2 text-2xl font-semibold">{t("title")}</h1>
-      <ProfileForm me={me} />
-    </main>
+    <>
+      <PageBar>
+        <h1 className="text-base font-semibold">{t("title")}</h1>
+        <span className="text-[13px] text-muted">{me.email}</span>
+      </PageBar>
+      <main className="p-4 md:p-5">
+        <div className={`${panel} mx-auto max-w-lg p-5`}>
+          <ProfileForm me={me} />
+        </div>
+      </main>
+    </>
   );
 }
