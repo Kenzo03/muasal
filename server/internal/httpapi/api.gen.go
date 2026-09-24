@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/oapi-codegen/runtime"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 // Defines values for Locale.
@@ -44,6 +45,30 @@ func (e NodeType) Valid() bool {
 	case NodeTypeMenu:
 		return true
 	case NodeTypeModule:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Priority.
+const (
+	PriorityHigh   Priority = "high"
+	PriorityLow    Priority = "low"
+	PriorityMedium Priority = "medium"
+	PriorityUrgent Priority = "urgent"
+)
+
+// Valid indicates whether the value is a known member of the Priority enum.
+func (e Priority) Valid() bool {
+	switch e {
+	case PriorityHigh:
+		return true
+	case PriorityLow:
+		return true
+	case PriorityMedium:
+		return true
+	case PriorityUrgent:
 		return true
 	default:
 		return false
@@ -93,6 +118,55 @@ func (e StatusCategory) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// Defines values for TicketRequesterKind.
+const (
+	TicketRequesterKindContact TicketRequesterKind = "contact"
+	TicketRequesterKindUser    TicketRequesterKind = "user"
+)
+
+// Valid indicates whether the value is a known member of the TicketRequesterKind enum.
+func (e TicketRequesterKind) Valid() bool {
+	switch e {
+	case TicketRequesterKindContact:
+		return true
+	case TicketRequesterKindUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TicketType.
+const (
+	TicketTypeBug           TicketType = "bug"
+	TicketTypeChangeRequest TicketType = "change_request"
+	TicketTypeFeature       TicketType = "feature"
+)
+
+// Valid indicates whether the value is a known member of the TicketType enum.
+func (e TicketType) Valid() bool {
+	switch e {
+	case TicketTypeBug:
+		return true
+	case TicketTypeChangeRequest:
+		return true
+	case TicketTypeFeature:
+		return true
+	default:
+		return false
+	}
+}
+
+// Attachment defines model for Attachment.
+type Attachment struct {
+	ContentType string    `json:"content_type"`
+	CreatedAt   time.Time `json:"created_at"`
+	Filename    string    `json:"filename"`
+	Id          int64     `json:"id"`
+	SizeBytes   int64     `json:"size_bytes"`
+	Uploader    Ref       `json:"uploader"`
 }
 
 // Client defines model for Client.
@@ -264,6 +338,13 @@ type NodeMove struct {
 	Position *int32 `json:"position,omitempty"`
 }
 
+// NodeRef defines model for NodeRef.
+type NodeRef struct {
+	Archived bool   `json:"archived"`
+	Id       int64  `json:"id"`
+	Name     string `json:"name"`
+}
+
 // NodeType defines model for NodeType.
 type NodeType string
 
@@ -282,6 +363,9 @@ type NodeUpdate struct {
 	Name        *string   `json:"name,omitempty"`
 	Type        *NodeType `json:"type,omitempty"`
 }
+
+// Priority defines model for Priority.
+type Priority string
 
 // Problem defines model for Problem.
 type Problem struct {
@@ -405,6 +489,93 @@ type StatusesUpdate struct {
 	Statuses []StatusInput `json:"statuses"`
 }
 
+// Ticket defines model for Ticket.
+type Ticket struct {
+	Assignee    *Ref                `json:"assignee,omitempty"`
+	Attachments []Attachment        `json:"attachments"`
+	Client      *Ref                `json:"client,omitempty"`
+	CreatedAt   time.Time           `json:"created_at"`
+	Description string              `json:"description"`
+	DueDate     *openapi_types.Date `json:"due_date"`
+	Id          int64               `json:"id"`
+
+	// Key Example: HRIS-231
+	Key        string          `json:"key"`
+	Nodes      []NodeRef       `json:"nodes"`
+	Priority   Priority        `json:"priority"`
+	ProjectKey string          `json:"project_key"`
+	Reason     string          `json:"reason"`
+	Reporter   Ref             `json:"reporter"`
+	Requester  TicketRequester `json:"requester"`
+	Status     Status          `json:"status"`
+	Title      string          `json:"title"`
+	Type       TicketType      `json:"type"`
+	UpdatedAt  time.Time       `json:"updated_at"`
+	Version    int32           `json:"version"`
+}
+
+// TicketCreate defines model for TicketCreate.
+type TicketCreate struct {
+	AssigneeId *int64 `json:"assignee_id,omitempty"`
+
+	// ClientId Omitted for core work (all clients).
+	ClientId           *int64              `json:"client_id,omitempty"`
+	Description        *string             `json:"description,omitempty"`
+	DueDate            *openapi_types.Date `json:"due_date,omitempty"`
+	NodeIds            []int64             `json:"node_ids"`
+	Priority           *Priority           `json:"priority,omitempty"`
+	Reason             *string             `json:"reason,omitempty"`
+	RequesterContactId *int64              `json:"requester_contact_id,omitempty"`
+
+	// RequesterUserId Without a requester the reporter is the requester.
+	RequesterUserId *int64 `json:"requester_user_id,omitempty"`
+
+	// StatusId An open status; omitted means the project's default.
+	StatusId *int64     `json:"status_id,omitempty"`
+	Title    string     `json:"title"`
+	Type     TicketType `json:"type"`
+}
+
+// TicketRequester defines model for TicketRequester.
+type TicketRequester struct {
+	Id   int64               `json:"id"`
+	Kind TicketRequesterKind `json:"kind"`
+	Name string              `json:"name"`
+
+	// Title Example: HR Manager
+	Title *string `json:"title"`
+}
+
+// TicketRequesterKind defines model for TicketRequester.Kind.
+type TicketRequesterKind string
+
+// TicketType defines model for TicketType.
+type TicketType string
+
+// TicketUpdate Replaces every editable field; send the current value of each field you keep.
+type TicketUpdate struct {
+	AssigneeId *int64 `json:"assignee_id,omitempty"`
+
+	// ClientId Omitted for core work (all clients).
+	ClientId           *int64              `json:"client_id,omitempty"`
+	Description        *string             `json:"description,omitempty"`
+	DueDate            *openapi_types.Date `json:"due_date,omitempty"`
+	NodeIds            []int64             `json:"node_ids"`
+	Priority           *Priority           `json:"priority,omitempty"`
+	Reason             *string             `json:"reason,omitempty"`
+	RequesterContactId *int64              `json:"requester_contact_id,omitempty"`
+
+	// RequesterUserId One of the two requester fields is required.
+	RequesterUserId *int64     `json:"requester_user_id,omitempty"`
+	Title           string     `json:"title"`
+	Type            TicketType `json:"type"`
+}
+
+// TransitionRequest defines model for TransitionRequest.
+type TransitionRequest struct {
+	StatusId int64 `json:"status_id"`
+}
+
 // User defines model for User.
 type User struct {
 	CreatedAt   time.Time  `json:"created_at"`
@@ -448,6 +619,11 @@ type UserUpdate struct {
 type ListContactsParams struct {
 	Q        *string `form:"q,omitempty" json:"q,omitempty"`
 	ClientId *int64  `form:"client_id,omitempty" json:"client_id,omitempty"`
+}
+
+// UpdateTicketParams defines parameters for UpdateTicket.
+type UpdateTicketParams struct {
+	IfMatch string `json:"If-Match"`
 }
 
 // CreateUserJSONRequestBody defines body for CreateUser for application/json ContentType.
@@ -497,6 +673,15 @@ type CreateNodeJSONRequestBody = NodeCreate
 
 // SetStatusesJSONRequestBody defines body for SetStatuses for application/json ContentType.
 type SetStatusesJSONRequestBody = StatusesUpdate
+
+// CreateTicketJSONRequestBody defines body for CreateTicket for application/json ContentType.
+type CreateTicketJSONRequestBody = TicketCreate
+
+// UpdateTicketJSONRequestBody defines body for UpdateTicket for application/json ContentType.
+type UpdateTicketJSONRequestBody = TicketUpdate
+
+// TransitionTicketJSONRequestBody defines body for TransitionTicket for application/json ContentType.
+type TransitionTicketJSONRequestBody = TransitionRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -590,6 +775,18 @@ type ServerInterface interface {
 
 	// (PUT /projects/{key}/statuses)
 	SetStatuses(w http.ResponseWriter, r *http.Request, key string)
+
+	// (POST /projects/{key}/tickets)
+	CreateTicket(w http.ResponseWriter, r *http.Request, key string)
+
+	// (GET /tickets/{key})
+	GetTicket(w http.ResponseWriter, r *http.Request, key string)
+
+	// (PUT /tickets/{key})
+	UpdateTicket(w http.ResponseWriter, r *http.Request, key string, params UpdateTicketParams)
+
+	// (POST /tickets/{key}/transition)
+	TransitionTicket(w http.ResponseWriter, r *http.Request, key string)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -1257,6 +1454,138 @@ func (siw *ServerInterfaceWrapper) SetStatuses(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// CreateTicket operation middleware
+func (siw *ServerInterfaceWrapper) CreateTicket(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateTicket(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetTicket operation middleware
+func (siw *ServerInterfaceWrapper) GetTicket(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTicket(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateTicket operation middleware
+func (siw *ServerInterfaceWrapper) UpdateTicket(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateTicketParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateTicket(w, r, key, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// TransitionTicket operation middleware
+func (siw *ServerInterfaceWrapper) TransitionTicket(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.TransitionTicket(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -1407,6 +1736,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/statuses", wrapper.GetStatuses)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/projects/{key}/statuses", wrapper.SetStatuses)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/assignees", wrapper.ListAssignees)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/tickets", wrapper.CreateTicket)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/tickets/{key}", wrapper.GetTicket)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/tickets/{key}", wrapper.UpdateTicket)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/transition", wrapper.TransitionTicket)
 
 	return m
 }

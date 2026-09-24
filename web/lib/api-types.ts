@@ -347,6 +347,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{key}/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Members and project admins. The ticket starts in the default status unless an open status_id is given. */
+        post: operations["createTicket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tickets/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get: operations["getTicket"];
+        /** @description Members and project admins. Replaces every editable field; a stale If-Match answers 412. */
+        put: operations["updateTicket"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tickets/{key}/transition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Members and project admins. Moves among open statuses; closing answers 422 close_unavailable until the close dialog ships. */
+        post: operations["transitionTicket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -637,6 +694,121 @@ export interface components {
         StatusesUpdate: {
             statuses: components["schemas"]["StatusInput"][];
             move_to?: components["schemas"]["StatusMove"][];
+        };
+        /** @enum {string} */
+        TicketType: "bug" | "change_request" | "feature";
+        /** @enum {string} */
+        Priority: "low" | "medium" | "high" | "urgent";
+        TicketRequester: {
+            /** @enum {string} */
+            kind: "contact" | "user";
+            /** Format: int64 */
+            id: number;
+            name: string;
+            /** @example HR Manager */
+            title: string | null;
+        };
+        NodeRef: {
+            /** Format: int64 */
+            id: number;
+            name: string;
+            archived: boolean;
+        };
+        Attachment: {
+            /** Format: int64 */
+            id: number;
+            filename: string;
+            content_type: string;
+            /** Format: int64 */
+            size_bytes: number;
+            uploader: components["schemas"]["Ref"];
+            /** Format: date-time */
+            created_at: string;
+        };
+        Ticket: {
+            /** Format: int64 */
+            id: number;
+            /** @example HRIS-231 */
+            key: string;
+            project_key: string;
+            title: string;
+            type: components["schemas"]["TicketType"];
+            description: string;
+            reason: string;
+            status: components["schemas"]["Status"];
+            client?: components["schemas"]["Ref"];
+            requester: components["schemas"]["TicketRequester"];
+            reporter: components["schemas"]["Ref"];
+            assignee?: components["schemas"]["Ref"];
+            priority: components["schemas"]["Priority"];
+            /** Format: date */
+            due_date: string | null;
+            nodes: components["schemas"]["NodeRef"][];
+            attachments: components["schemas"]["Attachment"][];
+            /** Format: int32 */
+            version: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        TicketCreate: {
+            type: components["schemas"]["TicketType"];
+            title: string;
+            /**
+             * Format: int64
+             * @description Omitted for core work (all clients).
+             */
+            client_id?: number;
+            /** Format: int64 */
+            requester_contact_id?: number;
+            /**
+             * Format: int64
+             * @description Without a requester the reporter is the requester.
+             */
+            requester_user_id?: number;
+            node_ids: number[];
+            reason?: string;
+            description?: string;
+            /** Format: int64 */
+            assignee_id?: number;
+            priority?: components["schemas"]["Priority"];
+            /** Format: date */
+            due_date?: string;
+            /**
+             * Format: int64
+             * @description An open status; omitted means the project's default.
+             */
+            status_id?: number;
+        };
+        /** @description Replaces every editable field; send the current value of each field you keep. */
+        TicketUpdate: {
+            type: components["schemas"]["TicketType"];
+            title: string;
+            /**
+             * Format: int64
+             * @description Omitted for core work (all clients).
+             */
+            client_id?: number;
+            /** Format: int64 */
+            requester_contact_id?: number;
+            /**
+             * Format: int64
+             * @description One of the two requester fields is required.
+             */
+            requester_user_id?: number;
+            node_ids: number[];
+            reason?: string;
+            description?: string;
+            /** Format: int64 */
+            assignee_id?: number;
+            priority?: components["schemas"]["Priority"];
+            /** Format: date */
+            due_date?: string;
+        };
+        TransitionRequest: {
+            /** Format: int64 */
+            status_id: number;
         };
     };
     responses: {
@@ -1377,6 +1549,112 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RefList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketCreate"];
+            };
+        };
+        responses: {
+            /** @description The new ticket; ETag carries its version. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ticket"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The ticket; ETag carries its version. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ticket"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateTicket: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketUpdate"];
+            };
+        };
+        responses: {
+            /** @description The updated ticket; ETag carries its new version. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ticket"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    transitionTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description The ticket in its new status. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ticket"];
                 };
             };
             default: components["responses"]["Problem"];
