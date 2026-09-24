@@ -23,6 +23,70 @@ type AuditEvent struct {
 	Ip         *netip.Addr
 }
 
+type Client struct {
+	ID         int64
+	Name       string
+	Code       *string
+	Aliases    []string
+	ArchivedAt *time.Time
+}
+
+type Contact struct {
+	ID       int64
+	ClientID *int64
+	Name     string
+	Title    *string
+	Email    *string
+	Phone    *string
+}
+
+type Membership struct {
+	UserID     int64
+	ProjectID  int64
+	Role       string
+	AllClients bool
+}
+
+type MembershipClient struct {
+	UserID    int64
+	ProjectID int64
+	ClientID  int64
+}
+
+type Node struct {
+	ID             int64
+	ProjectID      int64
+	ParentID       *int64
+	Type           string
+	Name           string
+	Code           *string
+	Aliases        []string
+	Description    string
+	ClientSpecific bool
+	Source         string
+	Position       int32
+	ArchivedAt     *time.Time
+}
+
+type NodeClient struct {
+	NodeID    int64
+	ProjectID int64
+	ClientID  int64
+}
+
+type Project struct {
+	ID          int64
+	Key         string
+	Name        string
+	Description string
+	CreatedAt   time.Time
+}
+
+type ProjectClient struct {
+	ProjectID int64
+	ClientID  int64
+}
+
 type Session struct {
 	TokenHash  []byte
 	UserID     int64

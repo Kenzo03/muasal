@@ -444,7 +444,7 @@ ORDER BY n.parent_id NULLS FIRST, n.position, n.id;
 -- name: IsNodeVisible :one
 -- Whether the node and every node above it are visible to this scope (R-AC-5).
 WITH RECURSIVE up AS (
-  SELECT id, parent_id, client_specific FROM nodes WHERE id = sqlc.arg('id')
+  SELECT s.id, s.parent_id, s.client_specific FROM nodes s WHERE s.id = sqlc.arg('id')
   UNION
   SELECT n.id, n.parent_id, n.client_specific FROM nodes n JOIN up ON n.id = up.parent_id
 )
@@ -496,7 +496,7 @@ SELECT sqlc.arg('node_id')::bigint, sqlc.arg('project_id')::bigint, unnest(sqlc.
 -- name: IsSelfOrDescendant :one
 -- Whether candidate is the node itself or anywhere below it: moving there would build a cycle.
 WITH RECURSIVE below AS (
-  SELECT id FROM nodes WHERE id = sqlc.arg('node_id')
+  SELECT s.id FROM nodes s WHERE s.id = sqlc.arg('node_id')
   UNION
   SELECT n.id FROM nodes n JOIN below b ON n.parent_id = b.id
 )
