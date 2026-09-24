@@ -84,6 +84,7 @@ test("an admin builds the HRIS tree and a member scoped to one client sees only 
   await setPassword(budi, budiLink!, budiPassword);
   await signIn(budi, budiEmail, budiPassword);
   await budi.getByRole("link", { name: key }).click();
+  await budi.getByRole("link", { name: "Modul", exact: true }).click(); // a project opens on its board
   await expect(budi.getByRole("button", { name: "Leave Request", exact: true })).toBeVisible();
   await expect(budi.getByRole("button", { name: "Attendance", exact: true })).toBeVisible();
   await expect(budi.getByText("Overtime Approval")).toHaveCount(0);

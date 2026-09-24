@@ -6225,7 +6225,7 @@ git commit -m "feat(web): archive and restore menus in the module tree"
 ### Task 14: End-to-end exit check
 
 **Files:**
-- Modify: `web/e2e/global-setup.ts` (a third admin)
+- Modify: `web/e2e/global-setup.ts` (a third admin), `web/e2e/registry.spec.ts` (projects now open on the board)
 - Create: `web/e2e/tickets.spec.ts`
 
 **Interfaces:**
@@ -6242,7 +6242,15 @@ In `web/e2e/global-setup.ts`, after the `Tree Admin` lines, add:
   process.env.E2E_TICKET_ADMIN_LINK = tickets.link;
 ```
 
+In `web/e2e/registry.spec.ts`, since Task 9 points the project list at the board, Budi opens the tree through its tab. After `await budi.getByRole("link", { name: key }).click();`, add:
+
+```ts
+  await budi.getByRole("link", { name: "Modul", exact: true }).click(); // a project opens on its board
+```
+
 - [ ] **Step 2: Write the exit-check test**
+
+The contact `<select>` sits inside its `<label>`, so Playwright's label text also holds every option. That is why the test finds it with `/^Kontak/`: `exact` never matches, and a loose "Kontak" also hits the "Seorang kontak" radio.
 
 `web/e2e/tickets.spec.ts`:
 
@@ -6292,7 +6300,7 @@ test("a PM logs a client request in one form and moves it on the board", async (
   await form.getByLabel("Nama kontak").fill("Budi");
   await form.getByLabel("Jabatan (opsional)").fill("HR Manager");
   await form.getByRole("button", { name: "Tambah", exact: true }).click();
-  await expect(form.getByLabel("Kontak", { exact: true })).not.toHaveValue("");
+  await expect(form.getByLabel(/^Kontak/)).not.toHaveValue(""); // the label text also holds the options
   await form.getByLabel("Judul").fill("Skip supervisor approval for overtime");
   await form.getByRole("checkbox", { name: "HR › Overtime Approval" }).check();
   await form.getByLabel("Alasan").fill("Client A supervisors are often on leave; HR approves overtime directly.");
@@ -6328,6 +6336,8 @@ cd web && E2E_BASE_URL=http://localhost:8080 npx playwright test
 ```
 
 Use `make e2e` where the stack answers on port 80. Expected: `3 passed`.
+
+Setup links are single-use, so `--repeat-each` fails from the second round at "Simpan kata sandi". To check for flakes, run the whole suite again: the global setup makes fresh admins.
 
 - [ ] **Step 4: Run every check CI runs**
 
