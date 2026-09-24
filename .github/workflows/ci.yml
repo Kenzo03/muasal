@@ -1,0 +1,70 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.6-pg18-trixie
+        env:
+          POSTGRES_USER: owner
+          POSTGRES_PASSWORD: owner
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U owner"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgres://owner:owner@localhost:5432/postgres?sslmode=disable
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.27.1"
+          cache-dependency-path: server/go.sum
+      - run: go generate ./...
+      - name: Generated Go code is up to date
+        run: git diff --exit-code
+      - run: go vet ./...
+      - run: go test ./...
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run gen:api
+      - name: Generated API types are up to date
+        run: git diff --exit-code
+      - run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: [server, web]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: cp deploy/.env.example deploy/.env
+      - run: docker compose -f deploy/compose.yaml --env-file deploy/.env up -d --build --wait
+      - working-directory: web
+        run: npm ci && npx playwright install --with-deps chromium && npx playwright test
+      - if: failure()
+        run: docker compose -f deploy/compose.yaml --env-file deploy/.env logs
