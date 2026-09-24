@@ -11,8 +11,8 @@ import (
 )
 
 const insertAuditEvent = `-- name: InsertAuditEvent :exec
-INSERT INTO audit_events (actor_id, via, entity, entity_id, action, changes, request_id, ip)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO audit_events (actor_id, via, entity, entity_id, project_id, action, changes, request_id, ip)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 
 type InsertAuditEventParams struct {
@@ -20,6 +20,7 @@ type InsertAuditEventParams struct {
 	Via       string
 	Entity    string
 	EntityID  int64
+	ProjectID *int64
 	Action    string
 	Changes   []byte
 	RequestID *string
@@ -32,6 +33,7 @@ func (q *Queries) InsertAuditEvent(ctx context.Context, arg InsertAuditEventPara
 		arg.Via,
 		arg.Entity,
 		arg.EntityID,
+		arg.ProjectID,
 		arg.Action,
 		arg.Changes,
 		arg.RequestID,

@@ -133,6 +133,276 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/SetupLink" }
         default: { $ref: "#/components/responses/Problem" }
+  /projects:
+    get:
+      operationId: listProjects
+      tags: [projects]
+      responses:
+        "200":
+          description: The projects the user belongs to; system admins see every project.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProjectList" }
+        default: { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createProject
+      tags: [projects]
+      description: System admins only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProjectCreate" }
+      responses:
+        "201":
+          description: The new project.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+        default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getProject
+      tags: [projects]
+      description: Members only; everyone else gets 404.
+      responses:
+        "200":
+          description: The project and the caller's role in it.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+        default: { $ref: "#/components/responses/Problem" }
+    patch:
+      operationId: updateProject
+      tags: [projects]
+      description: Project admins only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProjectUpdate" }
+      responses:
+        "200":
+          description: The updated project.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+        default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/clients:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listProjectClients
+      tags: [projects]
+      description: Project admins only.
+      responses:
+        "200":
+          description: The clients linked to the project.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClientList" }
+        default: { $ref: "#/components/responses/Problem" }
+    put:
+      operationId: setProjectClients
+      tags: [projects]
+      description: Project admins only. Replaces the linked clients; removing one that menus or member scopes use answers 409 client_in_use.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProjectClientsUpdate" }
+      responses:
+        "200":
+          description: The clients now linked.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClientList" }
+        default: { $ref: "#/components/responses/Problem" }
+  /clients:
+    get:
+      operationId: listClients
+      tags: [clients]
+      description: System admins and project admins.
+      responses:
+        "200":
+          description: Every client, archived ones included.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClientList" }
+        default: { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createClient
+      tags: [clients]
+      description: System admins and project admins.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClientCreate" }
+      responses:
+        "201":
+          description: The new client.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Client" }
+        default: { $ref: "#/components/responses/Problem" }
+  /clients/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    patch:
+      operationId: updateClient
+      tags: [clients]
+      description: System admins only. An empty code clears it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClientUpdate" }
+      responses:
+        "200":
+          description: The updated client.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Client" }
+        default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/members:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listProjectMembers
+      tags: [projects]
+      description: Project admins only.
+      responses:
+        "200":
+          description: The project's members and their client scopes.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MemberList" }
+        default: { $ref: "#/components/responses/Problem" }
+    put:
+      operationId: setProjectMembers
+      tags: [projects]
+      description: Project admins only. Replaces every membership of the project at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MembersUpdate" }
+      responses:
+        "200":
+          description: The members now.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MemberList" }
+        default: { $ref: "#/components/responses/Problem" }
+  /contacts:
+    get:
+      operationId: listContacts
+      tags: [contacts]
+      description: Contacts of clients in the caller's scope plus internal contacts, at most 50, for type-ahead.
+      parameters:
+        - { name: q, in: query, required: false, schema: { type: string, maxLength: 200 } }
+        - { name: client_id, in: query, required: false, schema: { type: integer, format: int64 } }
+      responses:
+        "200":
+          description: Matching contacts, by name.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ContactList" }
+        default: { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createContact
+      tags: [contacts]
+      description: Members and project admins, for clients in their scope.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ContactInput" }
+      responses:
+        "201":
+          description: The new contact.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Contact" }
+        default: { $ref: "#/components/responses/Problem" }
+  /contacts/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    patch:
+      operationId: updateContact
+      tags: [contacts]
+      description: Replaces every field; an omitted client_id makes the contact internal.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ContactInput" }
+      responses:
+        "200":
+          description: The updated contact.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Contact" }
+        default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/nodes:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listNodes
+      tags: [nodes]
+      description: The tree as a flat list. Client-specific menus outside the caller's scope, and what is under them, are left out.
+      responses:
+        "200":
+          description: Live nodes; siblings in position order.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NodeList" }
+        default: { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createNode
+      tags: [nodes]
+      description: Project admins only. The node goes last among its siblings.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NodeCreate" }
+      responses:
+        "201":
+          description: The new node.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Node" }
+        default: { $ref: "#/components/responses/Problem" }
+  /nodes/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    patch:
+      operationId: updateNode
+      tags: [nodes]
+      description: Project admins only. Edits fields, and moves the node when `move` is present.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NodeUpdate" }
+      responses:
+        "200":
+          description: The updated node.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Node" }
+        default: { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: deleteNode
+      tags: [nodes]
+      description: Project admins only. A node with sub-nodes answers 409 node_has_children.
+      responses:
+        "204": { description: Deleted. }
+        default: { $ref: "#/components/responses/Problem" }
 components:
   responses:
     Problem:
@@ -233,3 +503,218 @@ components:
         field: { type: string }
         code: { type: string }
         message: { type: string }
+    ProjectRole:
+      type: string
+      enum: [admin, member, viewer]
+    Project:
+      type: object
+      required: [id, key, name, description, role, created_at]
+      properties:
+        id: { type: integer, format: int64 }
+        key: { type: string, example: HRIS }
+        name: { type: string }
+        description: { type: string }
+        role: { $ref: "#/components/schemas/ProjectRole" }
+        created_at: { type: string, format: date-time }
+    ProjectList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Project" }
+    ProjectCreate:
+      type: object
+      required: [key, name]
+      properties:
+        key: { type: string, maxLength: 10, description: "2–10 capital letters or digits, starting with a letter; lower case is accepted" }
+        name: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 2000 }
+    ProjectUpdate:
+      type: object
+      properties:
+        key: { type: string, maxLength: 10 }
+        name: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 2000 }
+    Client:
+      type: object
+      required: [id, name, code, aliases, archived]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        code: { type: string, nullable: true, example: CLA }
+        aliases:
+          type: array
+          items: { type: string }
+        archived: { type: boolean }
+    ClientList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Client" }
+    ClientCreate:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 200 }
+        code: { type: string, maxLength: 20 }
+        aliases:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 100 }
+    ClientUpdate:
+      type: object
+      properties:
+        name: { type: string, maxLength: 200 }
+        code: { type: string, maxLength: 20 }
+        aliases:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 100 }
+        archived: { type: boolean }
+    ProjectClientsUpdate:
+      type: object
+      required: [client_ids]
+      properties:
+        client_ids:
+          type: array
+          items: { type: integer, format: int64 }
+    Member:
+      type: object
+      required: [user_id, name, email, role, all_clients, client_ids]
+      properties:
+        user_id: { type: integer, format: int64 }
+        name: { type: string }
+        email: { type: string }
+        role: { $ref: "#/components/schemas/ProjectRole" }
+        all_clients: { type: boolean }
+        client_ids:
+          type: array
+          items: { type: integer, format: int64 }
+    MemberList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Member" }
+    MemberInput:
+      type: object
+      required: [email, role, all_clients]
+      properties:
+        email: { type: string, maxLength: 320 }
+        role: { $ref: "#/components/schemas/ProjectRole" }
+        all_clients: { type: boolean, description: Project admins always have all clients. }
+        client_ids:
+          type: array
+          description: The clients a scoped member sees; ignored with all_clients.
+          items: { type: integer, format: int64 }
+    MembersUpdate:
+      type: object
+      required: [members]
+      properties:
+        members:
+          type: array
+          items: { $ref: "#/components/schemas/MemberInput" }
+    Contact:
+      type: object
+      required: [id, client_id, client_name, name, title, email, phone]
+      properties:
+        id: { type: integer, format: int64 }
+        client_id: { type: integer, format: int64, nullable: true }
+        client_name: { type: string, nullable: true }
+        name: { type: string }
+        title: { type: string, nullable: true }
+        email: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+    ContactList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Contact" }
+    ContactInput:
+      type: object
+      required: [name]
+      properties:
+        client_id: { type: integer, format: int64, description: Omitted for internal people. }
+        name: { type: string, maxLength: 200 }
+        title: { type: string, maxLength: 200 }
+        email: { type: string, maxLength: 320 }
+        phone: { type: string, maxLength: 50 }
+    NodeType:
+      type: string
+      enum: [module, menu]
+    NodeClient:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+    Node:
+      type: object
+      required: [id, parent_id, type, name, code, aliases, description, client_specific, clients, position]
+      properties:
+        id: { type: integer, format: int64 }
+        parent_id: { type: integer, format: int64, nullable: true }
+        type: { $ref: "#/components/schemas/NodeType" }
+        name: { type: string }
+        code: { type: string, nullable: true, example: HR.ATT.OT_APPROVAL }
+        aliases:
+          type: array
+          items: { type: string }
+        description: { type: string }
+        client_specific: { type: boolean }
+        clients:
+          type: array
+          description: The node's clients within the caller's scope.
+          items: { $ref: "#/components/schemas/NodeClient" }
+        position: { type: integer, format: int32 }
+    NodeList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Node" }
+    NodeCreate:
+      type: object
+      required: [type, name]
+      properties:
+        parent_id: { type: integer, format: int64 }
+        type: { $ref: "#/components/schemas/NodeType" }
+        name: { type: string, maxLength: 200 }
+        code: { type: string, maxLength: 100 }
+        aliases:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 100 }
+        description: { type: string, maxLength: 5000 }
+        client_specific: { type: boolean }
+        client_ids:
+          type: array
+          items: { type: integer, format: int64 }
+    NodeUpdate:
+      type: object
+      properties:
+        name: { type: string, maxLength: 200 }
+        type: { $ref: "#/components/schemas/NodeType" }
+        code: { type: string, maxLength: 100, description: An empty code clears it. }
+        aliases:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 100 }
+        description: { type: string, maxLength: 5000 }
+        client_specific: { type: boolean, description: When present, client_ids replaces the node's clients. }
+        client_ids:
+          type: array
+          items: { type: integer, format: int64 }
+        move: { $ref: "#/components/schemas/NodeMove" }
+    NodeMove:
+      type: object
+      properties:
+        parent_id: { type: integer, format: int64, nullable: true, description: Omitted or null moves to the top level. }
+        position: { type: integer, format: int32, minimum: 0, description: Index among the new siblings; omitted puts the node last. }

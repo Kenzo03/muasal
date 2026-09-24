@@ -117,6 +117,197 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listProjects"];
+        put?: never;
+        /** @description System admins only. */
+        post: operations["createProject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description Members only; everyone else gets 404. */
+        get: operations["getProject"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Project admins only. */
+        patch: operations["updateProject"];
+        trace?: never;
+    };
+    "/projects/{key}/clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description Project admins only. */
+        get: operations["listProjectClients"];
+        /** @description Project admins only. Replaces the linked clients; removing one that menus or member scopes use answers 409 client_in_use. */
+        put: operations["setProjectClients"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description System admins and project admins. */
+        get: operations["listClients"];
+        put?: never;
+        /** @description System admins and project admins. */
+        post: operations["createClient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clients/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description System admins only. An empty code clears it. */
+        patch: operations["updateClient"];
+        trace?: never;
+    };
+    "/projects/{key}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description Project admins only. */
+        get: operations["listProjectMembers"];
+        /** @description Project admins only. Replaces every membership of the project at once. */
+        put: operations["setProjectMembers"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Contacts of clients in the caller's scope plus internal contacts, at most 50, for type-ahead. */
+        get: operations["listContacts"];
+        put?: never;
+        /** @description Members and project admins, for clients in their scope. */
+        post: operations["createContact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Replaces every field; an omitted client_id makes the contact internal. */
+        patch: operations["updateContact"];
+        trace?: never;
+    };
+    "/projects/{key}/nodes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description The tree as a flat list. Client-specific menus outside the caller's scope, and what is under them, are left out. */
+        get: operations["listNodes"];
+        put?: never;
+        /** @description Project admins only. The node goes last among its siblings. */
+        post: operations["createNode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nodes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Project admins only. A node with sub-nodes answers 409 node_has_children. */
+        delete: operations["deleteNode"];
+        options?: never;
+        head?: never;
+        /** @description Project admins only. Edits fields, and moves the node when `move` is present. */
+        patch: operations["updateNode"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -192,6 +383,169 @@ export interface components {
             field: string;
             code: string;
             message: string;
+        };
+        /** @enum {string} */
+        ProjectRole: "admin" | "member" | "viewer";
+        Project: {
+            /** Format: int64 */
+            id: number;
+            /** @example HRIS */
+            key: string;
+            name: string;
+            description: string;
+            role: components["schemas"]["ProjectRole"];
+            /** Format: date-time */
+            created_at: string;
+        };
+        ProjectList: {
+            items: components["schemas"]["Project"][];
+        };
+        ProjectCreate: {
+            /** @description 2–10 capital letters or digits, starting with a letter; lower case is accepted */
+            key: string;
+            name: string;
+            description?: string;
+        };
+        ProjectUpdate: {
+            key?: string;
+            name?: string;
+            description?: string;
+        };
+        Client: {
+            /** Format: int64 */
+            id: number;
+            name: string;
+            /** @example CLA */
+            code: string | null;
+            aliases: string[];
+            archived: boolean;
+        };
+        ClientList: {
+            items: components["schemas"]["Client"][];
+        };
+        ClientCreate: {
+            name: string;
+            code?: string;
+            aliases?: string[];
+        };
+        ClientUpdate: {
+            name?: string;
+            code?: string;
+            aliases?: string[];
+            archived?: boolean;
+        };
+        ProjectClientsUpdate: {
+            client_ids: number[];
+        };
+        Member: {
+            /** Format: int64 */
+            user_id: number;
+            name: string;
+            email: string;
+            role: components["schemas"]["ProjectRole"];
+            all_clients: boolean;
+            client_ids: number[];
+        };
+        MemberList: {
+            items: components["schemas"]["Member"][];
+        };
+        MemberInput: {
+            email: string;
+            role: components["schemas"]["ProjectRole"];
+            /** @description Project admins always have all clients. */
+            all_clients: boolean;
+            /** @description The clients a scoped member sees; ignored with all_clients. */
+            client_ids?: number[];
+        };
+        MembersUpdate: {
+            members: components["schemas"]["MemberInput"][];
+        };
+        Contact: {
+            /** Format: int64 */
+            id: number;
+            /** Format: int64 */
+            client_id: number | null;
+            client_name: string | null;
+            name: string;
+            title: string | null;
+            email: string | null;
+            phone: string | null;
+        };
+        ContactList: {
+            items: components["schemas"]["Contact"][];
+        };
+        ContactInput: {
+            /**
+             * Format: int64
+             * @description Omitted for internal people.
+             */
+            client_id?: number;
+            name: string;
+            title?: string;
+            email?: string;
+            phone?: string;
+        };
+        /** @enum {string} */
+        NodeType: "module" | "menu";
+        NodeClient: {
+            /** Format: int64 */
+            id: number;
+            name: string;
+        };
+        Node: {
+            /** Format: int64 */
+            id: number;
+            /** Format: int64 */
+            parent_id: number | null;
+            type: components["schemas"]["NodeType"];
+            name: string;
+            /** @example HR.ATT.OT_APPROVAL */
+            code: string | null;
+            aliases: string[];
+            description: string;
+            client_specific: boolean;
+            /** @description The node's clients within the caller's scope. */
+            clients: components["schemas"]["NodeClient"][];
+            /** Format: int32 */
+            position: number;
+        };
+        NodeList: {
+            items: components["schemas"]["Node"][];
+        };
+        NodeCreate: {
+            /** Format: int64 */
+            parent_id?: number;
+            type: components["schemas"]["NodeType"];
+            name: string;
+            code?: string;
+            aliases?: string[];
+            description?: string;
+            client_specific?: boolean;
+            client_ids?: number[];
+        };
+        NodeUpdate: {
+            name?: string;
+            type?: components["schemas"]["NodeType"];
+            /** @description An empty code clears it. */
+            code?: string;
+            aliases?: string[];
+            description?: string;
+            /** @description When present */
+            client_specific?: boolean;
+            client_ids?: number[];
+            move?: components["schemas"]["NodeMove"];
+        };
+        NodeMove: {
+            /**
+             * Format: int64
+             * @description Omitted or null moves to the top level.
+             */
+            parent_id?: number | null;
+            /**
+             * Format: int32
+             * @description Index among the new siblings; omitted puts the node last.
+             */
+            position?: number;
         };
     };
     responses: {
@@ -416,6 +770,449 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SetupLink"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listProjects: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The projects the user belongs to; system admins see every project. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectCreate"];
+            };
+        };
+        responses: {
+            /** @description The new project. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Project"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project and the caller's role in it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Project"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectUpdate"];
+            };
+        };
+        responses: {
+            /** @description The updated project. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Project"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listProjectClients: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The clients linked to the project. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    setProjectClients: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectClientsUpdate"];
+            };
+        };
+        responses: {
+            /** @description The clients now linked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listClients: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every client, archived ones included. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClientCreate"];
+            };
+        };
+        responses: {
+            /** @description The new client. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Client"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClientUpdate"];
+            };
+        };
+        responses: {
+            /** @description The updated client. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Client"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listProjectMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project's members and their client scopes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    setProjectMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MembersUpdate"];
+            };
+        };
+        responses: {
+            /** @description The members now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listContacts: {
+        parameters: {
+            query?: {
+                q?: string;
+                client_id?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Matching contacts, by name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createContact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactInput"];
+            };
+        };
+        responses: {
+            /** @description The new contact. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Contact"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateContact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactInput"];
+            };
+        };
+        responses: {
+            /** @description The updated contact. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Contact"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listNodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Live nodes; siblings in position order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createNode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NodeCreate"];
+            };
+        };
+        responses: {
+            /** @description The new node. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Node"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteNode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateNode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NodeUpdate"];
+            };
+        };
+        responses: {
+            /** @description The updated node. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Node"];
                 };
             };
             default: components["responses"]["Problem"];
