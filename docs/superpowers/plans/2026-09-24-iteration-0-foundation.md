@@ -6,7 +6,7 @@
 
 **Architecture:** `api/openapi.yaml` is the contract. oapi-codegen generates the Go std-http routing and models from it, and openapi-typescript generates the web types. One Go 1.27 binary (`serve`, `migrate up`, `admin create-admin`, `healthcheck`) talks to PostgreSQL 18 through pgx and sqlc, with goose migrations embedded. Sessions live in PostgreSQL as SHA-256 hashes of 256-bit cookie tokens. Next.js 16 renders pages and reads through the Go API on the server, forwarding the session cookie. The browser sends every write to `/api/v1`, which Caddy routes to Go on the same origin.
 
-**Tech Stack:** Go 1.27.1, pgx v5.11.0, goose v3.28.0, sqlc v1.31.1, oapi-codegen v2.8.0 with runtime v1.7.0, golang.org/x/crypto v0.57.0; Node 24 (22+ works locally), Next.js 16.3.6, React 19.3.0, next-intl 4.14.6, openapi-fetch 0.17.0, openapi-typescript 7.13.0, Tailwind CSS 4.3.3, TypeScript 6.0.3, Playwright 1.63.0; PostgreSQL 18 (`pgvector/pgvector:0.8.6-pg18-trixie`), Caddy 2, Docker Compose, GitHub Actions (checkout, setup-go, setup-node v7).
+**Tech Stack:** Go 1.27.1, pgx v5.11.0, goose v3.28.0, sqlc v1.31.1, oapi-codegen v2.8.0 with runtime v1.7.0, golang.org/x/crypto v0.57.0; Node 24 (22+ works locally), Next.js 16.3.6, React 19.3.0, next-intl 4.14.6, openapi-fetch 0.17.0, openapi-typescript 7.13.0, Tailwind CSS 4.3.3, TypeScript 5.9.3, Playwright 1.63.0; PostgreSQL 18 (`pgvector/pgvector:0.8.6-pg18-trixie`), Caddy 2, Docker Compose, GitHub Actions (checkout, setup-go, setup-node v7).
 
 **Spec:** Claude Docs "FSD — Muasal": §3 architecture, §4 stack and code rules, §5.1 roles, §6 screens, §15.1 users, §16 data model, §17 API, §18.2 security, §19 deployment, §21 delivery plan.
 
@@ -33,7 +33,7 @@
 ## Deliberate Deviations from the FSD
 
 - oapi-codegen generates the plain std-http `ServerInterface`, not the strict server. Handlers decode and encode through two small helpers, and method names follow the operationIds.
-- TypeScript 6.0.3 (the last JavaScript-based compiler), because `next build` type-checks through the compiler API; revisit TypeScript 7 once Next.js supports it.
+- TypeScript 5.9.3, not 7: `next build` type-checks through the compiler API, which the native TypeScript 7 does not offer. (Execution found that 6.0.3, the first choice, breaks `npm install`: openapi-typescript 7.13 declares a peer range of ^5.x.)
 - shadcn/ui arrives in Iteration 1; Iteration 0 screens use plain Tailwind classes.
 - Production TLS and the offline installer belong to Iteration 5; Iteration 0 serves `http://localhost`.
 - `users` gains `failed_logins`, `failed_since` and `locked_until` for the lockout rule; `sso_subject` and `notify_prefs` come with their P1 features.
@@ -3069,7 +3069,7 @@ git commit -m "feat(server): app binary with serve, migrate, create-admin, healt
     "@types/react-dom": "19.3.0",
     "openapi-typescript": "7.13.0",
     "tailwindcss": "4.3.3",
-    "typescript": "6.0.3"
+    "typescript": "5.9.3"
   }
 }
 ```
@@ -3482,7 +3482,7 @@ git commit -m "feat(web): Next.js scaffold with i18n, typed API clients and auth
 
 **Interfaces:**
 - Consumes: `api`, `serverApi`, `getMe`, `problemKey`, `User`, `Problem` and the message namespaces from Task 8.
-- Produces: pages `/login`, `/setup/[token]`, `/settings/profile`, `/admin/users`. Accessible names the end-to-end test relies on (English): labels "Email", "Password", "New password", "Repeat the password", "Name"; buttons "Sign in", "Save password", "Create user"; status text "Password saved. You can sign in now."; link "Users"; the created setup link inside `data-testid="setup-link"`.
+- Produces: pages `/login`, `/setup/[token]`, `/settings/profile`, `/admin/users`. Accessible names the end-to-end test relies on (Indonesian, the default language): labels "Email", "Kata sandi", "Kata sandi baru", "Ulangi kata sandi", "Nama"; buttons "Masuk", "Simpan kata sandi", "Buat pengguna"; status text "Kata sandi tersimpan. Silakan masuk."; link "Pengguna"; the created setup link inside `data-testid="setup-link"`.
 
 - [ ] **Step 1: Sign-in screen**
 
@@ -3974,7 +3974,8 @@ name: muasal
 services:
   caddy:
     image: caddy:2
-    ports: ["${HTTP_PORT:-80}:80"]
+    # Caddy listens on the port in PUBLIC_URL, so the container port matches the host port.
+    ports: ["${HTTP_PORT:-80}:${HTTP_PORT:-80}"]
     environment:
       PUBLIC_URL: ${PUBLIC_URL}
     volumes:
@@ -4161,49 +4162,45 @@ export default async function globalSetup() {
 ```ts
 import { expect, test, type Page } from "@playwright/test";
 
+// The test runs in the default UI language, Indonesian: after sign-in the UI
+// follows the user's profile language, and new users start with `id`.
 const adminPassword = "e2e-admin-passphrase-1";
 const userPassword = "e2e-budi-passphrase-2";
 
-async function useEnglish(page: Page) {
-  await page.context().addCookies([{ name: "locale", value: "en", url: process.env.E2E_BASE_URL ?? "http://localhost" }]);
-}
-
 async function setPassword(page: Page, link: string, password: string) {
   await page.goto(link);
-  await page.getByLabel("New password").fill(password);
-  await page.getByLabel("Repeat the password").fill(password);
-  await page.getByRole("button", { name: "Save password" }).click();
-  await expect(page.getByRole("status")).toHaveText("Password saved. You can sign in now.");
+  await page.getByLabel("Kata sandi baru").fill(password);
+  await page.getByLabel("Ulangi kata sandi").fill(password);
+  await page.getByRole("button", { name: "Simpan kata sandi" }).click();
+  await expect(page.getByRole("status")).toHaveText("Kata sandi tersimpan. Silakan masuk.");
 }
 
 async function signIn(page: Page, email: string, password: string) {
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByLabel("Kata sandi").fill(password);
+  await page.getByRole("button", { name: "Masuk" }).click();
   await expect(page).toHaveURL(/\/$/);
 }
 
 // FSD §21 Iteration 0 exit check: a user signs in on the compose stack.
 test("an admin creates a user who sets a password and signs in", async ({ page, browser }) => {
-  await useEnglish(page);
   await setPassword(page, process.env.E2E_ADMIN_LINK!, adminPassword);
   await signIn(page, process.env.E2E_ADMIN_EMAIL!, adminPassword);
-  await expect(page.getByText("Signed in as E2E Admin")).toBeVisible();
+  await expect(page.getByText("Masuk sebagai E2E Admin")).toBeVisible();
 
-  await page.getByRole("link", { name: "Users" }).click();
+  await page.getByRole("link", { name: "Pengguna" }).click();
   const email = `budi-${Date.now()}@example.com`;
-  await page.getByLabel("Name").fill("Budi");
+  await page.getByLabel("Nama").fill("Budi");
   await page.getByLabel("Email").fill(email);
-  await page.getByRole("button", { name: "Create user" }).click();
+  await page.getByRole("button", { name: "Buat pengguna" }).click();
   const link = await page.getByTestId("setup-link").textContent();
   expect(link).toContain("/setup/");
 
   const budi = await (await browser.newContext()).newPage();
-  await useEnglish(budi);
   await setPassword(budi, link!, userPassword);
   await signIn(budi, email, userPassword);
-  await expect(budi.getByText("Signed in as Budi")).toBeVisible();
+  await expect(budi.getByText("Masuk sebagai Budi")).toBeVisible();
 });
 ```
 
