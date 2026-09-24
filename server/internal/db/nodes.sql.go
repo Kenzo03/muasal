@@ -34,6 +34,17 @@ func (q *Queries) ClearNodeClients(ctx context.Context, nodeID int64) error {
 	return err
 }
 
+const countLiveChildren = `-- name: CountLiveChildren :one
+SELECT count(*) FROM nodes WHERE parent_id = $1::bigint AND archived_at IS NULL
+`
+
+func (q *Queries) CountLiveChildren(ctx context.Context, nodeID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, countLiveChildren, nodeID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createNode = `-- name: CreateNode :one
 INSERT INTO nodes (project_id, parent_id, type, name, code, aliases, description, client_specific, position)
 VALUES ($1, $2, $3, $4, $5,
@@ -203,19 +214,21 @@ func (q *Queries) ListNodeClients(ctx context.Context, nodeID int64) ([]ListNode
 const listNodes = `-- name: ListNodes :many
 WITH RECURSIVE visible AS (
   SELECT n.id FROM nodes n
-  WHERE n.project_id = $3 AND n.parent_id IS NULL AND n.archived_at IS NULL
+  WHERE n.project_id = $3 AND n.parent_id IS NULL
+    AND (n.archived_at IS NULL OR $4::boolean)
     AND (NOT n.client_specific OR $1::boolean
          OR EXISTS (SELECT 1 FROM node_clients nc
                     WHERE nc.node_id = n.id AND nc.client_id = ANY ($2::bigint[])))
   UNION
   SELECT n.id FROM nodes n
   JOIN visible v ON n.parent_id = v.id
-  WHERE n.archived_at IS NULL
+  WHERE (n.archived_at IS NULL OR $4::boolean)
     AND (NOT n.client_specific OR $1::boolean
          OR EXISTS (SELECT 1 FROM node_clients nc
                     WHERE nc.node_id = n.id AND nc.client_id = ANY ($2::bigint[])))
 )
 SELECT n.id, n.parent_id, n.type, n.name, n.code, n.aliases, n.description, n.client_specific, n.position,
+       (n.archived_at IS NOT NULL)::boolean AS archived,
        coalesce(array_agg(c.id ORDER BY lower(c.name), c.id) FILTER (WHERE c.id IS NOT NULL), '{}')::bigint[] AS client_ids,
        coalesce(array_agg(c.name ORDER BY lower(c.name), c.id) FILTER (WHERE c.id IS NOT NULL), '{}')::text[] AS client_names
 FROM visible v
@@ -228,9 +241,10 @@ ORDER BY n.parent_id NULLS FIRST, n.position, n.id
 `
 
 type ListNodesParams struct {
-	AllClients bool
-	ClientIds  []int64
-	ProjectID  int64
+	AllClients      bool
+	ClientIds       []int64
+	ProjectID       int64
+	IncludeArchived bool
 }
 
 type ListNodesRow struct {
@@ -243,16 +257,23 @@ type ListNodesRow struct {
 	Description    string
 	ClientSpecific bool
 	Position       int32
+	Archived       bool
 	ClientIds      []int64
 	ClientNames    []string
 }
 
-// The project's live tree as a flat list, siblings in position order. A
+// The project's tree as a flat list, siblings in position order. A
 // client-specific menu, and everything under it, is left out unless one of its
 // clients is in scope (R-AC-5); client_ids and client_names hold only in-scope
-// clients (R-MR-8). UNION, not UNION ALL, so a cycle could never loop forever.
+// clients (R-MR-8). Archived nodes appear only with include_archived.
+// UNION, not UNION ALL, so a cycle could never loop forever.
 func (q *Queries) ListNodes(ctx context.Context, arg ListNodesParams) ([]ListNodesRow, error) {
-	rows, err := q.db.Query(ctx, listNodes, arg.AllClients, arg.ClientIds, arg.ProjectID)
+	rows, err := q.db.Query(ctx, listNodes,
+		arg.AllClients,
+		arg.ClientIds,
+		arg.ProjectID,
+		arg.IncludeArchived,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -270,6 +291,7 @@ func (q *Queries) ListNodes(ctx context.Context, arg ListNodesParams) ([]ListNod
 			&i.Description,
 			&i.ClientSpecific,
 			&i.Position,
+			&i.Archived,
 			&i.ClientIds,
 			&i.ClientNames,
 		); err != nil {
@@ -342,8 +364,11 @@ UPDATE nodes SET
   code            = CASE WHEN $3::text IS NULL THEN code ELSE nullif($3::text, '') END,
   aliases         = coalesce($4::text[], aliases),
   description     = coalesce($5, description),
-  client_specific = coalesce($6, client_specific)
-WHERE id = $7
+  client_specific = coalesce($6, client_specific),
+  archived_at     = CASE WHEN $7::boolean IS NULL THEN archived_at
+                         WHEN $7::boolean THEN coalesce(archived_at, now())
+                         ELSE NULL END
+WHERE id = $8
 RETURNING id, project_id, parent_id, type, name, code, aliases, description, client_specific, source, position, archived_at
 `
 
@@ -354,10 +379,11 @@ type UpdateNodeParams struct {
 	Aliases        []string
 	Description    *string
 	ClientSpecific *bool
+	Archived       *bool
 	ID             int64
 }
 
-// NULL keeps a field; an empty code clears it.
+// NULL keeps a field; an empty code clears it; archived sets or clears archived_at.
 func (q *Queries) UpdateNode(ctx context.Context, arg UpdateNodeParams) (Node, error) {
 	row := q.db.QueryRow(ctx, updateNode,
 		arg.Name,
@@ -366,6 +392,7 @@ func (q *Queries) UpdateNode(ctx context.Context, arg UpdateNodeParams) (Node, e
 		arg.Aliases,
 		arg.Description,
 		arg.ClientSpecific,
+		arg.Archived,
 		arg.ID,
 	)
 	var i Node

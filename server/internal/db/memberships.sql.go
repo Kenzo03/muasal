@@ -92,6 +92,39 @@ func (q *Queries) IsProjectAdminAnywhere(ctx context.Context, userID int64) (boo
 	return exists, err
 }
 
+const listAssignees = `-- name: ListAssignees :many
+SELECT u.id, u.name
+FROM memberships m JOIN users u ON u.id = m.user_id
+WHERE m.project_id = $1 AND m.role IN ('admin', 'member') AND u.disabled_at IS NULL
+ORDER BY lower(u.name), u.id
+`
+
+type ListAssigneesRow struct {
+	ID   int64
+	Name string
+}
+
+// Who can own tickets: active members who are not viewers (FSD §8.1).
+func (q *Queries) ListAssignees(ctx context.Context, projectID int64) ([]ListAssigneesRow, error) {
+	rows, err := q.db.Query(ctx, listAssignees, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAssigneesRow
+	for rows.Next() {
+		var i ListAssigneesRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProjectMembers = `-- name: ListProjectMembers :many
 SELECT u.id AS user_id, u.name, u.email, m.role, m.all_clients,
        coalesce(array_agg(mc.client_id ORDER BY mc.client_id) FILTER (WHERE mc.client_id IS NOT NULL), '{}')::bigint[] AS client_ids

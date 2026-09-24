@@ -32,7 +32,8 @@ RETURNING *;
 -- name: ListProjectClients :many
 SELECT c.* FROM clients c
 JOIN project_clients pc ON pc.client_id = c.id
-WHERE pc.project_id = $1
+WHERE pc.project_id = sqlc.arg('project_id')
+  AND (sqlc.arg('all_clients')::boolean OR c.id = ANY (sqlc.arg('client_ids')::bigint[]))
 ORDER BY lower(c.name), c.id;
 
 -- name: UnlinkClientsExcept :exec

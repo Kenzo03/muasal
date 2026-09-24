@@ -8,6 +8,7 @@ package db
 import (
 	"context"
 	"net/netip"
+	"time"
 )
 
 const insertAuditEvent = `-- name: InsertAuditEvent :exec
@@ -72,6 +73,51 @@ func (q *Queries) ListAuditEvents(ctx context.Context, arg ListAuditEventsParams
 			&i.Changes,
 			&i.RequestID,
 			&i.Ip,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTicketEvents = `-- name: ListTicketEvents :many
+SELECT e.id, e.occurred_at, e.actor_id, u.name AS actor_name, e.action, e.changes
+FROM audit_events e
+LEFT JOIN users u ON u.id = e.actor_id
+WHERE e.entity = 'ticket' AND e.entity_id = $1
+ORDER BY e.id
+`
+
+type ListTicketEventsRow struct {
+	ID         int64
+	OccurredAt time.Time
+	ActorID    *int64
+	ActorName  *string
+	Action     string
+	Changes    []byte
+}
+
+// A ticket's history: every event recorded against it, oldest first (FSD §8.7).
+func (q *Queries) ListTicketEvents(ctx context.Context, entityID int64) ([]ListTicketEventsRow, error) {
+	rows, err := q.db.Query(ctx, listTicketEvents, entityID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListTicketEventsRow
+	for rows.Next() {
+		var i ListTicketEventsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OccurredAt,
+			&i.ActorID,
+			&i.ActorName,
+			&i.Action,
+			&i.Changes,
 		); err != nil {
 			return nil, err
 		}

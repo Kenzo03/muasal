@@ -129,7 +129,7 @@ func (s *Server) ListProjectClients(w http.ResponseWriter, r *http.Request, key 
 	if !ok {
 		return
 	}
-	rows, err := s.q.ListProjectClients(r.Context(), pc.project.ID)
+	rows, err := s.q.ListProjectClients(r.Context(), db.ListProjectClientsParams{ProjectID: pc.project.ID, AllClients: true})
 	if err != nil {
 		s.fail(w, r, err)
 		return
@@ -156,7 +156,7 @@ func (s *Server) SetProjectClients(w http.ResponseWriter, r *http.Request, key s
 	ctx := r.Context()
 	var rows []db.Client
 	err := s.inTx(ctx, func(q *db.Queries) error {
-		before, err := q.ListProjectClients(ctx, pc.project.ID)
+		before, err := q.ListProjectClients(ctx, db.ListProjectClientsParams{ProjectID: pc.project.ID, AllClients: true})
 		if err != nil {
 			return err
 		}
@@ -166,7 +166,7 @@ func (s *Server) SetProjectClients(w http.ResponseWriter, r *http.Request, key s
 		if err := q.LinkClients(ctx, db.LinkClientsParams{ProjectID: pc.project.ID, ClientIds: in.ClientIds}); err != nil {
 			return err
 		}
-		if rows, err = q.ListProjectClients(ctx, pc.project.ID); err != nil {
+		if rows, err = q.ListProjectClients(ctx, db.ListProjectClientsParams{ProjectID: pc.project.ID, AllClients: true}); err != nil {
 			return err
 		}
 		return audit(ctx, q, webMeta(r).inProject(pc.project.ID), &pc.user.ID, "project", pc.project.ID, "set_clients",

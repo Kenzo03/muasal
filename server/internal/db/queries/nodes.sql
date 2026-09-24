@@ -1,23 +1,26 @@
 -- name: ListNodes :many
--- The project's live tree as a flat list, siblings in position order. A
+-- The project's tree as a flat list, siblings in position order. A
 -- client-specific menu, and everything under it, is left out unless one of its
 -- clients is in scope (R-AC-5); client_ids and client_names hold only in-scope
--- clients (R-MR-8). UNION, not UNION ALL, so a cycle could never loop forever.
+-- clients (R-MR-8). Archived nodes appear only with include_archived.
+-- UNION, not UNION ALL, so a cycle could never loop forever.
 WITH RECURSIVE visible AS (
   SELECT n.id FROM nodes n
-  WHERE n.project_id = sqlc.arg('project_id') AND n.parent_id IS NULL AND n.archived_at IS NULL
+  WHERE n.project_id = sqlc.arg('project_id') AND n.parent_id IS NULL
+    AND (n.archived_at IS NULL OR sqlc.arg('include_archived')::boolean)
     AND (NOT n.client_specific OR sqlc.arg('all_clients')::boolean
          OR EXISTS (SELECT 1 FROM node_clients nc
                     WHERE nc.node_id = n.id AND nc.client_id = ANY (sqlc.arg('client_ids')::bigint[])))
   UNION
   SELECT n.id FROM nodes n
   JOIN visible v ON n.parent_id = v.id
-  WHERE n.archived_at IS NULL
+  WHERE (n.archived_at IS NULL OR sqlc.arg('include_archived')::boolean)
     AND (NOT n.client_specific OR sqlc.arg('all_clients')::boolean
          OR EXISTS (SELECT 1 FROM node_clients nc
                     WHERE nc.node_id = n.id AND nc.client_id = ANY (sqlc.arg('client_ids')::bigint[])))
 )
 SELECT n.id, n.parent_id, n.type, n.name, n.code, n.aliases, n.description, n.client_specific, n.position,
+       (n.archived_at IS NOT NULL)::boolean AS archived,
        coalesce(array_agg(c.id ORDER BY lower(c.name), c.id) FILTER (WHERE c.id IS NOT NULL), '{}')::bigint[] AS client_ids,
        coalesce(array_agg(c.name ORDER BY lower(c.name), c.id) FILTER (WHERE c.id IS NOT NULL), '{}')::text[] AS client_names
 FROM visible v
@@ -56,16 +59,22 @@ VALUES (sqlc.arg('project_id'), sqlc.narg('parent_id'), sqlc.arg('type'), sqlc.a
 RETURNING *;
 
 -- name: UpdateNode :one
--- NULL keeps a field; an empty code clears it.
+-- NULL keeps a field; an empty code clears it; archived sets or clears archived_at.
 UPDATE nodes SET
   name            = coalesce(sqlc.narg('name'), name),
   type            = coalesce(sqlc.narg('type'), type),
   code            = CASE WHEN sqlc.narg('code')::text IS NULL THEN code ELSE nullif(sqlc.narg('code')::text, '') END,
   aliases         = coalesce(sqlc.narg('aliases')::text[], aliases),
   description     = coalesce(sqlc.narg('description'), description),
-  client_specific = coalesce(sqlc.narg('client_specific'), client_specific)
+  client_specific = coalesce(sqlc.narg('client_specific'), client_specific),
+  archived_at     = CASE WHEN sqlc.narg('archived')::boolean IS NULL THEN archived_at
+                         WHEN sqlc.narg('archived')::boolean THEN coalesce(archived_at, now())
+                         ELSE NULL END
 WHERE id = sqlc.arg('id')
 RETURNING *;
+
+-- name: CountLiveChildren :one
+SELECT count(*) FROM nodes WHERE parent_id = sqlc.arg('node_id')::bigint AND archived_at IS NULL;
 
 -- name: ListNodeClients :many
 SELECT c.id, c.name FROM node_clients nc

@@ -357,7 +357,7 @@ WHERE id = $1
 RETURNING *;
 
 -- name: ListTicketNodes :many
-SELECT n.id, n.name, n.archived_at IS NOT NULL AS archived
+SELECT n.id, n.name, (n.archived_at IS NOT NULL)::boolean AS archived
 FROM ticket_nodes tn
 JOIN nodes n ON n.id = tn.node_id
 WHERE tn.ticket_id = $1
@@ -545,7 +545,7 @@ WITH RECURSIVE visible AS (
                     WHERE nc.node_id = n.id AND nc.client_id = ANY (sqlc.arg('client_ids')::bigint[])))
 )
 SELECT n.id, n.parent_id, n.type, n.name, n.code, n.aliases, n.description, n.client_specific, n.position,
-       n.archived_at IS NOT NULL AS archived,
+       (n.archived_at IS NOT NULL)::boolean AS archived,
        coalesce(array_agg(c.id ORDER BY lower(c.name), c.id) FILTER (WHERE c.id IS NOT NULL), '{}')::bigint[] AS client_ids,
        coalesce(array_agg(c.name ORDER BY lower(c.name), c.id) FILTER (WHERE c.id IS NOT NULL), '{}')::text[] AS client_names
 FROM visible v
@@ -574,7 +574,7 @@ WHERE id = sqlc.arg('id')
 RETURNING *;
 
 -- name: CountLiveChildren :one
-SELECT count(*) FROM nodes WHERE parent_id = $1 AND archived_at IS NULL;
+SELECT count(*) FROM nodes WHERE parent_id = sqlc.arg('node_id')::bigint AND archived_at IS NULL;
 ```
 
 `ListProjectClients` now takes the scope. In `server/internal/httpapi/clients.go`, make its three calls pass all clients, since only project admins call them in this task:

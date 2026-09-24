@@ -34,3 +34,10 @@ DELETE FROM membership_clients WHERE user_id = $1 AND project_id = $2;
 -- name: AddMembershipClients :exec
 INSERT INTO membership_clients (user_id, project_id, client_id)
 SELECT sqlc.arg('user_id')::bigint, sqlc.arg('project_id')::bigint, unnest(sqlc.arg('client_ids')::bigint[]);
+
+-- name: ListAssignees :many
+-- Who can own tickets: active members who are not viewers (FSD §8.1).
+SELECT u.id, u.name
+FROM memberships m JOIN users u ON u.id = m.user_id
+WHERE m.project_id = $1 AND m.role IN ('admin', 'member') AND u.disabled_at IS NULL
+ORDER BY lower(u.name), u.id;

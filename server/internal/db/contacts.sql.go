@@ -78,7 +78,8 @@ WHERE ($1::boolean
                           SELECT mc.client_id FROM membership_clients mc WHERE mc.user_id = $2))
   AND ($3::bigint IS NULL OR c.id = $3::bigint)
   AND ($4::bigint IS NULL OR c.client_id = $4::bigint)
-  AND c.name ILIKE '%' || $5::text || '%'
+  AND (NOT $5::boolean OR c.client_id IS NULL)
+  AND c.name ILIKE '%' || $6::text || '%'
 ORDER BY lower(c.name), c.id
 LIMIT 50
 `
@@ -88,6 +89,7 @@ type ListContactsParams struct {
 	UserID   int64
 	ID       *int64
 	ClientID *int64
+	Internal bool
 	Q        string
 }
 
@@ -109,6 +111,7 @@ func (q *Queries) ListContacts(ctx context.Context, arg ListContactsParams) ([]L
 		arg.UserID,
 		arg.ID,
 		arg.ClientID,
+		arg.Internal,
 		arg.Q,
 	)
 	if err != nil {
