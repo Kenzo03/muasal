@@ -121,8 +121,9 @@ func TestPermissionSuiteReads(t *testing.T) {
 		}, nil},
 		{"/clients", map[string][]string{"admin": abc, "hana": abc},
 			map[string]int{"ani": 403, "budi": 403, "citra": 403, "dodi": 403}},
-		{"/projects/HRIS/clients", map[string][]string{"admin": abc, "hana": abc},
-			map[string]int{"ani": 403, "budi": 403, "citra": 403, "dodi": 404}},
+		{"/projects/HRIS/clients", map[string][]string{
+			"admin": abc, "hana": abc, "ani": abc, "budi": {"Client B"}, "citra": {"Client A", "Client C"},
+		}, map[string]int{"dodi": 404}},
 		{"/projects/HRIS/members", map[string][]string{"admin": hrisMembers, "hana": hrisMembers},
 			map[string]int{"ani": 403, "budi": 403, "citra": 403, "dodi": 404}},
 	} {

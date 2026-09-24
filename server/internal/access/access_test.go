@@ -80,3 +80,20 @@ func TestForProjectReadsTheMembership(t *testing.T) {
 		t.Errorf("a member is no admin: %v %v", ok, err)
 	}
 }
+
+func TestScopeSeesItsClientsAndCoreWork(t *testing.T) {
+	a, b := int64(1), int64(2)
+	scoped := access.Scope{Role: access.Member, ClientIDs: []int64{a}}
+	all := access.Scope{Role: access.Member, AllClients: true}
+	for _, c := range []struct {
+		scope  access.Scope
+		client *int64
+		sees   bool
+	}{
+		{scoped, nil, true}, {scoped, &a, true}, {scoped, &b, false}, {all, &b, true},
+	} {
+		if got := c.scope.Sees(c.client); got != c.sees {
+			t.Errorf("%+v sees %v: %v, want %v", c.scope, c.client, got, c.sees)
+		}
+	}
+}

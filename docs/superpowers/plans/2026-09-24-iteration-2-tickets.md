@@ -1032,7 +1032,7 @@ func TestAdminEditsStatusesAndMovesTicketsOffRemovedOnes(t *testing.T) {
 		t.Fatalf("update: %d %+v", code, list)
 	}
 	moved, err := e.q.GetTicketByKey(ctx, tk.Key)
-	if err != nil || moved.Ticket.StatusID != prog.Id || moved.Ticket.Version != 2 {
+	if err != nil || moved.Ticket.StatusID != prog.Id || moved.Ticket.Version != 3 { // seeded 1, In review 2, moved 3
 		t.Fatalf("ticket after the move: %+v %v", moved.Ticket, err)
 	}
 }
@@ -1148,6 +1148,15 @@ In `server/internal/httpapi/permission_test.go`, members now read the client lis
 		{"/projects/HRIS/clients", map[string][]string{
 			"admin": abc, "hana": abc, "ani": abc, "budi": {"Client B"}, "citra": {"Client A", "Client C"},
 		}, map[string]int{"dodi": 404}},
+```
+
+In `server/internal/httpapi/clients_test.go` (`TestLinkingClientsToAProject`), the member's read of the links now answers 200 with their scope:
+
+```go
+	var mine httpapi.ClientList
+	if code := e.call(budi, http.MethodGet, "/projects/HRIS/clients", nil, &mine); code != http.StatusOK || len(mine.Items) != 1 || mine.Items[0].Name != "Client B" {
+		t.Fatalf("a member reads the links in their scope: %d %+v", code, mine)
+	}
 ```
 
 - [ ] **Step 4: Run the tests to verify they fail**

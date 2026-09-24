@@ -163,7 +163,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** @description Project admins only. */
+        /** @description Every member; members see only the clients in their scope. */
         get: operations["listProjectClients"];
         /** @description Project admins only. Replaces the linked clients; removing one that menus or member scopes use answers 409 client_in_use. */
         put: operations["setProjectClients"];
@@ -306,6 +306,45 @@ export interface paths {
         head?: never;
         /** @description Project admins only. Edits fields, and moves the node when `move` is present. */
         patch: operations["updateNode"];
+        trace?: never;
+    };
+    "/projects/{key}/statuses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description Every member; the board, the list and the ticket page need them. */
+        get: operations["getStatuses"];
+        /** @description Project admins only. Replaces the ordered list; tickets of a removed status move as `move_to` says. */
+        put: operations["setStatuses"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{key}/assignees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description Members who can own tickets (not viewers). */
+        get: operations["listAssignees"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
 }
@@ -546,6 +585,58 @@ export interface components {
              * @description Index among the new siblings; omitted puts the node last.
              */
             position?: number;
+        };
+        Ref: {
+            /** Format: int64 */
+            id: number;
+            name: string;
+        };
+        RefList: {
+            items: components["schemas"]["Ref"][];
+        };
+        /** @enum {string} */
+        StatusCategory: "todo" | "in_progress" | "done" | "cancelled";
+        Status: {
+            /** Format: int64 */
+            id: number;
+            name: string;
+            category: components["schemas"]["StatusCategory"];
+            /** @example #2563EB */
+            color: string;
+            /** Format: int32 */
+            position: number;
+            is_default: boolean;
+        };
+        StatusList: {
+            items: components["schemas"]["Status"][];
+        };
+        StatusInput: {
+            /**
+             * Format: int64
+             * @description An existing status; omitted adds one.
+             */
+            id?: number;
+            name: string;
+            category: components["schemas"]["StatusCategory"];
+            /** @example #2563EB */
+            color: string;
+            is_default?: boolean;
+        };
+        StatusMove: {
+            /**
+             * Format: int64
+             * @description A removed status.
+             */
+            from: number;
+            /**
+             * Format: int64
+             * @description A kept status of the same open or closed kind.
+             */
+            to: number;
+        };
+        StatusesUpdate: {
+            statuses: components["schemas"]["StatusInput"][];
+            move_to?: components["schemas"]["StatusMove"][];
         };
     };
     responses: {
@@ -1213,6 +1304,79 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Node"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getStatuses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project's statuses in order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatusList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    setStatuses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StatusesUpdate"];
+            };
+        };
+        responses: {
+            /** @description The statuses now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatusList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listAssignees: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Assignable members by name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefList"];
                 };
             };
             default: components["responses"]["Problem"];

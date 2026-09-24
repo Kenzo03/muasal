@@ -125,11 +125,14 @@ func (s *Server) UpdateClient(w http.ResponseWriter, r *http.Request, id int64) 
 }
 
 func (s *Server) ListProjectClients(w http.ResponseWriter, r *http.Request, key string) {
-	pc, ok := s.projectFor(w, r, key, access.Admin)
+	pc, ok := s.projectFor(w, r, key, access.Viewer)
 	if !ok {
 		return
 	}
-	rows, err := s.q.ListProjectClients(r.Context(), db.ListProjectClientsParams{ProjectID: pc.project.ID, AllClients: true})
+	// Members pick from these on the ticket form, so they see their scope only (AC-TK-4).
+	rows, err := s.q.ListProjectClients(r.Context(), db.ListProjectClientsParams{
+		ProjectID: pc.project.ID, AllClients: pc.scope.AllClients, ClientIds: orEmpty(pc.scope.ClientIDs),
+	})
 	if err != nil {
 		s.fail(w, r, err)
 		return

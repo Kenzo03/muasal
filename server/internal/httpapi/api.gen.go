@@ -71,6 +71,30 @@ func (e ProjectRole) Valid() bool {
 	}
 }
 
+// Defines values for StatusCategory.
+const (
+	StatusCategoryCancelled  StatusCategory = "cancelled"
+	StatusCategoryDone       StatusCategory = "done"
+	StatusCategoryInProgress StatusCategory = "in_progress"
+	StatusCategoryTodo       StatusCategory = "todo"
+)
+
+// Valid indicates whether the value is a known member of the StatusCategory enum.
+func (e StatusCategory) Valid() bool {
+	switch e {
+	case StatusCategoryCancelled:
+		return true
+	case StatusCategoryDone:
+		return true
+	case StatusCategoryInProgress:
+		return true
+	case StatusCategoryTodo:
+		return true
+	default:
+		return false
+	}
+}
+
 // Client defines model for Client.
 type Client struct {
 	Aliases  []string `json:"aliases"`
@@ -310,6 +334,17 @@ type ProjectUpdate struct {
 	Name        *string `json:"name,omitempty"`
 }
 
+// Ref defines model for Ref.
+type Ref struct {
+	Id   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
+// RefList defines model for RefList.
+type RefList struct {
+	Items []Ref `json:"items"`
+}
+
 // SetupLink defines model for SetupLink.
 type SetupLink struct {
 	ExpiresAt time.Time `json:"expires_at"`
@@ -320,6 +355,54 @@ type SetupLink struct {
 type SetupRequest struct {
 	Password string `json:"password"`
 	Token    string `json:"token"`
+}
+
+// Status defines model for Status.
+type Status struct {
+	Category StatusCategory `json:"category"`
+
+	// Color Example: #2563EB
+	Color     string `json:"color"`
+	Id        int64  `json:"id"`
+	IsDefault bool   `json:"is_default"`
+	Name      string `json:"name"`
+	Position  int32  `json:"position"`
+}
+
+// StatusCategory defines model for StatusCategory.
+type StatusCategory string
+
+// StatusInput defines model for StatusInput.
+type StatusInput struct {
+	Category StatusCategory `json:"category"`
+
+	// Color Example: #2563EB
+	Color string `json:"color"`
+
+	// Id An existing status; omitted adds one.
+	Id        *int64 `json:"id,omitempty"`
+	IsDefault *bool  `json:"is_default,omitempty"`
+	Name      string `json:"name"`
+}
+
+// StatusList defines model for StatusList.
+type StatusList struct {
+	Items []Status `json:"items"`
+}
+
+// StatusMove defines model for StatusMove.
+type StatusMove struct {
+	// From A removed status.
+	From int64 `json:"from"`
+
+	// To A kept status of the same open or closed kind.
+	To int64 `json:"to"`
+}
+
+// StatusesUpdate defines model for StatusesUpdate.
+type StatusesUpdate struct {
+	MoveTo   *[]StatusMove `json:"move_to,omitempty"`
+	Statuses []StatusInput `json:"statuses"`
 }
 
 // User defines model for User.
@@ -412,6 +495,9 @@ type SetProjectMembersJSONRequestBody = MembersUpdate
 // CreateNodeJSONRequestBody defines body for CreateNode for application/json ContentType.
 type CreateNodeJSONRequestBody = NodeCreate
 
+// SetStatusesJSONRequestBody defines body for SetStatuses for application/json ContentType.
+type SetStatusesJSONRequestBody = StatusesUpdate
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
@@ -478,6 +564,9 @@ type ServerInterface interface {
 	// (PATCH /projects/{key})
 	UpdateProject(w http.ResponseWriter, r *http.Request, key string)
 
+	// (GET /projects/{key}/assignees)
+	ListAssignees(w http.ResponseWriter, r *http.Request, key string)
+
 	// (GET /projects/{key}/clients)
 	ListProjectClients(w http.ResponseWriter, r *http.Request, key string)
 
@@ -495,6 +584,12 @@ type ServerInterface interface {
 
 	// (POST /projects/{key}/nodes)
 	CreateNode(w http.ResponseWriter, r *http.Request, key string)
+
+	// (GET /projects/{key}/statuses)
+	GetStatuses(w http.ResponseWriter, r *http.Request, key string)
+
+	// (PUT /projects/{key}/statuses)
+	SetStatuses(w http.ResponseWriter, r *http.Request, key string)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -928,6 +1023,32 @@ func (siw *ServerInterfaceWrapper) UpdateProject(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// ListAssignees operation middleware
+func (siw *ServerInterfaceWrapper) ListAssignees(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAssignees(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListProjectClients operation middleware
 func (siw *ServerInterfaceWrapper) ListProjectClients(w http.ResponseWriter, r *http.Request) {
 
@@ -1084,6 +1205,58 @@ func (siw *ServerInterfaceWrapper) CreateNode(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// GetStatuses operation middleware
+func (siw *ServerInterfaceWrapper) GetStatuses(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetStatuses(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetStatuses operation middleware
+func (siw *ServerInterfaceWrapper) SetStatuses(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetStatuses(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -1231,6 +1404,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/nodes", wrapper.CreateNode)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/nodes/{id}", wrapper.DeleteNode)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/nodes/{id}", wrapper.UpdateNode)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/statuses", wrapper.GetStatuses)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/projects/{key}/statuses", wrapper.SetStatuses)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/assignees", wrapper.ListAssignees)
 
 	return m
 }

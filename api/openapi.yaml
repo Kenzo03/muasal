@@ -196,7 +196,7 @@ paths:
     get:
       operationId: listProjectClients
       tags: [projects]
-      description: Project admins only.
+      description: Every member; members see only the clients in their scope.
       responses:
         "200":
           description: The clients linked to the project.
@@ -402,6 +402,50 @@ paths:
       description: Project admins only. A node with sub-nodes answers 409 node_has_children.
       responses:
         "204": { description: Deleted. }
+        default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/statuses:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getStatuses
+      tags: [projects]
+      description: Every member; the board, the list and the ticket page need them.
+      responses:
+        "200":
+          description: The project's statuses in order.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StatusList" }
+        default: { $ref: "#/components/responses/Problem" }
+    put:
+      operationId: setStatuses
+      tags: [projects]
+      description: Project admins only. Replaces the ordered list; tickets of a removed status move as `move_to` says.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StatusesUpdate" }
+      responses:
+        "200":
+          description: The statuses now.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StatusList" }
+        default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/assignees:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listAssignees
+      tags: [projects]
+      description: Members who can own tickets (not viewers).
+      responses:
+        "200":
+          description: Assignable members by name.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RefList" }
         default: { $ref: "#/components/responses/Problem" }
 components:
   responses:
@@ -718,3 +762,61 @@ components:
       properties:
         parent_id: { type: integer, format: int64, nullable: true, description: Omitted or null moves to the top level. }
         position: { type: integer, format: int32, minimum: 0, description: Index among the new siblings; omitted puts the node last. }
+    Ref:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+    RefList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Ref" }
+    StatusCategory:
+      type: string
+      enum: [todo, in_progress, done, cancelled]
+    Status:
+      type: object
+      required: [id, name, category, color, position, is_default]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        category: { $ref: "#/components/schemas/StatusCategory" }
+        color: { type: string, example: "#2563EB" }
+        position: { type: integer, format: int32 }
+        is_default: { type: boolean }
+    StatusList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Status" }
+    StatusInput:
+      type: object
+      required: [name, category, color]
+      properties:
+        id: { type: integer, format: int64, description: An existing status; omitted adds one. }
+        name: { type: string, maxLength: 50 }
+        category: { $ref: "#/components/schemas/StatusCategory" }
+        color: { type: string, example: "#2563EB" }
+        is_default: { type: boolean }
+    StatusMove:
+      type: object
+      required: [from, to]
+      properties:
+        from: { type: integer, format: int64, description: A removed status. }
+        to: { type: integer, format: int64, description: A kept status of the same open or closed kind. }
+    StatusesUpdate:
+      type: object
+      required: [statuses]
+      properties:
+        statuses:
+          type: array
+          items: { $ref: "#/components/schemas/StatusInput" }
+        move_to:
+          type: array
+          items: { $ref: "#/components/schemas/StatusMove" }

@@ -4,6 +4,7 @@ package access
 import (
 	"context"
 	"errors"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -29,6 +30,12 @@ type Scope struct {
 
 // Allows reports whether the scope's role is at least need.
 func (s Scope) Allows(need string) bool { return rank[s.Role] >= rank[need] }
+
+// Sees reports whether the scope covers a row of the client; a nil client is
+// core work, which every member sees (R-AC-2, R-AC-3).
+func (s Scope) Sees(clientID *int64) bool {
+	return s.AllClients || clientID == nil || slices.Contains(s.ClientIDs, *clientID)
+}
 
 // ForProject reads u's scope in a project fresh from the database, so a changed
 // scope applies on the user's next request (R-AC-8). System admins act as

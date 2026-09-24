@@ -14,6 +14,8 @@ type Config struct {
 	MigrateDatabaseURL string // owner role; only migrations use it
 	PublicURL          string // the origin users open, e.g. https://muasal.example.com
 	ListenAddr         string // default ":8080"
+	AttachmentsDir     string // ATTACHMENTS_DIR, default /data/attachments
+	AttachmentMaxBytes int64  // 25 MB per file (FSD §8.7); the admin setting comes later
 }
 
 // Load reads settings through getenv (os.Getenv in production). Invalid
@@ -24,9 +26,14 @@ func Load(getenv func(string) string) (Config, error) {
 		MigrateDatabaseURL: getenv("MIGRATE_DATABASE_URL"),
 		PublicURL:          strings.TrimRight(getenv("PUBLIC_URL"), "/"),
 		ListenAddr:         getenv("LISTEN_ADDR"),
+		AttachmentsDir:     getenv("ATTACHMENTS_DIR"),
+		AttachmentMaxBytes: 25 << 20,
 	}
 	if c.ListenAddr == "" {
 		c.ListenAddr = ":8080"
+	}
+	if c.AttachmentsDir == "" {
+		c.AttachmentsDir = "/data/attachments"
 	}
 	var errs []error
 	if c.DatabaseURL == "" {
