@@ -16,6 +16,8 @@ export default async function ProjectLayout({ children, params }: { children: Re
         <h1 className="text-2xl font-semibold">{project.name}</h1>
       </div>
       <nav aria-label={t("nav")} className="mt-4 flex gap-5 border-b text-sm">
+        <Link href={`/p/${project.key}/board`} className="pb-2">{t("board")}</Link>
+        <Link href={`/p/${project.key}/tickets`} className="pb-2">{t("tickets")}</Link>
         <Link href={`/p/${project.key}/modules`} className="pb-2">{t("modules")}</Link>
         {project.role === "admin" && (
           <Link href={`/p/${project.key}/settings`} className="pb-2">{t("settings")}</Link>
