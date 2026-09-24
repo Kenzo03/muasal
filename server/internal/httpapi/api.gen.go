@@ -15,6 +15,24 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for ActivityItemKind.
+const (
+	ActivityItemKindComment ActivityItemKind = "comment"
+	ActivityItemKindEvent   ActivityItemKind = "event"
+)
+
+// Valid indicates whether the value is a known member of the ActivityItemKind enum.
+func (e ActivityItemKind) Valid() bool {
+	switch e {
+	case ActivityItemKindComment:
+		return true
+	case ActivityItemKindEvent:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Locale.
 const (
 	LocaleEn Locale = "en"
@@ -204,6 +222,31 @@ func (e ListTicketsParamsSort) Valid() bool {
 	}
 }
 
+// ActivityItem defines model for ActivityItem.
+type ActivityItem struct {
+	// Action Example: transition
+	Action *string   `json:"action,omitempty"`
+	Actor  *Ref      `json:"actor,omitempty"`
+	At     time.Time `json:"at"`
+
+	// Body A comment's text; absent when deleted
+	Body      *string                 `json:"body,omitempty"`
+	Changes   *map[string]interface{} `json:"changes,omitempty"`
+	CommentId *int64                  `json:"comment_id,omitempty"`
+	Deleted   *bool                   `json:"deleted,omitempty"`
+	Edited    *bool                   `json:"edited,omitempty"`
+	Internal  *bool                   `json:"internal,omitempty"`
+	Kind      ActivityItemKind        `json:"kind"`
+}
+
+// ActivityItemKind defines model for ActivityItem.Kind.
+type ActivityItemKind string
+
+// ActivityList defines model for ActivityList.
+type ActivityList struct {
+	Items []ActivityItem `json:"items"`
+}
+
 // Attachment defines model for Attachment.
 type Attachment struct {
 	ContentType string    `json:"content_type"`
@@ -243,6 +286,19 @@ type ClientUpdate struct {
 	Archived *bool     `json:"archived,omitempty"`
 	Code     *string   `json:"code,omitempty"`
 	Name     *string   `json:"name,omitempty"`
+}
+
+// CommentInput defines model for CommentInput.
+type CommentInput struct {
+	Body string `json:"body"`
+
+	// Internal Defaults to true; false marks the comment client-safe.
+	Internal *bool `json:"internal,omitempty"`
+}
+
+// CommentUpdate defines model for CommentUpdate.
+type CommentUpdate struct {
+	Body string `json:"body"`
 }
 
 // Contact defines model for Contact.
@@ -746,6 +802,9 @@ type CreateClientJSONRequestBody = ClientCreate
 // UpdateClientJSONRequestBody defines body for UpdateClient for application/json ContentType.
 type UpdateClientJSONRequestBody = ClientUpdate
 
+// UpdateCommentJSONRequestBody defines body for UpdateComment for application/json ContentType.
+type UpdateCommentJSONRequestBody = CommentUpdate
+
 // CreateContactJSONRequestBody defines body for CreateContact for application/json ContentType.
 type CreateContactJSONRequestBody = ContactInput
 
@@ -782,6 +841,9 @@ type CreateTicketJSONRequestBody = TicketCreate
 // UpdateTicketJSONRequestBody defines body for UpdateTicket for application/json ContentType.
 type UpdateTicketJSONRequestBody = TicketUpdate
 
+// CreateCommentJSONRequestBody defines body for CreateComment for application/json ContentType.
+type CreateCommentJSONRequestBody = CommentInput
+
 // TransitionTicketJSONRequestBody defines body for TransitionTicket for application/json ContentType.
 type TransitionTicketJSONRequestBody = TransitionRequest
 
@@ -817,6 +879,12 @@ type ServerInterface interface {
 
 	// (PATCH /clients/{id})
 	UpdateClient(w http.ResponseWriter, r *http.Request, id int64)
+
+	// (DELETE /comments/{id})
+	DeleteComment(w http.ResponseWriter, r *http.Request, id int64)
+
+	// (PATCH /comments/{id})
+	UpdateComment(w http.ResponseWriter, r *http.Request, id int64)
 
 	// (GET /contacts)
 	ListContacts(w http.ResponseWriter, r *http.Request, params ListContactsParams)
@@ -889,6 +957,12 @@ type ServerInterface interface {
 
 	// (PUT /tickets/{key})
 	UpdateTicket(w http.ResponseWriter, r *http.Request, key string, params UpdateTicketParams)
+
+	// (GET /tickets/{key}/activity)
+	GetTicketActivity(w http.ResponseWriter, r *http.Request, key string)
+
+	// (POST /tickets/{key}/comments)
+	CreateComment(w http.ResponseWriter, r *http.Request, key string)
 
 	// (POST /tickets/{key}/transition)
 	TransitionTicket(w http.ResponseWriter, r *http.Request, key string)
@@ -1070,6 +1144,58 @@ func (siw *ServerInterfaceWrapper) UpdateClient(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateClient(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteComment operation middleware
+func (siw *ServerInterfaceWrapper) DeleteComment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteComment(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateComment operation middleware
+func (siw *ServerInterfaceWrapper) UpdateComment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateComment(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1876,6 +2002,58 @@ func (siw *ServerInterfaceWrapper) UpdateTicket(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// GetTicketActivity operation middleware
+func (siw *ServerInterfaceWrapper) GetTicketActivity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTicketActivity(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateComment operation middleware
+func (siw *ServerInterfaceWrapper) CreateComment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateComment(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // TransitionTicket operation middleware
 func (siw *ServerInterfaceWrapper) TransitionTicket(w http.ResponseWriter, r *http.Request) {
 
@@ -2057,6 +2235,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/tickets/{key}", wrapper.GetTicket)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/tickets/{key}", wrapper.UpdateTicket)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/transition", wrapper.TransitionTicket)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/tickets/{key}/activity", wrapper.GetTicketActivity)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/comments", wrapper.CreateComment)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/comments/{id}", wrapper.DeleteComment)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/comments/{id}", wrapper.UpdateComment)
 
 	return m
 }

@@ -542,6 +542,64 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Ticket" }
         default: { $ref: "#/components/responses/Problem" }
+  /tickets/{key}/activity:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getTicketActivity
+      tags: [tickets]
+      responses:
+        "200":
+          description: Comments and history, oldest first.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ActivityList" }
+        default: { $ref: "#/components/responses/Problem" }
+  /tickets/{key}/comments:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: createComment
+      tags: [tickets]
+      description: Members and project admins. Internal unless internal is false.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CommentInput" }
+      responses:
+        "201":
+          description: The comment.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ActivityItem" }
+        default: { $ref: "#/components/responses/Problem" }
+  /comments/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    patch:
+      operationId: updateComment
+      tags: [tickets]
+      description: The author only. The history keeps the earlier text.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CommentUpdate" }
+      responses:
+        "200":
+          description: The comment.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ActivityItem" }
+        default: { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: deleteComment
+      tags: [tickets]
+      description: The author only. Readers then see "Comment deleted".
+      responses:
+        "204": { description: Deleted. }
+        default: { $ref: "#/components/responses/Problem" }
 components:
   responses:
     Problem:
@@ -1041,3 +1099,35 @@ components:
           type: array
           items: { $ref: "#/components/schemas/TicketSummary" }
         next_cursor: { type: string, nullable: true }
+    ActivityItem:
+      type: object
+      required: [kind, at]
+      properties:
+        kind: { type: string, enum: [comment, event] }
+        at: { type: string, format: date-time }
+        actor: { $ref: "#/components/schemas/Ref" }
+        comment_id: { type: integer, format: int64 }
+        internal: { type: boolean }
+        body: { type: string, description: A comment's text; absent when deleted, except for system admins. }
+        deleted: { type: boolean }
+        edited: { type: boolean }
+        action: { type: string, example: transition }
+        changes: { type: object, additionalProperties: true }
+    ActivityList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ActivityItem" }
+    CommentInput:
+      type: object
+      required: [body]
+      properties:
+        body: { type: string, maxLength: 20000 }
+        internal: { type: boolean, description: Defaults to true; false marks the comment client-safe. }
+    CommentUpdate:
+      type: object
+      required: [body]
+      properties:
+        body: { type: string, maxLength: 20000 }

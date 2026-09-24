@@ -405,6 +405,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tickets/{key}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get: operations["getTicketActivity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tickets/{key}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Members and project admins. Internal unless internal is false. */
+        post: operations["createComment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/comments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description The author only. Readers then see "Comment deleted". */
+        delete: operations["deleteComment"];
+        options?: never;
+        head?: never;
+        /** @description The author only. The history keeps the earlier text. */
+        patch: operations["updateComment"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -833,6 +890,36 @@ export interface components {
         TicketPage: {
             items: components["schemas"]["TicketSummary"][];
             next_cursor: string | null;
+        };
+        ActivityItem: {
+            /** @enum {string} */
+            kind: "comment" | "event";
+            /** Format: date-time */
+            at: string;
+            actor?: components["schemas"]["Ref"];
+            /** Format: int64 */
+            comment_id?: number;
+            internal?: boolean;
+            /** @description A comment's text; absent when deleted */
+            body?: string;
+            deleted?: boolean;
+            edited?: boolean;
+            /** @example transition */
+            action?: string;
+            changes?: {
+                [key: string]: unknown;
+            };
+        };
+        ActivityList: {
+            items: components["schemas"]["ActivityItem"][];
+        };
+        CommentInput: {
+            body: string;
+            /** @description Defaults to true; false marks the comment client-safe. */
+            internal?: boolean;
+        };
+        CommentUpdate: {
+            body: string;
         };
     };
     responses: {
@@ -1722,6 +1809,104 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Ticket"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getTicketActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Comments and history, oldest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommentInput"];
+            };
+        };
+        responses: {
+            /** @description The comment. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityItem"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommentUpdate"];
+            };
+        };
+        responses: {
+            /** @description The comment. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityItem"];
                 };
             };
             default: components["responses"]["Problem"];
