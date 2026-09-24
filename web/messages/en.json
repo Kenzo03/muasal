@@ -193,7 +193,7 @@
     "cannot_demote_self": "You cannot remove your own project admin role",
     "node_name_taken": "Another item under the same parent has this name",
     "node_code_taken": "Another item in this project has this code",
-    "node_has_children": "Delete or move its sub-items first",
+    "node_has_children": "Move, archive or delete its sub-items first",
     "node_cycle": "An item cannot move under itself",
     "client_specific_module": "Only menus can be client-specific",
     "stale": "Someone updated this ticket a moment ago. Your text is still here: reload, then save again.",

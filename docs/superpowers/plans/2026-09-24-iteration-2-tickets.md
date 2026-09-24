@@ -6131,7 +6131,7 @@ git commit -m "feat(web): ticket list and board"
 ### Task 13: Archive and restore in the module tree
 
 **Files:**
-- Modify: `web/app/p/[key]/modules/page.tsx`, `web/app/p/[key]/modules/ModuleTree.tsx`
+- Modify: `web/app/p/[key]/modules/page.tsx`, `web/app/p/[key]/modules/ModuleTree.tsx`, `web/messages/{en,id}.json`
 
 **Interfaces:**
 - Consumes: `archived` on nodes and on `PATCH /nodes/{id}`, and `GET …/nodes?archived=true` (Task 7).
@@ -6204,6 +6204,8 @@ In `web/app/p/[key]/modules/ModuleTree.tsx`:
 ```
 
 6. The "Pindahkan ke" choices leave archived nodes out: `nodes.filter((x) => !blocked.has(x.id) && !x.archived)`.
+7. Up and down moves count live siblings only, as `ListSiblingIDs` does, so "Tampilkan arsip" cannot skew them: `const siblings = (children.get(n.parent_id) ?? []).filter((s) => !s.archived);`.
+8. Archiving a node with sub-items also answers `node_has_children`, so its message covers both actions: en "Move, archive or delete its sub-items first", id "Pindahkan, arsipkan, atau hapus sub-itemnya terlebih dahulu".
 
 - [ ] **Step 3: Build**
 
@@ -6216,7 +6218,7 @@ Expected: the build succeeds.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add web/app/p
+git add web/app/p web/messages
 git commit -m "feat(web): archive and restore menus in the module tree"
 ```
 

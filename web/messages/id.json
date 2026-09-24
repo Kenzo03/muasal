@@ -193,7 +193,7 @@
     "cannot_demote_self": "Anda tidak dapat mencabut peran admin proyek Anda sendiri",
     "node_name_taken": "Sudah ada item dengan nama ini di induk yang sama",
     "node_code_taken": "Kode ini sudah dipakai item lain di proyek ini",
-    "node_has_children": "Hapus atau pindahkan sub-itemnya terlebih dahulu",
+    "node_has_children": "Pindahkan, arsipkan, atau hapus sub-itemnya terlebih dahulu",
     "node_cycle": "Item tidak dapat dipindahkan ke bawah dirinya sendiri",
     "client_specific_module": "Hanya menu yang dapat dikhususkan untuk klien",
     "stale": "Seseorang baru saja mengubah tiket ini. Teks Anda masih ada: muat ulang, lalu simpan lagi.",
