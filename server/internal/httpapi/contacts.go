@@ -17,7 +17,7 @@ func (s *Server) ListContacts(w http.ResponseWriter, r *http.Request, params Lis
 		return
 	}
 	rows, err := s.q.ListContacts(r.Context(), db.ListContactsParams{
-		IsAdmin: u.IsAdmin, UserID: u.ID, ClientID: params.ClientId, Q: strings.TrimSpace(deref(params.Q)),
+		IsAdmin: u.IsAdmin, UserID: u.ID, ClientID: params.ClientId, Internal: deref(params.Internal), Q: strings.TrimSpace(deref(params.Q)),
 	})
 	if err != nil {
 		s.fail(w, r, err)

@@ -176,8 +176,8 @@ func (s *Server) SetProjectClients(w http.ResponseWriter, r *http.Request, key s
 			changed(map[string]any{"client_ids": idsOf(before)}, map[string]any{"client_ids": idsOf(rows)}))
 	})
 	switch constraintOf(err) {
-	case "membership_clients_linked", "node_clients_linked":
-		writeProblem(w, http.StatusConflict, "client_in_use", "A client you removed is still used by menus or member scopes in this project")
+	case "membership_clients_linked", "node_clients_linked", "tickets_client_linked":
+		writeProblem(w, http.StatusConflict, "client_in_use", "A client you removed is still used by tickets, menus or member scopes in this project")
 		return
 	case "project_clients_client_fk":
 		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields",

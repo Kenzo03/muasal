@@ -701,6 +701,7 @@ export interface components {
             clients: components["schemas"]["NodeClient"][];
             /** Format: int32 */
             position: number;
+            archived: boolean;
         };
         NodeList: {
             items: components["schemas"]["Node"][];
@@ -727,6 +728,8 @@ export interface components {
             client_specific?: boolean;
             client_ids?: number[];
             move?: components["schemas"]["NodeMove"];
+            /** @description Archive (true) or restore (false); a linked node is archived */
+            archived?: boolean;
         };
         NodeMove: {
             /**
@@ -1462,6 +1465,8 @@ export interface operations {
             query?: {
                 q?: string;
                 client_id?: number;
+                /** @description Only internal people (no client). */
+                internal?: boolean;
             };
             header?: never;
             path?: never;
@@ -1535,7 +1540,10 @@ export interface operations {
     };
     listNodes: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Project admins only; also list archived nodes. */
+                archived?: boolean;
+            };
             header?: never;
             path: {
                 key: string;

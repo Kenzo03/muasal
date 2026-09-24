@@ -392,6 +392,7 @@ type MembersUpdate struct {
 // Node defines model for Node.
 type Node struct {
 	Aliases        []string `json:"aliases"`
+	Archived       bool     `json:"archived"`
 	ClientSpecific bool     `json:"client_specific"`
 
 	// Clients The node's clients within the caller's scope.
@@ -451,8 +452,11 @@ type NodeType string
 
 // NodeUpdate defines model for NodeUpdate.
 type NodeUpdate struct {
-	Aliases   *[]string `json:"aliases,omitempty"`
-	ClientIds *[]int64  `json:"client_ids,omitempty"`
+	Aliases *[]string `json:"aliases,omitempty"`
+
+	// Archived Archive (true) or restore (false); a linked node is archived
+	Archived  *bool    `json:"archived,omitempty"`
+	ClientIds *[]int64 `json:"client_ids,omitempty"`
 
 	// ClientSpecific When present
 	ClientSpecific *bool `json:"client_specific,omitempty"`
@@ -743,6 +747,15 @@ type UserUpdate struct {
 type ListContactsParams struct {
 	Q        *string `form:"q,omitempty" json:"q,omitempty"`
 	ClientId *int64  `form:"client_id,omitempty" json:"client_id,omitempty"`
+
+	// Internal Only internal people (no client).
+	Internal *bool `form:"internal,omitempty" json:"internal,omitempty"`
+}
+
+// ListNodesParams defines parameters for ListNodes.
+type ListNodesParams struct {
+	// Archived Project admins only; also list archived nodes.
+	Archived *bool `form:"archived,omitempty" json:"archived,omitempty"`
 }
 
 // ListTicketsParams defines parameters for ListTickets.
@@ -949,7 +962,7 @@ type ServerInterface interface {
 	SetProjectMembers(w http.ResponseWriter, r *http.Request, key string)
 
 	// (GET /projects/{key}/nodes)
-	ListNodes(w http.ResponseWriter, r *http.Request, key string)
+	ListNodes(w http.ResponseWriter, r *http.Request, key string, params ListNodesParams)
 
 	// (POST /projects/{key}/nodes)
 	CreateNode(w http.ResponseWriter, r *http.Request, key string)
@@ -1305,6 +1318,19 @@ func (siw *ServerInterfaceWrapper) ListContacts(w http.ResponseWriter, r *http.R
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "client_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "client_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "internal" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "internal", r.URL.Query(), &params.Internal, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "internal"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "internal", Err: err})
 		}
 		return
 	}
@@ -1665,8 +1691,24 @@ func (siw *ServerInterfaceWrapper) ListNodes(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListNodesParams
+
+	// ------------- Optional query parameter "archived" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "archived", r.URL.Query(), &params.Archived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "archived"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "archived", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListNodes(w, r, key)
+		siw.Handler.ListNodes(w, r, key, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
