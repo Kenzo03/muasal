@@ -31,9 +31,17 @@ WHERE id = $1 AND version = $2
 RETURNING *;
 
 -- name: SetTicketStatus :one
-UPDATE tickets SET status_id = $2, version = version + 1, updated_at = now()
-WHERE id = $1
+-- A close stamps closed_at and any other move clears it (FSD §8.1). With a
+-- version, a stale one matches no row (If-Match).
+UPDATE tickets SET status_id = sqlc.arg('status_id'),
+  closed_at  = CASE WHEN sqlc.arg('closed')::boolean THEN now() END,
+  version    = version + 1,
+  updated_at = now()
+WHERE id = sqlc.arg('id') AND (sqlc.narg('version')::int IS NULL OR version = sqlc.narg('version')::int)
 RETURNING *;
+
+-- name: SetTicketReason :exec
+UPDATE tickets SET reason = $2 WHERE id = $1;
 
 -- name: ListTicketNodes :many
 SELECT n.id, n.name, (n.archived_at IS NOT NULL)::boolean AS archived
@@ -68,6 +76,7 @@ WHERE t.project_id = sqlc.arg('project_id')
   AND (sqlc.narg('status_id')::bigint IS NULL OR t.status_id = sqlc.narg('status_id')::bigint)
   AND (sqlc.narg('category')::text IS NULL OR s.category = sqlc.narg('category')::text)
   AND (NOT sqlc.arg('open_only')::boolean OR s.category IN ('todo', 'in_progress'))
+  AND (sqlc.narg('closed_days')::int IS NULL OR t.closed_at IS NULL OR t.closed_at >= now() - make_interval(days => sqlc.narg('closed_days')::int))
   AND (sqlc.narg('type')::text IS NULL OR t.type = sqlc.narg('type')::text)
   AND (sqlc.narg('client_id')::bigint IS NULL OR t.client_id = sqlc.narg('client_id')::bigint)
   AND (NOT sqlc.arg('core_only')::boolean OR t.client_id IS NULL)
