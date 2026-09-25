@@ -2,6 +2,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/url"
@@ -16,6 +17,7 @@ type Config struct {
 	ListenAddr         string // default ":8080"
 	AttachmentsDir     string // ATTACHMENTS_DIR, default /data/attachments
 	AttachmentMaxBytes int64  // 25 MB per file (FSD §8.7); the admin setting comes later
+	SecretKey          []byte // APP_SECRET_KEY: 32 bytes, base64; seals AI API keys (R-AI-3). Optional without BYOK.
 }
 
 // Load reads settings through getenv (os.Getenv in production). Invalid
@@ -38,6 +40,13 @@ func Load(getenv func(string) string) (Config, error) {
 	var errs []error
 	if c.DatabaseURL == "" {
 		errs = append(errs, errors.New("DATABASE_URL is required"))
+	}
+	if k := getenv("APP_SECRET_KEY"); k != "" {
+		key, err := base64.StdEncoding.DecodeString(k)
+		if err != nil || len(key) != 32 {
+			errs = append(errs, errors.New("APP_SECRET_KEY must be 32 random bytes in base64, e.g. from `openssl rand -base64 32`"))
+		}
+		c.SecretKey = key
 	}
 	if u, err := url.Parse(c.PublicURL); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.Path != "" {
 		errs = append(errs, fmt.Errorf("PUBLIC_URL must be an origin such as https://muasal.example.com, got %q", c.PublicURL))

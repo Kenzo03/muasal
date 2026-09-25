@@ -41,3 +41,22 @@ func TestAttachmentsDefaultToTheDataVolume(t *testing.T) {
 		t.Fatalf("ATTACHMENTS_DIR: %q", c.AttachmentsDir)
 	}
 }
+
+// R-AI-3: the key that seals AI API keys is optional, but a malformed one
+// fails at start instead of at the first BYOK save.
+func TestSecretKeyIsOptionalButMustBe32Bytes(t *testing.T) {
+	base := map[string]string{"DATABASE_URL": "postgres://x", "PUBLIC_URL": "http://localhost"}
+	if c, err := Load(env(base)); err != nil || c.SecretKey != nil {
+		t.Fatalf("without APP_SECRET_KEY: %v %v", c.SecretKey, err)
+	}
+	base["APP_SECRET_KEY"] = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=" // 32 bytes
+	if c, err := Load(env(base)); err != nil || len(c.SecretKey) != 32 {
+		t.Fatalf("a 32-byte key: %d %v", len(c.SecretKey), err)
+	}
+	for _, bad := range []string{"short", "c2hvcnQ="} {
+		base["APP_SECRET_KEY"] = bad
+		if _, err := Load(env(base)); err == nil {
+			t.Errorf("APP_SECRET_KEY %q: want an error", bad)
+		}
+	}
+}
