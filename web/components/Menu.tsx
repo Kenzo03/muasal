@@ -8,12 +8,13 @@ type Props = {
   summary: React.ReactNode;
   summaryClassName?: string;
   align?: "left" | "right";
+  id?: string;
   children: React.ReactNode;
 };
 
 // A dropdown on native <details>, so the summary is a real button for keyboards
 // and screen readers. A click outside, Escape or following a link closes it.
-export default function Menu({ label, summary, summaryClassName, align = "left", children }: Props) {
+export default function Menu({ label, summary, summaryClassName, align = "left", id, children }: Props) {
   const ref = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
     const close = () => {
@@ -36,7 +37,7 @@ export default function Menu({ label, summary, summaryClassName, align = "left",
     };
   }, []);
   return (
-    <details ref={ref} className="relative">
+    <details ref={ref} id={id} className="relative">
       <summary aria-label={label} className={cx("cursor-pointer list-none", summaryClassName)}>
         {summary}
       </summary>

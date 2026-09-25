@@ -12,7 +12,9 @@ const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["500", "600"], variabl
 
 export const metadata: Metadata = { title: "Muasal" };
 
-export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+// modal is the parallel route of the create-ticket modal (@modal), which opens
+// over the current page (FSD §8.3).
+export default async function RootLayout({ children, modal }: Readonly<{ children: React.ReactNode; modal: React.ReactNode }>) {
   const locale = await getLocale();
   return (
     <html lang={locale} className={`${sans.variable} ${mono.variable}`}>
@@ -20,6 +22,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <NextIntlClientProvider>
           <Header />
           {children}
+          {modal}
         </NextIntlClientProvider>
       </body>
     </html>

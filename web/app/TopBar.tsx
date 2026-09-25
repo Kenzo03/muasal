@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Form from "next/form";
+import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Avatar } from "@/components/Chips";
@@ -29,6 +30,27 @@ export default function TopBar({ me, projects }: { me: User; projects: Project[]
   const project = projects.find((p) => p.key === currentKey(path));
   // Off a project page, New ticket asks which project (FSD §6.1).
   const creatable = projects.filter((p) => p.role !== "viewer");
+  const newTicketKey = project ? (project.role !== "viewer" ? project.key : undefined) : creatable.length === 1 ? creatable[0].key : undefined;
+
+  // The `c` shortcut opens New ticket from anywhere (§6.1, §8.3), unless the
+  // user is typing or a dialog is open. With several projects to choose from,
+  // it opens the project menu instead.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "c" || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+      const el = e.target as HTMLElement;
+      if (el.closest("input, textarea, select, [contenteditable=true], dialog[open]") || document.querySelector("dialog[open]")) return;
+      e.preventDefault();
+      if (newTicketKey) return router.push(`/p/${newTicketKey}/tickets/new`);
+      const menu = document.getElementById("new-ticket-menu") as HTMLDetailsElement | null;
+      if (menu) {
+        menu.open = true;
+        menu.querySelector<HTMLAnchorElement>("a")?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [newTicketKey, router]);
 
   async function setLocale(locale: "id" | "en") {
     if (locale === me.locale) return;
@@ -116,19 +138,20 @@ export default function TopBar({ me, projects }: { me: User; projects: Project[]
           </Form>
           {project ? (
             project.role !== "viewer" && (
-              <Link href={`/p/${project.key}/tickets/new`} aria-label={t("newTicket")} className={button.primary}>
+              <Link href={`/p/${project.key}/tickets/new`} aria-label={t("newTicket")} aria-keyshortcuts="c" title={t("newTicketShortcut")} className={button.primary}>
                 <Icon name="plus" />
                 <span className="hidden sm:inline">{t("newTicket")}</span>
               </Link>
             )
           ) : creatable.length === 1 ? (
-            <Link href={`/p/${creatable[0].key}/tickets/new`} aria-label={t("newTicket")} className={button.primary}>
+            <Link href={`/p/${creatable[0].key}/tickets/new`} aria-label={t("newTicket")} aria-keyshortcuts="c" title={t("newTicketShortcut")} className={button.primary}>
               <Icon name="plus" />
               <span className="hidden sm:inline">{t("newTicket")}</span>
             </Link>
           ) : (
             creatable.length > 1 && (
               <Menu
+                id="new-ticket-menu"
                 align="right"
                 label={t("newTicket")}
                 summaryClassName={button.primary}

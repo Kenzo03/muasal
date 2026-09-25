@@ -4,8 +4,8 @@ import { getTranslations } from "next-intl/server";
 import Icon from "@/components/Icon";
 import PageBar from "@/components/PageBar";
 import TicketForm from "@/components/TicketForm";
-import { getProject, serverApi } from "@/lib/server-api";
 import { panel } from "@/lib/ui";
+import { newTicketData } from "./data";
 
 export default async function NewTicketPage({
   params,
@@ -16,17 +16,11 @@ export default async function NewTicketPage({
 }) {
   const { key } = await params;
   const { status_id, node_id } = await searchParams;
-  const project = await getProject(key);
-  if (!project) notFound();
+  const data = await newTicketData(key);
+  if (!data) notFound();
+  const { project, clients, nodes, assignees } = data;
   const t = await getTranslations("ticketForm");
   const tp = await getTranslations("project");
-  const api = await serverApi();
-  const path = { params: { path: { key } } };
-  const [clients, nodes, assignees] = await Promise.all([
-    api.GET("/projects/{key}/clients", path),
-    api.GET("/projects/{key}/nodes", path),
-    api.GET("/projects/{key}/assignees", path),
-  ]);
   return (
     <>
       <PageBar>
@@ -45,9 +39,9 @@ export default async function NewTicketPage({
           <div className={`${panel} mx-auto max-w-[820px]`}>
             <TicketForm
               projectKey={key}
-              clients={clients.data?.items ?? []}
-              nodes={nodes.data?.items ?? []}
-              assignees={assignees.data?.items ?? []}
+              clients={clients}
+              nodes={nodes}
+              assignees={assignees}
               statusId={status_id ? Number(status_id) : undefined}
               nodeId={node_id ? Number(node_id) : undefined}
             />

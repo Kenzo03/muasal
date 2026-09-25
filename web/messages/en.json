@@ -32,7 +32,8 @@
     "search": "Search tickets or menus",
     "searchPlaceholder": "Search, or type HRIS-231",
     "language": "Language",
-    "account": "Account of {name}"
+    "account": "Account of {name}",
+    "newTicketShortcut": "New ticket (C)"
   },
   "search": {
     "heading": "Search",
@@ -413,7 +414,9 @@
     "descriptionHintNew": "Markdown works. Images can be pasted once the ticket exists.",
     "pasteAfterCreate": "Create the ticket first; then paste the image into its description or a comment.",
     "recent": "Recent",
-    "bugBehaviors": "Is it a bug, or how the menu was agreed to work? See the behaviors of"
+    "bugBehaviors": "Is it a bug, or how the menu was agreed to work? See the behaviors of",
+    "newIn": "New ticket in {project}",
+    "close": "Close"
   },
   "ticket": {
     "edit": "Edit",
