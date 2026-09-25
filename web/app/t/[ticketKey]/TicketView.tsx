@@ -154,10 +154,15 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
                   ) : (
                     <ul className="flex flex-wrap gap-1.5">
                       {ticket.nodes.map((n) => (
-                        <li key={n.id} className="inline-flex h-7 items-center gap-1.5 rounded border border-line bg-ground px-2.5 text-[13px]">
-                          <Icon name="screen" className="size-3.5 text-muted" />
-                          {pathOf(n.id) || n.name}
-                          {n.archived ? ` (${t("archived")})` : ""}
+                        <li key={n.id}>
+                          <Link
+                            href={`/p/${ticket.project_key}/modules/${n.id}`}
+                            className="inline-flex h-7 items-center gap-1.5 rounded border border-line bg-ground px-2.5 text-[13px] text-ink no-underline hover:border-field hover:text-ink"
+                          >
+                            <Icon name="screen" className="size-3.5 text-muted" />
+                            {pathOf(n.id) || n.name}
+                            {n.archived ? ` (${t("archived")})` : ""}
+                          </Link>
                         </li>
                       ))}
                     </ul>
