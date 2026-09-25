@@ -3140,8 +3140,8 @@ Expected: PASS.
 
 Then plant three leaks, one at a time, and run the suite after each:
 - In `timeline.sql`, change the scope line of `ListNodeTimeline` to `AND (true OR …)`.
-- In `search.sql`, change `SearchTickets`'s `(sqlc.arg('is_admin')::boolean OR EXISTS (` to `(true OR EXISTS (`.
-- In `home.sql`, change `ListRecentTickets`'s `(sqlc.arg('is_admin')::boolean OR EXISTS (` to `(true OR EXISTS (`.
+- In `search.sql`, change `SearchTickets`'s `(sqlc.arg('is_admin')::boolean OR EXISTS (` to `(true OR sqlc.arg('is_admin')::boolean OR EXISTS (`. Keep the argument, or the params struct loses `IsAdmin` and the build fails.
+- In `home.sql`, change `ListRecentTickets`'s `(sqlc.arg('is_admin')::boolean OR EXISTS (` the same way.
 
 Run `go generate ./...` after each change. Expected: FAIL, naming budi and citra for the timeline, and every user but admin for search and for `/me/updates`. Revert all three, run `go generate ./...` again, and check that the suite passes and `git diff --stat` shows only `permission_test.go`.
 
