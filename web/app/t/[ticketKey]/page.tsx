@@ -29,6 +29,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketK
       nodes={nodes.data?.items ?? []}
       assignees={assignees.data?.items ?? []}
       canEdit={canEdit}
+      canEditDecision={project.role === "admin" || ticket.decision?.confirmed_by?.id === me.id}
       activity={<Activity ticketKey={ticket.key} items={activity.data?.items ?? []} meId={me.id} canComment={canEdit} />}
       attachments={
         <Attachments ticketKey={ticket.key} files={ticket.attachments} meId={me.id} isProjectAdmin={project.role === "admin"} canUpload={canEdit} />

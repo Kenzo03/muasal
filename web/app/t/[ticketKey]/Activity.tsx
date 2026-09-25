@@ -6,15 +6,12 @@ import { useLocale, useTranslations } from "next-intl";
 import { Avatar } from "@/components/Chips";
 import Icon from "@/components/Icon";
 import { api } from "@/lib/api";
+import { describeChange, shown, type Change } from "@/lib/activity";
 import { utc } from "@/lib/format";
 import { useProblemText, type ActivityItem } from "@/lib/problem";
 import { button, chip, cx, field, panel } from "@/lib/ui";
 
-type Change = { old?: unknown; new?: unknown };
 type Filter = "all" | "comments" | "history";
-
-const shown = (v: unknown) =>
-  v === null || v === undefined || v === "" ? "—" : Array.isArray(v) ? v.join(", ") || "—" : String(v);
 
 // A ticket's comments and history, oldest first (FSD §8.7).
 export default function Activity({ ticketKey, items, meId, canComment }: {
@@ -66,35 +63,11 @@ export default function Activity({ ticketKey, items, meId, canComment }: {
     router.refresh();
   }
 
-  function describe(it: ActivityItem) {
-    const actor = it.actor?.name ?? t("system");
-    const c = (it.changes ?? {}) as Record<string, unknown>;
-    switch (it.action) {
-      case "create":
-        return t("created", { actor });
-      case "transition": {
-        const s = c.status as Change;
-        return t("transition", { actor, old: shown(s.old), new: shown(s.new) });
-      }
-      case "update":
-        return t("updated", { actor, fields: Object.keys(c).map(field_).join(", ") });
-      case "comment_edit":
-        return t("commentEdited", { actor });
-      case "comment_delete":
-        return t("commentDeleted", { actor });
-      case "attachment_add":
-        return t("attachmentAdded", { actor, file: shown(c.filename) });
-      case "attachment_delete":
-        return t("attachmentDeleted", { actor, file: shown(c.filename) });
-      default:
-        return `${actor}: ${it.action}`;
-    }
-  }
-
   // Updates list their old and new values; comment edits keep the earlier text (AC-TK-6).
   function details(it: ActivityItem) {
     const c = (it.changes ?? {}) as Record<string, Change>;
-    if (it.action === "update") {
+    // Updates, closes and decision records list their old and new values.
+    if (it.action === "update" || it.action?.startsWith("decision_") || (it.action === "transition" && Object.keys(c).length > 1)) {
       return (
         <details className="mt-1 pl-6">
           <summary className="cursor-pointer text-xs text-link">{t("details")}</summary>
@@ -118,7 +91,11 @@ export default function Activity({ ticketKey, items, meId, canComment }: {
   }
 
   const eventIcon = (it: ActivityItem) =>
-    it.action === "transition" ? "chevronRight" : it.action === "create" ? "plus" : it.action?.startsWith("attachment") ? "file" : "edit";
+    it.action === "transition" ? "chevronRight"
+    : it.action === "create" ? "plus"
+    : it.action === "decision_confirm" ? "check"
+    : it.action?.startsWith("attachment") ? "file"
+    : "edit";
 
   return (
     <section aria-labelledby="activity-title" className={cx(panel, "flex flex-col gap-3.5 px-4 py-3.5")}>
@@ -186,7 +163,7 @@ export default function Activity({ ticketKey, items, meId, canComment }: {
             <li key={`e${i}`} className="text-[13px] text-muted">
               <div className="flex items-start gap-2">
                 <Icon name={eventIcon(it)} className="mt-0.5 size-4" />
-                <span className="min-w-0 flex-1">{describe(it)}</span>
+                <span className="min-w-0 flex-1">{describeChange(t, it)}</span>
                 <span className="shrink-0 text-xs">{utc(it.at, locale)}</span>
               </div>
               {details(it)}
