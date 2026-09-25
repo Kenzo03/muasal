@@ -68,6 +68,40 @@ export interface paths {
         patch: operations["updateMe"];
         trace?: never;
     };
+    "/me/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Home's My tickets (FSD §6.4): the open tickets assigned to the caller in every project, as far as the caller may see them. view narrows them; the counts cover every view and project, whatever the view. */
+        get: operations["listMyTickets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/updates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Home's Recently updated (FSD §6.4): the 10 tickets the caller may see that changed last, newest first, each with its latest change. A comment change carries no text. */
+        get: operations["listMyUpdates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/users": {
         parameters: {
             query?: never;
@@ -1126,6 +1160,51 @@ export interface components {
             tickets: components["schemas"]["SearchTicket"][];
             nodes: components["schemas"]["SearchNode"][];
         };
+        /** @enum {string} */
+        MyTicketsView: "all" | "overdue" | "week" | "incomplete";
+        MyTicket: {
+            key: string;
+            title: string;
+            type: components["schemas"]["TicketType"];
+            priority: components["schemas"]["Priority"];
+            /** Format: date */
+            due_date?: string;
+            status: components["schemas"]["Status"];
+            client?: components["schemas"]["Ref"];
+            /** @description The first menu's parent and name, e.g. "Payroll › Payslip". */
+            menu?: string;
+            missing_reason: boolean;
+            missing_menus: boolean;
+        };
+        MyTicketsCounts: {
+            all: number;
+            overdue: number;
+            week: number;
+            incomplete: number;
+        };
+        ProjectCount: {
+            key: string;
+            open: number;
+        };
+        MyTicketsPage: {
+            items: components["schemas"]["MyTicket"][];
+            next_cursor: string | null;
+            counts: components["schemas"]["MyTicketsCounts"];
+            /** @description The caller's open tickets per project; projects without any are left out. */
+            projects: components["schemas"]["ProjectCount"][];
+        };
+        RecentTicket: {
+            key: string;
+            title: string;
+            type: components["schemas"]["TicketType"];
+            status: components["schemas"]["Status"];
+            /** Format: date-time */
+            updated_at: string;
+            change?: components["schemas"]["ActivityItem"];
+        };
+        RecentTicketList: {
+            items: components["schemas"]["RecentTicket"][];
+        };
     };
     responses: {
         /** @description An error, as RFC 9457 problem details. */
@@ -1253,6 +1332,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["User"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listMyTickets: {
+        parameters: {
+            query?: {
+                view?: components["schemas"]["MyTicketsView"];
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the caller's open tickets, with the counts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyTicketsPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listMyUpdates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The latest changed tickets. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecentTicketList"];
                 };
             };
             default: components["responses"]["Problem"];

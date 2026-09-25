@@ -69,6 +69,38 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/User" }
         default: { $ref: "#/components/responses/Problem" }
+  /me/tickets:
+    get:
+      operationId: listMyTickets
+      tags: [me]
+      description: >-
+        Home's My tickets (FSD §6.4): the open tickets assigned to the caller in every project, as far as the caller
+        may see them. view narrows them; the counts cover every view and project, whatever the view.
+      parameters:
+        - { name: view, in: query, schema: { $ref: "#/components/schemas/MyTicketsView" } }
+        - { name: limit, in: query, schema: { type: integer, format: int32, minimum: 1, maximum: 1000 } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: One page of the caller's open tickets, with the counts.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MyTicketsPage" }
+        default: { $ref: "#/components/responses/Problem" }
+  /me/updates:
+    get:
+      operationId: listMyUpdates
+      tags: [me]
+      description: >-
+        Home's Recently updated (FSD §6.4): the 10 tickets the caller may see that changed last, newest first, each
+        with its latest change. A comment change carries no text.
+      responses:
+        "200":
+          description: The latest changed tickets.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecentTicketList" }
+        default: { $ref: "#/components/responses/Problem" }
   /admin/users:
     get:
       operationId: listUsers
@@ -1391,3 +1423,64 @@ components:
         nodes:
           type: array
           items: { $ref: "#/components/schemas/SearchNode" }
+    MyTicketsView:
+      type: string
+      enum: [all, overdue, week, incomplete]
+    MyTicket:
+      type: object
+      required: [key, title, type, priority, status, missing_reason, missing_menus]
+      properties:
+        key: { type: string }
+        title: { type: string }
+        type: { $ref: "#/components/schemas/TicketType" }
+        priority: { $ref: "#/components/schemas/Priority" }
+        due_date: { type: string, format: date }
+        status: { $ref: "#/components/schemas/Status" }
+        client: { $ref: "#/components/schemas/Ref" }
+        menu: { type: string, description: 'The first menu''s parent and name, e.g. "Payroll › Payslip".' }
+        missing_reason: { type: boolean }
+        missing_menus: { type: boolean }
+    MyTicketsCounts:
+      type: object
+      required: [all, overdue, week, incomplete]
+      properties:
+        all: { type: integer }
+        overdue: { type: integer }
+        week: { type: integer }
+        incomplete: { type: integer }
+    ProjectCount:
+      type: object
+      required: [key, open]
+      properties:
+        key: { type: string }
+        open: { type: integer }
+    MyTicketsPage:
+      type: object
+      required: [items, next_cursor, counts, projects]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/MyTicket" }
+        next_cursor: { type: string, nullable: true }
+        counts: { $ref: "#/components/schemas/MyTicketsCounts" }
+        projects:
+          type: array
+          description: The caller's open tickets per project; projects without any are left out.
+          items: { $ref: "#/components/schemas/ProjectCount" }
+    RecentTicket:
+      type: object
+      required: [key, title, type, status, updated_at]
+      properties:
+        key: { type: string }
+        title: { type: string }
+        type: { $ref: "#/components/schemas/TicketType" }
+        status: { $ref: "#/components/schemas/Status" }
+        updated_at: { type: string, format: date-time }
+        change: { $ref: "#/components/schemas/ActivityItem" }
+    RecentTicketList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/RecentTicket" }
