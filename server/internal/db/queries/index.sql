@@ -50,3 +50,15 @@ WHERE c.ticket_id = sqlc.arg('ticket_id')
 SELECT id, content, content_hash FROM chunks
 WHERE ticket_id = $1 AND (embedding IS NULL OR embed_model IS DISTINCT FROM sqlc.arg('model')::text)
 ORDER BY id;
+
+-- name: ListTicketIDsUnderNode :many
+-- Tickets on a node or its sub-nodes, whose chunks name the node's path.
+WITH RECURSIVE sub AS (
+  SELECT n.id FROM nodes n WHERE n.id = $1
+  UNION ALL
+  SELECT n.id FROM nodes n JOIN sub ON n.parent_id = sub.id
+)
+SELECT DISTINCT tn.ticket_id FROM ticket_nodes tn JOIN sub ON sub.id = tn.node_id ORDER BY 1;
+
+-- name: ListTicketIDsOfClient :many
+SELECT id FROM tickets WHERE client_id = sqlc.arg('client_id')::bigint ORDER BY id;

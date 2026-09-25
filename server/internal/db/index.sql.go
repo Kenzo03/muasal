@@ -175,6 +175,60 @@ func (q *Queries) ListPendingTicketChunks(ctx context.Context, arg ListPendingTi
 	return items, nil
 }
 
+const listTicketIDsOfClient = `-- name: ListTicketIDsOfClient :many
+SELECT id FROM tickets WHERE client_id = $1::bigint ORDER BY id
+`
+
+func (q *Queries) ListTicketIDsOfClient(ctx context.Context, clientID int64) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listTicketIDsOfClient, clientID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTicketIDsUnderNode = `-- name: ListTicketIDsUnderNode :many
+WITH RECURSIVE sub AS (
+  SELECT n.id FROM nodes n WHERE n.id = $1
+  UNION ALL
+  SELECT n.id FROM nodes n JOIN sub ON n.parent_id = sub.id
+)
+SELECT DISTINCT tn.ticket_id FROM ticket_nodes tn JOIN sub ON sub.id = tn.node_id ORDER BY 1
+`
+
+// Tickets on a node or its sub-nodes, whose chunks name the node's path.
+func (q *Queries) ListTicketIDsUnderNode(ctx context.Context, id int64) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listTicketIDsUnderNode, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var ticket_id int64
+		if err := rows.Scan(&ticket_id); err != nil {
+			return nil, err
+		}
+		items = append(items, ticket_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTicketNodePaths = `-- name: ListTicketNodePaths :many
 WITH RECURSIVE up AS (
   SELECT tn.node_id AS id, n.parent_id, ARRAY[n.name]::text[] AS path

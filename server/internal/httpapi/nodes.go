@@ -150,7 +150,7 @@ func (s *Server) UpdateNode(w http.ResponseWriter, r *http.Request, id int64) {
 	}
 	ctx := r.Context()
 	var out Node
-	err := s.inTx(ctx, func(q *db.Queries) error {
+	err := s.inJobTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		before, err := q.ListNodeClients(ctx, id)
 		if err != nil {
 			return err
@@ -182,6 +182,16 @@ func (s *Server) UpdateNode(w http.ResponseWriter, r *http.Request, id int64) {
 			return err
 		}
 		out = toAPINode(updated, after)
+		// Chunks name each menu's path, so a rename or a move re-indexes the tickets below it (§13.1).
+		if updated.Name != n.Name || in.Move != nil {
+			ids, err := q.ListTicketIDsUnderNode(ctx, id)
+			if err != nil {
+				return err
+			}
+			if err := s.index(ctx, tx, ids...); err != nil {
+				return err
+			}
+		}
 		return audit(ctx, q, webMeta(r).inProject(n.ProjectID), &pc.user.ID, "node", id, "update",
 			changed(nodeAudit(n, before), nodeAudit(updated, after)))
 	})
