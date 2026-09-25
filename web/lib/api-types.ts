@@ -68,6 +68,40 @@ export interface paths {
         patch: operations["updateMe"];
         trace?: never;
     };
+    "/me/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Home's My tickets (FSD §6.4): the open tickets assigned to the caller in every project, as far as the caller may see them. view narrows them; the counts cover every view and project, whatever the view. */
+        get: operations["listMyTickets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/updates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Home's Recently updated (FSD §6.4): the 10 tickets the caller may see that changed last, newest first, each with its latest change. A comment change carries no text. */
+        get: operations["listMyUpdates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/users": {
         parameters: {
             query?: never;
@@ -297,7 +331,8 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /** @description Every member who sees the node, archived or not (R-MR-4), with the path of its parents. */
+        get: operations["getNode"];
         put?: never;
         post?: never;
         /** @description Project admins only. A node with sub-nodes answers 409 node_has_children. */
@@ -306,6 +341,44 @@ export interface paths {
         head?: never;
         /** @description Project admins only. Edits fields, and moves the node when `move` is present. */
         patch: operations["updateNode"];
+        trace?: never;
+    };
+    "/nodes/{id}/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        /** @description The visible tickets on the node, and by default on its sub-nodes: open ones first, newest first, then closed ones by close date, newest first, with their decision records (FSD §7.4). Pages follow next_cursor. */
+        get: operations["getNodeTimeline"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nodes/{id}/behaviors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        /** @description The decisions in force on the node, and by default on its sub-nodes; core work first, then by client (FSD §7.4). */
+        get: operations["getNodeBehaviors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/projects/{key}/statuses": {
@@ -397,8 +470,27 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Members and project admins. Moves among open statuses; closing answers 422 close_unavailable until the close dialog ships. */
+        /** @description Members and project admins. Entering a Done or Cancelled status is a close: it needs a reason, at least one menu and the decision record, else 422 close_validation_failed (FSD §9.1). Leaving one reopens the ticket and turns its decision record back into a draft. A stale If-Match answers 412. */
         post: operations["transitionTicket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tickets/{key}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /** @description Project admins and the confirmer reword a confirmed decision record (R-DC-5); every edit is audited. A ticket without a confirmed record answers 409 decision_not_confirmed. */
+        put: operations["updateDecision"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -496,6 +588,23 @@ export interface paths {
         post?: never;
         /** @description The uploader or a project admin. */
         delete: operations["deleteAttachment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Tickets and nodes the caller may open, across their projects (FSD §6.1): a ticket key, words in a ticket or part of its title; part of a node's name, an alias or its code. Fewer than 2 characters find nothing. */
+        get: operations["search"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -743,6 +852,42 @@ export interface components {
              */
             position?: number;
         };
+        NodeDetail: {
+            node: components["schemas"]["Node"];
+            /** @description The node's parents, top first. */
+            path: components["schemas"]["Ref"][];
+            project_key: string;
+        };
+        TimelineEntry: {
+            key: string;
+            title: string;
+            type: components["schemas"]["TicketType"];
+            status: components["schemas"]["Status"];
+            client?: components["schemas"]["Ref"];
+            requester: components["schemas"]["TicketRequester"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            closed_at?: string;
+            decision?: components["schemas"]["DecisionRecord"];
+        };
+        TimelinePage: {
+            items: components["schemas"]["TimelineEntry"][];
+            next_cursor: string | null;
+        };
+        Behavior: {
+            key: string;
+            title: string;
+            client?: components["schemas"]["Ref"];
+            /** Format: date-time */
+            closed_at?: string;
+            what_changed: string;
+            why: string;
+            alternatives: string;
+        };
+        BehaviorList: {
+            items: components["schemas"]["Behavior"][];
+        };
         Ref: {
             /** Format: int64 */
             id: number;
@@ -851,6 +996,12 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+            /**
+             * Format: date-time
+             * @description Set on close
+             */
+            closed_at?: string | null;
+            decision?: components["schemas"]["DecisionRecord"];
         };
         TicketCreate: {
             type: components["schemas"]["TicketType"];
@@ -909,6 +1060,30 @@ export interface components {
         TransitionRequest: {
             /** Format: int64 */
             status_id: number;
+            /** @description A close only; replaces the ticket's reason. */
+            reason?: string;
+            /** @description A close only; replaces the ticket's menus. */
+            node_ids?: number[];
+            decision?: components["schemas"]["DecisionInput"];
+        };
+        DecisionInput: {
+            what_changed: string;
+            why: string;
+            alternatives?: string;
+        };
+        /** @enum {string} */
+        DecisionOutcome: "implemented" | "rejected";
+        /** @enum {string} */
+        DecisionState: "draft" | "confirmed";
+        DecisionRecord: {
+            what_changed: string;
+            why: string;
+            alternatives: string;
+            outcome: components["schemas"]["DecisionOutcome"];
+            state: components["schemas"]["DecisionState"];
+            confirmed_by?: components["schemas"]["Ref"];
+            /** Format: date-time */
+            confirmed_at?: string;
         };
         TicketSummary: {
             /** Format: int64 */
@@ -962,6 +1137,73 @@ export interface components {
         };
         CommentUpdate: {
             body: string;
+        };
+        SearchTicket: {
+            key: string;
+            title: string;
+            project_key: string;
+            status: components["schemas"]["Status"];
+            client?: components["schemas"]["Ref"];
+        };
+        SearchNode: {
+            /** Format: int64 */
+            id: number;
+            name: string;
+            type: components["schemas"]["NodeType"];
+            code: string | null;
+            aliases: string[];
+            project_key: string;
+            /** @description The names from the top of the tree down to this node. */
+            path: string[];
+        };
+        SearchResults: {
+            tickets: components["schemas"]["SearchTicket"][];
+            nodes: components["schemas"]["SearchNode"][];
+        };
+        /** @enum {string} */
+        MyTicketsView: "all" | "overdue" | "week" | "incomplete";
+        MyTicket: {
+            key: string;
+            title: string;
+            type: components["schemas"]["TicketType"];
+            priority: components["schemas"]["Priority"];
+            /** Format: date */
+            due_date?: string;
+            status: components["schemas"]["Status"];
+            client?: components["schemas"]["Ref"];
+            /** @description The first menu's parent and name, e.g. "Payroll › Payslip". */
+            menu?: string;
+            missing_reason: boolean;
+            missing_menus: boolean;
+        };
+        MyTicketsCounts: {
+            all: number;
+            overdue: number;
+            week: number;
+            incomplete: number;
+        };
+        ProjectCount: {
+            key: string;
+            open: number;
+        };
+        MyTicketsPage: {
+            items: components["schemas"]["MyTicket"][];
+            next_cursor: string | null;
+            counts: components["schemas"]["MyTicketsCounts"];
+            /** @description The caller's open tickets per project; projects without any are left out. */
+            projects: components["schemas"]["ProjectCount"][];
+        };
+        RecentTicket: {
+            key: string;
+            title: string;
+            type: components["schemas"]["TicketType"];
+            status: components["schemas"]["Status"];
+            /** Format: date-time */
+            updated_at: string;
+            change?: components["schemas"]["ActivityItem"];
+        };
+        RecentTicketList: {
+            items: components["schemas"]["RecentTicket"][];
         };
     };
     responses: {
@@ -1090,6 +1332,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["User"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listMyTickets: {
+        parameters: {
+            query?: {
+                view?: components["schemas"]["MyTicketsView"];
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the caller's open tickets, with the counts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyTicketsPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listMyUpdates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The latest changed tickets. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecentTicketList"];
                 };
             };
             default: components["responses"]["Problem"];
@@ -1591,6 +1879,29 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    getNode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The node and its path. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     deleteNode: {
         parameters: {
             query?: never;
@@ -1634,6 +1945,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Node"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getNodeTimeline: {
+        parameters: {
+            query?: {
+                sub_nodes?: boolean;
+                client_id?: number;
+                /** @description Only core work (no client). */
+                core?: boolean;
+                type?: components["schemas"]["TicketType"];
+                /** @description Entries on or after this day; an entry's day is its close day */
+                from?: string;
+                /** @description Entries on or before this day. */
+                to?: string;
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the timeline. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimelinePage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getNodeBehaviors: {
+        parameters: {
+            query?: {
+                sub_nodes?: boolean;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Confirmed, implemented decisions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BehaviorList"];
                 };
             };
             default: components["responses"]["Problem"];
@@ -1719,6 +2090,8 @@ export interface operations {
                 category?: components["schemas"]["StatusCategory"];
                 /** @description Only To do and In progress statuses. */
                 open?: boolean;
+                /** @description Closed tickets only when closed within this many days; the board asks for 14. */
+                closed_days?: number;
                 type?: components["schemas"]["TicketType"];
                 client_id?: number;
                 /** @description Only core work (no client). */
@@ -1837,7 +2210,9 @@ export interface operations {
     transitionTicket: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "If-Match"?: string;
+            };
             path: {
                 key: string;
             };
@@ -1849,13 +2224,40 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The ticket in its new status. */
+            /** @description The ticket in its new status; ETag carries its version. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["Ticket"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateDecision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecisionInput"];
+            };
+        };
+        responses: {
+            /** @description The record as saved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DecisionRecord"];
                 };
             };
             default: components["responses"]["Problem"];
@@ -2029,6 +2431,29 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    search: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description At most 50 tickets and 20 nodes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchResults"];
+                };
             };
             default: components["responses"]["Problem"];
         };

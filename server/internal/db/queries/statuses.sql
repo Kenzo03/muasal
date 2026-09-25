@@ -27,3 +27,6 @@ WHERE project_id = sqlc.arg('project_id') AND status_id = sqlc.arg('from_id');
 -- name: DeleteStatusesExcept :exec
 DELETE FROM statuses
 WHERE project_id = sqlc.arg('project_id') AND NOT (id = ANY (sqlc.arg('keep_ids')::bigint[]));
+
+-- name: ListStatusIDsInUse :many
+SELECT DISTINCT status_id FROM tickets WHERE project_id = $1;

@@ -69,6 +69,38 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/User" }
         default: { $ref: "#/components/responses/Problem" }
+  /me/tickets:
+    get:
+      operationId: listMyTickets
+      tags: [me]
+      description: >-
+        Home's My tickets (FSD §6.4): the open tickets assigned to the caller in every project, as far as the caller
+        may see them. view narrows them; the counts cover every view and project, whatever the view.
+      parameters:
+        - { name: view, in: query, schema: { $ref: "#/components/schemas/MyTicketsView" } }
+        - { name: limit, in: query, schema: { type: integer, format: int32, minimum: 1, maximum: 1000 } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: One page of the caller's open tickets, with the counts.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MyTicketsPage" }
+        default: { $ref: "#/components/responses/Problem" }
+  /me/updates:
+    get:
+      operationId: listMyUpdates
+      tags: [me]
+      description: >-
+        Home's Recently updated (FSD §6.4): the 10 tickets the caller may see that changed last, newest first, each
+        with its latest change. A comment change carries no text.
+      responses:
+        "200":
+          description: The latest changed tickets.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecentTicketList" }
+        default: { $ref: "#/components/responses/Problem" }
   /admin/users:
     get:
       operationId: listUsers
@@ -383,6 +415,17 @@ paths:
   /nodes/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    get:
+      operationId: getNode
+      tags: [nodes]
+      description: Every member who sees the node, archived or not (R-MR-4), with the path of its parents.
+      responses:
+        "200":
+          description: The node and its path.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NodeDetail" }
+        default: { $ref: "#/components/responses/Problem" }
     patch:
       operationId: updateNode
       tags: [nodes]
@@ -405,6 +448,47 @@ paths:
       description: Project admins only. A node with sub-nodes answers 409 node_has_children.
       responses:
         "204": { description: Deleted. }
+        default: { $ref: "#/components/responses/Problem" }
+  /nodes/{id}/timeline:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    get:
+      operationId: getNodeTimeline
+      tags: [nodes]
+      description: >-
+        The visible tickets on the node, and by default on its sub-nodes: open ones first, newest first, then closed
+        ones by close date, newest first, with their decision records (FSD §7.4). Pages follow next_cursor.
+      parameters:
+        - { name: sub_nodes, in: query, schema: { type: boolean, default: true } }
+        - { name: client_id, in: query, schema: { type: integer, format: int64 } }
+        - { name: core, in: query, schema: { type: boolean }, description: Only core work (no client). }
+        - { name: type, in: query, schema: { $ref: "#/components/schemas/TicketType" } }
+        - { name: from, in: query, schema: { type: string, format: date }, description: Entries on or after this day; an entry's day is its close day, or its creation day while open. }
+        - { name: to, in: query, schema: { type: string, format: date }, description: Entries on or before this day. }
+        - { name: limit, in: query, schema: { type: integer, format: int32, minimum: 1, maximum: 1000 } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: One page of the timeline.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TimelinePage" }
+        default: { $ref: "#/components/responses/Problem" }
+  /nodes/{id}/behaviors:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    get:
+      operationId: getNodeBehaviors
+      tags: [nodes]
+      description: The decisions in force on the node, and by default on its sub-nodes; core work first, then by client (FSD §7.4).
+      parameters:
+        - { name: sub_nodes, in: query, schema: { type: boolean, default: true } }
+      responses:
+        "200":
+          description: Confirmed, implemented decisions.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BehaviorList" }
         default: { $ref: "#/components/responses/Problem" }
   /projects/{key}/statuses:
     parameters:
@@ -461,6 +545,7 @@ paths:
         - { name: status_id, in: query, schema: { type: integer, format: int64 } }
         - { name: category, in: query, schema: { $ref: "#/components/schemas/StatusCategory" } }
         - { name: open, in: query, schema: { type: boolean }, description: Only To do and In progress statuses. }
+        - { name: closed_days, in: query, schema: { type: integer, format: int32, minimum: 1 }, description: Closed tickets only when closed within this many days; the board asks for 14. }
         - { name: type, in: query, schema: { $ref: "#/components/schemas/TicketType" } }
         - { name: client_id, in: query, schema: { type: integer, format: int64 } }
         - { name: core, in: query, schema: { type: boolean }, description: Only core work (no client). }
@@ -532,7 +617,12 @@ paths:
     post:
       operationId: transitionTicket
       tags: [tickets]
-      description: Members and project admins. Moves among open statuses; closing answers 422 close_unavailable until the close dialog ships.
+      description: >-
+        Members and project admins. Entering a Done or Cancelled status is a close: it needs a reason, at least one
+        menu and the decision record, else 422 close_validation_failed (FSD §9.1). Leaving one reopens the ticket and
+        turns its decision record back into a draft. A stale If-Match answers 412.
+      parameters:
+        - { name: If-Match, in: header, schema: { type: string, example: '"7"' } }
       requestBody:
         required: true
         content:
@@ -540,10 +630,31 @@ paths:
             schema: { $ref: "#/components/schemas/TransitionRequest" }
       responses:
         "200":
-          description: The ticket in its new status.
+          description: The ticket in its new status; ETag carries its version.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Ticket" }
+        default: { $ref: "#/components/responses/Problem" }
+  /tickets/{key}/decision:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    put:
+      operationId: updateDecision
+      tags: [tickets]
+      description: >-
+        Project admins and the confirmer reword a confirmed decision record (R-DC-5); every edit is audited.
+        A ticket without a confirmed record answers 409 decision_not_confirmed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DecisionInput" }
+      responses:
+        "200":
+          description: The record as saved.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DecisionRecord" }
         default: { $ref: "#/components/responses/Problem" }
   /tickets/{key}/activity:
     parameters:
@@ -646,6 +757,22 @@ paths:
       description: The uploader or a project admin.
       responses:
         "204": { description: Removed from the ticket. }
+        default: { $ref: "#/components/responses/Problem" }
+  /search:
+    get:
+      operationId: search
+      tags: [search]
+      description: >-
+        Tickets and nodes the caller may open, across their projects (FSD §6.1): a ticket key, words in a ticket or
+        part of its title; part of a node's name, an alias or its code. Fewer than 2 characters find nothing.
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: string, maxLength: 200 } }
+      responses:
+        "200":
+          description: At most 50 tickets and 20 nodes.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SearchResults" }
         default: { $ref: "#/components/responses/Problem" }
 components:
   responses:
@@ -964,6 +1091,55 @@ components:
       properties:
         parent_id: { type: integer, format: int64, nullable: true, description: Omitted or null moves to the top level. }
         position: { type: integer, format: int32, minimum: 0, description: Index among the new siblings; omitted puts the node last. }
+    NodeDetail:
+      type: object
+      required: [node, path, project_key]
+      properties:
+        node: { $ref: "#/components/schemas/Node" }
+        path:
+          type: array
+          description: The node's parents, top first.
+          items: { $ref: "#/components/schemas/Ref" }
+        project_key: { type: string }
+    TimelineEntry:
+      type: object
+      required: [key, title, type, status, requester, created_at]
+      properties:
+        key: { type: string }
+        title: { type: string }
+        type: { $ref: "#/components/schemas/TicketType" }
+        status: { $ref: "#/components/schemas/Status" }
+        client: { $ref: "#/components/schemas/Ref" }
+        requester: { $ref: "#/components/schemas/TicketRequester" }
+        created_at: { type: string, format: date-time }
+        closed_at: { type: string, format: date-time }
+        decision: { $ref: "#/components/schemas/DecisionRecord" }
+    TimelinePage:
+      type: object
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/TimelineEntry" }
+        next_cursor: { type: string, nullable: true }
+    Behavior:
+      type: object
+      required: [key, title, what_changed, why, alternatives]
+      properties:
+        key: { type: string }
+        title: { type: string }
+        client: { $ref: "#/components/schemas/Ref" }
+        closed_at: { type: string, format: date-time }
+        what_changed: { type: string }
+        why: { type: string }
+        alternatives: { type: string }
+    BehaviorList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Behavior" }
     Ref:
       type: object
       required: [id, name]
@@ -1080,6 +1256,8 @@ components:
         version: { type: integer, format: int32 }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
+        closed_at: { type: string, format: date-time, nullable: true, description: Set on close, cleared on reopen. }
+        decision: { $ref: "#/components/schemas/DecisionRecord" }
     TicketCreate:
       type: object
       required: [type, title, node_ids]
@@ -1121,6 +1299,36 @@ components:
       required: [status_id]
       properties:
         status_id: { type: integer, format: int64 }
+        reason: { type: string, maxLength: 2000, description: A close only; replaces the ticket's reason. }
+        node_ids:
+          type: array
+          description: A close only; replaces the ticket's menus.
+          items: { type: integer, format: int64 }
+        decision: { $ref: "#/components/schemas/DecisionInput" }
+    DecisionInput:
+      type: object
+      required: [what_changed, why]
+      properties:
+        what_changed: { type: string, maxLength: 1000 }
+        why: { type: string, maxLength: 2000 }
+        alternatives: { type: string, maxLength: 2000 }
+    DecisionOutcome:
+      type: string
+      enum: [implemented, rejected]
+    DecisionState:
+      type: string
+      enum: [draft, confirmed]
+    DecisionRecord:
+      type: object
+      required: [what_changed, why, alternatives, outcome, state]
+      properties:
+        what_changed: { type: string }
+        why: { type: string }
+        alternatives: { type: string }
+        outcome: { $ref: "#/components/schemas/DecisionOutcome" }
+        state: { $ref: "#/components/schemas/DecisionState" }
+        confirmed_by: { $ref: "#/components/schemas/Ref" }
+        confirmed_at: { type: string, format: date-time }
     TicketSummary:
       type: object
       required: [id, key, title, type, priority, due_date, status_id, requester_name, node_names, missing_reason, updated_at]
@@ -1180,3 +1388,99 @@ components:
       required: [body]
       properties:
         body: { type: string, maxLength: 20000 }
+    SearchTicket:
+      type: object
+      required: [key, title, project_key, status]
+      properties:
+        key: { type: string }
+        title: { type: string }
+        project_key: { type: string }
+        status: { $ref: "#/components/schemas/Status" }
+        client: { $ref: "#/components/schemas/Ref" }
+    SearchNode:
+      type: object
+      required: [id, name, type, code, aliases, project_key, path]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        type: { $ref: "#/components/schemas/NodeType" }
+        code: { type: string, nullable: true }
+        aliases:
+          type: array
+          items: { type: string }
+        project_key: { type: string }
+        path:
+          type: array
+          description: The names from the top of the tree down to this node.
+          items: { type: string }
+    SearchResults:
+      type: object
+      required: [tickets, nodes]
+      properties:
+        tickets:
+          type: array
+          items: { $ref: "#/components/schemas/SearchTicket" }
+        nodes:
+          type: array
+          items: { $ref: "#/components/schemas/SearchNode" }
+    MyTicketsView:
+      type: string
+      enum: [all, overdue, week, incomplete]
+    MyTicket:
+      type: object
+      required: [key, title, type, priority, status, missing_reason, missing_menus]
+      properties:
+        key: { type: string }
+        title: { type: string }
+        type: { $ref: "#/components/schemas/TicketType" }
+        priority: { $ref: "#/components/schemas/Priority" }
+        due_date: { type: string, format: date }
+        status: { $ref: "#/components/schemas/Status" }
+        client: { $ref: "#/components/schemas/Ref" }
+        menu: { type: string, description: 'The first menu''s parent and name, e.g. "Payroll › Payslip".' }
+        missing_reason: { type: boolean }
+        missing_menus: { type: boolean }
+    MyTicketsCounts:
+      type: object
+      required: [all, overdue, week, incomplete]
+      properties:
+        all: { type: integer }
+        overdue: { type: integer }
+        week: { type: integer }
+        incomplete: { type: integer }
+    ProjectCount:
+      type: object
+      required: [key, open]
+      properties:
+        key: { type: string }
+        open: { type: integer }
+    MyTicketsPage:
+      type: object
+      required: [items, next_cursor, counts, projects]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/MyTicket" }
+        next_cursor: { type: string, nullable: true }
+        counts: { $ref: "#/components/schemas/MyTicketsCounts" }
+        projects:
+          type: array
+          description: The caller's open tickets per project; projects without any are left out.
+          items: { $ref: "#/components/schemas/ProjectCount" }
+    RecentTicket:
+      type: object
+      required: [key, title, type, status, updated_at]
+      properties:
+        key: { type: string }
+        title: { type: string }
+        type: { $ref: "#/components/schemas/TicketType" }
+        status: { $ref: "#/components/schemas/Status" }
+        updated_at: { type: string, format: date-time }
+        change: { $ref: "#/components/schemas/ActivityItem" }
+    RecentTicketList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/RecentTicket" }

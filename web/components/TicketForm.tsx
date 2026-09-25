@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Icon from "@/components/Icon";
+import NodePicker from "@/components/NodePicker";
 import { api } from "@/lib/api";
 import {
   problemKey, useProblemText,
   type Client, type Contact, type Node, type Priority, type Ref, type Ticket, type TicketType,
 } from "@/lib/problem";
 import { button, cx, field } from "@/lib/ui";
+import { isWeak } from "@/lib/weak";
 
 type Props = {
   projectKey: string;
@@ -18,6 +20,7 @@ type Props = {
   assignees: Ref[];
   ticket?: Ticket; // edit this ticket; without it the form creates one
   statusId?: number; // the board column a new ticket starts in
+  nodeId?: number; // the menu a new ticket starts with (the node page's "New ticket for this menu")
   onSaved?: () => void;
   onCancel?: () => void;
 };
@@ -39,7 +42,7 @@ function Row({ label, htmlFor, id, children }: { label: string; htmlFor?: string
 
 // The one form a PM fills while the client is on the phone (FSD §8.3):
 // Client → Requested by → Title → Affected menus → Reason → Type → Description, and More.
-export default function TicketForm({ projectKey, clients, nodes, assignees, ticket, statusId, onSaved, onCancel }: Props) {
+export default function TicketForm({ projectKey, clients, nodes, assignees, ticket, statusId, nodeId, onSaved, onCancel }: Props) {
   const t = useTranslations("ticketForm");
   const tTypes = useTranslations("ticketTypes");
   const tPri = useTranslations("priorities");
@@ -56,8 +59,8 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [newTitle, setNewTitle] = useState("");
-  const [nodeIds, setNodeIds] = useState<Set<number>>(() => new Set(ticket?.nodes.map((n) => n.id)));
-  const [menuFilter, setMenuFilter] = useState("");
+const [nodeIds, setNodeIds] = useState<Set<number>>(() => new Set(ticket ? ticket.nodes.map((n) => n.id) : nodeId ? [nodeId] : []));
+const [reason, setReason] = useState(ticket?.reason ?? "");
   const [error, setError] = useState("");
   const [stale, setStale] = useState(false);
   const [notice, setNotice] = useState("");
@@ -86,16 +89,6 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
     };
   }, [clientId]);
 
-  const byId = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
-  const pathOf = (n: Node) => {
-    const names = [n.name];
-    for (let p = n.parent_id === null ? undefined : byId.get(n.parent_id); p; p = p.parent_id === null ? undefined : byId.get(p.parent_id)) {
-      names.unshift(p.name);
-    }
-    return names.join(" › ");
-  };
-  const q = menuFilter.trim().toLowerCase();
-  const menuChoices = nodes.filter((n) => !q || [pathOf(n), n.code ?? "", ...n.aliases].some((s) => s.toLowerCase().includes(q)));
   // R-MR-10: warn, without blocking, when a chosen menu belongs to other clients only.
   const warnings = clientId === null ? [] : nodes.filter((n) => nodeIds.has(n.id) && n.client_specific && !n.clients.some((c) => c.id === clientId));
 
@@ -166,6 +159,7 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
     if (another) {
       formEl.reset();
       setNodeIds(new Set());
+      setReason("");
       setError("");
       setNotice(t("created", { key: data.key }));
       return;
@@ -248,39 +242,29 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
           <input id="tf-title" name="title" defaultValue={ticket?.title} required minLength={5} maxLength={200} className={field.input} />
         </Row>
         <Row label={t("menus")} id="tf-menus">
-          <fieldset className="flex flex-col gap-2">
-            <legend className="sr-only">{t("menus")}</legend>
-            <label className="flex h-[34px] items-center gap-2 rounded border border-field bg-white px-2.5 text-muted focus-within:outline-2 focus-within:outline-accent">
-              <Icon name="search" />
-              <input
-                value={menuFilter}
-                onChange={(e) => setMenuFilter(e.target.value)}
-                aria-label={t("menusFilter")}
-                placeholder={t("menusFilter")}
-                className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted"
-              />
-            </label>
-            <div className="flex max-h-48 flex-col overflow-y-auto rounded border border-line-soft text-[13px]">
-              {menuChoices.map((n) => (
-                <label key={n.id} className={cx("flex items-center gap-2 border-b border-line-soft px-2.5 py-1.5 last:border-0", nodeIds.has(n.id) && "bg-accent-soft")}>
-                  <input type="checkbox" checked={nodeIds.has(n.id)} onChange={(e) => toggleNode(n.id, e.target.checked)} className="size-4 accent-accent" />
-                  {pathOf(n)}
-                  {n.code && <span className="ml-auto font-mono text-[11px] text-muted">{n.code}</span>}
-                </label>
-              ))}
-            </div>
-            <p className={field.hint}>{t("menusHint")}</p>
-            {warnings.map((n) => (
-              <p key={n.id} className="flex items-center gap-1.5 text-xs text-warn">
-                <Icon name="warning" className="size-3.5" />
-                {t("menuForOtherClients", { menu: n.name, clients: n.clients.map((c) => c.name).join(", ") })}
-              </p>
-            ))}
-          </fieldset>
+          <NodePicker nodes={nodes} selected={nodeIds} onToggle={toggleNode} legend={t("menus")} />
+          <p className={field.hint}>{t("menusHint")}</p>
+          {warnings.map((n) => (
+            <p key={n.id} className="flex items-center gap-1.5 text-xs text-warn">
+              <Icon name="warning" className="size-3.5" />
+              {t("menuForOtherClients", { menu: n.name, clients: n.clients.map((c) => c.name).join(", ") })}
+            </p>
+          ))}
         </Row>
         <Row label={t("reason")} htmlFor="tf-reason">
-          <textarea id="tf-reason" name="reason" defaultValue={ticket?.reason} maxLength={2000} rows={3} aria-describedby="reason-hint" className={field.textarea} />
-          <p id="reason-hint" className={field.hint}>{t("reasonHint")}</p>
+          <textarea
+            id="tf-reason"
+            name="reason"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            maxLength={2000}
+            rows={3}
+            aria-describedby="reason-hint"
+            className={field.textarea}
+          />
+          <p id="reason-hint" className={isWeak(reason) ? "text-xs text-warn" : field.hint}>
+            {isWeak(reason) ? t("weakReason") : t("reasonHint")}
+          </p>
         </Row>
         <Row label={t("type")} id="tf-type">
           <div role="radiogroup" aria-labelledby="tf-type" className="flex flex-wrap">

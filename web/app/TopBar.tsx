@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Form from "next/form";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Avatar } from "@/components/Chips";
@@ -18,14 +19,16 @@ function currentKey(path: string): string | undefined {
 }
 
 // The dark top bar of the Terakota design: the project switcher and the
-// project's tabs, New ticket, the language switch and the account menu. Off
-// project pages, system admins get their admin pages as tabs instead.
+// project's tabs, search, New ticket, the language switch and the account menu.
+// Off project pages, system admins get their admin pages as tabs instead.
 export default function TopBar({ me, projects }: { me: User; projects: Project[] }) {
   const t = useTranslations("nav");
   const tp = useTranslations("project");
   const path = usePathname();
   const router = useRouter();
   const project = projects.find((p) => p.key === currentKey(path));
+  // Off a project page, New ticket asks which project (FSD §6.1).
+  const creatable = projects.filter((p) => p.role !== "viewer");
 
   async function setLocale(locale: "id" | "en") {
     if (locale === me.locale) return;
@@ -98,11 +101,58 @@ export default function TopBar({ me, projects }: { me: User; projects: Project[]
           </nav>
         )}
         <div className="ml-auto flex h-13 items-center gap-2">
-          {project && project.role !== "viewer" && (
-            <Link href={`/p/${project.key}/tickets/new`} aria-label={t("newTicket")} className={button.primary}>
+          <Form action="/search" role="search">
+            <label className="flex h-8 w-40 items-center gap-2 rounded border border-bar-line bg-bar-raised px-2.5 text-bar-muted focus-within:border-bar-accent sm:w-56 lg:w-80">
+              <Icon name="search" />
+              <input
+                type="search"
+                name="q"
+                required
+                aria-label={t("search")}
+                placeholder={t("searchPlaceholder")}
+                className="min-w-0 flex-1 bg-transparent text-[13px] text-white outline-none placeholder:text-bar-muted"
+              />
+            </label>
+          </Form>
+          {project ? (
+            project.role !== "viewer" && (
+              <Link href={`/p/${project.key}/tickets/new`} aria-label={t("newTicket")} className={button.primary}>
+                <Icon name="plus" />
+                <span className="hidden sm:inline">{t("newTicket")}</span>
+              </Link>
+            )
+          ) : creatable.length === 1 ? (
+            <Link href={`/p/${creatable[0].key}/tickets/new`} aria-label={t("newTicket")} className={button.primary}>
               <Icon name="plus" />
               <span className="hidden sm:inline">{t("newTicket")}</span>
             </Link>
+          ) : (
+            creatable.length > 1 && (
+              <Menu
+                align="right"
+                label={t("newTicket")}
+                summaryClassName={button.primary}
+                summary={
+                  <>
+                    <Icon name="plus" />
+                    <span className="hidden sm:inline">{t("newTicket")}</span>
+                    <Icon name="chevron" className="size-4" />
+                  </>
+                }
+              >
+                <p className="px-3 pb-1 pt-1.5 text-xs text-muted">{t("chooseProject")}</p>
+                {creatable.map((p) => (
+                  <Link
+                    key={p.id}
+                    href={`/p/${p.key}/tickets/new`}
+                    className="flex items-baseline gap-2 px-3 py-2 text-sm text-ink no-underline hover:bg-paper hover:text-ink"
+                  >
+                    <span className="font-mono text-xs font-semibold text-muted">{p.key}</span>
+                    {p.name}
+                  </Link>
+                ))}
+              </Menu>
+            )
           )}
           <div role="group" aria-label={t("language")} className="flex h-8 overflow-hidden rounded border border-bar-line text-xs font-semibold">
             {(["id", "en"] as const).map((l) => (

@@ -34,15 +34,7 @@ func (s *Server) ListNodes(w http.ResponseWriter, r *http.Request, key string, p
 	}
 	items := make([]Node, len(rows))
 	for i, n := range rows {
-		clients := make([]NodeClient, len(n.ClientIds))
-		for j, id := range n.ClientIds {
-			clients[j] = NodeClient{Id: id, Name: n.ClientNames[j]}
-		}
-		items[i] = Node{
-			Id: n.ID, ParentId: n.ParentID, Type: NodeType(n.Type), Name: n.Name, Code: n.Code,
-			Aliases: orEmpty(n.Aliases), Description: n.Description, ClientSpecific: n.ClientSpecific,
-			Clients: clients, Position: n.Position, Archived: n.Archived,
-		}
+		items[i] = toAPINodeRow(n)
 	}
 	writeJSON(w, http.StatusOK, NodeList{Items: items})
 }
@@ -386,6 +378,18 @@ func toAPINode(n db.Node, clients []db.ListNodeClientsRow) Node {
 		out.Clients[i] = NodeClient{Id: c.ID, Name: c.Name}
 	}
 	return out
+}
+
+func toAPINodeRow(n db.ListNodesRow) Node {
+	clients := make([]NodeClient, len(n.ClientIds))
+	for j, id := range n.ClientIds {
+		clients[j] = NodeClient{Id: id, Name: n.ClientNames[j]}
+	}
+	return Node{
+		Id: n.ID, ParentId: n.ParentID, Type: NodeType(n.Type), Name: n.Name, Code: n.Code,
+		Aliases: orEmpty(n.Aliases), Description: n.Description, ClientSpecific: n.ClientSpecific,
+		Clients: clients, Position: n.Position, Archived: n.Archived,
+	}
 }
 
 func nodeAudit(n db.Node, clients []db.ListNodeClientsRow) map[string]any {

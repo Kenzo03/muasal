@@ -33,6 +33,42 @@ func (e ActivityItemKind) Valid() bool {
 	}
 }
 
+// Defines values for DecisionOutcome.
+const (
+	DecisionOutcomeImplemented DecisionOutcome = "implemented"
+	DecisionOutcomeRejected    DecisionOutcome = "rejected"
+)
+
+// Valid indicates whether the value is a known member of the DecisionOutcome enum.
+func (e DecisionOutcome) Valid() bool {
+	switch e {
+	case DecisionOutcomeImplemented:
+		return true
+	case DecisionOutcomeRejected:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DecisionState.
+const (
+	DecisionStateConfirmed DecisionState = "confirmed"
+	DecisionStateDraft     DecisionState = "draft"
+)
+
+// Valid indicates whether the value is a known member of the DecisionState enum.
+func (e DecisionState) Valid() bool {
+	switch e {
+	case DecisionStateConfirmed:
+		return true
+	case DecisionStateDraft:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Locale.
 const (
 	LocaleEn Locale = "en"
@@ -45,6 +81,30 @@ func (e Locale) Valid() bool {
 	case LocaleEn:
 		return true
 	case LocaleId:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MyTicketsView.
+const (
+	MyTicketsViewAll        MyTicketsView = "all"
+	MyTicketsViewIncomplete MyTicketsView = "incomplete"
+	MyTicketsViewOverdue    MyTicketsView = "overdue"
+	MyTicketsViewWeek       MyTicketsView = "week"
+)
+
+// Valid indicates whether the value is a known member of the MyTicketsView enum.
+func (e MyTicketsView) Valid() bool {
+	switch e {
+	case MyTicketsViewAll:
+		return true
+	case MyTicketsViewIncomplete:
+		return true
+	case MyTicketsViewOverdue:
+		return true
+	case MyTicketsViewWeek:
 		return true
 	default:
 		return false
@@ -257,6 +317,22 @@ type Attachment struct {
 	Uploader    Ref       `json:"uploader"`
 }
 
+// Behavior defines model for Behavior.
+type Behavior struct {
+	Alternatives string     `json:"alternatives"`
+	Client       *Ref       `json:"client,omitempty"`
+	ClosedAt     *time.Time `json:"closed_at,omitempty"`
+	Key          string     `json:"key"`
+	Title        string     `json:"title"`
+	WhatChanged  string     `json:"what_changed"`
+	Why          string     `json:"why"`
+}
+
+// BehaviorList defines model for BehaviorList.
+type BehaviorList struct {
+	Items []Behavior `json:"items"`
+}
+
 // Client defines model for Client.
 type Client struct {
 	Aliases  []string `json:"aliases"`
@@ -333,6 +409,30 @@ type CreatedUser struct {
 	User      User      `json:"user"`
 }
 
+// DecisionInput defines model for DecisionInput.
+type DecisionInput struct {
+	Alternatives *string `json:"alternatives,omitempty"`
+	WhatChanged  string  `json:"what_changed"`
+	Why          string  `json:"why"`
+}
+
+// DecisionOutcome defines model for DecisionOutcome.
+type DecisionOutcome string
+
+// DecisionRecord defines model for DecisionRecord.
+type DecisionRecord struct {
+	Alternatives string          `json:"alternatives"`
+	ConfirmedAt  *time.Time      `json:"confirmed_at,omitempty"`
+	ConfirmedBy  *Ref            `json:"confirmed_by,omitempty"`
+	Outcome      DecisionOutcome `json:"outcome"`
+	State        DecisionState   `json:"state"`
+	WhatChanged  string          `json:"what_changed"`
+	Why          string          `json:"why"`
+}
+
+// DecisionState defines model for DecisionState.
+type DecisionState string
+
 // FieldError defines model for FieldError.
 type FieldError struct {
 	Code    string `json:"code"`
@@ -389,6 +489,43 @@ type MembersUpdate struct {
 	Members []MemberInput `json:"members"`
 }
 
+// MyTicket defines model for MyTicket.
+type MyTicket struct {
+	Client  *Ref                `json:"client,omitempty"`
+	DueDate *openapi_types.Date `json:"due_date,omitempty"`
+	Key     string              `json:"key"`
+
+	// Menu The first menu's parent and name, e.g. "Payroll › Payslip".
+	Menu          *string    `json:"menu,omitempty"`
+	MissingMenus  bool       `json:"missing_menus"`
+	MissingReason bool       `json:"missing_reason"`
+	Priority      Priority   `json:"priority"`
+	Status        Status     `json:"status"`
+	Title         string     `json:"title"`
+	Type          TicketType `json:"type"`
+}
+
+// MyTicketsCounts defines model for MyTicketsCounts.
+type MyTicketsCounts struct {
+	All        int `json:"all"`
+	Incomplete int `json:"incomplete"`
+	Overdue    int `json:"overdue"`
+	Week       int `json:"week"`
+}
+
+// MyTicketsPage defines model for MyTicketsPage.
+type MyTicketsPage struct {
+	Counts     MyTicketsCounts `json:"counts"`
+	Items      []MyTicket      `json:"items"`
+	NextCursor *string         `json:"next_cursor"`
+
+	// Projects The caller's open tickets per project; projects without any are left out.
+	Projects []ProjectCount `json:"projects"`
+}
+
+// MyTicketsView defines model for MyTicketsView.
+type MyTicketsView string
+
 // Node defines model for Node.
 type Node struct {
 	Aliases        []string `json:"aliases"`
@@ -424,6 +561,15 @@ type NodeCreate struct {
 	Name           string    `json:"name"`
 	ParentId       *int64    `json:"parent_id,omitempty"`
 	Type           NodeType  `json:"type"`
+}
+
+// NodeDetail defines model for NodeDetail.
+type NodeDetail struct {
+	Node Node `json:"node"`
+
+	// Path The node's parents, top first.
+	Path       []Ref  `json:"path"`
+	ProjectKey string `json:"project_key"`
 }
 
 // NodeList defines model for NodeList.
@@ -499,6 +645,12 @@ type ProjectClientsUpdate struct {
 	ClientIds []int64 `json:"client_ids"`
 }
 
+// ProjectCount defines model for ProjectCount.
+type ProjectCount struct {
+	Key  string `json:"key"`
+	Open int    `json:"open"`
+}
+
 // ProjectCreate defines model for ProjectCreate.
 type ProjectCreate struct {
 	Description *string `json:"description,omitempty"`
@@ -523,6 +675,21 @@ type ProjectUpdate struct {
 	Name        *string `json:"name,omitempty"`
 }
 
+// RecentTicket defines model for RecentTicket.
+type RecentTicket struct {
+	Change    *ActivityItem `json:"change,omitempty"`
+	Key       string        `json:"key"`
+	Status    Status        `json:"status"`
+	Title     string        `json:"title"`
+	Type      TicketType    `json:"type"`
+	UpdatedAt time.Time     `json:"updated_at"`
+}
+
+// RecentTicketList defines model for RecentTicketList.
+type RecentTicketList struct {
+	Items []RecentTicket `json:"items"`
+}
+
 // Ref defines model for Ref.
 type Ref struct {
 	Id   int64  `json:"id"`
@@ -532,6 +699,34 @@ type Ref struct {
 // RefList defines model for RefList.
 type RefList struct {
 	Items []Ref `json:"items"`
+}
+
+// SearchNode defines model for SearchNode.
+type SearchNode struct {
+	Aliases []string `json:"aliases"`
+	Code    *string  `json:"code"`
+	Id      int64    `json:"id"`
+	Name    string   `json:"name"`
+
+	// Path The names from the top of the tree down to this node.
+	Path       []string `json:"path"`
+	ProjectKey string   `json:"project_key"`
+	Type       NodeType `json:"type"`
+}
+
+// SearchResults defines model for SearchResults.
+type SearchResults struct {
+	Nodes   []SearchNode   `json:"nodes"`
+	Tickets []SearchTicket `json:"tickets"`
+}
+
+// SearchTicket defines model for SearchTicket.
+type SearchTicket struct {
+	Client     *Ref   `json:"client,omitempty"`
+	Key        string `json:"key"`
+	ProjectKey string `json:"project_key"`
+	Status     Status `json:"status"`
+	Title      string `json:"title"`
 }
 
 // SetupLink defines model for SetupLink.
@@ -596,10 +791,14 @@ type StatusesUpdate struct {
 
 // Ticket defines model for Ticket.
 type Ticket struct {
-	Assignee    *Ref                `json:"assignee,omitempty"`
-	Attachments []Attachment        `json:"attachments"`
-	Client      *Ref                `json:"client,omitempty"`
+	Assignee    *Ref         `json:"assignee,omitempty"`
+	Attachments []Attachment `json:"attachments"`
+	Client      *Ref         `json:"client,omitempty"`
+
+	// ClosedAt Set on close
+	ClosedAt    *time.Time          `json:"closed_at,omitempty"`
 	CreatedAt   time.Time           `json:"created_at"`
+	Decision    *DecisionRecord     `json:"decision,omitempty"`
 	Description string              `json:"description"`
 	DueDate     *openapi_types.Date `json:"due_date"`
 	Id          int64               `json:"id"`
@@ -699,9 +898,35 @@ type TicketUpdate struct {
 	Type            TicketType `json:"type"`
 }
 
+// TimelineEntry defines model for TimelineEntry.
+type TimelineEntry struct {
+	Client    *Ref            `json:"client,omitempty"`
+	ClosedAt  *time.Time      `json:"closed_at,omitempty"`
+	CreatedAt time.Time       `json:"created_at"`
+	Decision  *DecisionRecord `json:"decision,omitempty"`
+	Key       string          `json:"key"`
+	Requester TicketRequester `json:"requester"`
+	Status    Status          `json:"status"`
+	Title     string          `json:"title"`
+	Type      TicketType      `json:"type"`
+}
+
+// TimelinePage defines model for TimelinePage.
+type TimelinePage struct {
+	Items      []TimelineEntry `json:"items"`
+	NextCursor *string         `json:"next_cursor"`
+}
+
 // TransitionRequest defines model for TransitionRequest.
 type TransitionRequest struct {
-	StatusId int64 `json:"status_id"`
+	Decision *DecisionInput `json:"decision,omitempty"`
+
+	// NodeIds A close only; replaces the ticket's menus.
+	NodeIds *[]int64 `json:"node_ids,omitempty"`
+
+	// Reason A close only; replaces the ticket's reason.
+	Reason   *string `json:"reason,omitempty"`
+	StatusId int64   `json:"status_id"`
 }
 
 // User defines model for User.
@@ -752,6 +977,36 @@ type ListContactsParams struct {
 	Internal *bool `form:"internal,omitempty" json:"internal,omitempty"`
 }
 
+// ListMyTicketsParams defines parameters for ListMyTickets.
+type ListMyTicketsParams struct {
+	View   *MyTicketsView `form:"view,omitempty" json:"view,omitempty"`
+	Limit  *int32         `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor *string        `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// GetNodeBehaviorsParams defines parameters for GetNodeBehaviors.
+type GetNodeBehaviorsParams struct {
+	SubNodes *bool `form:"sub_nodes,omitempty" json:"sub_nodes,omitempty"`
+}
+
+// GetNodeTimelineParams defines parameters for GetNodeTimeline.
+type GetNodeTimelineParams struct {
+	SubNodes *bool  `form:"sub_nodes,omitempty" json:"sub_nodes,omitempty"`
+	ClientId *int64 `form:"client_id,omitempty" json:"client_id,omitempty"`
+
+	// Core Only core work (no client).
+	Core *bool       `form:"core,omitempty" json:"core,omitempty"`
+	Type *TicketType `form:"type,omitempty" json:"type,omitempty"`
+
+	// From Entries on or after this day; an entry's day is its close day
+	From *openapi_types.Date `form:"from,omitempty" json:"from,omitempty"`
+
+	// To Entries on or before this day.
+	To     *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
+	Limit  *int32              `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor *string             `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
 // ListNodesParams defines parameters for ListNodes.
 type ListNodesParams struct {
 	// Archived Project admins only; also list archived nodes.
@@ -764,9 +1019,12 @@ type ListTicketsParams struct {
 	Category *StatusCategory `form:"category,omitempty" json:"category,omitempty"`
 
 	// Open Only To do and In progress statuses.
-	Open     *bool       `form:"open,omitempty" json:"open,omitempty"`
-	Type     *TicketType `form:"type,omitempty" json:"type,omitempty"`
-	ClientId *int64      `form:"client_id,omitempty" json:"client_id,omitempty"`
+	Open *bool `form:"open,omitempty" json:"open,omitempty"`
+
+	// ClosedDays Closed tickets only when closed within this many days; the board asks for 14.
+	ClosedDays *int32      `form:"closed_days,omitempty" json:"closed_days,omitempty"`
+	Type       *TicketType `form:"type,omitempty" json:"type,omitempty"`
+	ClientId   *int64      `form:"client_id,omitempty" json:"client_id,omitempty"`
 
 	// Core Only core work (no client).
 	Core       *bool  `form:"core,omitempty" json:"core,omitempty"`
@@ -792,6 +1050,11 @@ type ListTicketsParamsMissing string
 // ListTicketsParamsSort defines parameters for ListTickets.
 type ListTicketsParamsSort string
 
+// SearchParams defines parameters for Search.
+type SearchParams struct {
+	Q string `form:"q" json:"q"`
+}
+
 // UpdateTicketParams defines parameters for UpdateTicket.
 type UpdateTicketParams struct {
 	IfMatch string `json:"If-Match"`
@@ -800,6 +1063,11 @@ type UpdateTicketParams struct {
 // UploadAttachmentMultipartBody defines parameters for UploadAttachment.
 type UploadAttachmentMultipartBody struct {
 	File openapi_types.File `json:"file"`
+}
+
+// TransitionTicketParams defines parameters for TransitionTicket.
+type TransitionTicketParams struct {
+	IfMatch *string `json:"If-Match,omitempty"`
 }
 
 // CreateUserJSONRequestBody defines body for CreateUser for application/json ContentType.
@@ -865,6 +1133,9 @@ type UploadAttachmentMultipartRequestBody UploadAttachmentMultipartBody
 // CreateCommentJSONRequestBody defines body for CreateComment for application/json ContentType.
 type CreateCommentJSONRequestBody = CommentInput
 
+// UpdateDecisionJSONRequestBody defines body for UpdateDecision for application/json ContentType.
+type UpdateDecisionJSONRequestBody = DecisionInput
+
 // TransitionTicketJSONRequestBody defines body for TransitionTicket for application/json ContentType.
 type TransitionTicketJSONRequestBody = TransitionRequest
 
@@ -928,11 +1199,26 @@ type ServerInterface interface {
 	// (PATCH /me)
 	UpdateMe(w http.ResponseWriter, r *http.Request)
 
+	// (GET /me/tickets)
+	ListMyTickets(w http.ResponseWriter, r *http.Request, params ListMyTicketsParams)
+
+	// (GET /me/updates)
+	ListMyUpdates(w http.ResponseWriter, r *http.Request)
+
 	// (DELETE /nodes/{id})
 	DeleteNode(w http.ResponseWriter, r *http.Request, id int64)
 
+	// (GET /nodes/{id})
+	GetNode(w http.ResponseWriter, r *http.Request, id int64)
+
 	// (PATCH /nodes/{id})
 	UpdateNode(w http.ResponseWriter, r *http.Request, id int64)
+
+	// (GET /nodes/{id}/behaviors)
+	GetNodeBehaviors(w http.ResponseWriter, r *http.Request, id int64, params GetNodeBehaviorsParams)
+
+	// (GET /nodes/{id}/timeline)
+	GetNodeTimeline(w http.ResponseWriter, r *http.Request, id int64, params GetNodeTimelineParams)
 
 	// (GET /projects)
 	ListProjects(w http.ResponseWriter, r *http.Request)
@@ -979,6 +1265,9 @@ type ServerInterface interface {
 	// (POST /projects/{key}/tickets)
 	CreateTicket(w http.ResponseWriter, r *http.Request, key string)
 
+	// (GET /search)
+	Search(w http.ResponseWriter, r *http.Request, params SearchParams)
+
 	// (GET /tickets/{key})
 	GetTicket(w http.ResponseWriter, r *http.Request, key string)
 
@@ -994,8 +1283,11 @@ type ServerInterface interface {
 	// (POST /tickets/{key}/comments)
 	CreateComment(w http.ResponseWriter, r *http.Request, key string)
 
+	// (PUT /tickets/{key}/decision)
+	UpdateDecision(w http.ResponseWriter, r *http.Request, key string)
+
 	// (POST /tickets/{key}/transition)
-	TransitionTicket(w http.ResponseWriter, r *http.Request, key string)
+	TransitionTicket(w http.ResponseWriter, r *http.Request, key string, params TransitionTicketParams)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -1414,6 +1706,79 @@ func (siw *ServerInterfaceWrapper) UpdateMe(w http.ResponseWriter, r *http.Reque
 	handler.ServeHTTP(w, r)
 }
 
+// ListMyTickets operation middleware
+func (siw *ServerInterfaceWrapper) ListMyTickets(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListMyTicketsParams
+
+	// ------------- Optional query parameter "view" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "view", r.URL.Query(), &params.View, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "view"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "view", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMyTickets(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMyUpdates operation middleware
+func (siw *ServerInterfaceWrapper) ListMyUpdates(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMyUpdates(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DeleteNode operation middleware
 func (siw *ServerInterfaceWrapper) DeleteNode(w http.ResponseWriter, r *http.Request) {
 
@@ -1440,6 +1805,32 @@ func (siw *ServerInterfaceWrapper) DeleteNode(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// GetNode operation middleware
+func (siw *ServerInterfaceWrapper) GetNode(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetNode(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UpdateNode operation middleware
 func (siw *ServerInterfaceWrapper) UpdateNode(w http.ResponseWriter, r *http.Request) {
 
@@ -1457,6 +1848,181 @@ func (siw *ServerInterfaceWrapper) UpdateNode(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateNode(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetNodeBehaviors operation middleware
+func (siw *ServerInterfaceWrapper) GetNodeBehaviors(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetNodeBehaviorsParams
+
+	// ------------- Optional query parameter "sub_nodes" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sub_nodes", r.URL.Query(), &params.SubNodes, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sub_nodes"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sub_nodes", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetNodeBehaviors(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetNodeTimeline operation middleware
+func (siw *ServerInterfaceWrapper) GetNodeTimeline(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetNodeTimelineParams
+
+	// ------------- Optional query parameter "sub_nodes" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sub_nodes", r.URL.Query(), &params.SubNodes, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sub_nodes"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sub_nodes", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "client_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "client_id", r.URL.Query(), &params.ClientId, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "client_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "client_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "core" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "core", r.URL.Query(), &params.Core, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "core"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "core", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "type", r.URL.Query(), &params.Type, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetNodeTimeline(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1853,6 +2419,19 @@ func (siw *ServerInterfaceWrapper) ListTickets(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	// ------------- Optional query parameter "closed_days" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "closed_days", r.URL.Query(), &params.ClosedDays, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "closed_days"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "closed_days", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "type" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "type", r.URL.Query(), &params.Type, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -2033,6 +2612,39 @@ func (siw *ServerInterfaceWrapper) CreateTicket(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// Search operation middleware
+func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SearchParams
+
+	// ------------- Required query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.Search(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetTicket operation middleware
 func (siw *ServerInterfaceWrapper) GetTicket(w http.ResponseWriter, r *http.Request) {
 
@@ -2191,6 +2803,32 @@ func (siw *ServerInterfaceWrapper) CreateComment(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// UpdateDecision operation middleware
+func (siw *ServerInterfaceWrapper) UpdateDecision(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateDecision(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // TransitionTicket operation middleware
 func (siw *ServerInterfaceWrapper) TransitionTicket(w http.ResponseWriter, r *http.Request) {
 
@@ -2206,8 +2844,32 @@ func (siw *ServerInterfaceWrapper) TransitionTicket(w http.ResponseWriter, r *ht
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params TransitionTicketParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.TransitionTicket(w, r, key)
+		siw.Handler.TransitionTicket(w, r, key, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2342,6 +3004,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/setup", wrapper.SetupPassword)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me", wrapper.GetMe)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/me", wrapper.UpdateMe)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/tickets", wrapper.ListMyTickets)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/updates", wrapper.ListMyUpdates)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/users", wrapper.ListUsers)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/admin/users", wrapper.CreateUser)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/admin/users/{id}", wrapper.UpdateUser)
@@ -2363,7 +3027,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/nodes", wrapper.ListNodes)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/nodes", wrapper.CreateNode)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/nodes/{id}", wrapper.DeleteNode)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/nodes/{id}", wrapper.GetNode)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/nodes/{id}", wrapper.UpdateNode)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/nodes/{id}/timeline", wrapper.GetNodeTimeline)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/nodes/{id}/behaviors", wrapper.GetNodeBehaviors)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/statuses", wrapper.GetStatuses)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/projects/{key}/statuses", wrapper.SetStatuses)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/assignees", wrapper.ListAssignees)
@@ -2372,6 +3039,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/tickets/{key}", wrapper.GetTicket)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/tickets/{key}", wrapper.UpdateTicket)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/transition", wrapper.TransitionTicket)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/tickets/{key}/decision", wrapper.UpdateDecision)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/tickets/{key}/activity", wrapper.GetTicketActivity)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/comments", wrapper.CreateComment)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/comments/{id}", wrapper.DeleteComment)
@@ -2379,6 +3047,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/attachments", wrapper.UploadAttachment)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/attachments/{id}", wrapper.DeleteAttachment)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/attachments/{id}", wrapper.DownloadAttachment)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/search", wrapper.Search)
 
 	return m
 }

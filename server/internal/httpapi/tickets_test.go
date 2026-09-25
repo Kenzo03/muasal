@@ -190,8 +190,8 @@ func TestTransitionsMoveBetweenOpenStatuses(t *testing.T) {
 		t.Fatalf("to In progress: %d %+v", code, out)
 	}
 	var p httpapi.Problem
-	if code := e.call(w.pm, http.MethodPost, path, map[string]any{"status_id": st.Items[3].Id}, &p); code != http.StatusUnprocessableEntity || p.Code != "close_unavailable" {
-		t.Fatalf("to Done: %d %+v", code, p)
+	if code := e.call(w.pm, http.MethodPost, path, map[string]any{"status_id": st.Items[3].Id}, &p); code != http.StatusUnprocessableEntity || p.Code != "close_validation_failed" {
+		t.Fatalf("to Done without the close fields: %d %+v", code, p)
 	}
 	if code := e.call(viewer, http.MethodPost, path, map[string]any{"status_id": st.Items[0].Id}, nil); code != http.StatusForbidden {
 		t.Fatalf("a viewer moves it: %d", code)

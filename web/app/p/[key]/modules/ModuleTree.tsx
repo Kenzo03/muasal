@@ -164,7 +164,15 @@ export default function ModuleTree({ projectKey, nodes, clients, canEdit, showAr
   }
 
   function details(n: Node) {
-    const path = <p className="text-xs text-muted">{pathOf(n)}</p>;
+    const path = (
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-xs text-muted">{pathOf(n)}</p>
+        <Link href={`/p/${projectKey}/modules/${n.id}`} className={cx(button.quiet, "ml-auto")}>
+          {t("openPage")}
+          <Icon name="arrowRight" className="size-3.5" />
+        </Link>
+      </div>
+    );
     // R-MR-4: an archived node can only be restored.
     if (n.archived) {
       return (

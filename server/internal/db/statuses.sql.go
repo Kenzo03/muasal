@@ -101,6 +101,30 @@ func (q *Queries) InsertStatus(ctx context.Context, arg InsertStatusParams) (int
 	return id, err
 }
 
+const listStatusIDsInUse = `-- name: ListStatusIDsInUse :many
+SELECT DISTINCT status_id FROM tickets WHERE project_id = $1
+`
+
+func (q *Queries) ListStatusIDsInUse(ctx context.Context, projectID int64) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listStatusIDsInUse, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var status_id int64
+		if err := rows.Scan(&status_id); err != nil {
+			return nil, err
+		}
+		items = append(items, status_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listStatuses = `-- name: ListStatuses :many
 SELECT id, project_id, name, category, position, color, is_default FROM statuses WHERE project_id = $1 ORDER BY position, id
 `

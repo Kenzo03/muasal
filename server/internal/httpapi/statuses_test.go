@@ -170,3 +170,79 @@ func TestAssigneesAreMembersWhoAreNotViewers(t *testing.T) {
 		t.Fatalf("assignees: %v", names)
 	}
 }
+
+// R-TK-3 for status edits: a status that tickets use cannot open or close them
+// by changing its category, and a removed Done status moves its tickets to
+// another Done status, never to Cancelled (R-DC-2).
+func TestStatusesInUseKeepTheirKind(t *testing.T) {
+	e := newEnv(t)
+	ctx := context.Background()
+	proj := e.seedProject("HRIS")
+	admin, au := e.signedIn("admin@example.com", true)
+	var list httpapi.StatusList
+	e.call(admin, http.MethodGet, "/projects/HRIS/statuses", nil, &list)
+	review, done := list.Items[2], list.Items[3]
+	waiting := e.seedTicket(proj, au, "Waiting for review", nil)
+	shipped := e.seedTicket(proj, au, "Shipped last week", nil)
+	if _, err := e.q.SetTicketStatus(ctx, db.SetTicketStatusParams{ID: waiting.ID, StatusID: review.Id}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.q.SetTicketStatus(ctx, db.SetTicketStatusParams{ID: shipped.ID, StatusID: done.Id, Closed: true}); err != nil {
+		t.Fatal(err)
+	}
+	rows := func() []map[string]any {
+		out := make([]map[string]any, len(list.Items))
+		for i, s := range list.Items {
+			out[i] = statusInput(s)
+		}
+		return out
+	}
+	put := func(body map[string]any) (int, httpapi.Problem) {
+		var prob httpapi.Problem
+		code := e.call(admin, http.MethodPut, "/projects/HRIS/statuses", body, &prob)
+		if code == http.StatusOK {
+			e.call(admin, http.MethodGet, "/projects/HRIS/statuses", nil, &list)
+		}
+		return code, prob
+	}
+
+	reviewDone, doneCancelled, reviewTodo := rows(), rows(), rows()
+	reviewDone[2]["category"] = "done"
+	doneCancelled[3]["category"] = "cancelled"
+	reviewTodo[2]["category"] = "todo"
+	for _, c := range []struct {
+		name  string
+		body  map[string]any
+		code  int
+		field string
+	}{
+		{"In review becomes Done", map[string]any{"statuses": reviewDone}, 422, "statuses[2].category"},    // closes without the close checks
+		{"Done becomes Cancelled", map[string]any{"statuses": doneCancelled}, 422, "statuses[3].category"}, // flips a decision's outcome
+		{"In review becomes To do", map[string]any{"statuses": reviewTodo}, 200, ""},                       // open stays open
+	} {
+		code, prob := put(c.body)
+		if f := firstError(prob); code != c.code || f.Field != c.field || (c.field != "" && f.Code != "status_category_in_use") {
+			t.Errorf("%s: %d %+v", c.name, code, prob)
+		}
+	}
+
+	// Removing Done: its tickets may go to another Done status, not to Cancelled.
+	withDeployed := append(rows(), map[string]any{"name": "Deployed", "category": "done", "color": "#15803D"})
+	if code, prob := put(map[string]any{"statuses": withDeployed}); code != http.StatusOK {
+		t.Fatalf("add Deployed: %d %+v", code, prob)
+	}
+	cancelled, deployed := list.Items[4], list.Items[5]
+	withoutDone := append(rows()[:3], rows()[4:]...)
+	toCancelled := map[string]any{"statuses": withoutDone, "move_to": []map[string]any{{"from": done.Id, "to": cancelled.Id}}}
+	if code, prob := put(toCancelled); code != http.StatusUnprocessableEntity || firstError(prob).Field != "move_to[0]" {
+		t.Fatalf("Done to Cancelled: %d %+v", code, prob)
+	}
+	toDeployed := map[string]any{"statuses": withoutDone, "move_to": []map[string]any{{"from": done.Id, "to": deployed.Id}}}
+	if code, prob := put(toDeployed); code != http.StatusOK {
+		t.Fatalf("Done to Deployed: %d %+v", code, prob)
+	}
+	moved, err := e.q.GetTicketByKey(ctx, shipped.Key)
+	if err != nil || moved.Ticket.StatusID != deployed.Id || moved.Ticket.ClosedAt == nil {
+		t.Fatalf("the shipped ticket after the move: %+v %v", moved.Ticket, err)
+	}
+}

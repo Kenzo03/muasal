@@ -12,10 +12,10 @@ export default async function NewTicketPage({
   searchParams,
 }: {
   params: Promise<{ key: string }>;
-  searchParams: Promise<{ status_id?: string }>;
+  searchParams: Promise<{ status_id?: string; node_id?: string }>;
 }) {
   const { key } = await params;
-  const { status_id } = await searchParams;
+  const { status_id, node_id } = await searchParams;
   const project = await getProject(key);
   if (!project) notFound();
   const t = await getTranslations("ticketForm");
@@ -49,6 +49,7 @@ export default async function NewTicketPage({
               nodes={nodes.data?.items ?? []}
               assignees={assignees.data?.items ?? []}
               statusId={status_id ? Number(status_id) : undefined}
+              nodeId={node_id ? Number(node_id) : undefined}
             />
           </div>
         )}

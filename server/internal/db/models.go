@@ -63,6 +63,17 @@ type Contact struct {
 	Phone    *string
 }
 
+type DecisionRecord struct {
+	TicketID     int64
+	WhatChanged  string
+	Why          string
+	Alternatives string
+	Outcome      string
+	State        string
+	ConfirmedBy  *int64
+	ConfirmedAt  *time.Time
+}
+
 type Membership struct {
 	UserID     int64
 	ProjectID  int64
@@ -158,6 +169,7 @@ type Ticket struct {
 	Version            int32
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+	ClosedAt           *time.Time
 }
 
 type TicketNode struct {

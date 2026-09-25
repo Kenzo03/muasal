@@ -21,6 +21,8 @@ var errStale = errors.New("the ticket changed since it was read")
 
 var clientIDField = FieldError{Field: "client_id", Code: "invalid", Message: "Choose a client of this project in your scope"}
 
+var nodeIDsField = FieldError{Field: "node_ids", Code: "invalid", Message: "Choose menus and modules of this project"}
+
 // ticketInput is a create or an update request, whichever arrived.
 type ticketInput struct {
 	Type        TicketType
@@ -119,9 +121,8 @@ func (s *Server) UpdateTicket(w http.ResponseWriter, r *http.Request, key string
 	if !ok {
 		return
 	}
-	version, err := strconv.ParseInt(strings.Trim(params.IfMatch, `"`), 10, 32)
-	if err != nil {
-		writeProblem(w, http.StatusBadRequest, "invalid_parameter", "If-Match must carry the ticket's version, as its ETag gave it")
+	version, ok := ifMatch(w, params.IfMatch)
+	if !ok {
 		return
 	}
 	var in TicketUpdate
@@ -141,6 +142,10 @@ func (s *Server) UpdateTicket(w http.ResponseWriter, r *http.Request, key string
 	if in.RequesterContactId == nil && in.RequesterUserId == nil {
 		fields = append(fields, FieldError{Field: "requester_contact_id", Code: "required", Message: "Say who asked for this"})
 	}
+	// TK-3 holds after the close: a closed ticket keeps a reason and a menu (FSD §9.1).
+	if closedCategory(row.Status.Category) {
+		fields = append(fields, closeFieldErrors(draft.Reason, len(nodeIDs))...)
+	}
 	if len(fields) > 0 {
 		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields", fields...)
 		return
@@ -152,7 +157,7 @@ func (s *Server) UpdateTicket(w http.ResponseWriter, r *http.Request, key string
 			return err
 		}
 		updated, err := q.UpdateTicket(ctx, db.UpdateTicketParams{
-			ID: row.Ticket.ID, Version: int32(version), Type: draft.Type, Title: draft.Title, Description: draft.Description,
+			ID: row.Ticket.ID, Version: version, Type: draft.Type, Title: draft.Title, Description: draft.Description,
 			Reason: draft.Reason, ClientID: draft.ClientID, RequesterContactID: draft.RequesterContactID,
 			RequesterUserID: draft.RequesterUserID, AssigneeID: draft.AssigneeID, Priority: draft.Priority, DueDate: draft.DueDate,
 		})
@@ -187,12 +192,23 @@ func (s *Server) UpdateTicket(w http.ResponseWriter, r *http.Request, key string
 	}
 }
 
-// TransitionTicket moves a ticket among open statuses (R-TK-3). Entering Done
-// or Cancelled is a close, which needs the decision record of FSD §9.1.
-func (s *Server) TransitionTicket(w http.ResponseWriter, r *http.Request, key string) {
+// TransitionTicket moves a ticket to another status (R-TK-3). Entering Done or
+// Cancelled is a close: the reason and menus it names and a confirmed decision
+// record commit with the status in one transaction, or nothing changes (R-DC-1,
+// R-DC-7). Leaving them reopens the ticket and turns its record back into a
+// draft (R-DC-6). If-Match is optional; a stale version answers 412.
+func (s *Server) TransitionTicket(w http.ResponseWriter, r *http.Request, key string, params TransitionTicketParams) {
 	pc, row, ok := s.ticketFor(w, r, key, access.Member)
 	if !ok {
 		return
+	}
+	var version *int32
+	if params.IfMatch != nil {
+		v, ok := ifMatch(w, *params.IfMatch)
+		if !ok {
+			return
+		}
+		version = &v
 	}
 	var in TransitionRequest
 	if !decodeJSON(w, r, &in) {
@@ -209,31 +225,108 @@ func (s *Server) TransitionTicket(w http.ResponseWriter, r *http.Request, key st
 		s.fail(w, r, err)
 		return
 	}
-	if closedCategory(st.Category) {
-		writeProblem(w, http.StatusUnprocessableEntity, "close_unavailable", "Closing a ticket needs its decision record, which is not available yet")
-		return
+	moving, closing := st.ID != row.Ticket.StatusID, closedCategory(st.Category)
+	reason := row.Ticket.Reason
+	if in.Reason != nil {
+		reason = strings.TrimSpace(*in.Reason)
+	}
+	var nodeIDs []int64 // replaces the ticket's menus when not nil
+	var text decisionText
+	if moving && closing {
+		menus, err := s.q.ListTicketNodes(ctx, row.Ticket.ID)
+		if err != nil {
+			s.fail(w, r, err)
+			return
+		}
+		var fields []FieldError
+		count := len(menus)
+		if in.NodeIds != nil {
+			ids, live, err := s.liveNodeIDs(ctx, pc, *in.NodeIds)
+			if err != nil {
+				s.fail(w, r, err)
+				return
+			}
+			if !live {
+				fields = append(fields, nodeIDsField)
+			}
+			nodeIDs, count = ids, len(ids)
+		}
+		fields = append(fields, closeFieldErrors(reason, count)...)
+		var decisionFields []FieldError
+		text, decisionFields = checkDecision("decision.", in.Decision)
+		if fields = append(fields, decisionFields...); len(fields) > 0 {
+			writeProblem(w, http.StatusUnprocessableEntity, "close_validation_failed", "Ticket can't be closed yet", fields...)
+			return
+		}
 	}
 	var out Ticket
 	err = s.inTx(ctx, func(q *db.Queries) error {
-		if st.ID != row.Ticket.StatusID {
-			if _, err := q.SetTicketStatus(ctx, db.SetTicketStatusParams{ID: row.Ticket.ID, StatusID: st.ID}); err != nil {
-				return err
-			}
-			if err := audit(ctx, q, webMeta(r).inProject(pc.project.ID), &pc.user.ID, "ticket", row.Ticket.ID, "transition",
-				map[string]any{"status": map[string]any{"old": row.Status.Name, "new": st.Name}}); err != nil {
-				return err
-			}
+		before, err := ticketFromRow(ctx, q, row)
+		if err != nil || !moving {
+			out = before
+			return err
 		}
-		var err error
-		out, err = readTicket(ctx, q, row.Ticket.Key)
-		return err
+		_, err = q.SetTicketStatus(ctx, db.SetTicketStatusParams{ID: row.Ticket.ID, StatusID: st.ID, Closed: closing, Version: version})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errStale
+		}
+		if err != nil {
+			return err
+		}
+		action := ""
+		switch {
+		case closing:
+			if in.Reason != nil {
+				if err := q.SetTicketReason(ctx, db.SetTicketReasonParams{ID: row.Ticket.ID, Reason: reason}); err != nil {
+					return err
+				}
+			}
+			if nodeIDs != nil {
+				if err := q.ClearTicketNodes(ctx, row.Ticket.ID); err != nil {
+					return err
+				}
+				if err := q.AddTicketNodes(ctx, db.AddTicketNodesParams{TicketID: row.Ticket.ID, NodeIds: nodeIDs}); err != nil {
+					return err
+				}
+			}
+			outcome := DecisionOutcomeImplemented // R-DC-2: Done implements, Cancelled rejects
+			if st.Category == string(StatusCategoryCancelled) {
+				outcome = DecisionOutcomeRejected
+			}
+			if _, err := q.ConfirmDecision(ctx, db.ConfirmDecisionParams{
+				TicketID: row.Ticket.ID, WhatChanged: text.WhatChanged, Why: text.Why, Alternatives: text.Alternatives,
+				Outcome: string(outcome), ConfirmedBy: pc.user.ID,
+			}); err != nil {
+				return err
+			}
+			action = "decision_confirm"
+		case closedCategory(row.Status.Category):
+			if err := q.DraftDecision(ctx, row.Ticket.ID); err != nil {
+				return err
+			}
+			action = "decision_draft"
+		}
+		if out, err = readTicket(ctx, q, row.Ticket.Key); err != nil {
+			return err
+		}
+		m := webMeta(r).inProject(pc.project.ID)
+		if err := audit(ctx, q, m, &pc.user.ID, "ticket", row.Ticket.ID, "transition", changed(ticketAudit(before), ticketAudit(out))); err != nil {
+			return err
+		}
+		if d := changed(decisionAudit(before.Decision), decisionAudit(out.Decision)); action != "" && len(d) > 0 {
+			return audit(ctx, q, m, &pc.user.ID, "ticket", row.Ticket.ID, action, d)
+		}
+		return nil
 	})
-	if err != nil {
+	switch {
+	case errors.Is(err, errStale):
+		writeProblem(w, http.StatusPreconditionFailed, "stale", "Someone updated this ticket a moment ago")
+	case err != nil:
 		s.fail(w, r, err)
-		return
+	default:
+		w.Header().Set("ETag", etag(out.Version))
+		writeJSON(w, http.StatusOK, out)
 	}
-	w.Header().Set("ETag", etag(out.Version))
-	writeJSON(w, http.StatusOK, out)
 }
 
 // ticketFor loads a ticket for the signed-in user. A ticket in a project the
@@ -344,24 +437,37 @@ func (s *Server) checkTicket(ctx context.Context, pc projectCtx, in ticketInput)
 			f = append(f, FieldError{Field: "assignee_id", Code: "invalid", Message: "Choose a member who can see this ticket"})
 		}
 	}
-	nodeIDs := slices.Compact(slices.Sorted(slices.Values(in.NodeIDs)))
-	if len(nodeIDs) > 0 {
-		visible, err := s.q.ListNodes(ctx, db.ListNodesParams{ProjectID: pc.project.ID, AllClients: pc.scope.AllClients, ClientIds: orEmpty(pc.scope.ClientIDs)})
-		if err != nil {
-			return t, nil, nil, err
-		}
-		live := map[int64]bool{}
-		for _, n := range visible {
-			live[n.ID] = true
-		}
-		for _, id := range nodeIDs {
-			if !live[id] {
-				f = append(f, FieldError{Field: "node_ids", Code: "invalid", Message: "Choose menus and modules of this project"})
-				break
-			}
+	nodeIDs, live, err := s.liveNodeIDs(ctx, pc, in.NodeIDs)
+	if err != nil {
+		return t, nil, nil, err
+	}
+	if !live {
+		f = append(f, nodeIDsField)
+	}
+	return t, nodeIDs, f, nil
+}
+
+// liveNodeIDs sorts and dedupes ids, and reports whether each is a live node of
+// the project that the caller sees.
+func (s *Server) liveNodeIDs(ctx context.Context, pc projectCtx, ids []int64) ([]int64, bool, error) {
+	out := slices.Compact(slices.Sorted(slices.Values(ids)))
+	if len(out) == 0 {
+		return []int64{}, true, nil
+	}
+	visible, err := s.q.ListNodes(ctx, db.ListNodesParams{ProjectID: pc.project.ID, AllClients: pc.scope.AllClients, ClientIds: orEmpty(pc.scope.ClientIDs)})
+	if err != nil {
+		return nil, false, err
+	}
+	live := map[int64]bool{}
+	for _, n := range visible {
+		live[n.ID] = true
+	}
+	for _, id := range out {
+		if !live[id] {
+			return out, false, nil
 		}
 	}
-	return t, orEmpty(nodeIDs), f, nil
+	return out, true, nil
 }
 
 // startStatus picks a new ticket's status: the one asked for when it is an open
@@ -400,11 +506,15 @@ func ticketFromRow(ctx context.Context, q *db.Queries, row db.GetTicketByKeyRow)
 	if err != nil {
 		return Ticket{}, err
 	}
+	decision, err := decisionOf(ctx, q, t.ID)
+	if err != nil {
+		return Ticket{}, err
+	}
 	out := Ticket{
 		Id: t.ID, Key: t.Key, ProjectKey: row.ProjectKey, Title: t.Title, Type: TicketType(t.Type),
 		Description: t.Description, Reason: t.Reason, Priority: Priority(t.Priority), Version: t.Version,
 		Status: toAPIStatus(row.Status), Reporter: Ref{Id: t.ReporterID, Name: row.ReporterName},
-		CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt,
+		CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt, ClosedAt: t.ClosedAt, Decision: decision,
 		Nodes: make([]NodeRef, len(nodes)), Attachments: make([]Attachment, len(files)),
 	}
 	if t.ClientID != nil {
@@ -466,3 +576,13 @@ func ticketClientInvalid(w http.ResponseWriter) {
 }
 
 func etag(version int32) string { return `"` + strconv.Itoa(int(version)) + `"` }
+
+// ifMatch reads the version an If-Match header carries; a malformed one answers 400.
+func ifMatch(w http.ResponseWriter, header string) (int32, bool) {
+	v, err := strconv.ParseInt(strings.Trim(header, `"`), 10, 32)
+	if err != nil {
+		writeProblem(w, http.StatusBadRequest, "invalid_parameter", "If-Match must carry the ticket's version, as its ETag gave it")
+		return 0, false
+	}
+	return int32(v), true
+}

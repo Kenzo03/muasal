@@ -38,7 +38,7 @@ const createTicket = `-- name: CreateTicket :one
 INSERT INTO tickets (project_id, number, key, type, title, description, reason, status_id, client_id,
                      requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-RETURNING id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at
+RETURNING id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at
 `
 
 type CreateTicketParams struct {
@@ -98,12 +98,13 @@ func (q *Queries) CreateTicket(ctx context.Context, arg CreateTicketParams) (Tic
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ClosedAt,
 	)
 	return i, err
 }
 
 const getTicketByKey = `-- name: GetTicketByKey :one
-SELECT t.id, t.project_id, t.number, t.key, t.type, t.title, t.description, t.reason, t.status_id, t.client_id, t.requester_contact_id, t.requester_user_id, t.reporter_id, t.assignee_id, t.priority, t.due_date, t.version, t.created_at, t.updated_at, s.id, s.project_id, s.name, s.category, s.position, s.color, s.is_default, p.key AS project_key, rp.name AS reporter_name, c.name AS client_name,
+SELECT t.id, t.project_id, t.number, t.key, t.type, t.title, t.description, t.reason, t.status_id, t.client_id, t.requester_contact_id, t.requester_user_id, t.reporter_id, t.assignee_id, t.priority, t.due_date, t.version, t.created_at, t.updated_at, t.closed_at, s.id, s.project_id, s.name, s.category, s.position, s.color, s.is_default, p.key AS project_key, rp.name AS reporter_name, c.name AS client_name,
        rc.name AS requester_contact_name, rc.title AS requester_contact_title,
        ru.name AS requester_user_name, a.name AS assignee_name
 FROM tickets t
@@ -152,6 +153,7 @@ func (q *Queries) GetTicketByKey(ctx context.Context, key string) (GetTicketByKe
 		&i.Ticket.Version,
 		&i.Ticket.CreatedAt,
 		&i.Ticket.UpdatedAt,
+		&i.Ticket.ClosedAt,
 		&i.Status.ID,
 		&i.Status.ProjectID,
 		&i.Status.Name,
@@ -221,22 +223,23 @@ WHERE t.project_id = $1
   AND ($4::bigint IS NULL OR t.status_id = $4::bigint)
   AND ($5::text IS NULL OR s.category = $5::text)
   AND (NOT $6::boolean OR s.category IN ('todo', 'in_progress'))
-  AND ($7::text IS NULL OR t.type = $7::text)
-  AND ($8::bigint IS NULL OR t.client_id = $8::bigint)
-  AND (NOT $9::boolean OR t.client_id IS NULL)
-  AND ($10::bigint IS NULL OR t.assignee_id = $10::bigint)
-  AND ($11::bigint[] IS NULL OR EXISTS (
-        SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id AND tn.node_id = ANY ($11::bigint[])))
-  AND (NOT $12::boolean OR t.reason = '')
-  AND (NOT $13::boolean OR NOT EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id))
-  AND ($14::text = '' OR t.title ILIKE '%' || $14::text || '%' OR t.key = upper($14::text))
+  AND ($7::int IS NULL OR t.closed_at IS NULL OR t.closed_at >= now() - make_interval(days => $7::int))
+  AND ($8::text IS NULL OR t.type = $8::text)
+  AND ($9::bigint IS NULL OR t.client_id = $9::bigint)
+  AND (NOT $10::boolean OR t.client_id IS NULL)
+  AND ($11::bigint IS NULL OR t.assignee_id = $11::bigint)
+  AND ($12::bigint[] IS NULL OR EXISTS (
+        SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id AND tn.node_id = ANY ($12::bigint[])))
+  AND (NOT $13::boolean OR t.reason = '')
+  AND (NOT $14::boolean OR NOT EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id))
+  AND ($15::text = '' OR t.title ILIKE '%' || $15::text || '%' OR t.key = upper($15::text))
 ORDER BY
-  CASE WHEN $15::text = 'priority' THEN array_position(ARRAY['urgent', 'high', 'medium', 'low'], t.priority) END,
-  CASE WHEN $15::text IN ('priority', 'due') THEN t.due_date END NULLS LAST,
-  CASE WHEN $15::text = 'updated' THEN t.updated_at END DESC,
-  CASE WHEN $15::text = 'created' THEN t.number END DESC,
+  CASE WHEN $16::text = 'priority' THEN array_position(ARRAY['urgent', 'high', 'medium', 'low'], t.priority) END,
+  CASE WHEN $16::text IN ('priority', 'due') THEN t.due_date END NULLS LAST,
+  CASE WHEN $16::text = 'updated' THEN t.updated_at END DESC,
+  CASE WHEN $16::text = 'created' THEN t.number END DESC,
   t.number
-LIMIT $17 OFFSET $16
+LIMIT $18 OFFSET $17
 `
 
 type ListTicketsParams struct {
@@ -246,6 +249,7 @@ type ListTicketsParams struct {
 	StatusID      *int64
 	Category      *string
 	OpenOnly      bool
+	ClosedDays    *int32
 	Type          *string
 	ClientID      *int64
 	CoreOnly      bool
@@ -287,6 +291,7 @@ func (q *Queries) ListTickets(ctx context.Context, arg ListTicketsParams) ([]Lis
 		arg.StatusID,
 		arg.Category,
 		arg.OpenOnly,
+		arg.ClosedDays,
 		arg.Type,
 		arg.ClientID,
 		arg.CoreOnly,
@@ -345,19 +350,45 @@ func (q *Queries) NextTicketNumber(ctx context.Context, id int64) (int64, error)
 	return ticket_seq, err
 }
 
+const setTicketReason = `-- name: SetTicketReason :exec
+UPDATE tickets SET reason = $2 WHERE id = $1
+`
+
+type SetTicketReasonParams struct {
+	ID     int64
+	Reason string
+}
+
+func (q *Queries) SetTicketReason(ctx context.Context, arg SetTicketReasonParams) error {
+	_, err := q.db.Exec(ctx, setTicketReason, arg.ID, arg.Reason)
+	return err
+}
+
 const setTicketStatus = `-- name: SetTicketStatus :one
-UPDATE tickets SET status_id = $2, version = version + 1, updated_at = now()
-WHERE id = $1
-RETURNING id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at
+UPDATE tickets SET status_id = $1,
+  closed_at  = CASE WHEN $2::boolean THEN now() END,
+  version    = version + 1,
+  updated_at = now()
+WHERE id = $3 AND ($4::int IS NULL OR version = $4::int)
+RETURNING id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at
 `
 
 type SetTicketStatusParams struct {
-	ID       int64
 	StatusID int64
+	Closed   bool
+	ID       int64
+	Version  *int32
 }
 
+// A close stamps closed_at and any other move clears it (FSD §8.1). With a
+// version, a stale one matches no row (If-Match).
 func (q *Queries) SetTicketStatus(ctx context.Context, arg SetTicketStatusParams) (Ticket, error) {
-	row := q.db.QueryRow(ctx, setTicketStatus, arg.ID, arg.StatusID)
+	row := q.db.QueryRow(ctx, setTicketStatus,
+		arg.StatusID,
+		arg.Closed,
+		arg.ID,
+		arg.Version,
+	)
 	var i Ticket
 	err := row.Scan(
 		&i.ID,
@@ -379,6 +410,7 @@ func (q *Queries) SetTicketStatus(ctx context.Context, arg SetTicketStatusParams
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ClosedAt,
 	)
 	return i, err
 }
@@ -388,7 +420,7 @@ UPDATE tickets SET type = $3, title = $4, description = $5, reason = $6, client_
   requester_contact_id = $8, requester_user_id = $9, assignee_id = $10, priority = $11, due_date = $12,
   version = version + 1, updated_at = now()
 WHERE id = $1 AND version = $2
-RETURNING id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at
+RETURNING id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at
 `
 
 type UpdateTicketParams struct {
@@ -443,6 +475,7 @@ func (q *Queries) UpdateTicket(ctx context.Context, arg UpdateTicketParams) (Tic
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ClosedAt,
 	)
 	return i, err
 }

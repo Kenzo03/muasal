@@ -5,19 +5,30 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Avatar, ClientChip, PriorityChip, TypeIcon } from "@/components/Chips";
+import CloseDialog from "@/components/CloseDialog";
 import Icon from "@/components/Icon";
 import { api } from "@/lib/api";
 import { day } from "@/lib/format";
-import { useProblemText, type Status, type TicketSummary } from "@/lib/problem";
+import { useProblemText, type Node, type Status, type Ticket, type TicketSummary } from "@/lib/problem";
 import { cx, field } from "@/lib/ui";
 
-type Props = { projectKey: string; statuses: Status[]; tickets: TicketSummary[]; canEdit: boolean; today: string };
+type Props = {
+  projectKey: string;
+  statuses: Status[];
+  tickets: TicketSummary[];
+  nodes: Node[];
+  canEdit: boolean;
+  today: string;
+  query: Record<string, string>; // the page's filters, kept by the "Show all" link
+};
 
-const closing = (s: Status) => s.category === "done" || s.category === "cancelled";
+const closes = (s: Status) => s.category === "done" || s.category === "cancelled";
 
 // Cards move by native drag-and-drop or by their status menu, which keyboards
-// reach too. A move shows at once and rolls back when the API refuses it (FSD §8.4).
-export default function Board({ projectKey, statuses, tickets, canEdit, today }: Props) {
+// reach too. An open move shows at once and rolls back when the API refuses it;
+// a move into Done or Cancelled opens the close dialog, and the card stays
+// where it was until the close is confirmed (FSD §8.4, AC-TK-2).
+export default function Board({ projectKey, statuses, tickets, nodes, canEdit, today, query }: Props) {
   const t = useTranslations("board");
   const tTypes = useTranslations("ticketTypes");
   const tPri = useTranslations("priorities");
@@ -27,11 +38,20 @@ export default function Board({ projectKey, statuses, tickets, canEdit, today }:
   const [items, setItems] = useState(tickets);
   const [dragging, setDragging] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [closing, setClosing] = useState<{ ticket: Ticket; status: Status } | null>(null);
+  const showAll = query.closed === "all";
+  const { closed: _closed, ...recent } = query;
   useEffect(() => setItems(tickets), [tickets]); // fresh server data wins
 
   async function move(ticketId: number, statusId: number) {
     const card = items.find((x) => x.id === ticketId);
-    if (!card || card.status_id === statusId) return;
+    const target = statuses.find((s) => s.id === statusId);
+    if (!card || !target || card.status_id === statusId) return;
+    if (closes(target)) {
+      const { data, error } = await api.GET("/tickets/{key}", { params: { path: { key: card.key } } });
+      if (error) return setError(problemText(error));
+      return setClosing({ ticket: data, status: target });
+    }
     const before = items;
     setItems((xs) => xs.map((x) => (x.id === ticketId ? { ...x, status_id: statusId } : x)));
     const { error } = await api.POST("/tickets/{key}/transition", {
@@ -52,7 +72,7 @@ export default function Board({ projectKey, statuses, tickets, canEdit, today }:
       <div className="flex gap-3 overflow-x-auto pb-2">
         {statuses.map((s) => {
           const cards = items.filter((x) => x.status_id === s.id);
-          const droppable = canEdit && !closing(s);
+          const droppable = canEdit;
           return (
             <section
               key={s.id}
@@ -85,7 +105,14 @@ export default function Board({ projectKey, statuses, tickets, canEdit, today }:
                   </Link>
                 )}
               </h2>
-              {closing(s) && <p className="px-1 text-xs text-muted">{t("closedLater")}</p>}
+              {closes(s) && (
+                <p className="flex items-center gap-2 px-1 text-xs text-muted">
+                  {showAll ? t("allClosed") : t("recentClosed")}
+                  <Link href={`?${new URLSearchParams(showAll ? recent : { ...query, closed: "all" })}`} className="ml-auto">
+                    {showAll ? t("showRecent") : t("showAll")}
+                  </Link>
+                </p>
+              )}
               {cards.map((c) => (
                 <article
                   key={c.id}
@@ -128,7 +155,7 @@ export default function Board({ projectKey, statuses, tickets, canEdit, today }:
                       className="mt-0.5 h-7 w-full rounded border border-line-soft bg-paper px-1 text-xs text-muted"
                     >
                       {statuses.map((o) => (
-                        <option key={o.id} value={o.id} disabled={closing(o)}>{o.name}</option>
+                        <option key={o.id} value={o.id}>{o.name}</option>
                       ))}
                     </select>
                   )}
@@ -138,6 +165,18 @@ export default function Board({ projectKey, statuses, tickets, canEdit, today }:
           );
         })}
       </div>
+      {closing && (
+        <CloseDialog
+          ticket={closing.ticket}
+          status={closing.status}
+          nodes={nodes}
+          onDone={() => {
+            setClosing(null);
+            router.refresh();
+          }}
+          onCancel={() => setClosing(null)}
+        />
+      )}
     </div>
   );
 }

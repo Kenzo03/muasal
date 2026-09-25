@@ -19,17 +19,9 @@ func (s *Server) ListTickets(w http.ResponseWriter, r *http.Request, key string,
 	if !ok {
 		return
 	}
-	limit, offset := 50, 0
-	if params.Limit != nil {
-		limit = min(max(int(*params.Limit), 1), 1000)
-	}
-	if params.Cursor != nil {
-		n, err := strconv.Atoi(*params.Cursor)
-		if err != nil || n < 0 {
-			writeProblem(w, http.StatusBadRequest, "invalid_parameter", "The cursor is not one this API gave")
-			return
-		}
-		offset = n
+	limit, offset, ok := paging(w, params.Limit, params.Cursor)
+	if !ok {
+		return
 	}
 	filter := db.ListTicketsParams{
 		ProjectID: pc.project.ID, AllClients: pc.scope.AllClients, ClientIds: orEmpty(pc.scope.ClientIDs),
@@ -37,6 +29,7 @@ func (s *Server) ListTickets(w http.ResponseWriter, r *http.Request, key string,
 		AssigneeID: params.AssigneeId, Q: strings.TrimSpace(deref(params.Q)), Sort: "updated",
 		MissingReason: params.Missing != nil && *params.Missing == ListTicketsParamsMissingReason,
 		MissingMenus:  params.Missing != nil && *params.Missing == ListTicketsParamsMissingMenus,
+		ClosedDays:    params.ClosedDays,
 		Lim:           int32(limit + 1), Off: int32(offset),
 	}
 	if params.Category != nil {
@@ -53,9 +46,7 @@ func (s *Server) ListTickets(w http.ResponseWriter, r *http.Request, key string,
 	}
 	ctx := r.Context()
 	if params.NodeId != nil {
-		nodes, err := s.q.ListNodes(ctx, db.ListNodesParams{
-			ProjectID: pc.project.ID, AllClients: pc.scope.AllClients, ClientIds: orEmpty(pc.scope.ClientIDs), IncludeArchived: true,
-		})
+		nodes, err := s.visibleNodes(ctx, pc)
 		if err != nil {
 			s.fail(w, r, err)
 			return
@@ -76,6 +67,24 @@ func (s *Server) ListTickets(w http.ResponseWriter, r *http.Request, key string,
 		page.Items = append(page.Items, toTicketSummary(t))
 	}
 	writeJSON(w, http.StatusOK, page)
+}
+
+// paging reads a page size (50 by default, at most 1,000) and an offset cursor
+// that an earlier page gave; a cursor it did not give answers 400.
+func paging(w http.ResponseWriter, lim *int32, cursor *string) (int, int, bool) {
+	limit, offset := 50, 0
+	if lim != nil {
+		limit = min(max(int(*lim), 1), 1000)
+	}
+	if cursor != nil {
+		n, err := strconv.Atoi(*cursor)
+		if err != nil || n < 0 {
+			writeProblem(w, http.StatusBadRequest, "invalid_parameter", "The cursor is not one this API gave")
+			return 0, 0, false
+		}
+		offset = n
+	}
+	return limit, offset, true
 }
 
 // subtree lists root and every node below it; an unknown root gives an empty,

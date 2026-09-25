@@ -5,13 +5,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Avatar, ClientChip, PriorityChip, StatusDot, TypeIcon } from "@/components/Chips";
+import CloseDialog from "@/components/CloseDialog";
 import Icon from "@/components/Icon";
 import PageBar from "@/components/PageBar";
 import TicketForm from "@/components/TicketForm";
 import { api } from "@/lib/api";
 import { day, utc } from "@/lib/format";
+import { nodePaths } from "@/lib/nodes";
 import { useProblemText, type Client, type Node, type Ref, type Status, type Ticket } from "@/lib/problem";
 import { button, cx, field, panel, sectionTitle } from "@/lib/ui";
+import DecisionCard from "./DecisionCard";
 
 type Props = {
   ticket: Ticket;
@@ -20,13 +23,14 @@ type Props = {
   nodes: Node[];
   assignees: Ref[];
   canEdit: boolean;
+  canEditDecision: boolean; // project admin or the record's confirmer (R-DC-5)
   activity: React.ReactNode;
   attachments: React.ReactNode;
 };
 
 const closing = (s: Status) => s.category === "done" || s.category === "cancelled";
 
-export default function TicketView({ ticket, statuses, clients, nodes, assignees, canEdit, activity, attachments }: Props) {
+export default function TicketView({ ticket, statuses, clients, nodes, assignees, canEdit, canEditDecision, activity, attachments }: Props) {
   const t = useTranslations("ticket");
   const tp = useTranslations("project");
   const tTypes = useTranslations("ticketTypes");
@@ -36,14 +40,14 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState("");
-  const byId = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
-  const pathOf = (id: number) => {
-    const names: string[] = [];
-    for (let n = byId.get(id); n; n = n.parent_id === null ? undefined : byId.get(n.parent_id)) names.unshift(n.name);
-    return names.join(" › ");
-  };
+  const [closingTo, setClosingTo] = useState<Status | null>(null);
+  const pathOf = useMemo(() => nodePaths(nodes), [nodes]);
 
+  // Open moves go straight through; Done and Cancelled open the close dialog (FSD §9.1).
   async function transition(statusId: number) {
+    const target = statuses.find((s) => s.id === statusId);
+    if (!target || target.id === ticket.status.id) return;
+    if (closing(target)) return setClosingTo(target);
     const { error } = await api.POST("/tickets/{key}/transition", {
       params: { path: { key: ticket.key } },
       body: { status_id: statusId },
@@ -85,7 +89,7 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
                 className="h-full cursor-pointer bg-transparent pr-2 font-semibold outline-none disabled:cursor-default"
               >
                 {statuses.map((s) => (
-                  <option key={s.id} value={s.id} disabled={closing(s)}>{s.name}</option>
+                  <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
             </label>
@@ -150,16 +154,22 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
                   ) : (
                     <ul className="flex flex-wrap gap-1.5">
                       {ticket.nodes.map((n) => (
-                        <li key={n.id} className="inline-flex h-7 items-center gap-1.5 rounded border border-line bg-ground px-2.5 text-[13px]">
-                          <Icon name="screen" className="size-3.5 text-muted" />
-                          {pathOf(n.id) || n.name}
-                          {n.archived ? ` (${t("archived")})` : ""}
+                        <li key={n.id}>
+                          <Link
+                            href={`/p/${ticket.project_key}/modules/${n.id}`}
+                            className="inline-flex h-7 items-center gap-1.5 rounded border border-line bg-ground px-2.5 text-[13px] text-ink no-underline hover:border-field hover:text-ink"
+                          >
+                            <Icon name="screen" className="size-3.5 text-muted" />
+                            {pathOf(n.id) || n.name}
+                            {n.archived ? ` (${t("archived")})` : ""}
+                          </Link>
                         </li>
                       ))}
                     </ul>
                   )}
                 </div>
               </section>
+              {ticket.decision && <DecisionCard ticketKey={ticket.key} decision={ticket.decision} canEdit={canEditDecision} />}
               {activity}
             </div>
             <aside className="flex flex-col gap-4">
@@ -175,11 +185,29 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
                   <dd>{utc(ticket.created_at, locale)}</dd>
                   <dt className="text-muted">{t("updated")}</dt>
                   <dd>{utc(ticket.updated_at, locale)}</dd>
+                  {ticket.closed_at && (
+                    <>
+                      <dt className="text-muted">{t("closed")}</dt>
+                      <dd>{utc(ticket.closed_at, locale)}</dd>
+                    </>
+                  )}
                 </dl>
               </section>
               {attachments}
             </aside>
           </div>
+        )}
+        {closingTo && (
+          <CloseDialog
+            ticket={ticket}
+            status={closingTo}
+            nodes={nodes}
+            onDone={() => {
+              setClosingTo(null);
+              router.refresh();
+            }}
+            onCancel={() => setClosingTo(null)}
+          />
         )}
       </main>
     </>
