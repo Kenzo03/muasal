@@ -619,6 +619,34 @@ type RefList struct {
 	Items []Ref `json:"items"`
 }
 
+// SearchNode defines model for SearchNode.
+type SearchNode struct {
+	Aliases []string `json:"aliases"`
+	Code    *string  `json:"code"`
+	Id      int64    `json:"id"`
+	Name    string   `json:"name"`
+
+	// Path The names from the top of the tree down to this node.
+	Path       []string `json:"path"`
+	ProjectKey string   `json:"project_key"`
+	Type       NodeType `json:"type"`
+}
+
+// SearchResults defines model for SearchResults.
+type SearchResults struct {
+	Nodes   []SearchNode   `json:"nodes"`
+	Tickets []SearchTicket `json:"tickets"`
+}
+
+// SearchTicket defines model for SearchTicket.
+type SearchTicket struct {
+	Client     *Ref   `json:"client,omitempty"`
+	Key        string `json:"key"`
+	ProjectKey string `json:"project_key"`
+	Status     Status `json:"status"`
+	Title      string `json:"title"`
+}
+
 // SetupLink defines model for SetupLink.
 type SetupLink struct {
 	ExpiresAt time.Time `json:"expires_at"`
@@ -933,6 +961,11 @@ type ListTicketsParamsMissing string
 // ListTicketsParamsSort defines parameters for ListTickets.
 type ListTicketsParamsSort string
 
+// SearchParams defines parameters for Search.
+type SearchParams struct {
+	Q string `form:"q" json:"q"`
+}
+
 // UpdateTicketParams defines parameters for UpdateTicket.
 type UpdateTicketParams struct {
 	IfMatch string `json:"If-Match"`
@@ -1136,6 +1169,9 @@ type ServerInterface interface {
 
 	// (POST /projects/{key}/tickets)
 	CreateTicket(w http.ResponseWriter, r *http.Request, key string)
+
+	// (GET /search)
+	Search(w http.ResponseWriter, r *http.Request, params SearchParams)
 
 	// (GET /tickets/{key})
 	GetTicket(w http.ResponseWriter, r *http.Request, key string)
@@ -2408,6 +2444,39 @@ func (siw *ServerInterfaceWrapper) CreateTicket(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// Search operation middleware
+func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SearchParams
+
+	// ------------- Required query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.Search(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetTicket operation middleware
 func (siw *ServerInterfaceWrapper) GetTicket(w http.ResponseWriter, r *http.Request) {
 
@@ -2808,6 +2877,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/attachments", wrapper.UploadAttachment)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/attachments/{id}", wrapper.DeleteAttachment)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/attachments/{id}", wrapper.DownloadAttachment)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/search", wrapper.Search)
 
 	return m
 }
