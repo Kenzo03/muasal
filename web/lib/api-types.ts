@@ -297,7 +297,8 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /** @description Every member who sees the node, archived or not (R-MR-4), with the path of its parents. */
+        get: operations["getNode"];
         put?: never;
         post?: never;
         /** @description Project admins only. A node with sub-nodes answers 409 node_has_children. */
@@ -306,6 +307,44 @@ export interface paths {
         head?: never;
         /** @description Project admins only. Edits fields, and moves the node when `move` is present. */
         patch: operations["updateNode"];
+        trace?: never;
+    };
+    "/nodes/{id}/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        /** @description The visible tickets on the node, and by default on its sub-nodes: open ones first, newest first, then closed ones by close date, newest first, with their decision records (FSD §7.4). Pages follow next_cursor. */
+        get: operations["getNodeTimeline"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nodes/{id}/behaviors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        /** @description The decisions in force on the node, and by default on its sub-nodes; core work first, then by client (FSD §7.4). */
+        get: operations["getNodeBehaviors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/projects/{key}/statuses": {
@@ -761,6 +800,42 @@ export interface components {
              * @description Index among the new siblings; omitted puts the node last.
              */
             position?: number;
+        };
+        NodeDetail: {
+            node: components["schemas"]["Node"];
+            /** @description The node's parents, top first. */
+            path: components["schemas"]["Ref"][];
+            project_key: string;
+        };
+        TimelineEntry: {
+            key: string;
+            title: string;
+            type: components["schemas"]["TicketType"];
+            status: components["schemas"]["Status"];
+            client?: components["schemas"]["Ref"];
+            requester: components["schemas"]["TicketRequester"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            closed_at?: string;
+            decision?: components["schemas"]["DecisionRecord"];
+        };
+        TimelinePage: {
+            items: components["schemas"]["TimelineEntry"][];
+            next_cursor: string | null;
+        };
+        Behavior: {
+            key: string;
+            title: string;
+            client?: components["schemas"]["Ref"];
+            /** Format: date-time */
+            closed_at?: string;
+            what_changed: string;
+            why: string;
+            alternatives: string;
+        };
+        BehaviorList: {
+            items: components["schemas"]["Behavior"][];
         };
         Ref: {
             /** Format: int64 */
@@ -1640,6 +1715,29 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    getNode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The node and its path. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     deleteNode: {
         parameters: {
             query?: never;
@@ -1683,6 +1781,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Node"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getNodeTimeline: {
+        parameters: {
+            query?: {
+                sub_nodes?: boolean;
+                client_id?: number;
+                /** @description Only core work (no client). */
+                core?: boolean;
+                type?: components["schemas"]["TicketType"];
+                /** @description Entries on or after this day; an entry's day is its close day */
+                from?: string;
+                /** @description Entries on or before this day. */
+                to?: string;
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the timeline. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimelinePage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getNodeBehaviors: {
+        parameters: {
+            query?: {
+                sub_nodes?: boolean;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Confirmed, implemented decisions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BehaviorList"];
                 };
             };
             default: components["responses"]["Problem"];

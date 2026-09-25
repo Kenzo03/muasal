@@ -383,6 +383,17 @@ paths:
   /nodes/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    get:
+      operationId: getNode
+      tags: [nodes]
+      description: Every member who sees the node, archived or not (R-MR-4), with the path of its parents.
+      responses:
+        "200":
+          description: The node and its path.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NodeDetail" }
+        default: { $ref: "#/components/responses/Problem" }
     patch:
       operationId: updateNode
       tags: [nodes]
@@ -405,6 +416,47 @@ paths:
       description: Project admins only. A node with sub-nodes answers 409 node_has_children.
       responses:
         "204": { description: Deleted. }
+        default: { $ref: "#/components/responses/Problem" }
+  /nodes/{id}/timeline:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    get:
+      operationId: getNodeTimeline
+      tags: [nodes]
+      description: >-
+        The visible tickets on the node, and by default on its sub-nodes: open ones first, newest first, then closed
+        ones by close date, newest first, with their decision records (FSD §7.4). Pages follow next_cursor.
+      parameters:
+        - { name: sub_nodes, in: query, schema: { type: boolean, default: true } }
+        - { name: client_id, in: query, schema: { type: integer, format: int64 } }
+        - { name: core, in: query, schema: { type: boolean }, description: Only core work (no client). }
+        - { name: type, in: query, schema: { $ref: "#/components/schemas/TicketType" } }
+        - { name: from, in: query, schema: { type: string, format: date }, description: Entries on or after this day; an entry's day is its close day, or its creation day while open. }
+        - { name: to, in: query, schema: { type: string, format: date }, description: Entries on or before this day. }
+        - { name: limit, in: query, schema: { type: integer, format: int32, minimum: 1, maximum: 1000 } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: One page of the timeline.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TimelinePage" }
+        default: { $ref: "#/components/responses/Problem" }
+  /nodes/{id}/behaviors:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    get:
+      operationId: getNodeBehaviors
+      tags: [nodes]
+      description: The decisions in force on the node, and by default on its sub-nodes; core work first, then by client (FSD §7.4).
+      parameters:
+        - { name: sub_nodes, in: query, schema: { type: boolean, default: true } }
+      responses:
+        "200":
+          description: Confirmed, implemented decisions.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BehaviorList" }
         default: { $ref: "#/components/responses/Problem" }
   /projects/{key}/statuses:
     parameters:
@@ -991,6 +1043,55 @@ components:
       properties:
         parent_id: { type: integer, format: int64, nullable: true, description: Omitted or null moves to the top level. }
         position: { type: integer, format: int32, minimum: 0, description: Index among the new siblings; omitted puts the node last. }
+    NodeDetail:
+      type: object
+      required: [node, path, project_key]
+      properties:
+        node: { $ref: "#/components/schemas/Node" }
+        path:
+          type: array
+          description: The node's parents, top first.
+          items: { $ref: "#/components/schemas/Ref" }
+        project_key: { type: string }
+    TimelineEntry:
+      type: object
+      required: [key, title, type, status, requester, created_at]
+      properties:
+        key: { type: string }
+        title: { type: string }
+        type: { $ref: "#/components/schemas/TicketType" }
+        status: { $ref: "#/components/schemas/Status" }
+        client: { $ref: "#/components/schemas/Ref" }
+        requester: { $ref: "#/components/schemas/TicketRequester" }
+        created_at: { type: string, format: date-time }
+        closed_at: { type: string, format: date-time }
+        decision: { $ref: "#/components/schemas/DecisionRecord" }
+    TimelinePage:
+      type: object
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/TimelineEntry" }
+        next_cursor: { type: string, nullable: true }
+    Behavior:
+      type: object
+      required: [key, title, what_changed, why, alternatives]
+      properties:
+        key: { type: string }
+        title: { type: string }
+        client: { $ref: "#/components/schemas/Ref" }
+        closed_at: { type: string, format: date-time }
+        what_changed: { type: string }
+        why: { type: string }
+        alternatives: { type: string }
+    BehaviorList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Behavior" }
     Ref:
       type: object
       required: [id, name]

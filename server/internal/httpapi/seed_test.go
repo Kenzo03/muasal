@@ -138,3 +138,26 @@ func (e *env) seedTicket(p db.Project, reporter db.User, title string, client *d
 	}
 	return t
 }
+
+// seedClose closes a ticket in status with a decision record confirmed by by;
+// a Cancelled status records a rejection (R-DC-2).
+func (e *env) seedClose(tk db.Ticket, status int64, by db.User, whatChanged string) {
+	e.t.Helper()
+	ctx := context.Background()
+	st, err := e.q.GetStatus(ctx, status)
+	if err == nil {
+		_, err = e.q.SetTicketStatus(ctx, db.SetTicketStatusParams{ID: tk.ID, StatusID: status, Closed: true})
+	}
+	outcome := "implemented"
+	if st.Category == "cancelled" {
+		outcome = "rejected"
+	}
+	if err == nil {
+		_, err = e.q.ConfirmDecision(ctx, db.ConfirmDecisionParams{
+			TicketID: tk.ID, WhatChanged: whatChanged, Why: "Because the client asked for it this way.", Outcome: outcome, ConfirmedBy: by.ID,
+		})
+	}
+	if err != nil {
+		e.t.Fatal(err)
+	}
+}

@@ -293,6 +293,22 @@ type Attachment struct {
 	Uploader    Ref       `json:"uploader"`
 }
 
+// Behavior defines model for Behavior.
+type Behavior struct {
+	Alternatives string     `json:"alternatives"`
+	Client       *Ref       `json:"client,omitempty"`
+	ClosedAt     *time.Time `json:"closed_at,omitempty"`
+	Key          string     `json:"key"`
+	Title        string     `json:"title"`
+	WhatChanged  string     `json:"what_changed"`
+	Why          string     `json:"why"`
+}
+
+// BehaviorList defines model for BehaviorList.
+type BehaviorList struct {
+	Items []Behavior `json:"items"`
+}
+
 // Client defines model for Client.
 type Client struct {
 	Aliases  []string `json:"aliases"`
@@ -484,6 +500,15 @@ type NodeCreate struct {
 	Name           string    `json:"name"`
 	ParentId       *int64    `json:"parent_id,omitempty"`
 	Type           NodeType  `json:"type"`
+}
+
+// NodeDetail defines model for NodeDetail.
+type NodeDetail struct {
+	Node Node `json:"node"`
+
+	// Path The node's parents, top first.
+	Path       []Ref  `json:"path"`
+	ProjectKey string `json:"project_key"`
 }
 
 // NodeList defines model for NodeList.
@@ -763,6 +788,25 @@ type TicketUpdate struct {
 	Type            TicketType `json:"type"`
 }
 
+// TimelineEntry defines model for TimelineEntry.
+type TimelineEntry struct {
+	Client    *Ref            `json:"client,omitempty"`
+	ClosedAt  *time.Time      `json:"closed_at,omitempty"`
+	CreatedAt time.Time       `json:"created_at"`
+	Decision  *DecisionRecord `json:"decision,omitempty"`
+	Key       string          `json:"key"`
+	Requester TicketRequester `json:"requester"`
+	Status    Status          `json:"status"`
+	Title     string          `json:"title"`
+	Type      TicketType      `json:"type"`
+}
+
+// TimelinePage defines model for TimelinePage.
+type TimelinePage struct {
+	Items      []TimelineEntry `json:"items"`
+	NextCursor *string         `json:"next_cursor"`
+}
+
 // TransitionRequest defines model for TransitionRequest.
 type TransitionRequest struct {
 	Decision *DecisionInput `json:"decision,omitempty"`
@@ -821,6 +865,29 @@ type ListContactsParams struct {
 
 	// Internal Only internal people (no client).
 	Internal *bool `form:"internal,omitempty" json:"internal,omitempty"`
+}
+
+// GetNodeBehaviorsParams defines parameters for GetNodeBehaviors.
+type GetNodeBehaviorsParams struct {
+	SubNodes *bool `form:"sub_nodes,omitempty" json:"sub_nodes,omitempty"`
+}
+
+// GetNodeTimelineParams defines parameters for GetNodeTimeline.
+type GetNodeTimelineParams struct {
+	SubNodes *bool  `form:"sub_nodes,omitempty" json:"sub_nodes,omitempty"`
+	ClientId *int64 `form:"client_id,omitempty" json:"client_id,omitempty"`
+
+	// Core Only core work (no client).
+	Core *bool       `form:"core,omitempty" json:"core,omitempty"`
+	Type *TicketType `form:"type,omitempty" json:"type,omitempty"`
+
+	// From Entries on or after this day; an entry's day is its close day
+	From *openapi_types.Date `form:"from,omitempty" json:"from,omitempty"`
+
+	// To Entries on or before this day.
+	To     *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
+	Limit  *int32              `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor *string             `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // ListNodesParams defines parameters for ListNodes.
@@ -1013,8 +1080,17 @@ type ServerInterface interface {
 	// (DELETE /nodes/{id})
 	DeleteNode(w http.ResponseWriter, r *http.Request, id int64)
 
+	// (GET /nodes/{id})
+	GetNode(w http.ResponseWriter, r *http.Request, id int64)
+
 	// (PATCH /nodes/{id})
 	UpdateNode(w http.ResponseWriter, r *http.Request, id int64)
+
+	// (GET /nodes/{id}/behaviors)
+	GetNodeBehaviors(w http.ResponseWriter, r *http.Request, id int64, params GetNodeBehaviorsParams)
+
+	// (GET /nodes/{id}/timeline)
+	GetNodeTimeline(w http.ResponseWriter, r *http.Request, id int64, params GetNodeTimelineParams)
 
 	// (GET /projects)
 	ListProjects(w http.ResponseWriter, r *http.Request)
@@ -1525,6 +1601,32 @@ func (siw *ServerInterfaceWrapper) DeleteNode(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// GetNode operation middleware
+func (siw *ServerInterfaceWrapper) GetNode(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetNode(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UpdateNode operation middleware
 func (siw *ServerInterfaceWrapper) UpdateNode(w http.ResponseWriter, r *http.Request) {
 
@@ -1542,6 +1644,181 @@ func (siw *ServerInterfaceWrapper) UpdateNode(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateNode(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetNodeBehaviors operation middleware
+func (siw *ServerInterfaceWrapper) GetNodeBehaviors(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetNodeBehaviorsParams
+
+	// ------------- Optional query parameter "sub_nodes" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sub_nodes", r.URL.Query(), &params.SubNodes, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sub_nodes"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sub_nodes", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetNodeBehaviors(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetNodeTimeline operation middleware
+func (siw *ServerInterfaceWrapper) GetNodeTimeline(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetNodeTimelineParams
+
+	// ------------- Optional query parameter "sub_nodes" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sub_nodes", r.URL.Query(), &params.SubNodes, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sub_nodes"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sub_nodes", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "client_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "client_id", r.URL.Query(), &params.ClientId, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "client_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "client_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "core" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "core", r.URL.Query(), &params.Core, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "core"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "core", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "type", r.URL.Query(), &params.Type, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetNodeTimeline(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2511,7 +2788,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/nodes", wrapper.ListNodes)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/nodes", wrapper.CreateNode)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/nodes/{id}", wrapper.DeleteNode)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/nodes/{id}", wrapper.GetNode)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/nodes/{id}", wrapper.UpdateNode)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/nodes/{id}/timeline", wrapper.GetNodeTimeline)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/nodes/{id}/behaviors", wrapper.GetNodeBehaviors)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/statuses", wrapper.GetStatuses)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/projects/{key}/statuses", wrapper.SetStatuses)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/assignees", wrapper.ListAssignees)
