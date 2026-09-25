@@ -1,0 +1,51 @@
+{"id": "q01", "question": "Kenapa approval lembur di Arunika tidak lewat supervisor?", "expected": ["DEMO-1"]}
+{"id": "q02", "question": "Who asked for the two-level overtime approval at Bumi Logistik, and why?", "expected": ["DEMO-2"]}
+{"id": "q03", "question": "What is the weekly overtime limit and why?", "expected": ["DEMO-3"]}
+{"id": "q04", "question": "Apakah lembur di bawah 2 jam bisa disetujui otomatis untuk Arunika?", "expected": ["DEMO-4"]}
+{"id": "q05", "question": "How can HR approve many overtime requests at once?", "expected": ["DEMO-5"]}
+{"id": "q06", "question": "Kenapa Cahaya Farma wajib isi nomor batch saat lembur?", "expected": ["DEMO-6"]}
+{"id": "q07", "question": "How far from the store can Arunika staff clock in?", "expected": ["DEMO-8"]}
+{"id": "q08", "question": "Driver Bumi boleh absen masuk dari mana saja? Kenapa?", "expected": ["DEMO-9"]}
+{"id": "q09", "question": "Why was a liveness check added to selfie clock in?", "expected": ["DEMO-10"]}
+{"id": "q10", "question": "Are split shifts allowed for Arunika stores?", "expected": ["DEMO-12"]}
+{"id": "q11", "question": "Tukar shift perlu persetujuan siapa?", "expected": ["DEMO-13"]}
+{"id": "q12", "question": "How is the night shift allowance paid at Bumi Logistik?", "expected": ["DEMO-14"]}
+{"id": "q13", "question": "Berapa hari sebelumnya cuti tahunan harus diajukan?", "expected": ["DEMO-15"]}
+{"id": "q14", "question": "When can Arunika store staff not take annual leave?", "expected": ["DEMO-16"]}
+{"id": "q15", "question": "Kapan karyawan Cahaya harus upload surat dokter untuk cuti sakit?", "expected": ["DEMO-17"]}
+{"id": "q16", "question": "Did we allow unlimited unpaid leave for Bumi drivers?", "expected": ["DEMO-18"]}
+{"id": "q17", "question": "Berapa maksimal sisa cuti yang bisa dibawa ke tahun berikutnya untuk Arunika?", "expected": ["DEMO-21", "DEMO-20"]}
+{"id": "q18", "question": "How does leave carry-over work by default, and when does it expire?", "expected": ["DEMO-20"]}
+{"id": "q19", "question": "How does annual leave accrue for Cahaya Farma employees?", "expected": ["DEMO-22"]}
+{"id": "q20", "question": "Validasi NIK di profil karyawan seperti apa?", "expected": ["DEMO-23"]}
+{"id": "q21", "question": "Why do Cahaya employee profiles show the pharmacist licence?", "expected": ["DEMO-24"]}
+{"id": "q22", "question": "What documents do new hires upload during onboarding?", "expected": ["DEMO-26", "DEMO-27"]}
+{"id": "q23", "question": "Driver Bumi butuh dokumen apa saat onboarding?", "expected": ["DEMO-27"]}
+{"id": "q24", "question": "What is the password of the payslip PDF?", "expected": ["DEMO-28"]}
+{"id": "q25", "question": "Kenapa slip gaji Arunika menampilkan rincian jam lembur?", "expected": ["DEMO-29"]}
+{"id": "q26", "question": "Can Cahaya Farma hide basic salary on payslips?", "expected": ["DEMO-31"]}
+{"id": "q27", "question": "Which PPh 21 method do we use since 2024?", "expected": ["DEMO-32"]}
+{"id": "q28", "question": "Bagaimana perhitungan PPh 21 bulan Desember?", "expected": ["DEMO-33"]}
+{"id": "q29", "question": "Who pays the income tax of Bumi drivers?", "expected": ["DEMO-34"]}
+{"id": "q30", "question": "What is the salary cap for BPJS Kesehatan contributions?", "expected": ["DEMO-35"]}
+{"id": "q31", "question": "Kapan Arunika mulai membayar BPJS untuk pegawai part-time?", "expected": ["DEMO-36"]}
+{"id": "q32", "question": "How is THR calculated for employees with less than a year of service?", "expected": ["DEMO-37"]}
+{"id": "q33", "question": "THR pekerja harian Arunika dihitung dari apa?", "expected": ["DEMO-38"]}
+{"id": "q34", "question": "Can Cahaya pay THR in two installments?", "expected": ["DEMO-39"]}
+{"id": "q35", "question": "Which bank file format does the payroll transfer use?", "expected": ["DEMO-40"]}
+{"id": "q36", "question": "Bisakah gaji karyawan Bumi dibagi ke dua rekening?", "expected": ["DEMO-41"]}
+{"id": "q37", "question": "How is the Arunika attendance report grouped?", "expected": ["DEMO-43"]}
+{"id": "q38", "question": "Berapa menit toleransi keterlambatan di laporan?", "expected": ["DEMO-44"]}
+{"id": "q39", "question": "Was the double overtime approval notification at Arunika fixed?", "expected": ["DEMO-47"]}
+{"id": "q40", "question": "Kenapa saldo cuti bisa minus setelah carry-over kedaluwarsa?", "expected": ["DEMO-48"]}
+{"id": "q41", "question": "What changed in payroll for Bumi Logistik since 2025?", "node": "Payroll", "client": "Bumi Logistik", "expected": ["DEMO-14", "DEMO-30", "DEMO-34", "DEMO-41"]}
+{"id": "u01", "question": "What is the gym membership reimbursement policy?", "expected": []}
+{"id": "u02", "question": "Apa kebijakan kendaraan dinas untuk manajer?", "expected": []}
+{"id": "u03", "question": "How is sales commission calculated for Arunika cashiers?", "expected": []}
+{"id": "u04", "question": "Which ERP does Bumi Logistik use for its warehouse inventory?", "expected": []}
+{"id": "u05", "question": "Apa kebijakan kerja remote untuk kantor pusat?", "expected": []}
+{"id": "u06", "question": "Berapa bonus tahunan untuk direktur?", "expected": []}
+{"id": "u07", "question": "How are performance reviews scored?", "expected": []}
+{"id": "u08", "question": "What is the dress code for pharmacists at Cahaya?", "expected": []}
+{"id": "u09", "question": "Kapan jadwal pelatihan K3 berikutnya?", "expected": []}
+{"id": "u10", "question": "Siapa yang menyetujui klaim biaya perjalanan dinas?", "expected": []}

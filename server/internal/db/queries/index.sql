@@ -65,3 +65,22 @@ SELECT id FROM tickets WHERE client_id = sqlc.arg('client_id')::bigint ORDER BY 
 
 -- name: ListAllTicketIDs :many
 SELECT id FROM tickets ORDER BY id DESC;
+
+-- name: GetNodeIDByPath :one
+-- A node by its names from the top of the tree, for the eval's node chips.
+WITH RECURSIVE walk AS (
+  SELECT n.id, 1 AS depth
+  FROM nodes n JOIN projects p ON p.id = n.project_id
+  WHERE p.key = sqlc.arg('project_key') AND n.parent_id IS NULL AND n.name = (sqlc.arg('path')::text[])[1]
+  UNION ALL
+  SELECT n.id, w.depth + 1
+  FROM nodes n JOIN walk w ON n.parent_id = w.id
+  WHERE n.name = (sqlc.arg('path')::text[])[w.depth + 1]
+)
+SELECT id FROM walk WHERE depth = cardinality(sqlc.arg('path')::text[]);
+
+-- name: GetClientByName :one
+SELECT * FROM clients WHERE lower(name) = lower($1);
+
+-- name: ListProjectTicketIDs :many
+SELECT id FROM tickets WHERE project_id = $1 ORDER BY id;

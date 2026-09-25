@@ -159,11 +159,19 @@ func Retrieve(ctx context.Context, pool *pgxpool.Pool, a Asker, s Scope, questio
 	}
 	pick := ranked[:min(topTickets, len(ranked))]
 	if count > 0 && int(count) <= t.ExhaustiveMax {
-		// A small set skips ranking: every item, newest first (§11.3).
-		if pick, err = q.ListScopeTicketIDs(ctx, db.ListScopeTicketIDsParams{IsAdmin: f.admin, UserID: f.user, ProjectIds: f.projects,
+		// A small set takes every item (§11.3): the ranked ones first, so the
+		// evidence budget trims the least relevant, then the rest newest first.
+		all, err := q.ListScopeTicketIDs(ctx, db.ListScopeTicketIDsParams{IsAdmin: f.admin, UserID: f.user, ProjectIds: f.projects,
 			NodeIds: f.nodes, ClientIds: f.clients, UserIds: f.users, ContactIds: f.contacts, FromTs: f.from, ToTs: f.to,
-			Lim: int32(t.ExhaustiveMax)}); err != nil {
+			Lim: int32(t.ExhaustiveMax)})
+		if err != nil {
 			return found, err
+		}
+		pick = append([]int64(nil), ranked...)
+		for _, id := range all {
+			if !slices.Contains(pick, id) {
+				pick = append(pick, id)
+			}
 		}
 		found.Exhaustive = true
 	}

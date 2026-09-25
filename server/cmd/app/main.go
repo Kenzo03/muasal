@@ -19,7 +19,11 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 
+	"github.com/kenzo03/muasal/server/internal/ai"
+	"github.com/kenzo03/muasal/server/internal/ask"
 	"github.com/kenzo03/muasal/server/internal/config"
+	"github.com/kenzo03/muasal/server/internal/db"
+	"github.com/kenzo03/muasal/server/internal/eval"
 	"github.com/kenzo03/muasal/server/internal/httpapi"
 	"github.com/kenzo03/muasal/server/internal/indexer"
 	"github.com/kenzo03/muasal/server/internal/migrate"
@@ -30,6 +34,8 @@ const usage = `usage:
   app migrate up                             apply migrations and prepare the app database role
   app admin create-admin --email E --name N  create an admin and print a one-time setup link
   app admin reindex --all                    queue an index job for every ticket, e.g. after a restore
+  app eval [--seed] [--use-local URL] [--set FILE] [--data FILE] [--strict-latency]
+                                             run the Ask golden set (FSD §11.8); --seed loads the demo project first
   app healthcheck                            exit 0 when the API on LISTEN_ADDR is ready`
 
 func main() {
@@ -62,6 +68,8 @@ func run(ctx context.Context, args []string, log *slog.Logger) error {
 		return createAdmin(ctx, cfg, log, args[2:])
 	case len(args) == 3 && args[0] == "admin" && args[1] == "reindex" && args[2] == "--all":
 		return reindexAll(ctx, cfg, log)
+	case args[0] == "eval":
+		return runEval(ctx, cfg, args[1:])
 	}
 	return errors.New(usage)
 }
@@ -144,6 +152,75 @@ func reindexAll(ctx context.Context, cfg config.Config, log *slog.Logger) error 
 		return err
 	}
 	fmt.Printf("Queued %d tickets; Admin → AI → Index status shows the progress.\n", n)
+	return nil
+}
+
+// runEval runs the golden set as the first system admin (FSD §11.8) and fails
+// when citation precision, evidence recall or abstention misses its target.
+func runEval(ctx context.Context, cfg config.Config, args []string) error {
+	fs := flag.NewFlagSet("eval", flag.ContinueOnError)
+	set := fs.String("set", "", "golden set, JSON lines (default: the built-in golden set v0)")
+	data := fs.String("data", "", "demo dataset for --seed (default: the built-in HRIS demo)")
+	seed := fs.Bool("seed", false, "load the demo dataset into project DEMO if missing, then index it")
+	local := fs.String("use-local", "", "first set AI to Local with this base URL, e.g. http://host.docker.internal:11434/v1")
+	chatModel := fs.String("chat-model", "qwen3.5:4b", "chat model for --use-local")
+	embedModel := fs.String("embed-model", "bge-m3", "embedding model for --use-local")
+	strict := fs.Bool("strict-latency", false, "fail when the median latency misses 15 s")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+	q := db.New(pool)
+	var admin db.User
+	if err := pool.QueryRow(ctx, "SELECT id, locale FROM users WHERE is_admin AND disabled_at IS NULL ORDER BY id LIMIT 1").Scan(&admin.ID, &admin.Locale); err != nil {
+		return fmt.Errorf("no system admin to ask as; run `app admin create-admin` first: %w", err)
+	}
+	rt := &ai.Runtime{Store: ai.NewStore(q), Gate: ai.NewGate(), SecretKey: cfg.SecretKey, HTTP: &http.Client{}}
+	if *local != "" {
+		s, err := rt.Store.Get(ctx)
+		if err != nil {
+			return err
+		}
+		s.Mode = ai.ModeLocal
+		s.Chat = ai.Endpoint{URL: *local, Model: *chatModel}
+		s.Embed = ai.Endpoint{URL: *local, Model: *embedModel}
+		if p := s.Validate(); len(p) > 0 {
+			return fmt.Errorf("--use-local: %s %s", p[0].Field, p[0].Message)
+		}
+		if err := rt.Store.Put(ctx, q, s, admin.ID); err != nil {
+			return err
+		}
+		fmt.Printf("AI set to Local: %s, chat %s, embeddings %s\n", *local, *chatModel, *embedModel)
+	}
+	if *seed {
+		ds, err := eval.LoadDataset(*data)
+		if err != nil {
+			return err
+		}
+		fmt.Println("Loading and indexing the demo dataset…")
+		if err := eval.Seed(ctx, pool, rt, ds, os.Stdout); err != nil {
+			return err
+		}
+	}
+	questions, err := eval.LoadQuestions(*set)
+	if err != nil {
+		return err
+	}
+	asker := ask.Asker{UserID: admin.ID, IsAdmin: true, Locale: admin.Locale, TZ: time.UTC}
+	rep, err := eval.Run(ctx, pool, rt, asker, questions, 7, os.Stdout)
+	if err != nil {
+		return err
+	}
+	targets := eval.DefaultTargets
+	targets.Strict = *strict
+	rep.Print(os.Stdout, targets)
+	if !rep.Pass(targets) {
+		return errors.New("the golden set missed a target")
+	}
 	return nil
 }
 

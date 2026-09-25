@@ -76,8 +76,8 @@ func TestTheRelevanceFloorLeavesNoEvidence(t *testing.T) {
 	}
 }
 
-// §11.3: a small scope skips ranking and takes every item, newest first; a
-// larger one takes the best-ranked tickets.
+// §11.3: a small scope takes every item, the most relevant first; a larger
+// one takes the best-ranked tickets.
 func TestSmallScopesTakeEveryItem(t *testing.T) {
 	w := newWorld(t)
 	old := w.ticket("Overtime export format", &w.a, w.ot, "Payroll imports a CSV.", "2025-01-15", "Export overtime as CSV.")
@@ -85,7 +85,7 @@ func TestSmallScopesTakeEveryItem(t *testing.T) {
 	payroll := w.ticket("Payslip shows overtime", nil, w.hr, "Employees asked for detail.", "2026-03-01", "Payslips list overtime hours.")
 	q := "Why does HR approve overtime?"
 	small := w.retrieve(w.admin, ask.Scope{NodeIDs: []int64{w.ot.ID}}, q, ask.Tuning{EmbedModel: "bge-m3", MinSimilarity: 0.3, ExhaustiveMax: 40})
-	if !small.Exhaustive || !slices.Equal(small.TicketIDs, []int64{recent.ID, old.ID}) {
+	if !small.Exhaustive || len(small.TicketIDs) != 2 || small.TicketIDs[0] != recent.ID || !slices.Contains(small.TicketIDs, old.ID) {
 		t.Fatalf("small set: %v %v", small.Exhaustive, keysOf(w, small.TicketIDs))
 	}
 	ranked := w.retrieve(w.admin, ask.Scope{}, q, hybrid)

@@ -29,6 +29,49 @@ func (q *Queries) DeleteStaleChunks(ctx context.Context, arg DeleteStaleChunksPa
 	return err
 }
 
+const getClientByName = `-- name: GetClientByName :one
+SELECT id, name, code, aliases, archived_at FROM clients WHERE lower(name) = lower($1)
+`
+
+func (q *Queries) GetClientByName(ctx context.Context, lower string) (Client, error) {
+	row := q.db.QueryRow(ctx, getClientByName, lower)
+	var i Client
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Code,
+		&i.Aliases,
+		&i.ArchivedAt,
+	)
+	return i, err
+}
+
+const getNodeIDByPath = `-- name: GetNodeIDByPath :one
+WITH RECURSIVE walk AS (
+  SELECT n.id, 1 AS depth
+  FROM nodes n JOIN projects p ON p.id = n.project_id
+  WHERE p.key = $2 AND n.parent_id IS NULL AND n.name = ($1::text[])[1]
+  UNION ALL
+  SELECT n.id, w.depth + 1
+  FROM nodes n JOIN walk w ON n.parent_id = w.id
+  WHERE n.name = ($1::text[])[w.depth + 1]
+)
+SELECT id FROM walk WHERE depth = cardinality($1::text[])
+`
+
+type GetNodeIDByPathParams struct {
+	Path       []string
+	ProjectKey string
+}
+
+// A node by its names from the top of the tree, for the eval's node chips.
+func (q *Queries) GetNodeIDByPath(ctx context.Context, arg GetNodeIDByPathParams) (int64, error) {
+	row := q.db.QueryRow(ctx, getNodeIDByPath, arg.Path, arg.ProjectKey)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const getTicketSource = `-- name: GetTicketSource :one
 SELECT t.id, t.key, t.type, t.title, t.description, t.reason, t.project_id, t.client_id,
        t.requester_contact_id, t.requester_user_id, t.reporter_id, t.assignee_id, t.created_at, t.closed_at,
@@ -192,6 +235,30 @@ func (q *Queries) ListPendingTicketChunks(ctx context.Context, arg ListPendingTi
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProjectTicketIDs = `-- name: ListProjectTicketIDs :many
+SELECT id FROM tickets WHERE project_id = $1 ORDER BY id
+`
+
+func (q *Queries) ListProjectTicketIDs(ctx context.Context, projectID int64) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listProjectTicketIDs, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
