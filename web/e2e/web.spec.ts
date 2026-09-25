@@ -29,6 +29,7 @@ test("a PM files a ticket from the keyboard, pastes a screenshot and reorganises
 
   // `c` on the board opens the create form over the board; Escape goes back to it.
   await page.goto(`/p/${key}/board`);
+  await expect(page.locator('[aria-keyshortcuts="c"]')).toBeVisible(); // the listener is attached
   await page.keyboard.press("c");
   const modal = page.getByRole("dialog", { name: `Tiket baru di ${key}` });
   await expect(modal).toBeVisible();
