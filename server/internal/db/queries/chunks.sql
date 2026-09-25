@@ -45,5 +45,5 @@ SELECT count(*) FROM chunks WHERE embedding IS NULL OR embed_model IS DISTINCT F
 SELECT id, source_type, source_id, seq, content, content_hash, embed_model, (embedding IS NOT NULL)::boolean AS embedded
 FROM chunks WHERE ticket_id = $1 ORDER BY source_type, source_id, seq;
 
--- name: CountChunks :one
-SELECT count(*) FROM chunks;
+-- name: CountEmbeddedChunks :one
+SELECT count(*) FROM chunks WHERE embedding IS NOT NULL;

@@ -12,17 +12,6 @@ import (
 	pgvector "github.com/pgvector/pgvector-go"
 )
 
-const countChunks = `-- name: CountChunks :one
-SELECT count(*) FROM chunks
-`
-
-func (q *Queries) CountChunks(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countChunks)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const countChunksByModel = `-- name: CountChunksByModel :many
 SELECT coalesce(embed_model, '') AS model, count(*) AS chunks, max(indexed_at)::timestamptz AS latest
 FROM chunks GROUP BY 1 ORDER BY 1
@@ -52,6 +41,17 @@ func (q *Queries) CountChunksByModel(ctx context.Context) ([]CountChunksByModelR
 		return nil, err
 	}
 	return items, nil
+}
+
+const countEmbeddedChunks = `-- name: CountEmbeddedChunks :one
+SELECT count(*) FROM chunks WHERE embedding IS NOT NULL
+`
+
+func (q *Queries) CountEmbeddedChunks(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countEmbeddedChunks)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const countPendingChunks = `-- name: CountPendingChunks :one

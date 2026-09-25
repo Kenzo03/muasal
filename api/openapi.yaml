@@ -854,6 +854,63 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ReindexResult" }
         default: { $ref: "#/components/responses/Problem" }
+  /ask:
+    post:
+      operationId: ask
+      tags: [ask]
+      description: >-
+        Everyone signed in (FSD §10, §11). Answers from the tickets the asker may open, with a citation on every claim,
+        or says it lacks information. With Accept text/event-stream the answer streams as events - queued, scope,
+        evidence, claim, result, error (§11.6) - and a comment line every 15 seconds keeps proxies open; otherwise the
+        final AskResult comes as JSON. With AI off it returns keyword results under the same scope. 10 questions a
+        minute per user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AskRequest" }
+      responses:
+        "200":
+          description: The answer.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AskResult" }
+            text/event-stream:
+              schema: { type: string }
+        default: { $ref: "#/components/responses/Problem" }
+  /ask/threads:
+    get:
+      operationId: listAskThreads
+      tags: [ask]
+      description: The asker's own threads, newest first (§10.6).
+      responses:
+        "200":
+          description: At most 100 threads.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AskThreadList" }
+        default: { $ref: "#/components/responses/Problem" }
+  /ask/threads/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    get:
+      operationId: getAskThread
+      tags: [ask]
+      description: One of the asker's threads with its questions and answers; anyone else's answers 404.
+      responses:
+        "200":
+          description: The thread.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AskThreadDetail" }
+        default: { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: hideAskThread
+      tags: [ask]
+      description: Hides the thread from the asker's list; the Ask log keeps it until retention expires (§10.6).
+      responses:
+        "204": { description: Hidden. }
+        default: { $ref: "#/components/responses/Problem" }
 components:
   responses:
     Problem:
@@ -1679,3 +1736,96 @@ components:
       required: [queued]
       properties:
         queued: { type: integer }
+    AskScope:
+      type: object
+      description: Chips; an empty list means no filter. Dates are whole days in the asker's timezone.
+      properties:
+        project_ids: { type: array, items: { type: integer, format: int64 } }
+        node_ids: { type: array, items: { type: integer, format: int64 }, description: Sub-nodes are included. }
+        client_ids: { type: array, items: { type: integer, format: int64 }, description: Core work (all clients) is included. }
+        user_ids: { type: array, items: { type: integer, format: int64 } }
+        contact_ids: { type: array, items: { type: integer, format: int64 } }
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+    AskDetected:
+      allOf:
+        - $ref: "#/components/schemas/AskScope"
+        - type: object
+          properties:
+            keys: { type: array, items: { type: string }, description: Ticket keys named in the question. }
+    AskScopeEvent:
+      type: object
+      required: [explicit, detected]
+      properties:
+        explicit: { $ref: "#/components/schemas/AskScope" }
+        detected: { $ref: "#/components/schemas/AskDetected" }
+    AskRequest:
+      type: object
+      required: [question]
+      properties:
+        question: { type: string, minLength: 1, maxLength: 1000 }
+        thread_id: { type: integer, format: int64, description: Adds the question to one of the asker's threads. }
+        language: { type: string, enum: [auto, id, en], default: auto }
+        scope: { $ref: "#/components/schemas/AskScope" }
+    AskItem:
+      type: object
+      required: [key, title, client, requested_by, date, status, closed]
+      properties:
+        key: { type: string }
+        title: { type: string }
+        client: { type: string, nullable: true, description: Null for core work. }
+        requested_by: { type: string }
+        date: { type: string, format: date-time, description: The close date, or the creation date while open. }
+        status: { type: string }
+        closed: { type: boolean }
+    AskClaim:
+      type: object
+      required: [text, cites]
+      properties:
+        text: { type: string }
+        cites: { type: array, items: { type: string } }
+    AskResult:
+      type: object
+      required: [status, query_id, thread_id, language, scope, evidence, claims, closest, results]
+      properties:
+        status: { type: string, enum: [answered, not_enough_info, ai_off, error] }
+        query_id: { type: integer, format: int64 }
+        thread_id: { type: integer, format: int64 }
+        language: { type: string, enum: [id, en] }
+        model: { type: string, description: The badge, e.g. "Local · qwen3.5:4b" or "Cloud · <provider> · <model>". }
+        message: { type: string, description: The not-enough-information text, or the error's message. }
+        error_code: { type: string, enum: [ai_unavailable, ai_busy, ai_timeout, ai_invalid] }
+        scope: { $ref: "#/components/schemas/AskScopeEvent" }
+        evidence: { type: array, items: { $ref: "#/components/schemas/AskItem" } }
+        claims: { type: array, items: { $ref: "#/components/schemas/AskClaim" } }
+        closest: { type: array, items: { $ref: "#/components/schemas/AskItem" }, description: With not enough information, up to five nearest tickets. }
+        results: { type: array, items: { $ref: "#/components/schemas/AskItem" }, description: With AI off, the keyword results. }
+    AskThread:
+      type: object
+      required: [id, title, created_at]
+      properties:
+        id: { type: integer, format: int64 }
+        title: { type: string }
+        created_at: { type: string, format: date-time }
+    AskThreadList:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/AskThread" } }
+    AskThreadQuery:
+      type: object
+      required: [id, question, status, claims, created_at]
+      properties:
+        id: { type: integer, format: int64 }
+        question: { type: string }
+        status: { type: string }
+        claims: { type: array, items: { $ref: "#/components/schemas/AskClaim" } }
+        model: { type: string }
+        created_at: { type: string, format: date-time }
+    AskThreadDetail:
+      allOf:
+        - $ref: "#/components/schemas/AskThread"
+        - type: object
+          required: [queries]
+          properties:
+            queries: { type: array, items: { $ref: "#/components/schemas/AskThreadQuery" } }

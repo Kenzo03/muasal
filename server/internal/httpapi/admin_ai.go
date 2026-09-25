@@ -49,17 +49,18 @@ func (s *Server) UpdateAISettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	next, fields := s.aiSettingsFrom(cur, in)
-	// A new embedding model re-embeds every chunk, so the admin confirms it (§13.4).
-	embedChanged := next.Embed.URL != cur.Embed.URL || next.Embed.Model != cur.Embed.Model || next.EmbedDim != cur.EmbedDim
+	// A new embedding model re-embeds every chunk, so the admin confirms it
+	// (§13.4). A new URL for the same model changes nothing in the index.
+	embedChanged := next.Embed.Model != cur.Embed.Model || next.EmbedDim != cur.EmbedDim
 	if embedChanged && !deref(in.Reindex) {
-		chunks, err := s.q.CountChunks(ctx)
+		chunks, err := s.q.CountEmbeddedChunks(ctx)
 		if err != nil {
 			s.fail(w, r, err)
 			return
 		}
 		if chunks > 0 {
 			fields = append(fields, FieldError{Field: "embed.model", Code: "reindex_required",
-				Message: fmt.Sprintf("A new embedding model re-embeds all %d chunks; confirm to continue", chunks)})
+				Message: fmt.Sprintf("A new embedding model re-embeds all %d embedded chunks; confirm to continue", chunks)})
 		}
 	}
 	if len(fields) > 0 {

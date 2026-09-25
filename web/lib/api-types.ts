@@ -679,6 +679,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Everyone signed in (FSD §10, §11). Answers from the tickets the asker may open, with a citation on every claim, or says it lacks information. With Accept text/event-stream the answer streams as events - queued, scope, evidence, claim, result, error (§11.6) - and a comment line every 15 seconds keeps proxies open; otherwise the final AskResult comes as JSON. With AI off it returns keyword results under the same scope. 10 questions a minute per user. */
+        post: operations["ask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ask/threads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The asker's own threads, newest first (§10.6). */
+        get: operations["listAskThreads"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ask/threads/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        /** @description One of the asker's threads with its questions and answers; anyone else's answers 404. */
+        get: operations["getAskThread"];
+        put?: never;
+        post?: never;
+        /** @description Hides the thread from the asker's list; the Ask log keeps it until retention expires (§10.6). */
+        delete: operations["hideAskThread"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1387,6 +1441,106 @@ export interface components {
         };
         ReindexResult: {
             queued: number;
+        };
+        /** @description Chips; an empty list means no filter. Dates are whole days in the asker's timezone. */
+        AskScope: {
+            project_ids?: number[];
+            /** @description Sub-nodes are included. */
+            node_ids?: number[];
+            /** @description Core work (all clients) is included. */
+            client_ids?: number[];
+            user_ids?: number[];
+            contact_ids?: number[];
+            /** Format: date */
+            from?: string;
+            /** Format: date */
+            to?: string;
+        };
+        AskDetected: components["schemas"]["AskScope"] & {
+            /** @description Ticket keys named in the question. */
+            keys?: string[];
+        };
+        AskScopeEvent: {
+            explicit: components["schemas"]["AskScope"];
+            detected: components["schemas"]["AskDetected"];
+        };
+        AskRequest: {
+            question: string;
+            /**
+             * Format: int64
+             * @description Adds the question to one of the asker's threads.
+             */
+            thread_id?: number;
+            /**
+             * @default auto
+             * @enum {string}
+             */
+            language: "auto" | "id" | "en";
+            scope?: components["schemas"]["AskScope"];
+        };
+        AskItem: {
+            key: string;
+            title: string;
+            /** @description Null for core work. */
+            client: string | null;
+            requested_by: string;
+            /**
+             * Format: date-time
+             * @description The close date
+             */
+            date: string;
+            status: string;
+            closed: boolean;
+        };
+        AskClaim: {
+            text: string;
+            cites: string[];
+        };
+        AskResult: {
+            /** @enum {string} */
+            status: "answered" | "not_enough_info" | "ai_off" | "error";
+            /** Format: int64 */
+            query_id: number;
+            /** Format: int64 */
+            thread_id: number;
+            /** @enum {string} */
+            language: "id" | "en";
+            /** @description The badge */
+            model?: string;
+            /** @description The not-enough-information text */
+            message?: string;
+            /** @enum {string} */
+            error_code?: "ai_unavailable" | "ai_busy" | "ai_timeout" | "ai_invalid";
+            scope: components["schemas"]["AskScopeEvent"];
+            evidence: components["schemas"]["AskItem"][];
+            claims: components["schemas"]["AskClaim"][];
+            /** @description With not enough information */
+            closest: components["schemas"]["AskItem"][];
+            /** @description With AI off */
+            results: components["schemas"]["AskItem"][];
+        };
+        AskThread: {
+            /** Format: int64 */
+            id: number;
+            title: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        AskThreadList: {
+            items: components["schemas"]["AskThread"][];
+        };
+        AskThreadQuery: {
+            /** Format: int64 */
+            id: number;
+            question: string;
+            status: string;
+            claims: components["schemas"]["AskClaim"][];
+            model?: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        AskThreadDetail: components["schemas"]["AskThread"] & {
+            queries: components["schemas"]["AskThreadQuery"][];
         };
     };
     responses: {
@@ -2754,6 +2908,97 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ReindexResult"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AskRequest"];
+            };
+        };
+        responses: {
+            /** @description The answer. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskResult"];
+                    "text/event-stream": string;
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listAskThreads: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description At most 100 threads. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskThreadList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getAskThread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The thread. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskThreadDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    hideAskThread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Hidden. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

@@ -17,6 +17,7 @@ import (
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 
 	"github.com/kenzo03/muasal/server/internal/ai"
+	"github.com/kenzo03/muasal/server/internal/ask"
 	"github.com/kenzo03/muasal/server/internal/auth"
 	"github.com/kenzo03/muasal/server/internal/config"
 	"github.com/kenzo03/muasal/server/internal/db"
@@ -32,6 +33,8 @@ type Server struct {
 	now     func() time.Time
 	jobs    *river.Client[pgx.Tx] // inserts jobs only; `serve` runs the workers (FSD §13.2)
 	ai      *ai.Runtime
+	engine  *ask.Engine
+	askRate *auth.Limiter
 }
 
 // New wires a Server; it opens no connections of its own.
@@ -41,7 +44,7 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) *Server {
 		panic(err) // an insert-only client with a fixed config cannot fail
 	}
 	q := db.New(pool)
-	return &Server{
+	s := &Server{
 		cfg:     cfg,
 		pool:    pool,
 		q:       q,
@@ -50,7 +53,10 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) *Server {
 		now:     time.Now,
 		jobs:    jobs,
 		ai:      &ai.Runtime{Store: ai.NewStore(q), Gate: ai.NewGate(), SecretKey: cfg.SecretKey, HTTP: &http.Client{}},
+		askRate: auth.NewLimiter(10, time.Minute), // FSD §17.1: Ask 10 a minute per user
 	}
+	s.engine = ask.NewEngine(pool, s.ai)
+	return s
 }
 
 // AI is the runtime the API shares with the index workers in the same process:
