@@ -19,6 +19,7 @@ import (
 
 	"github.com/kenzo03/muasal/server/internal/config"
 	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/muasal/server/internal/indexer"
 	"github.com/kenzo03/muasal/server/internal/migrate"
 )
 
@@ -73,7 +74,22 @@ func serve(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		return err
 	}
 	defer pool.Close()
-	srv := &http.Server{Addr: cfg.ListenAddr, Handler: httpapi.New(cfg, pool, log).Handler(), ReadHeaderTimeout: 10 * time.Second}
+	api := httpapi.New(cfg, pool, log)
+	// The index workers share the API's AI runtime, so embedding pauses while
+	// an answer is generated (FSD §11.7).
+	workers, err := indexer.NewClient(pool, api.AI(), log, indexer.Options{})
+	if err != nil {
+		return err
+	}
+	if err := workers.Start(ctx); err != nil {
+		return fmt.Errorf("start index workers: %w", err)
+	}
+	defer func() {
+		stop, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		_ = workers.Stop(stop)
+	}()
+	srv := &http.Server{Addr: cfg.ListenAddr, Handler: api.Handler(), ReadHeaderTimeout: 10 * time.Second}
 	errc := make(chan error, 1)
 	go func() { errc <- srv.ListenAndServe() }()
 	log.Info("listening", "addr", cfg.ListenAddr)
