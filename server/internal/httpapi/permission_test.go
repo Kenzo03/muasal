@@ -23,8 +23,9 @@ import (
 //	  citra  viewer, Clients A and C
 //	plus admin, a system admin who belongs to no project.
 //
-//	Tickets: HRIS-1 core, HRIS-2 Client A, HRIS-3 Client B (with a file),
-//	HRIS-4 Client C, PAY-1 Client C.
+//	Tickets: HRIS-1 core, HRIS-2 Client A (closed), HRIS-3 Client B (closed,
+//	with a file), HRIS-4 Client C, PAY-1 Client C. HRIS-2 is on Overtime
+//	Approval, PAY-1 on Run Payroll, the others on Leave Request.
 
 var suiteUsers = []string{"admin", "hana", "ani", "budi", "citra", "dodi"}
 
@@ -36,6 +37,7 @@ type world struct {
 	contacts   map[string]int64
 	fileB      int64 // an attachment of HRIS-3
 	inProgress int64 // HRIS's "In progress" status
+	done       int64 // HRIS's "Done" status
 }
 
 func seedWorld(e *env) world {
@@ -81,18 +83,20 @@ func seedWorld(e *env) world {
 	w.contacts["Bayu"] = e.seedContact("Bayu", &b)
 	w.contacts["Cahya"] = e.seedContact("Cahya", &c)
 
-	e.seedTicket(hris, u["hana"], "Core fix", nil)
-	e.seedTicket(hris, u["hana"], "Client A request", &a)
-	e.seedTicket(hris, u["hana"], "Client B request", &b)
-	e.seedTicket(hris, u["hana"], "Client C request", &c)
-	e.seedTicket(pay, u["dodi"], "PAY Client C request", &c)
+	e.seedTicket(hris, u["hana"], "Core fix", nil, w.nodes["Leave Request"])
+	closedA := e.seedTicket(hris, u["hana"], "Client A request", &a, w.nodes["Overtime Approval"])
+	closedB := e.seedTicket(hris, u["hana"], "Client B request", &b, w.nodes["Leave Request"])
+	e.seedTicket(hris, u["hana"], "Client C request", &c, w.nodes["Leave Request"])
+	e.seedTicket(pay, u["dodi"], "PAY Client C request", &c, w.nodes["Run Payroll"])
 	_, file, _ := upload(e, w.as["hana"], "HRIS-3", "b.txt", []byte("for Client B"))
 	w.fileB = file.Id
 	statuses, err := e.q.ListStatuses(context.Background(), hris.ID)
 	if err != nil {
 		e.t.Fatal(err)
 	}
-	w.inProgress = statuses[1].ID
+	w.inProgress, w.done = statuses[1].ID, statuses[3].ID
+	e.seedClose(closedA, w.done, u["hana"], "Client A approves overtime in HR")
+	e.seedClose(closedB, w.done, u["hana"], "Client B exports leave balances")
 	return w
 }
 
@@ -125,6 +129,7 @@ func TestPermissionSuiteReads(t *testing.T) {
 	hrisTickets := []string{"HRIS-1", "HRIS-2", "HRIS-3", "HRIS-4"}
 	assignees := []string{"ani@example.com", "budi@example.com", "hana@example.com"}
 	statuses := []string{"Cancelled", "Done", "In progress", "In review", "To do"}
+	nodePath := func(name, rest string) string { return fmt.Sprintf("/nodes/%d%s", w.nodes[name].ID, rest) }
 	for _, c := range []struct {
 		path string
 		see  map[string][]string // these users get exactly these rows
@@ -162,6 +167,23 @@ func TestPermissionSuiteReads(t *testing.T) {
 		{"/projects/HRIS/statuses", map[string][]string{
 			"admin": statuses, "hana": statuses, "ani": statuses, "budi": statuses, "citra": statuses,
 		}, map[string]int{"dodi": 404}},
+		{nodePath("Attendance", "/timeline"), map[string][]string{
+			"admin": hrisTickets, "hana": hrisTickets, "ani": hrisTickets,
+			"budi": {"HRIS-1", "HRIS-3"}, "citra": {"HRIS-1", "HRIS-2", "HRIS-4"},
+		}, map[string]int{"dodi": 404}},
+		{nodePath("Overtime Approval", "/timeline"), map[string][]string{
+			"admin": {"HRIS-2"}, "hana": {"HRIS-2"}, "ani": {"HRIS-2"}, "citra": {"HRIS-2"},
+		}, map[string]int{"budi": 404, "dodi": 404}},
+		{nodePath("Run Payroll", "/timeline"), map[string][]string{"admin": {"PAY-1"}, "citra": {"PAY-1"}, "dodi": {"PAY-1"}},
+			map[string]int{"hana": 404, "ani": 404, "budi": 404}},
+		{nodePath("HR", "/behaviors"), map[string][]string{
+			"admin": {"HRIS-2", "HRIS-3"}, "hana": {"HRIS-2", "HRIS-3"}, "ani": {"HRIS-2", "HRIS-3"},
+			"budi": {"HRIS-3"}, "citra": {"HRIS-2"},
+		}, map[string]int{"dodi": 404}},
+		{"/me/updates", map[string][]string{
+			"admin": {"HRIS-1", "HRIS-2", "HRIS-3", "HRIS-4", "PAY-1"}, "hana": hrisTickets, "ani": hrisTickets,
+			"budi": {"HRIS-1", "HRIS-3"}, "citra": {"HRIS-1", "HRIS-2", "HRIS-4", "PAY-1"}, "dodi": {"PAY-1"},
+		}, nil},
 	} {
 		for _, user := range suiteUsers {
 			got, code := listed(e, w.as[user], c.path)
@@ -181,6 +203,7 @@ func TestPermissionSuiteReads(t *testing.T) {
 		"/tickets/HRIS-2/activity":              {"admin", "hana", "ani", "citra"},
 		"/tickets/HRIS-3":                       {"admin", "hana", "ani", "budi"},
 		fmt.Sprintf("/attachments/%d", w.fileB): {"admin", "hana", "ani", "budi"},
+		nodePath("Overtime Approval", ""):       {"admin", "hana", "ani", "citra"},
 	} {
 		for _, user := range suiteUsers {
 			want := http.StatusNotFound
@@ -209,6 +232,55 @@ func TestPermissionSuiteReads(t *testing.T) {
 			}
 		}
 	}
+	// R-AC-7 in search: results hold only what each user may open, across projects.
+	for _, c := range []struct {
+		q     string
+		nodes bool
+		see   map[string][]string
+	}{
+		{"request", false, map[string][]string{
+			"admin": {"HRIS-2", "HRIS-3", "HRIS-4", "PAY-1"}, "hana": {"HRIS-2", "HRIS-3", "HRIS-4"}, "ani": {"HRIS-2", "HRIS-3", "HRIS-4"},
+			"budi": {"HRIS-3"}, "citra": {"HRIS-2", "HRIS-4", "PAY-1"}, "dodi": {"PAY-1"},
+		}},
+		{"overtime", true, map[string][]string{
+			"admin": {"Overtime Approval"}, "hana": {"Overtime Approval"}, "ani": {"Overtime Approval"}, "citra": {"Overtime Approval"},
+		}},
+		{"payroll", true, map[string][]string{
+			"admin": {"Payroll", "Run Payroll"}, "citra": {"Payroll", "Run Payroll"}, "dodi": {"Payroll", "Run Payroll"},
+		}},
+	} {
+		for _, user := range suiteUsers {
+			var res httpapi.SearchResults
+			code := e.call(w.as[user], http.MethodGet, "/search?q="+c.q, nil, &res)
+			got := []string{}
+			if c.nodes {
+				for _, n := range res.Nodes {
+					got = append(got, n.Name)
+				}
+			} else {
+				for _, tk := range res.Tickets {
+					got = append(got, tk.Key)
+				}
+			}
+			slices.Sort(got)
+			if want := c.see[user]; code != http.StatusOK || !slices.Equal(got, want) {
+				t.Errorf("search %q as %s: %d %v, want %v", c.q, user, code, got, want)
+			}
+		}
+	}
+
+	// R-AC-7 on Home: My tickets hold only open tickets the assignee may see.
+	// HRIS-4 is Client C's, which budi cannot see; HRIS-3 is closed.
+	for key, user := range map[string]string{"HRIS-1": "budi", "HRIS-3": "budi", "HRIS-4": "budi", "PAY-1": "citra"} {
+		if _, err := e.d.Pool.Exec(context.Background(), "UPDATE tickets SET assignee_id = $1 WHERE key = $2", w.users[user].ID, key); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for user, want := range map[string][]string{"budi": {"HRIS-1"}, "citra": {"PAY-1"}, "hana": {}} {
+		if got, code := listed(e, w.as[user], "/me/tickets"); code != http.StatusOK || !slices.Equal(got, want) {
+			t.Errorf("my tickets as %s: %d %v, want %v", user, code, got, want)
+		}
+	}
 }
 
 func TestPermissionSuiteWrites(t *testing.T) {
@@ -222,6 +294,9 @@ func TestPermissionSuiteWrites(t *testing.T) {
 	aTicket := map[string]any{"title": "Client A change", "type": "bug", "node_ids": []int64{}, "client_id": w.clients["A"].ID}
 	edit := map[string]any{"title": "Taken over", "type": "bug", "node_ids": []int64{}, "requester_user_id": w.users["budi"].ID}
 	ifMatch := map[string]string{"If-Match": `"1"`}
+	decision := map[string]any{"what_changed": "Client A approves overtime in HR.", "why": "Supervisors are often on leave."}
+	closeCore := map[string]any{"status_id": w.done, "reason": "Every client asked for the core fix.",
+		"decision": map[string]any{"what_changed": "The core fix ships to every client.", "why": "Every client asked for the core fix."}}
 	for _, c := range []struct {
 		user, method, path string
 		headers            map[string]string
@@ -255,12 +330,18 @@ func TestPermissionSuiteWrites(t *testing.T) {
 		{"citra", http.MethodPost, "/tickets/HRIS-2/comments", nil, map[string]any{"body": "Seen"}, 403},
 		{"budi", http.MethodPost, "/tickets/HRIS-2/comments", nil, map[string]any{"body": "Hi"}, 404},
 		{"citra", http.MethodDelete, fmt.Sprintf("/attachments/%d", w.fileB), nil, nil, 404},
+		{"budi", http.MethodPut, "/tickets/HRIS-2/decision", nil, decision, 404},
+		{"citra", http.MethodPut, "/tickets/HRIS-2/decision", nil, decision, 403},
+		{"ani", http.MethodPut, "/tickets/HRIS-2/decision", nil, decision, 403}, // neither project admin nor confirmer
+		{"citra", http.MethodPost, "/tickets/HRIS-4/transition", nil, closeCore, 403},
 		// Allowed, as controls: the suite must not pass by refusing everything.
 		{"hana", http.MethodPatch, node("Leave Request"), nil, map[string]any{"name": "Leave Requests"}, 200},
 		{"citra", http.MethodPatch, contact("Cahya"), nil, map[string]any{"name": "Cahya", "client_id": w.clients["C"].ID}, 200},
 		{"budi", http.MethodPost, "/projects/HRIS/tickets", nil, coreTicket, 201},
 		{"ani", http.MethodPost, "/tickets/HRIS-3/comments", nil, map[string]any{"body": "Checked"}, 201},
 		{"budi", http.MethodPost, "/tickets/HRIS-3/transition", nil, map[string]any{"status_id": w.inProgress}, 200},
+		{"hana", http.MethodPut, "/tickets/HRIS-2/decision", nil, decision, 200},
+		{"budi", http.MethodPost, "/tickets/HRIS-1/transition", nil, closeCore, 200},
 	} {
 		if code, _ := e.callWith(w.as[c.user], c.method, c.path, c.headers, c.body, nil); code != c.want {
 			t.Errorf("%s %s as %s: %d, want %d", c.method, c.path, c.user, code, c.want)
