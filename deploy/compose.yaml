@@ -30,6 +30,7 @@ services:
       DATABASE_URL: postgres://app:${DB_APP_PASSWORD}@db:5432/muasal?sslmode=disable
       MIGRATE_DATABASE_URL: postgres://owner:${DB_OWNER_PASSWORD}@db:5432/muasal?sslmode=disable
       PUBLIC_URL: ${PUBLIC_URL}
+      APP_SECRET_KEY: ${APP_SECRET_KEY:-} # seals AI API keys (BYOK); `openssl rand -base64 32`
     volumes: [attachments:/data/attachments]
     healthcheck:
       test: ["CMD", "/app", "healthcheck"]
@@ -54,6 +55,21 @@ services:
     networks: [app]
     restart: unless-stopped
 
+  # Optional local model server (FSD §3, §13.4): `docker compose --profile local-ai up -d`.
+  # It sits on the internal network, so models come from the offline bundle or a
+  # one-off pull (see the README); on macOS run Ollama natively instead, with
+  # compose.host-ai.yaml, so it can use the Apple GPU (§18.1).
+  model:
+    image: ollama/ollama:0.34.1
+    profiles: [local-ai]
+    environment:
+      OLLAMA_KEEP_ALIVE: "-1"
+      OLLAMA_MAX_LOADED_MODELS: "2"
+      OLLAMA_CONTEXT_LENGTH: "8192"
+    volumes: [models:/root/.ollama]
+    networks: [app]
+    restart: unless-stopped
+
 networks:
   edge: {}
   app: { internal: true } # no route to the internet
@@ -62,3 +78,4 @@ volumes:
   caddy_data: {}
   pgdata: {}
   attachments: {}
+  models: {}

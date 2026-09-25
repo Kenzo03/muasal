@@ -1,0 +1,14 @@
+# Reach a model server outside the stack (FSD §13.4, §18.1):
+#   - on the dev laptop, Ollama running natively on the Apple GPU at
+#     http://host.docker.internal:11434/v1;
+#   - a Bring-your-own-key provider on the internet.
+# The app joins an extra network with a route out; the database stays internal.
+#
+#   docker compose -f deploy/compose.yaml -f deploy/compose.host-ai.yaml --env-file deploy/.env up -d --build --wait
+services:
+  app:
+    networks: [app, egress]
+    extra_hosts: ["host.docker.internal:host-gateway"] # Linux; Docker Desktop already has it
+
+networks:
+  egress: {}
