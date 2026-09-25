@@ -53,6 +53,16 @@ const paths = {
       <path d="m5.5 8 1.8 1.8 3.2-3.6" />
     </>
   ),
+  grip: (
+    <>
+      <circle cx="6" cy="4" r=".9" />
+      <circle cx="10" cy="4" r=".9" />
+      <circle cx="6" cy="8" r=".9" />
+      <circle cx="10" cy="8" r=".9" />
+      <circle cx="6" cy="12" r=".9" />
+      <circle cx="10" cy="12" r=".9" />
+    </>
+  ),
   upload: <path d="M8 10.5V3M5 6l3-3 3 3M3 12.5h10" />,
   arrowRight: <path d="M3.5 8h9M9 4.5 12.5 8 9 11.5" />,
 } satisfies Record<string, React.ReactNode>;

@@ -231,7 +231,16 @@
     "showArchived": "Tampilkan arsip",
     "hideArchived": "Sembunyikan arsip",
     "archivedBadge": "Diarsipkan",
-    "openPage": "Buka halaman"
+    "openPage": "Buka halaman",
+    "dragHandle": "Seret {name}",
+    "dnd": {
+      "instructions": "Untuk memindahkan menu atau modul, tekan Spasi, geser dengan tombol panah, lalu tekan Spasi lagi untuk meletakkannya di atas, di bawah, atau di dalam yang lain. Escape membatalkan.",
+      "start": "{name} diambil.",
+      "over": "{name} berada di atas {target}.",
+      "none": "{name} tidak berada di atas menu atau modul.",
+      "end": "{name} diletakkan di {target}.",
+      "cancel": "Pemindahan dibatalkan."
+    }
   },
   "nodePage": {
     "path": "Jejak",

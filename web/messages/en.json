@@ -231,7 +231,16 @@
     "showArchived": "Show archived",
     "hideArchived": "Hide archived",
     "archivedBadge": "Archived",
-    "openPage": "Open page"
+    "openPage": "Open page",
+    "dragHandle": "Drag {name}",
+    "dnd": {
+      "instructions": "To move a menu or module, press Space, move it with the arrow keys, and press Space again to drop it above, below or inside another. Escape cancels.",
+      "start": "Picked up {name}.",
+      "over": "{name} is over {target}.",
+      "none": "{name} is not over a menu or module.",
+      "end": "Dropped {name} at {target}.",
+      "cancel": "Move cancelled."
+    }
   },
   "nodePage": {
     "path": "Path",
