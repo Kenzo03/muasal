@@ -47,6 +47,12 @@ const paths = {
       <path d="M8 6.5v3M8 11.3v.01" />
     </>
   ),
+  check: (
+    <>
+      <circle cx="8" cy="8" r="5.5" />
+      <path d="m5.5 8 1.8 1.8 3.2-3.6" />
+    </>
+  ),
   upload: <path d="M8 10.5V3M5 6l3-3 3 3M3 12.5h10" />,
   arrowRight: <path d="M3.5 8h9M9 4.5 12.5 8 9 11.5" />,
 } satisfies Record<string, React.ReactNode>;

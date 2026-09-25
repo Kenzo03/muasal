@@ -298,6 +298,7 @@
     "menuForOtherClients": "{menu} ditandai khusus untuk {clients}.",
     "reason": "Alasan",
     "reasonHint": "Mengapa ini diminta? Tiket perlu alasan sebelum dapat ditutup.",
+    "weakReason": "Jelaskan mengapa klien membutuhkannya, misalnya kebijakan mereka atau masalah yang diselesaikan",
     "type": "Jenis",
     "description": "Deskripsi",
     "more": "Lainnya",

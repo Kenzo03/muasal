@@ -298,6 +298,7 @@
     "menuForOtherClients": "{menu} is marked for {clients} only.",
     "reason": "Reason",
     "reasonHint": "Why was this requested? A ticket needs a reason before it can close.",
+    "weakReason": "Say why the client needs this, e.g. their policy or the problem it solves",
     "type": "Type",
     "description": "Description",
     "more": "More",
