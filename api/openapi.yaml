@@ -532,7 +532,12 @@ paths:
     post:
       operationId: transitionTicket
       tags: [tickets]
-      description: Members and project admins. Moves among open statuses; closing answers 422 close_unavailable until the close dialog ships.
+      description: >-
+        Members and project admins. Entering a Done or Cancelled status is a close: it needs a reason, at least one
+        menu and the decision record, else 422 close_validation_failed (FSD §9.1). Leaving one reopens the ticket and
+        turns its decision record back into a draft. A stale If-Match answers 412.
+      parameters:
+        - { name: If-Match, in: header, schema: { type: string, example: '"7"' } }
       requestBody:
         required: true
         content:
@@ -540,7 +545,7 @@ paths:
             schema: { $ref: "#/components/schemas/TransitionRequest" }
       responses:
         "200":
-          description: The ticket in its new status.
+          description: The ticket in its new status; ETag carries its version.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Ticket" }
@@ -1080,6 +1085,8 @@ components:
         version: { type: integer, format: int32 }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
+        closed_at: { type: string, format: date-time, nullable: true, description: Set on close, cleared on reopen. }
+        decision: { $ref: "#/components/schemas/DecisionRecord" }
     TicketCreate:
       type: object
       required: [type, title, node_ids]
@@ -1121,6 +1128,36 @@ components:
       required: [status_id]
       properties:
         status_id: { type: integer, format: int64 }
+        reason: { type: string, maxLength: 2000, description: A close only; replaces the ticket's reason. }
+        node_ids:
+          type: array
+          description: A close only; replaces the ticket's menus.
+          items: { type: integer, format: int64 }
+        decision: { $ref: "#/components/schemas/DecisionInput" }
+    DecisionInput:
+      type: object
+      required: [what_changed, why]
+      properties:
+        what_changed: { type: string, maxLength: 1000 }
+        why: { type: string, maxLength: 2000 }
+        alternatives: { type: string, maxLength: 2000 }
+    DecisionOutcome:
+      type: string
+      enum: [implemented, rejected]
+    DecisionState:
+      type: string
+      enum: [draft, confirmed]
+    DecisionRecord:
+      type: object
+      required: [what_changed, why, alternatives, outcome, state]
+      properties:
+        what_changed: { type: string }
+        why: { type: string }
+        alternatives: { type: string }
+        outcome: { $ref: "#/components/schemas/DecisionOutcome" }
+        state: { $ref: "#/components/schemas/DecisionState" }
+        confirmed_by: { $ref: "#/components/schemas/Ref" }
+        confirmed_at: { type: string, format: date-time }
     TicketSummary:
       type: object
       required: [id, key, title, type, priority, due_date, status_id, requester_name, node_names, missing_reason, updated_at]

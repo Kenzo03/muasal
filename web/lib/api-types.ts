@@ -397,7 +397,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Members and project admins. Moves among open statuses; closing answers 422 close_unavailable until the close dialog ships. */
+        /** @description Members and project admins. Entering a Done or Cancelled status is a close: it needs a reason, at least one menu and the decision record, else 422 close_validation_failed (FSD §9.1). Leaving one reopens the ticket and turns its decision record back into a draft. A stale If-Match answers 412. */
         post: operations["transitionTicket"];
         delete?: never;
         options?: never;
@@ -851,6 +851,12 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+            /**
+             * Format: date-time
+             * @description Set on close
+             */
+            closed_at?: string | null;
+            decision?: components["schemas"]["DecisionRecord"];
         };
         TicketCreate: {
             type: components["schemas"]["TicketType"];
@@ -909,6 +915,30 @@ export interface components {
         TransitionRequest: {
             /** Format: int64 */
             status_id: number;
+            /** @description A close only; replaces the ticket's reason. */
+            reason?: string;
+            /** @description A close only; replaces the ticket's menus. */
+            node_ids?: number[];
+            decision?: components["schemas"]["DecisionInput"];
+        };
+        DecisionInput: {
+            what_changed: string;
+            why: string;
+            alternatives?: string;
+        };
+        /** @enum {string} */
+        DecisionOutcome: "implemented" | "rejected";
+        /** @enum {string} */
+        DecisionState: "draft" | "confirmed";
+        DecisionRecord: {
+            what_changed: string;
+            why: string;
+            alternatives: string;
+            outcome: components["schemas"]["DecisionOutcome"];
+            state: components["schemas"]["DecisionState"];
+            confirmed_by?: components["schemas"]["Ref"];
+            /** Format: date-time */
+            confirmed_at?: string;
         };
         TicketSummary: {
             /** Format: int64 */
@@ -1837,7 +1867,9 @@ export interface operations {
     transitionTicket: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "If-Match"?: string;
+            };
             path: {
                 key: string;
             };
@@ -1849,7 +1881,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The ticket in its new status. */
+            /** @description The ticket in its new status; ETag carries its version. */
             200: {
                 headers: {
                     [name: string]: unknown;

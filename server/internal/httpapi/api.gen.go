@@ -33,6 +33,42 @@ func (e ActivityItemKind) Valid() bool {
 	}
 }
 
+// Defines values for DecisionOutcome.
+const (
+	DecisionOutcomeImplemented DecisionOutcome = "implemented"
+	DecisionOutcomeRejected    DecisionOutcome = "rejected"
+)
+
+// Valid indicates whether the value is a known member of the DecisionOutcome enum.
+func (e DecisionOutcome) Valid() bool {
+	switch e {
+	case DecisionOutcomeImplemented:
+		return true
+	case DecisionOutcomeRejected:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DecisionState.
+const (
+	DecisionStateConfirmed DecisionState = "confirmed"
+	DecisionStateDraft     DecisionState = "draft"
+)
+
+// Valid indicates whether the value is a known member of the DecisionState enum.
+func (e DecisionState) Valid() bool {
+	switch e {
+	case DecisionStateConfirmed:
+		return true
+	case DecisionStateDraft:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Locale.
 const (
 	LocaleEn Locale = "en"
@@ -333,6 +369,30 @@ type CreatedUser struct {
 	User      User      `json:"user"`
 }
 
+// DecisionInput defines model for DecisionInput.
+type DecisionInput struct {
+	Alternatives *string `json:"alternatives,omitempty"`
+	WhatChanged  string  `json:"what_changed"`
+	Why          string  `json:"why"`
+}
+
+// DecisionOutcome defines model for DecisionOutcome.
+type DecisionOutcome string
+
+// DecisionRecord defines model for DecisionRecord.
+type DecisionRecord struct {
+	Alternatives string          `json:"alternatives"`
+	ConfirmedAt  *time.Time      `json:"confirmed_at,omitempty"`
+	ConfirmedBy  *Ref            `json:"confirmed_by,omitempty"`
+	Outcome      DecisionOutcome `json:"outcome"`
+	State        DecisionState   `json:"state"`
+	WhatChanged  string          `json:"what_changed"`
+	Why          string          `json:"why"`
+}
+
+// DecisionState defines model for DecisionState.
+type DecisionState string
+
 // FieldError defines model for FieldError.
 type FieldError struct {
 	Code    string `json:"code"`
@@ -596,10 +656,14 @@ type StatusesUpdate struct {
 
 // Ticket defines model for Ticket.
 type Ticket struct {
-	Assignee    *Ref                `json:"assignee,omitempty"`
-	Attachments []Attachment        `json:"attachments"`
-	Client      *Ref                `json:"client,omitempty"`
+	Assignee    *Ref         `json:"assignee,omitempty"`
+	Attachments []Attachment `json:"attachments"`
+	Client      *Ref         `json:"client,omitempty"`
+
+	// ClosedAt Set on close
+	ClosedAt    *time.Time          `json:"closed_at,omitempty"`
 	CreatedAt   time.Time           `json:"created_at"`
+	Decision    *DecisionRecord     `json:"decision,omitempty"`
 	Description string              `json:"description"`
 	DueDate     *openapi_types.Date `json:"due_date"`
 	Id          int64               `json:"id"`
@@ -701,7 +765,14 @@ type TicketUpdate struct {
 
 // TransitionRequest defines model for TransitionRequest.
 type TransitionRequest struct {
-	StatusId int64 `json:"status_id"`
+	Decision *DecisionInput `json:"decision,omitempty"`
+
+	// NodeIds A close only; replaces the ticket's menus.
+	NodeIds *[]int64 `json:"node_ids,omitempty"`
+
+	// Reason A close only; replaces the ticket's reason.
+	Reason   *string `json:"reason,omitempty"`
+	StatusId int64   `json:"status_id"`
 }
 
 // User defines model for User.
@@ -800,6 +871,11 @@ type UpdateTicketParams struct {
 // UploadAttachmentMultipartBody defines parameters for UploadAttachment.
 type UploadAttachmentMultipartBody struct {
 	File openapi_types.File `json:"file"`
+}
+
+// TransitionTicketParams defines parameters for TransitionTicket.
+type TransitionTicketParams struct {
+	IfMatch *string `json:"If-Match,omitempty"`
 }
 
 // CreateUserJSONRequestBody defines body for CreateUser for application/json ContentType.
@@ -995,7 +1071,7 @@ type ServerInterface interface {
 	CreateComment(w http.ResponseWriter, r *http.Request, key string)
 
 	// (POST /tickets/{key}/transition)
-	TransitionTicket(w http.ResponseWriter, r *http.Request, key string)
+	TransitionTicket(w http.ResponseWriter, r *http.Request, key string, params TransitionTicketParams)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -2206,8 +2282,32 @@ func (siw *ServerInterfaceWrapper) TransitionTicket(w http.ResponseWriter, r *ht
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params TransitionTicketParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.TransitionTicket(w, r, key)
+		siw.Handler.TransitionTicket(w, r, key, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
