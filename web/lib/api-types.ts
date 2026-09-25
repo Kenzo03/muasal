@@ -405,6 +405,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tickets/{key}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /** @description Project admins and the confirmer reword a confirmed decision record (R-DC-5); every edit is audited. A ticket without a confirmed record answers 409 decision_not_confirmed. */
+        put: operations["updateDecision"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tickets/{key}/activity": {
         parameters: {
             query?: never;
@@ -1749,6 +1768,8 @@ export interface operations {
                 category?: components["schemas"]["StatusCategory"];
                 /** @description Only To do and In progress statuses. */
                 open?: boolean;
+                /** @description Closed tickets only when closed within this many days; the board asks for 14. */
+                closed_days?: number;
                 type?: components["schemas"]["TicketType"];
                 client_id?: number;
                 /** @description Only core work (no client). */
@@ -1888,6 +1909,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Ticket"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateDecision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecisionInput"];
+            };
+        };
+        responses: {
+            /** @description The record as saved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DecisionRecord"];
                 };
             };
             default: components["responses"]["Problem"];

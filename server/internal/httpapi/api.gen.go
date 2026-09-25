@@ -835,9 +835,12 @@ type ListTicketsParams struct {
 	Category *StatusCategory `form:"category,omitempty" json:"category,omitempty"`
 
 	// Open Only To do and In progress statuses.
-	Open     *bool       `form:"open,omitempty" json:"open,omitempty"`
-	Type     *TicketType `form:"type,omitempty" json:"type,omitempty"`
-	ClientId *int64      `form:"client_id,omitempty" json:"client_id,omitempty"`
+	Open *bool `form:"open,omitempty" json:"open,omitempty"`
+
+	// ClosedDays Closed tickets only when closed within this many days; the board asks for 14.
+	ClosedDays *int32      `form:"closed_days,omitempty" json:"closed_days,omitempty"`
+	Type       *TicketType `form:"type,omitempty" json:"type,omitempty"`
+	ClientId   *int64      `form:"client_id,omitempty" json:"client_id,omitempty"`
 
 	// Core Only core work (no client).
 	Core       *bool  `form:"core,omitempty" json:"core,omitempty"`
@@ -940,6 +943,9 @@ type UploadAttachmentMultipartRequestBody UploadAttachmentMultipartBody
 
 // CreateCommentJSONRequestBody defines body for CreateComment for application/json ContentType.
 type CreateCommentJSONRequestBody = CommentInput
+
+// UpdateDecisionJSONRequestBody defines body for UpdateDecision for application/json ContentType.
+type UpdateDecisionJSONRequestBody = DecisionInput
 
 // TransitionTicketJSONRequestBody defines body for TransitionTicket for application/json ContentType.
 type TransitionTicketJSONRequestBody = TransitionRequest
@@ -1069,6 +1075,9 @@ type ServerInterface interface {
 
 	// (POST /tickets/{key}/comments)
 	CreateComment(w http.ResponseWriter, r *http.Request, key string)
+
+	// (PUT /tickets/{key}/decision)
+	UpdateDecision(w http.ResponseWriter, r *http.Request, key string)
 
 	// (POST /tickets/{key}/transition)
 	TransitionTicket(w http.ResponseWriter, r *http.Request, key string, params TransitionTicketParams)
@@ -1929,6 +1938,19 @@ func (siw *ServerInterfaceWrapper) ListTickets(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	// ------------- Optional query parameter "closed_days" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "closed_days", r.URL.Query(), &params.ClosedDays, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "closed_days"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "closed_days", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "type" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "type", r.URL.Query(), &params.Type, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -2267,6 +2289,32 @@ func (siw *ServerInterfaceWrapper) CreateComment(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// UpdateDecision operation middleware
+func (siw *ServerInterfaceWrapper) UpdateDecision(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateDecision(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // TransitionTicket operation middleware
 func (siw *ServerInterfaceWrapper) TransitionTicket(w http.ResponseWriter, r *http.Request) {
 
@@ -2472,6 +2520,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/tickets/{key}", wrapper.GetTicket)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/tickets/{key}", wrapper.UpdateTicket)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/transition", wrapper.TransitionTicket)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/tickets/{key}/decision", wrapper.UpdateDecision)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/tickets/{key}/activity", wrapper.GetTicketActivity)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/comments", wrapper.CreateComment)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/comments/{id}", wrapper.DeleteComment)

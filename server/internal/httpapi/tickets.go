@@ -142,6 +142,10 @@ func (s *Server) UpdateTicket(w http.ResponseWriter, r *http.Request, key string
 	if in.RequesterContactId == nil && in.RequesterUserId == nil {
 		fields = append(fields, FieldError{Field: "requester_contact_id", Code: "required", Message: "Say who asked for this"})
 	}
+	// TK-3 holds after the close: a closed ticket keeps a reason and a menu (FSD §9.1).
+	if closedCategory(row.Status.Category) {
+		fields = append(fields, closeFieldErrors(draft.Reason, len(nodeIDs))...)
+	}
 	if len(fields) > 0 {
 		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields", fields...)
 		return

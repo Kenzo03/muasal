@@ -37,6 +37,7 @@ func (s *Server) ListTickets(w http.ResponseWriter, r *http.Request, key string,
 		AssigneeID: params.AssigneeId, Q: strings.TrimSpace(deref(params.Q)), Sort: "updated",
 		MissingReason: params.Missing != nil && *params.Missing == ListTicketsParamsMissingReason,
 		MissingMenus:  params.Missing != nil && *params.Missing == ListTicketsParamsMissingMenus,
+		ClosedDays:    params.ClosedDays,
 		Lim:           int32(limit + 1), Off: int32(offset),
 	}
 	if params.Category != nil {

@@ -3,11 +3,13 @@ package httpapi
 import (
 	"context"
 	"errors"
+	"net/http"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/kenzo03/muasal/server/internal/access"
 	"github.com/kenzo03/muasal/server/internal/db"
 )
 
@@ -90,4 +92,57 @@ func decisionAudit(d *DecisionRecord) map[string]any {
 		m["confirmed_by"] = d.ConfirmedBy.Name
 	}
 	return m
+}
+
+// UpdateDecision rewords a confirmed decision record. Project admins and the
+// confirmer may; every edit keeps the old words in the ticket's history (R-DC-5).
+func (s *Server) UpdateDecision(w http.ResponseWriter, r *http.Request, key string) {
+	pc, row, ok := s.ticketFor(w, r, key, access.Member)
+	if !ok {
+		return
+	}
+	var in DecisionInput
+	if !decodeJSON(w, r, &in) {
+		return
+	}
+	ctx := r.Context()
+	before, err := decisionOf(ctx, s.q, row.Ticket.ID)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	if before == nil || before.State != DecisionStateConfirmed {
+		writeProblem(w, http.StatusConflict, "decision_not_confirmed", "Close the ticket to confirm its decision record first")
+		return
+	}
+	if !pc.scope.Allows(access.Admin) && (before.ConfirmedBy == nil || before.ConfirmedBy.Id != pc.user.ID) {
+		writeProblem(w, http.StatusForbidden, "forbidden", "Only project admins and the confirmer edit a decision record")
+		return
+	}
+	text, fields := checkDecision("", &in)
+	if len(fields) > 0 {
+		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields", fields...)
+		return
+	}
+	var out *DecisionRecord
+	err = s.inTx(ctx, func(q *db.Queries) error {
+		if err := q.UpdateDecision(ctx, db.UpdateDecisionParams{
+			TicketID: row.Ticket.ID, WhatChanged: text.WhatChanged, Why: text.Why, Alternatives: text.Alternatives,
+		}); err != nil {
+			return err
+		}
+		var err error
+		if out, err = decisionOf(ctx, q, row.Ticket.ID); err != nil {
+			return err
+		}
+		if d := changed(decisionAudit(before), decisionAudit(out)); len(d) > 0 {
+			return audit(ctx, q, webMeta(r).inProject(pc.project.ID), &pc.user.ID, "ticket", row.Ticket.ID, "decision_edit", d)
+		}
+		return nil
+	})
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, out)
 }

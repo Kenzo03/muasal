@@ -461,6 +461,7 @@ paths:
         - { name: status_id, in: query, schema: { type: integer, format: int64 } }
         - { name: category, in: query, schema: { $ref: "#/components/schemas/StatusCategory" } }
         - { name: open, in: query, schema: { type: boolean }, description: Only To do and In progress statuses. }
+        - { name: closed_days, in: query, schema: { type: integer, format: int32, minimum: 1 }, description: Closed tickets only when closed within this many days; the board asks for 14. }
         - { name: type, in: query, schema: { $ref: "#/components/schemas/TicketType" } }
         - { name: client_id, in: query, schema: { type: integer, format: int64 } }
         - { name: core, in: query, schema: { type: boolean }, description: Only core work (no client). }
@@ -549,6 +550,27 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Ticket" }
+        default: { $ref: "#/components/responses/Problem" }
+  /tickets/{key}/decision:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    put:
+      operationId: updateDecision
+      tags: [tickets]
+      description: >-
+        Project admins and the confirmer reword a confirmed decision record (R-DC-5); every edit is audited.
+        A ticket without a confirmed record answers 409 decision_not_confirmed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DecisionInput" }
+      responses:
+        "200":
+          description: The record as saved.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DecisionRecord" }
         default: { $ref: "#/components/responses/Problem" }
   /tickets/{key}/activity:
     parameters:

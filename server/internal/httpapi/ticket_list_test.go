@@ -108,3 +108,32 @@ func TestTicketListPagesByCursor(t *testing.T) {
 		t.Fatalf("bad cursor: %d", code)
 	}
 }
+
+// FSD §8.4: the board asks only for tickets closed in the last 14 days.
+func TestTicketListCanLeaveOutOldCloses(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	ctx := context.Background()
+	done := statusID(e, w.pm, "Done")
+	old := e.seedTicket(w.p, w.pmUser, "Closed long ago", &w.a, w.ot)
+	recent := e.seedTicket(w.p, w.pmUser, "Closed yesterday", &w.a, w.ot)
+	open := e.seedTicket(w.p, w.pmUser, "Still open", &w.a, w.ot)
+	for _, tk := range []db.Ticket{old, recent} {
+		if _, err := e.q.SetTicketStatus(ctx, db.SetTicketStatusParams{ID: tk.ID, StatusID: done, Closed: true}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := e.d.Pool.Exec(ctx, "UPDATE tickets SET closed_at = now() - interval '20 days' WHERE id = $1", old.ID); err != nil {
+		t.Fatal(err)
+	}
+	for query, want := range map[string][]string{
+		"?sort=key":                {old.Key, recent.Key, open.Key},
+		"?sort=key&closed_days=14": {recent.Key, open.Key},
+	} {
+		var page httpapi.TicketPage
+		e.call(w.pm, http.MethodGet, "/projects/HRIS/tickets"+query, nil, &page)
+		if got := ticketKeys(page); !slices.Equal(got, want) {
+			t.Errorf("%s: %v, want %v", query, got, want)
+		}
+	}
+}
