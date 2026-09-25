@@ -68,7 +68,7 @@ func Build(src Source) []db.UpsertChunkParams {
 		}
 		b.WriteString("Menus: " + strings.Join(paths, "; ") + "\n")
 	}
-	b.WriteString("Requested by: " + requester(t) + "\n")
+	b.WriteString("Requested by: " + Requester(t) + "\n")
 	if s := strings.TrimSpace(t.Reason); s != "" {
 		b.WriteString("Reason: " + s + "\n")
 	}
@@ -120,8 +120,8 @@ func contextLine(src Source) string {
 	return strings.Join(parts, " · ")
 }
 
-// requester is "Budi (HR Manager, Client A)" for a contact, or the user's name.
-func requester(t db.GetTicketSourceRow) string {
+// Requester is "Budi (HR Manager, Client A)" for a contact, or the user's name.
+func Requester(t db.GetTicketSourceRow) string {
 	if t.ContactName == nil {
 		return deref(t.RequesterUserName)
 	}

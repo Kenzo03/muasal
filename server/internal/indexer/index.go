@@ -78,7 +78,7 @@ func (ix *Indexer) Rebuild(ctx context.Context, ticketID int64) error {
 	if err := q.LockTicketIndex(ctx, ticketID); err != nil {
 		return err
 	}
-	src, err := load(ctx, q, ticketID)
+	src, err := Load(ctx, q, ticketID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		if err := q.DeleteTicketChunks(ctx, ticketID); err != nil {
 			return err
@@ -102,7 +102,8 @@ func (ix *Indexer) Rebuild(ctx context.Context, ticketID int64) error {
 	return tx.Commit(ctx)
 }
 
-func load(ctx context.Context, q *db.Queries, ticketID int64) (Source, error) {
+// Load reads a ticket as its chunks describe it; Ask packs evidence from it too.
+func Load(ctx context.Context, q *db.Queries, ticketID int64) (Source, error) {
 	t, err := q.GetTicketSource(ctx, ticketID)
 	if err != nil {
 		return Source{}, err
