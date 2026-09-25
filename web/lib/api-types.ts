@@ -322,6 +322,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{key}/nodes/recent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description The menus and modules of the caller's own latest tickets in the project, most recent first, at most 8, for "recently used first" in the menu picker (FSD §8.1). Only live nodes the caller sees. */
+        get: operations["listRecentNodes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/nodes/{id}": {
         parameters: {
             query?: never;
@@ -1205,6 +1224,9 @@ export interface components {
         RecentTicketList: {
             items: components["schemas"]["RecentTicket"][];
         };
+        RecentNodes: {
+            node_ids: number[];
+        };
     };
     responses: {
         /** @description An error, as RFC 9457 problem details. */
@@ -1874,6 +1896,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Node"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listRecentNodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Node ids, most recent first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecentNodes"];
                 };
             };
             default: components["responses"]["Problem"];

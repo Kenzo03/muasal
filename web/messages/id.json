@@ -411,7 +411,9 @@
     "reload": "Muat ulang",
     "descriptionHint": "Mendukung Markdown. Tempel gambar untuk melampirkannya ke tiket.",
     "descriptionHintNew": "Mendukung Markdown. Gambar bisa ditempel setelah tiket dibuat.",
-    "pasteAfterCreate": "Buat tiketnya dulu, lalu tempel gambar di deskripsi atau komentar."
+    "pasteAfterCreate": "Buat tiketnya dulu, lalu tempel gambar di deskripsi atau komentar.",
+    "recent": "Terakhir",
+    "bugBehaviors": "Bug, atau memang perilaku yang sudah disepakati? Lihat perilaku"
   },
   "ticket": {
     "edit": "Ubah",

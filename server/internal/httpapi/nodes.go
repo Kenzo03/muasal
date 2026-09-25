@@ -403,3 +403,20 @@ func nodeAudit(n db.Node, clients []db.ListNodeClientsRow) map[string]any {
 		"archived": n.ArchivedAt != nil,
 	}
 }
+
+// ListRecentNodes lists the nodes of the caller's own latest tickets, so the
+// menu picker can put them first (FSD §8.1).
+func (s *Server) ListRecentNodes(w http.ResponseWriter, r *http.Request, key string) {
+	pc, ok := s.projectFor(w, r, key, access.Viewer)
+	if !ok {
+		return
+	}
+	ids, err := s.q.ListRecentNodes(r.Context(), db.ListRecentNodesParams{
+		ProjectID: pc.project.ID, AllClients: pc.scope.AllClients, ClientIds: orEmpty(pc.scope.ClientIDs), ReporterID: pc.user.ID,
+	})
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, RecentNodes{NodeIds: orEmpty(ids)})
+}

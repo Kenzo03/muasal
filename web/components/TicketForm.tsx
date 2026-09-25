@@ -60,8 +60,14 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [newTitle, setNewTitle] = useState("");
-const [nodeIds, setNodeIds] = useState<Set<number>>(() => new Set(ticket ? ticket.nodes.map((n) => n.id) : nodeId ? [nodeId] : []));
-const [reason, setReason] = useState(ticket?.reason ?? "");
+  const [nodeIds, setNodeIds] = useState<Set<number>>(() => new Set(ticket ? ticket.nodes.map((n) => n.id) : nodeId ? [nodeId] : []));
+  const [recent, setRecent] = useState<number[]>([]);
+  useEffect(() => {
+    // Recently used menus first (§8.1); the picker works without them.
+    api.GET("/projects/{key}/nodes/recent", { params: { path: { key: projectKey } } }).then(({ data }) => setRecent(data?.node_ids ?? []));
+  }, [projectKey]);
+  const [reason, setReason] = useState(ticket?.reason ?? "");
+  const [type, setType] = useState<TicketType>(ticket?.type ?? "change_request");
   const [error, setError] = useState("");
   const [stale, setStale] = useState(false);
   const [notice, setNotice] = useState("");
@@ -243,7 +249,7 @@ const [reason, setReason] = useState(ticket?.reason ?? "");
           <input id="tf-title" name="title" defaultValue={ticket?.title} required minLength={5} maxLength={200} className={field.input} />
         </Row>
         <Row label={t("menus")} id="tf-menus">
-          <NodePicker nodes={nodes} selected={nodeIds} onToggle={toggleNode} legend={t("menus")} />
+          <NodePicker nodes={nodes} selected={nodeIds} onToggle={toggleNode} legend={t("menus")} recent={recent} />
           <p className={field.hint}>{t("menusHint")}</p>
           {warnings.map((n) => (
             <p key={n.id} className="flex items-center gap-1.5 text-xs text-warn">
@@ -268,7 +274,7 @@ const [reason, setReason] = useState(ticket?.reason ?? "");
           </p>
         </Row>
         <Row label={t("type")} id="tf-type">
-          <div role="radiogroup" aria-labelledby="tf-type" className="flex flex-wrap">
+          <div role="radiogroup" aria-labelledby="tf-type" className="flex flex-wrap" onChange={(e) => setType((e.target as HTMLInputElement).value as TicketType)}>
             {types.map((ty, i) => (
               <label
                 key={ty}
@@ -283,6 +289,20 @@ const [reason, setReason] = useState(ticket?.reason ?? "");
               </label>
             ))}
           </div>
+          {type === "bug" && nodeIds.size > 0 && (
+            // A "bug" may be the agreed behavior for this client: the menu's Behaviors tab says (§7.4, story 5).
+            <p className={field.hint}>
+              {t("bugBehaviors")}{" "}
+              {nodes
+                .filter((n) => nodeIds.has(n.id))
+                .map((n, i) => (
+                  <span key={n.id}>
+                    {i > 0 && ", "}
+                    <a href={`/p/${projectKey}/modules/${n.id}?tab=behaviors`} target="_blank" rel="noopener">{n.name}</a>
+                  </span>
+                ))}
+            </p>
+          )}
         </Row>
         <Row label={t("description")} htmlFor="tf-description">
           <textarea

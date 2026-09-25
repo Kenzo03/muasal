@@ -411,7 +411,9 @@
     "reload": "Reload",
     "descriptionHint": "Markdown works. Paste an image to attach it to the ticket.",
     "descriptionHintNew": "Markdown works. Images can be pasted once the ticket exists.",
-    "pasteAfterCreate": "Create the ticket first; then paste the image into its description or a comment."
+    "pasteAfterCreate": "Create the ticket first; then paste the image into its description or a comment.",
+    "recent": "Recent",
+    "bugBehaviors": "Is it a bug, or how the menu was agreed to work? See the behaviors of"
   },
   "ticket": {
     "edit": "Edit",

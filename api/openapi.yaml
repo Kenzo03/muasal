@@ -412,6 +412,22 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Node" }
         default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/nodes/recent:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listRecentNodes
+      tags: [nodes]
+      description: >-
+        The menus and modules of the caller's own latest tickets in the project, most recent first, at most 8, for
+        "recently used first" in the menu picker (FSD §8.1). Only live nodes the caller sees.
+      responses:
+        "200":
+          description: Node ids, most recent first.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecentNodes" }
+        default: { $ref: "#/components/responses/Problem" }
   /nodes/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
@@ -1484,3 +1500,10 @@ components:
         items:
           type: array
           items: { $ref: "#/components/schemas/RecentTicket" }
+    RecentNodes:
+      type: object
+      required: [node_ids]
+      properties:
+        node_ids:
+          type: array
+          items: { type: integer, format: int64 }

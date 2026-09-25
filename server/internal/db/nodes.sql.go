@@ -305,6 +305,67 @@ func (q *Queries) ListNodes(ctx context.Context, arg ListNodesParams) ([]ListNod
 	return items, nil
 }
 
+const listRecentNodes = `-- name: ListRecentNodes :many
+WITH RECURSIVE visible AS (
+  SELECT n.id FROM nodes n
+  WHERE n.project_id = $1 AND n.parent_id IS NULL AND n.archived_at IS NULL
+    AND (NOT n.client_specific OR $3::boolean
+         OR EXISTS (SELECT 1 FROM node_clients nc
+                    WHERE nc.node_id = n.id AND nc.client_id = ANY ($4::bigint[])))
+  UNION
+  SELECT n.id FROM nodes n
+  JOIN visible v ON n.parent_id = v.id
+  WHERE n.archived_at IS NULL
+    AND (NOT n.client_specific OR $3::boolean
+         OR EXISTS (SELECT 1 FROM node_clients nc
+                    WHERE nc.node_id = n.id AND nc.client_id = ANY ($4::bigint[])))
+)
+SELECT tn.node_id
+FROM ticket_nodes tn
+JOIN tickets t ON t.id = tn.ticket_id
+JOIN visible v ON v.id = tn.node_id
+WHERE t.project_id = $1 AND t.reporter_id = $2
+GROUP BY tn.node_id
+ORDER BY max(t.created_at) DESC, tn.node_id DESC
+LIMIT 8
+`
+
+type ListRecentNodesParams struct {
+	ProjectID  int64
+	ReporterID int64
+	AllClients bool
+	ClientIds  []int64
+}
+
+// The live menus and modules of the user's own latest tickets in the project,
+// most recent first, for "recently used first" in the menu picker (FSD §8.1).
+// Same visibility as ListNodes: a client-specific node, or anything under one,
+// needs one of its clients in scope (R-AC-5).
+func (q *Queries) ListRecentNodes(ctx context.Context, arg ListRecentNodesParams) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listRecentNodes,
+		arg.ProjectID,
+		arg.ReporterID,
+		arg.AllClients,
+		arg.ClientIds,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var node_id int64
+		if err := rows.Scan(&node_id); err != nil {
+			return nil, err
+		}
+		items = append(items, node_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSiblingIDs = `-- name: ListSiblingIDs :many
 SELECT id FROM nodes
 WHERE project_id = $1
