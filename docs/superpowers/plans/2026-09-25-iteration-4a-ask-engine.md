@@ -49,6 +49,7 @@ Iteration 4 is split in two (decided 25 Sep 2026). This plan, 4a, is the AI back
 - **Rate limit:** Ask 10 per minute per user (§17.1).
 - **Logs:** carry IDs, never ticket text or questions; question text lives only in `ask_queries` (§18.2).
 - **UI strings:** every string ships in Indonesian (default) and English.
+- **AI is the installer's choice:** Muasal runs fully without a model. Whoever installs it picks, in Admin → AI, either a local model server they run (Ollama or vLLM) or their own cloud key (BYOK); nothing assumes a model is present. Tickets, search, node pages and Home never depend on AI.
 
 ## Deliberate Deviations from the FSD
 
@@ -66,6 +67,7 @@ Iteration 4 is split in two (decided 25 Sep 2026). This plan, 4a, is the AI back
 - Scope detection matches people by user and contact names after a cue word, as specified. Date phrases cover the §11.2 list in both languages; other phrasings are left to the explicit date chip.
 - Language detection counts common Indonesian and English words, as specified; no model call.
 - The relevance floor `ask.min_similarity` starts at 0.45 and is tuned by the exit-check run; the chosen value goes into the tier presets.
+- A fresh install starts in **Off** mode instead of Local (§13.4 table), because the model is the installer's choice (25 Sep 2026). The installer or the admin switches to Local or BYOK; chunks written while Off get their vectors afterwards (R-AI-5).
 - `/readyz` does not check the model server, so the stack stays healthy while Ollama is down (AC-IX-2). Index status and Test connection report the model server instead.
 - An embedding-model change clears vectors, changes the column dimension and rebuilds the HNSW index in one migration-like step run by a job, as §13.4 describes; the shadow-table upgrade stays a later option.
 
@@ -119,7 +121,7 @@ Each task below lists its files and interfaces. Its steps (failing test, run, im
 ### Task 3: Secrets and AI settings
 - `internal/config`: `APP_SECRET_KEY` (32 bytes, base64), optional; BYOK and remote keys need it.
 - `internal/secret`: `Seal(key, plaintext) ([]byte, error)`, `Open(key, sealed) ([]byte, error)`.
-- `internal/aisettings`: `Settings{Mode; Chat, Embed Endpoint{URL, Model, APIKeySealed}; Provider; Acknowledged; ContextTokens, MaxConcurrent, Temperature, TimeoutSeconds, MinSimilarity, ExhaustiveMax; EmbedDim}`, `Defaults()` for the dev-laptop tier, `Validate`, and `Store.Get(ctx)` with a 5-second cache.
+- `internal/aisettings`: `Settings{Mode; Chat, Embed Endpoint{URL, Model, APIKeySealed}; Provider; Acknowledged; ContextTokens, MaxConcurrent, Temperature, TimeoutSeconds, MinSimilarity, ExhaustiveMax; EmbedDim}`, `Defaults()` with mode Off and the dev-laptop tier's presets ready for Local, `Validate`, and `Store.Get(ctx)` with a 5-second cache.
 - Test: defaults, validation, sealing round trip, cache expiry.
 
 ### Task 4: The `llm` client
@@ -185,5 +187,5 @@ Each task below lists its files and interfaces. Its steps (failing test, run, im
 
 ### Task 17: Deploy and the exit check
 - `deploy/compose.yaml`: `APP_SECRET_KEY`; a `model` service (Ollama) under the `local-ai` profile on the internal network. `deploy/compose.host-ai.yaml`: `host.docker.internal` for the laptop and an egress network for BYOK.
-- On the laptop: `ollama pull qwen3.5:4b bge-m3`, the stack with the override, Admin → AI set to Local, then `docker compose exec app /app eval --seed … --set …`. Expected: citation precision ≥ 90%, recall@12 ≥ 85%, abstention 100%; median latency is recorded (the laptop is expected to miss 15 s, §18.1).
+- On the dev laptop, with the Ollama already installed there (`qwen3.5:4b` and `bge-m3` pulled on 23 Sep 2026, served with `OLLAMA_CONTEXT_LENGTH=8192 OLLAMA_KEEP_ALIVE=-1 ollama serve`): start the stack with the override, set Admin → AI to Local with `http://host.docker.internal:11434/v1`, chat `qwen3.5:4b`, embeddings `bge-m3`, then `docker compose exec app /app eval --seed … --set …`. Expected: citation precision ≥ 90%, recall@12 ≥ 85%, abstention 100%; median latency is recorded (the laptop is expected to miss 15 s, §18.1).
 - Update FSD §21: the Iteration 4 row names `qwen3.5:4b` on the dev laptop for the exit check, and Progress records 4a.
