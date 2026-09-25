@@ -774,6 +774,57 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/SearchResults" }
         default: { $ref: "#/components/responses/Problem" }
+  /admin/settings/ai:
+    get:
+      operationId: getAISettings
+      tags: [admin]
+      description: System admins. AI mode, endpoints, models and tuning (FSD §13.4). API keys are never returned, only whether one is saved.
+      responses:
+        "200":
+          description: The current settings.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AISettings" }
+        default: { $ref: "#/components/responses/Problem" }
+    put:
+      operationId: updateAISettings
+      tags: [admin]
+      description: >-
+        System admins. Bring your own key needs a provider, a key and the acknowledgement that questions and ticket
+        excerpts go to that provider, else 422 with byok_not_acknowledged (R-AI-1); nothing is sent to the provider.
+        A key needs APP_SECRET_KEY on the server. Every save is audited, keys never.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AISettingsUpdate" }
+      responses:
+        "200":
+          description: The saved settings.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AISettings" }
+        default: { $ref: "#/components/responses/Problem" }
+  /admin/ai/test:
+    post:
+      operationId: testAI
+      tags: [admin]
+      description: >-
+        System admins. Tries the given settings without saving them: lists the chat server's models, runs a
+        one-sentence chat and one embedding, and reports latencies and the embedding dimension (§13.4). Keys left out
+        come from the saved settings. BYOK without the acknowledgement answers 422 and calls nothing.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AISettingsUpdate" }
+      responses:
+        "200":
+          description: One probe per endpoint; a failed probe carries its error.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AITestResult" }
+        default: { $ref: "#/components/responses/Problem" }
 components:
   responses:
     Problem:
@@ -1484,3 +1535,70 @@ components:
         items:
           type: array
           items: { $ref: "#/components/schemas/RecentTicket" }
+    AIMode:
+      type: string
+      enum: [off, local, byok]
+    AIEndpoint:
+      type: object
+      required: [url, model, api_key_set]
+      properties:
+        url: { type: string, example: "http://model:11434/v1" }
+        model: { type: string, example: "qwen3.5:4b" }
+        api_key_set: { type: boolean }
+    AIEndpointUpdate:
+      type: object
+      required: [url, model]
+      properties:
+        url: { type: string, maxLength: 500 }
+        model: { type: string, maxLength: 200 }
+        api_key: { type: string, maxLength: 500, description: Omitted keeps the saved key; an empty string removes it. }
+    AITuning:
+      type: object
+      required: [context_tokens, max_concurrent, temperature, timeout_seconds, min_similarity, exhaustive_max]
+      properties:
+        context_tokens: { type: integer, description: Evidence budget in tokens. }
+        max_concurrent: { type: integer, description: Answers generated at once. }
+        temperature: { type: number, format: double }
+        timeout_seconds: { type: integer }
+        min_similarity: { type: number, format: double, description: Relevance floor for vector-only evidence. }
+        exhaustive_max: { type: integer, description: At most this many matching items skip ranking. }
+    AISettings:
+      type: object
+      required: [mode, provider, acknowledged, chat, embed, embed_dim, tuning, badge, secret_key_set]
+      properties:
+        mode: { $ref: "#/components/schemas/AIMode" }
+        provider: { type: string, description: The BYOK provider's name. }
+        acknowledged: { type: boolean, description: R-AI-1 }
+        chat: { $ref: "#/components/schemas/AIEndpoint" }
+        embed: { $ref: "#/components/schemas/AIEndpoint" }
+        embed_dim: { type: integer }
+        tuning: { $ref: "#/components/schemas/AITuning" }
+        badge: { type: string, example: "Local · qwen3.5:4b" }
+        secret_key_set: { type: boolean, description: Whether APP_SECRET_KEY is set, which API keys need. }
+    AISettingsUpdate:
+      type: object
+      required: [mode, chat, embed, tuning]
+      properties:
+        mode: { $ref: "#/components/schemas/AIMode" }
+        provider: { type: string, maxLength: 100 }
+        acknowledged: { type: boolean }
+        chat: { $ref: "#/components/schemas/AIEndpointUpdate" }
+        embed: { $ref: "#/components/schemas/AIEndpointUpdate" }
+        tuning: { $ref: "#/components/schemas/AITuning" }
+    AIProbe:
+      type: object
+      required: [ok, latency_ms]
+      properties:
+        ok: { type: boolean }
+        latency_ms: { type: integer }
+        error: { type: string }
+        models:
+          type: array
+          items: { type: string }
+        dim: { type: integer, description: The embedding's dimension. }
+    AITestResult:
+      type: object
+      required: [chat, embed]
+      properties:
+        chat: { $ref: "#/components/schemas/AIProbe" }
+        embed: { $ref: "#/components/schemas/AIProbe" }

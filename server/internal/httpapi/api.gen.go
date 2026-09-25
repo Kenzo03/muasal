@@ -15,6 +15,27 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for AIMode.
+const (
+	AIModeByok  AIMode = "byok"
+	AIModeLocal AIMode = "local"
+	AIModeOff   AIMode = "off"
+)
+
+// Valid indicates whether the value is a known member of the AIMode enum.
+func (e AIMode) Valid() bool {
+	switch e {
+	case AIModeByok:
+		return true
+	case AIModeLocal:
+		return true
+	case AIModeOff:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityItemKind.
 const (
 	ActivityItemKindComment ActivityItemKind = "comment"
@@ -280,6 +301,91 @@ func (e ListTicketsParamsSort) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// AIEndpoint defines model for AIEndpoint.
+type AIEndpoint struct {
+	ApiKeySet bool `json:"api_key_set"`
+
+	// Model Example: qwen3.5:4b
+	Model string `json:"model"`
+
+	// Url Example: http://model:11434/v1
+	Url string `json:"url"`
+}
+
+// AIEndpointUpdate defines model for AIEndpointUpdate.
+type AIEndpointUpdate struct {
+	// ApiKey Omitted keeps the saved key; an empty string removes it.
+	ApiKey *string `json:"api_key,omitempty"`
+	Model  string  `json:"model"`
+	Url    string  `json:"url"`
+}
+
+// AIMode defines model for AIMode.
+type AIMode string
+
+// AIProbe defines model for AIProbe.
+type AIProbe struct {
+	// Dim The embedding's dimension.
+	Dim       *int      `json:"dim,omitempty"`
+	Error     *string   `json:"error,omitempty"`
+	LatencyMs int       `json:"latency_ms"`
+	Models    *[]string `json:"models,omitempty"`
+	Ok        bool      `json:"ok"`
+}
+
+// AISettings defines model for AISettings.
+type AISettings struct {
+	// Acknowledged R-AI-1
+	Acknowledged bool `json:"acknowledged"`
+
+	// Badge Example: Local · qwen3.5:4b
+	Badge    string     `json:"badge"`
+	Chat     AIEndpoint `json:"chat"`
+	Embed    AIEndpoint `json:"embed"`
+	EmbedDim int        `json:"embed_dim"`
+	Mode     AIMode     `json:"mode"`
+
+	// Provider The BYOK provider's name.
+	Provider string `json:"provider"`
+
+	// SecretKeySet Whether APP_SECRET_KEY is set
+	SecretKeySet bool     `json:"secret_key_set"`
+	Tuning       AITuning `json:"tuning"`
+}
+
+// AISettingsUpdate defines model for AISettingsUpdate.
+type AISettingsUpdate struct {
+	Acknowledged *bool            `json:"acknowledged,omitempty"`
+	Chat         AIEndpointUpdate `json:"chat"`
+	Embed        AIEndpointUpdate `json:"embed"`
+	Mode         AIMode           `json:"mode"`
+	Provider     *string          `json:"provider,omitempty"`
+	Tuning       AITuning         `json:"tuning"`
+}
+
+// AITestResult defines model for AITestResult.
+type AITestResult struct {
+	Chat  AIProbe `json:"chat"`
+	Embed AIProbe `json:"embed"`
+}
+
+// AITuning defines model for AITuning.
+type AITuning struct {
+	// ContextTokens Evidence budget in tokens.
+	ContextTokens int `json:"context_tokens"`
+
+	// ExhaustiveMax At most this many matching items skip ranking.
+	ExhaustiveMax int `json:"exhaustive_max"`
+
+	// MaxConcurrent Answers generated at once.
+	MaxConcurrent int `json:"max_concurrent"`
+
+	// MinSimilarity Relevance floor for vector-only evidence.
+	MinSimilarity  float64 `json:"min_similarity"`
+	Temperature    float64 `json:"temperature"`
+	TimeoutSeconds int     `json:"timeout_seconds"`
 }
 
 // ActivityItem defines model for ActivityItem.
@@ -1070,6 +1176,12 @@ type TransitionTicketParams struct {
 	IfMatch *string `json:"If-Match,omitempty"`
 }
 
+// TestAIJSONRequestBody defines body for TestAI for application/json ContentType.
+type TestAIJSONRequestBody = AISettingsUpdate
+
+// UpdateAISettingsJSONRequestBody defines body for UpdateAISettings for application/json ContentType.
+type UpdateAISettingsJSONRequestBody = AISettingsUpdate
+
 // CreateUserJSONRequestBody defines body for CreateUser for application/json ContentType.
 type CreateUserJSONRequestBody = UserCreate
 
@@ -1141,6 +1253,15 @@ type TransitionTicketJSONRequestBody = TransitionRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+
+	// (POST /admin/ai/test)
+	TestAI(w http.ResponseWriter, r *http.Request)
+
+	// (GET /admin/settings/ai)
+	GetAISettings(w http.ResponseWriter, r *http.Request)
+
+	// (PUT /admin/settings/ai)
+	UpdateAISettings(w http.ResponseWriter, r *http.Request)
 
 	// (GET /admin/users)
 	ListUsers(w http.ResponseWriter, r *http.Request)
@@ -1298,6 +1419,48 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// TestAI operation middleware
+func (siw *ServerInterfaceWrapper) TestAI(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.TestAI(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAISettings operation middleware
+func (siw *ServerInterfaceWrapper) GetAISettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAISettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateAISettings operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAISettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateAISettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // ListUsers operation middleware
 func (siw *ServerInterfaceWrapper) ListUsers(w http.ResponseWriter, r *http.Request) {
@@ -3048,6 +3211,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/attachments/{id}", wrapper.DeleteAttachment)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/attachments/{id}", wrapper.DownloadAttachment)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/search", wrapper.Search)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/settings/ai", wrapper.GetAISettings)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/admin/settings/ai", wrapper.UpdateAISettings)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/admin/ai/test", wrapper.TestAI)
 
 	return m
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 
+	"github.com/kenzo03/muasal/server/internal/ai"
 	"github.com/kenzo03/muasal/server/internal/auth"
 	"github.com/kenzo03/muasal/server/internal/config"
 	"github.com/kenzo03/muasal/server/internal/db"
@@ -30,6 +31,7 @@ type Server struct {
 	log     *slog.Logger
 	now     func() time.Time
 	jobs    *river.Client[pgx.Tx] // inserts jobs only; `serve` runs the workers (FSD §13.2)
+	ai      *ai.Runtime
 }
 
 // New wires a Server; it opens no connections of its own.
@@ -38,16 +40,22 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) *Server {
 	if err != nil {
 		panic(err) // an insert-only client with a fixed config cannot fail
 	}
+	q := db.New(pool)
 	return &Server{
 		cfg:     cfg,
 		pool:    pool,
-		q:       db.New(pool),
+		q:       q,
 		ipLimit: auth.NewLimiter(20, time.Minute), // FSD §15.1: 20 sign-in attempts per IP per minute
 		log:     log,
 		now:     time.Now,
 		jobs:    jobs,
+		ai:      &ai.Runtime{Store: ai.NewStore(q), Gate: ai.NewGate(), SecretKey: cfg.SecretKey, HTTP: &http.Client{}},
 	}
 }
+
+// AI is the runtime the API shares with the index workers in the same process:
+// one settings cache and one generation gate (§11.7).
+func (s *Server) AI() *ai.Runtime { return s.ai }
 
 // Handler serves the API under /api/v1 plus unauthenticated health checks.
 func (s *Server) Handler() http.Handler {

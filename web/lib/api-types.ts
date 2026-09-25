@@ -610,6 +610,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/settings/ai": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description System admins. AI mode, endpoints, models and tuning (FSD §13.4). API keys are never returned, only whether one is saved. */
+        get: operations["getAISettings"];
+        /** @description System admins. Bring your own key needs a provider, a key and the acknowledgement that questions and ticket excerpts go to that provider, else 422 with byok_not_acknowledged (R-AI-1); nothing is sent to the provider. A key needs APP_SECRET_KEY on the server. Every save is audited, keys never. */
+        put: operations["updateAISettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/ai/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description System admins. Tries the given settings without saving them: lists the chat server's models, runs a one-sentence chat and one embedding, and reports latencies and the embedding dimension (§13.4). Keys left out come from the saved settings. BYOK without the acknowledgement answers 422 and calls nothing. */
+        post: operations["testAI"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1204,6 +1239,72 @@ export interface components {
         };
         RecentTicketList: {
             items: components["schemas"]["RecentTicket"][];
+        };
+        /** @enum {string} */
+        AIMode: "off" | "local" | "byok";
+        AIEndpoint: {
+            /** @example http://model:11434/v1 */
+            url: string;
+            /** @example qwen3.5:4b */
+            model: string;
+            api_key_set: boolean;
+        };
+        AIEndpointUpdate: {
+            url: string;
+            model: string;
+            /** @description Omitted keeps the saved key; an empty string removes it. */
+            api_key?: string;
+        };
+        AITuning: {
+            /** @description Evidence budget in tokens. */
+            context_tokens: number;
+            /** @description Answers generated at once. */
+            max_concurrent: number;
+            /** Format: double */
+            temperature: number;
+            timeout_seconds: number;
+            /**
+             * Format: double
+             * @description Relevance floor for vector-only evidence.
+             */
+            min_similarity: number;
+            /** @description At most this many matching items skip ranking. */
+            exhaustive_max: number;
+        };
+        AISettings: {
+            mode: components["schemas"]["AIMode"];
+            /** @description The BYOK provider's name. */
+            provider: string;
+            /** @description R-AI-1 */
+            acknowledged: boolean;
+            chat: components["schemas"]["AIEndpoint"];
+            embed: components["schemas"]["AIEndpoint"];
+            embed_dim: number;
+            tuning: components["schemas"]["AITuning"];
+            /** @example Local · qwen3.5:4b */
+            badge: string;
+            /** @description Whether APP_SECRET_KEY is set */
+            secret_key_set: boolean;
+        };
+        AISettingsUpdate: {
+            mode: components["schemas"]["AIMode"];
+            provider?: string;
+            acknowledged?: boolean;
+            chat: components["schemas"]["AIEndpointUpdate"];
+            embed: components["schemas"]["AIEndpointUpdate"];
+            tuning: components["schemas"]["AITuning"];
+        };
+        AIProbe: {
+            ok: boolean;
+            latency_ms: number;
+            error?: string;
+            models?: string[];
+            /** @description The embedding's dimension. */
+            dim?: number;
+        };
+        AITestResult: {
+            chat: components["schemas"]["AIProbe"];
+            embed: components["schemas"]["AIProbe"];
         };
     };
     responses: {
@@ -2453,6 +2554,77 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SearchResults"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getAISettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The current settings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AISettings"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateAISettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AISettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description The saved settings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AISettings"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    testAI: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AISettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description One probe per endpoint; a failed probe carries its error. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AITestResult"];
                 };
             };
             default: components["responses"]["Problem"];
