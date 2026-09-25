@@ -408,7 +408,10 @@
     "created": "{key} created.",
     "save": "Save",
     "cancel": "Cancel",
-    "reload": "Reload"
+    "reload": "Reload",
+    "descriptionHint": "Markdown works. Paste an image to attach it to the ticket.",
+    "descriptionHintNew": "Markdown works. Images can be pasted once the ticket exists.",
+    "pasteAfterCreate": "Create the ticket first; then paste the image into its description or a comment."
   },
   "ticket": {
     "edit": "Edit",
@@ -526,7 +529,8 @@
       "outcome": "Outcome",
       "state": "State",
       "confirmed_by": "Confirmed by"
-    }
+    },
+    "markdownHint": "Markdown works: **bold**, lists, `code`, links. Paste an image to attach it."
   },
   "attachments": {
     "title": "Attachments",

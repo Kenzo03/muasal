@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Avatar } from "@/components/Chips";
 import Icon from "@/components/Icon";
+import Markdown from "@/components/Markdown";
 import { api } from "@/lib/api";
 import { describeChange, shown, type Change } from "@/lib/activity";
 import { utc } from "@/lib/format";
+import { pasteImages } from "@/lib/paste";
 import { useProblemText, type ActivityItem } from "@/lib/problem";
 import { button, chip, cx, field, panel } from "@/lib/ui";
 
@@ -27,6 +29,7 @@ export default function Activity({ ticketKey, items, meId, canComment }: {
   const [filter, setFilter] = useState<Filter>("all");
   const [editing, setEditing] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const paste = pasteImages(ticketKey, (p) => setError(problemText(p)), () => router.refresh());
   const visible = items.filter((it) => filter === "all" || (filter === "comments") === (it.kind === "comment"));
   const field_ = (k: string) => (t.has(`fields.${k}`) ? t(`fields.${k}`) : k);
 
@@ -142,14 +145,14 @@ export default function Activity({ ticketKey, items, meId, canComment }: {
                   <p className="text-sm italic text-muted">{t("deleted")}{it.body ? `: ${it.body}` : ""}</p>
                 ) : editing === it.comment_id ? (
                   <form onSubmit={(e) => saveEdit(e, it.comment_id!)} className="flex flex-col gap-2">
-                    <textarea name="body" defaultValue={it.body} required maxLength={20000} rows={3} aria-label={t("edit")} className={field.textarea} />
+                    <textarea name="body" defaultValue={it.body} required maxLength={20000} rows={3} aria-label={t("edit")} onPaste={paste} className={field.textarea} />
                     <div className="flex gap-2">
                       <button className={button.primary}>{t("save")}</button>
                       <button type="button" onClick={() => setEditing(null)} className={button.secondary}>{t("cancel")}</button>
                     </div>
                   </form>
                 ) : (
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed">{it.body}</p>
+                  <Markdown text={it.body ?? ""} />
                 )}
                 {!it.deleted && canComment && it.actor?.id === meId && editing !== it.comment_id && (
                   <div className="flex gap-3">
@@ -173,7 +176,8 @@ export default function Activity({ ticketKey, items, meId, canComment }: {
       </ol>
       {canComment && (
         <form onSubmit={send} className="flex flex-col gap-2 border-t border-line-soft pt-3.5">
-          <textarea name="body" required maxLength={20000} rows={3} aria-label={t("placeholder")} placeholder={t("placeholder")} className={field.textarea} />
+          <textarea name="body" required maxLength={20000} rows={3} aria-label={t("placeholder")} placeholder={t("placeholder")} onPaste={paste} className={field.textarea} />
+          <p className={field.hint}>{t("markdownHint")}</p>
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-2 text-[13px]">
               <input type="checkbox" name="internal" defaultChecked className="size-4 accent-accent" />

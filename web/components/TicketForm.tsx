@@ -11,6 +11,7 @@ import {
   type Client, type Contact, type Node, type Priority, type Ref, type Ticket, type TicketType,
 } from "@/lib/problem";
 import { button, cx, field } from "@/lib/ui";
+import { pasteImages } from "@/lib/paste";
 import { isWeak } from "@/lib/weak";
 
 type Props = {
@@ -284,7 +285,27 @@ const [reason, setReason] = useState(ticket?.reason ?? "");
           </div>
         </Row>
         <Row label={t("description")} htmlFor="tf-description">
-          <textarea id="tf-description" name="description" defaultValue={ticket?.description} maxLength={50000} rows={5} className={field.textarea} />
+          <textarea
+            id="tf-description"
+            name="description"
+            defaultValue={ticket?.description}
+            maxLength={50000}
+            rows={5}
+            aria-describedby="description-hint"
+            onPaste={
+              ticket
+                ? pasteImages(ticket.key, (p) => setError(problemText(p)), () => router.refresh())
+                : (e) => {
+                    // A new ticket has nowhere to keep a file yet.
+                    if (Array.from(e.clipboardData.files).some((f) => f.type.startsWith("image/"))) {
+                      e.preventDefault();
+                      setNotice(t("pasteAfterCreate"));
+                    }
+                  }
+            }
+            className={field.textarea}
+          />
+          <p id="description-hint" className={field.hint}>{t(ticket ? "descriptionHint" : "descriptionHintNew")}</p>
         </Row>
         <details className="group" open={Boolean(ticket?.assignee || ticket?.due_date)}>
           <summary className="flex cursor-pointer items-center gap-1.5 text-sm font-semibold">

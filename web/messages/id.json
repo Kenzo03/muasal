@@ -408,7 +408,10 @@
     "created": "{key} dibuat.",
     "save": "Simpan",
     "cancel": "Batal",
-    "reload": "Muat ulang"
+    "reload": "Muat ulang",
+    "descriptionHint": "Mendukung Markdown. Tempel gambar untuk melampirkannya ke tiket.",
+    "descriptionHintNew": "Mendukung Markdown. Gambar bisa ditempel setelah tiket dibuat.",
+    "pasteAfterCreate": "Buat tiketnya dulu, lalu tempel gambar di deskripsi atau komentar."
   },
   "ticket": {
     "edit": "Ubah",
@@ -526,7 +529,8 @@
       "outcome": "Hasil",
       "state": "Keadaan",
       "confirmed_by": "Dikonfirmasi oleh"
-    }
+    },
+    "markdownHint": "Mendukung Markdown: **tebal**, daftar, `kode`, tautan. Tempel gambar untuk melampirkannya."
   },
   "attachments": {
     "title": "Lampiran",
