@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/kenzo03/muasal/server/internal/access"
@@ -42,7 +43,12 @@ func (s *Server) SetStatuses(w http.ResponseWriter, r *http.Request, key string)
 		s.fail(w, r, err)
 		return
 	}
-	if fields := validateStatuses(in, before); len(fields) > 0 {
+	inUse, err := s.q.ListStatusIDsInUse(ctx, pc.project.ID)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	if fields := validateStatuses(in, before, inUse); len(fields) > 0 {
 		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields", fields...)
 		return
 	}
@@ -101,8 +107,10 @@ func (s *Server) SetStatuses(w http.ResponseWriter, r *http.Request, key string)
 	writeJSON(w, http.StatusOK, StatusList{Items: toAPIStatuses(rows)})
 }
 
-// validateStatuses checks R-TK-2 and the moves of R-TK-4 against the current list.
-func validateStatuses(in StatusesUpdate, before []db.Status) []FieldError {
+// validateStatuses checks R-TK-2 and the moves of R-TK-4 against the current
+// list. A status that tickets use keeps its kind, so no ticket opens or closes
+// without its close checks (R-TK-3): only To do and In progress swap.
+func validateStatuses(in StatusesUpdate, before []db.Status, inUse []int64) []FieldError {
 	var f []FieldError
 	old := map[int64]db.Status{}
 	for _, st := range before {
@@ -128,8 +136,13 @@ func validateStatuses(in StatusesUpdate, before []db.Status) []FieldError {
 			f = append(f, FieldError{Field: at + "color", Code: "invalid", Message: "Use a color like #2563EB"})
 		}
 		if st.Id != nil {
-			if _, ok := old[*st.Id]; !ok {
+			o, ok := old[*st.Id]
+			switch {
+			case !ok:
 				f = append(f, FieldError{Field: at + "id", Code: "invalid", Message: "Unknown status"})
+			case o.Category != string(st.Category) && slices.Contains(inUse, *st.Id) &&
+				(closedCategory(o.Category) || closedCategory(string(st.Category))):
+				f = append(f, FieldError{Field: at + "category", Code: "status_category_in_use", Message: "Tickets use this status; move them before it opens or closes"})
 			}
 			kept[*st.Id] = st.Category
 		}
@@ -156,7 +169,10 @@ func validateStatuses(in StatusesUpdate, before []db.Status) []FieldError {
 		from, existed := old[m.From]
 		_, stays := kept[m.From]
 		to, isKept := kept[m.To]
-		if !existed || stays || !isKept || closedCategory(from.Category) != closedCategory(string(to)) {
+		// Open tickets land in any open status; closed ones only in the same
+		// category, so their decisions keep their outcome (R-DC-2).
+		sameKind := from.Category == string(to) || (!closedCategory(from.Category) && !closedCategory(string(to)))
+		if !existed || stays || !isKept || !sameKind {
 			f = append(f, FieldError{Field: fmt.Sprintf("move_to[%d]", i), Code: "invalid", Message: "Move tickets from a removed status to a kept one of the same kind"})
 		}
 	}
