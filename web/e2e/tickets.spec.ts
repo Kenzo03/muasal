@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { setPassword, signIn } from "./helpers";
+import { drag, setPassword, signIn } from "./helpers";
 
 // FSD §21 Iteration 2 exit check: a PM logs a client request in one form (story 3),
 // then works it: an Internal comment (AC-TK-10) and a move on the board (AC-TK-1).
@@ -64,7 +64,7 @@ test("a PM logs a client request in one form and moves it on the board", async (
   // AC-TK-1: dragging the card from To do to In progress records the move.
   await rina.goto(`/p/${key}/board`);
   const inProgress = rina.getByRole("region", { name: "In progress" });
-  await rina.getByRole("article").filter({ hasText: `${key}-1` }).dragTo(inProgress);
+  await drag(rina, rina.getByRole("article").filter({ hasText: `${key}-1` }), inProgress);
   await expect(inProgress.getByRole("article")).toContainText(`${key}-1`);
   await rina.goto(`/t/${key}-1`);
   await expect(rina.getByText(/Rina PM mengubah Status dari To do menjadi In progress/)).toBeVisible();

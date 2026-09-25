@@ -114,3 +114,31 @@ WHERE id = ANY (sqlc.arg('ids')::bigint[]);
 
 -- name: DeleteNode :exec
 DELETE FROM nodes WHERE id = $1;
+
+-- name: ListRecentNodes :many
+-- The live menus and modules of the user's own latest tickets in the project,
+-- most recent first, for "recently used first" in the menu picker (FSD §8.1).
+-- Same visibility as ListNodes: a client-specific node, or anything under one,
+-- needs one of its clients in scope (R-AC-5).
+WITH RECURSIVE visible AS (
+  SELECT n.id FROM nodes n
+  WHERE n.project_id = sqlc.arg('project_id') AND n.parent_id IS NULL AND n.archived_at IS NULL
+    AND (NOT n.client_specific OR sqlc.arg('all_clients')::boolean
+         OR EXISTS (SELECT 1 FROM node_clients nc
+                    WHERE nc.node_id = n.id AND nc.client_id = ANY (sqlc.arg('client_ids')::bigint[])))
+  UNION
+  SELECT n.id FROM nodes n
+  JOIN visible v ON n.parent_id = v.id
+  WHERE n.archived_at IS NULL
+    AND (NOT n.client_specific OR sqlc.arg('all_clients')::boolean
+         OR EXISTS (SELECT 1 FROM node_clients nc
+                    WHERE nc.node_id = n.id AND nc.client_id = ANY (sqlc.arg('client_ids')::bigint[])))
+)
+SELECT tn.node_id
+FROM ticket_nodes tn
+JOIN tickets t ON t.id = tn.ticket_id
+JOIN visible v ON v.id = tn.node_id
+WHERE t.project_id = sqlc.arg('project_id') AND t.reporter_id = sqlc.arg('reporter_id')
+GROUP BY tn.node_id
+ORDER BY max(t.created_at) DESC, tn.node_id DESC
+LIMIT 8;

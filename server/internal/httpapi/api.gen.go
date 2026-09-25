@@ -675,6 +675,11 @@ type ProjectUpdate struct {
 	Name        *string `json:"name,omitempty"`
 }
 
+// RecentNodes defines model for RecentNodes.
+type RecentNodes struct {
+	NodeIds []int64 `json:"node_ids"`
+}
+
 // RecentTicket defines model for RecentTicket.
 type RecentTicket struct {
 	Change    *ActivityItem `json:"change,omitempty"`
@@ -1252,6 +1257,9 @@ type ServerInterface interface {
 
 	// (POST /projects/{key}/nodes)
 	CreateNode(w http.ResponseWriter, r *http.Request, key string)
+
+	// (GET /projects/{key}/nodes/recent)
+	ListRecentNodes(w http.ResponseWriter, r *http.Request, key string)
 
 	// (GET /projects/{key}/statuses)
 	GetStatuses(w http.ResponseWriter, r *http.Request, key string)
@@ -2310,6 +2318,32 @@ func (siw *ServerInterfaceWrapper) CreateNode(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// ListRecentNodes operation middleware
+func (siw *ServerInterfaceWrapper) ListRecentNodes(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListRecentNodes(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetStatuses operation middleware
 func (siw *ServerInterfaceWrapper) GetStatuses(w http.ResponseWriter, r *http.Request) {
 
@@ -3026,6 +3060,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/contacts/{id}", wrapper.UpdateContact)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/nodes", wrapper.ListNodes)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/nodes", wrapper.CreateNode)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/nodes/recent", wrapper.ListRecentNodes)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/nodes/{id}", wrapper.DeleteNode)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/nodes/{id}", wrapper.GetNode)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/nodes/{id}", wrapper.UpdateNode)

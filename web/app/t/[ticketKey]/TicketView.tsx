@@ -7,6 +7,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Avatar, ClientChip, PriorityChip, StatusDot, TypeIcon } from "@/components/Chips";
 import CloseDialog from "@/components/CloseDialog";
 import Icon from "@/components/Icon";
+import Markdown from "@/components/Markdown";
 import PageBar from "@/components/PageBar";
 import TicketForm from "@/components/TicketForm";
 import { api } from "@/lib/api";
@@ -141,7 +142,7 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
               <section aria-label={t("details")} className={panel}>
                 <div className={block}>
                   <h2 className={sectionTitle}>{t("description")}</h2>
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed">{ticket.description || <span className="text-muted">{t("none")}</span>}</p>
+                  {ticket.description ? <Markdown text={ticket.description} /> : <p className="text-sm text-muted">{t("none")}</p>}
                 </div>
                 <div className={block}>
                   <h2 className={sectionTitle}>{t("reason")}</h2>
