@@ -362,9 +362,9 @@ diff --git a/web/messages/id.json b/web/messages/id.json
 
 - [ ] **Step 2: Run the tests**
 
-Run: `cd web && npx tsc --noEmit && npm run build`
+Run: `cd web && npm run build && npx tsc --noEmit`
 
-Expected: no type errors and a clean build.
+Expected: a clean build, then no type errors. (The build writes the route types `tsc` reads; run in the other order, `tsc` sees the previous build's types.)
 
 The end-to-end test in Task 6 covers rendering and paste.
 
@@ -1114,9 +1114,9 @@ diff --git a/web/messages/id.json b/web/messages/id.json
 
 - [ ] **Step 2: Run the tests**
 
-Run: `cd web && npx tsc --noEmit && npm run build`
+Run: `cd web && npm run build && npx tsc --noEmit`
 
-Expected: no type errors and a clean build.
+Expected: a clean build, then no type errors. (The build writes the route types `tsc` reads; run in the other order, `tsc` sees the previous build's types.)
 
 - [ ] **Step 3: Commit**
 
@@ -1449,9 +1449,9 @@ diff --git a/web/messages/id.json b/web/messages/id.json
 
 - [ ] **Step 2: Run the tests**
 
-Run: `cd web && npx tsc --noEmit && npm run build`
+Run: `cd web && npm run build && npx tsc --noEmit`
 
-Expected: no type errors and a clean build.
+Expected: a clean build, then no type errors. (The build writes the route types `tsc` reads; run in the other order, `tsc` sees the previous build's types.)
 
 - [ ] **Step 3: Commit**
 
@@ -1979,7 +1979,7 @@ git commit -m "test(web): Iteration 4b end-to-end test"
 
 ```bash
 cd server && gofmt -l . && go vet ./... && go test ./...
-cd ../web && npm run gen:api && git diff --exit-code lib/api-types.ts && npx tsc --noEmit && npm run build
+cd ../web && npm run gen:api && git diff --exit-code lib/api-types.ts && npm run build && npx tsc --noEmit
 cd .. && make up && cd web && E2E_BASE_URL=http://localhost:8080 npx playwright test
 ```
 
