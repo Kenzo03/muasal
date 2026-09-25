@@ -2,6 +2,7 @@ package httpapi_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"slices"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/kenzo03/muasal/server/internal/db"
 	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/muasal/server/internal/llm/llmtest"
 )
 
 // The permission suite (FSD §5.3, §21.1) seeds two projects, three clients and
@@ -347,4 +349,78 @@ func TestPermissionSuiteWrites(t *testing.T) {
 			t.Errorf("%s %s as %s: %d, want %d", c.method, c.path, c.user, code, c.want)
 		}
 	}
+}
+
+// R-AC-7 and AC-AK-3 in Ask: every user's evidence is exactly the tickets they
+// may open, and no claim cites anything else, across projects.
+func TestPermissionSuiteAsk(t *testing.T) {
+	e := newEnv(t)
+	w := seedWorld(e)
+	fake := llmtest.New(t)
+	fake.Answer = func(_, _ string, schema json.RawMessage) string {
+		keys := evidenceKeys(schema)
+		b, _ := json.Marshal(map[string]any{"claims": []map[string]any{{"text": "Every request changed something.", "cites": keys[:min(4, len(keys))]}}})
+		return string(b)
+	}
+	if code := e.call(w.as["admin"], http.MethodPut, "/admin/settings/ai", aiUpdate("local", fake.BaseURL()), nil); code != http.StatusOK {
+		t.Fatalf("switch to Local: %d", code)
+	}
+	var ids []int64
+	rows, err := e.d.Pool.Query(context.Background(), "SELECT id FROM tickets")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var id int64
+		_ = rows.Scan(&id)
+		ids = append(ids, id)
+	}
+	e.indexNow(ids...)
+
+	hrisTickets := []string{"HRIS-1", "HRIS-2", "HRIS-3", "HRIS-4"}
+	for user, want := range map[string][]string{
+		"admin": {"HRIS-1", "HRIS-2", "HRIS-3", "HRIS-4", "PAY-1"}, "hana": hrisTickets, "ani": hrisTickets,
+		"budi": {"HRIS-1", "HRIS-3"}, "citra": {"HRIS-1", "HRIS-2", "HRIS-4", "PAY-1"}, "dodi": {"PAY-1"},
+	} {
+		var res httpapi.AskResult
+		if code := e.call(w.as[user], http.MethodPost, "/ask", map[string]any{"question": "Which request or fix changed what, for Client A, Client B and Client C?"}, &res); code != http.StatusOK {
+			t.Fatalf("ask as %s: %d", user, code)
+		}
+		var got []string
+		for _, it := range res.Evidence {
+			got = append(got, it.Key)
+		}
+		slices.Sort(got)
+		if !slices.Equal(got, want) {
+			t.Errorf("evidence as %s: %v, want %v", user, got, want)
+		}
+		for _, c := range res.Claims {
+			for _, k := range c.Cites {
+				if !slices.Contains(want, k) {
+					t.Errorf("a claim as %s cites %s", user, k)
+				}
+			}
+		}
+	}
+}
+
+// evidenceKeys reads the citation enum of an answer's schema.
+func evidenceKeys(schema json.RawMessage) []string {
+	var s struct {
+		Properties struct {
+			Claims struct {
+				Items struct {
+					Properties struct {
+						Cites struct {
+							Items struct {
+								Enum []string `json:"enum"`
+							} `json:"items"`
+						} `json:"cites"`
+					} `json:"properties"`
+				} `json:"items"`
+			} `json:"claims"`
+		} `json:"properties"`
+	}
+	_ = json.Unmarshal(schema, &s)
+	return s.Properties.Claims.Items.Properties.Cites.Items.Enum
 }

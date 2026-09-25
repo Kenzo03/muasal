@@ -125,7 +125,7 @@ func (s *Server) UpdateDecision(w http.ResponseWriter, r *http.Request, key stri
 		return
 	}
 	var out *DecisionRecord
-	err = s.inTx(ctx, func(q *db.Queries) error {
+	err = s.inJobTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		if err := q.UpdateDecision(ctx, db.UpdateDecisionParams{
 			TicketID: row.Ticket.ID, WhatChanged: text.WhatChanged, Why: text.Why, Alternatives: text.Alternatives,
 		}); err != nil {
@@ -133,6 +133,9 @@ func (s *Server) UpdateDecision(w http.ResponseWriter, r *http.Request, key stri
 		}
 		var err error
 		if out, err = decisionOf(ctx, q, row.Ticket.ID); err != nil {
+			return err
+		}
+		if err := s.index(ctx, tx, row.Ticket.ID); err != nil {
 			return err
 		}
 		if d := changed(decisionAudit(before), decisionAudit(out)); len(d) > 0 {

@@ -37,3 +37,7 @@ export type NodeDetail = components["schemas"]["NodeDetail"];
 export type SearchResults = components["schemas"]["SearchResults"];
 export type MyTicket = components["schemas"]["MyTicket"];
 export type RecentTicket = components["schemas"]["RecentTicket"];
+export type AIMode = components["schemas"]["AIMode"];
+export type AISettings = components["schemas"]["AISettings"];
+export type AITestResult = components["schemas"]["AITestResult"];
+export type IndexStatus = components["schemas"]["IndexStatus"];

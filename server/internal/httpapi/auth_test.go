@@ -33,11 +33,17 @@ type env struct {
 	api *httpapi.Server
 }
 
-func newEnv(t *testing.T) *env {
+func newEnv(t *testing.T) *env { return newEnvWith(t, nil) }
+
+// newEnvWith lets a test change the config, e.g. set APP_SECRET_KEY.
+func newEnvWith(t *testing.T, change func(*config.Config)) *env {
 	d := testdb.New(t)
 	cfg := config.Config{
 		DatabaseURL: d.AppURL, PublicURL: origin, ListenAddr: ":0",
 		AttachmentsDir: t.TempDir(), AttachmentMaxBytes: 64 << 10,
+	}
+	if change != nil {
+		change(&cfg)
 	}
 	api := httpapi.New(cfg, d.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	srv := httptest.NewServer(api.Handler())

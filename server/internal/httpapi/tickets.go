@@ -70,7 +70,7 @@ func (s *Server) CreateTicket(w http.ResponseWriter, r *http.Request, key string
 		return
 	}
 	var out Ticket
-	err = s.inTx(ctx, func(q *db.Queries) error {
+	err = s.inJobTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		n, err := q.NextTicketNumber(ctx, pc.project.ID)
 		if err != nil {
 			return err
@@ -84,6 +84,9 @@ func (s *Server) CreateTicket(w http.ResponseWriter, r *http.Request, key string
 			return err
 		}
 		if out, err = readTicket(ctx, q, created.Key); err != nil {
+			return err
+		}
+		if err := s.index(ctx, tx, created.ID); err != nil {
 			return err
 		}
 		return audit(ctx, q, webMeta(r).inProject(pc.project.ID), &pc.user.ID, "ticket", created.ID, "create", ticketAudit(out))
@@ -151,7 +154,7 @@ func (s *Server) UpdateTicket(w http.ResponseWriter, r *http.Request, key string
 		return
 	}
 	var out Ticket
-	err = s.inTx(ctx, func(q *db.Queries) error {
+	err = s.inJobTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		before, err := ticketFromRow(ctx, q, row)
 		if err != nil {
 			return err
@@ -174,6 +177,9 @@ func (s *Server) UpdateTicket(w http.ResponseWriter, r *http.Request, key string
 			return err
 		}
 		if out, err = readTicket(ctx, q, updated.Key); err != nil {
+			return err
+		}
+		if err := s.index(ctx, tx, updated.ID); err != nil {
 			return err
 		}
 		return audit(ctx, q, webMeta(r).inProject(pc.project.ID), &pc.user.ID, "ticket", updated.ID, "update",
@@ -260,7 +266,7 @@ func (s *Server) TransitionTicket(w http.ResponseWriter, r *http.Request, key st
 		}
 	}
 	var out Ticket
-	err = s.inTx(ctx, func(q *db.Queries) error {
+	err = s.inJobTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		before, err := ticketFromRow(ctx, q, row)
 		if err != nil || !moving {
 			out = before
@@ -307,6 +313,9 @@ func (s *Server) TransitionTicket(w http.ResponseWriter, r *http.Request, key st
 			action = "decision_draft"
 		}
 		if out, err = readTicket(ctx, q, row.Ticket.Key); err != nil {
+			return err
+		}
+		if err := s.index(ctx, tx, row.Ticket.ID); err != nil {
 			return err
 		}
 		m := webMeta(r).inProject(pc.project.ID)

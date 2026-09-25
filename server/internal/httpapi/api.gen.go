@@ -15,6 +15,27 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for AIMode.
+const (
+	AIModeByok  AIMode = "byok"
+	AIModeLocal AIMode = "local"
+	AIModeOff   AIMode = "off"
+)
+
+// Valid indicates whether the value is a known member of the AIMode enum.
+func (e AIMode) Valid() bool {
+	switch e {
+	case AIModeByok:
+		return true
+	case AIModeLocal:
+		return true
+	case AIModeOff:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityItemKind.
 const (
 	ActivityItemKindComment ActivityItemKind = "comment"
@@ -27,6 +48,93 @@ func (e ActivityItemKind) Valid() bool {
 	case ActivityItemKindComment:
 		return true
 	case ActivityItemKindEvent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AskRequestLanguage.
+const (
+	AskRequestLanguageAuto AskRequestLanguage = "auto"
+	AskRequestLanguageEn   AskRequestLanguage = "en"
+	AskRequestLanguageId   AskRequestLanguage = "id"
+)
+
+// Valid indicates whether the value is a known member of the AskRequestLanguage enum.
+func (e AskRequestLanguage) Valid() bool {
+	switch e {
+	case AskRequestLanguageAuto:
+		return true
+	case AskRequestLanguageEn:
+		return true
+	case AskRequestLanguageId:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AskResultErrorCode.
+const (
+	AskResultErrorCodeAiBusy        AskResultErrorCode = "ai_busy"
+	AskResultErrorCodeAiInvalid     AskResultErrorCode = "ai_invalid"
+	AskResultErrorCodeAiTimeout     AskResultErrorCode = "ai_timeout"
+	AskResultErrorCodeAiUnavailable AskResultErrorCode = "ai_unavailable"
+)
+
+// Valid indicates whether the value is a known member of the AskResultErrorCode enum.
+func (e AskResultErrorCode) Valid() bool {
+	switch e {
+	case AskResultErrorCodeAiBusy:
+		return true
+	case AskResultErrorCodeAiInvalid:
+		return true
+	case AskResultErrorCodeAiTimeout:
+		return true
+	case AskResultErrorCodeAiUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AskResultLanguage.
+const (
+	AskResultLanguageEn AskResultLanguage = "en"
+	AskResultLanguageId AskResultLanguage = "id"
+)
+
+// Valid indicates whether the value is a known member of the AskResultLanguage enum.
+func (e AskResultLanguage) Valid() bool {
+	switch e {
+	case AskResultLanguageEn:
+		return true
+	case AskResultLanguageId:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AskResultStatus.
+const (
+	AskResultStatusAiOff         AskResultStatus = "ai_off"
+	AskResultStatusAnswered      AskResultStatus = "answered"
+	AskResultStatusError         AskResultStatus = "error"
+	AskResultStatusNotEnoughInfo AskResultStatus = "not_enough_info"
+)
+
+// Valid indicates whether the value is a known member of the AskResultStatus enum.
+func (e AskResultStatus) Valid() bool {
+	switch e {
+	case AskResultStatusAiOff:
+		return true
+	case AskResultStatusAnswered:
+		return true
+	case AskResultStatusError:
+		return true
+	case AskResultStatusNotEnoughInfo:
 		return true
 	default:
 		return false
@@ -174,6 +282,24 @@ func (e ProjectRole) Valid() bool {
 	}
 }
 
+// Defines values for ReindexRequestScope.
+const (
+	ReindexRequestScopeAll    ReindexRequestScope = "all"
+	ReindexRequestScopeFailed ReindexRequestScope = "failed"
+)
+
+// Valid indicates whether the value is a known member of the ReindexRequestScope enum.
+func (e ReindexRequestScope) Valid() bool {
+	switch e {
+	case ReindexRequestScopeAll:
+		return true
+	case ReindexRequestScopeFailed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for StatusCategory.
 const (
 	StatusCategoryCancelled  StatusCategory = "cancelled"
@@ -282,6 +408,97 @@ func (e ListTicketsParamsSort) Valid() bool {
 	}
 }
 
+// AIEndpoint defines model for AIEndpoint.
+type AIEndpoint struct {
+	ApiKeySet bool `json:"api_key_set"`
+
+	// Model Example: qwen3.5:4b
+	Model string `json:"model"`
+
+	// Url Example: http://model:11434/v1
+	Url string `json:"url"`
+}
+
+// AIEndpointUpdate defines model for AIEndpointUpdate.
+type AIEndpointUpdate struct {
+	// ApiKey Omitted keeps the saved key; an empty string removes it.
+	ApiKey *string `json:"api_key,omitempty"`
+	Model  string  `json:"model"`
+	Url    string  `json:"url"`
+}
+
+// AIMode defines model for AIMode.
+type AIMode string
+
+// AIProbe defines model for AIProbe.
+type AIProbe struct {
+	// Dim The embedding's dimension.
+	Dim       *int      `json:"dim,omitempty"`
+	Error     *string   `json:"error,omitempty"`
+	LatencyMs int       `json:"latency_ms"`
+	Models    *[]string `json:"models,omitempty"`
+	Ok        bool      `json:"ok"`
+}
+
+// AISettings defines model for AISettings.
+type AISettings struct {
+	// Acknowledged R-AI-1
+	Acknowledged bool `json:"acknowledged"`
+
+	// Badge Example: Local · qwen3.5:4b
+	Badge    string     `json:"badge"`
+	Chat     AIEndpoint `json:"chat"`
+	Embed    AIEndpoint `json:"embed"`
+	EmbedDim int        `json:"embed_dim"`
+	Mode     AIMode     `json:"mode"`
+
+	// Provider The BYOK provider's name.
+	Provider string `json:"provider"`
+
+	// SecretKeySet Whether APP_SECRET_KEY is set
+	SecretKeySet bool     `json:"secret_key_set"`
+	Tuning       AITuning `json:"tuning"`
+}
+
+// AISettingsUpdate defines model for AISettingsUpdate.
+type AISettingsUpdate struct {
+	Acknowledged *bool            `json:"acknowledged,omitempty"`
+	Chat         AIEndpointUpdate `json:"chat"`
+	Embed        AIEndpointUpdate `json:"embed"`
+
+	// EmbedDim The new embedding model's dimension
+	EmbedDim *int    `json:"embed_dim,omitempty"`
+	Mode     AIMode  `json:"mode"`
+	Provider *string `json:"provider,omitempty"`
+
+	// Reindex Confirms that a new embedding model re-embeds every chunk (§13.4). Changing the embedding URL, model or dimension without it answers 422 reindex_required.
+	Reindex *bool    `json:"reindex,omitempty"`
+	Tuning  AITuning `json:"tuning"`
+}
+
+// AITestResult defines model for AITestResult.
+type AITestResult struct {
+	Chat  AIProbe `json:"chat"`
+	Embed AIProbe `json:"embed"`
+}
+
+// AITuning defines model for AITuning.
+type AITuning struct {
+	// ContextTokens Evidence budget in tokens.
+	ContextTokens int `json:"context_tokens"`
+
+	// ExhaustiveMax At most this many matching items skip ranking.
+	ExhaustiveMax int `json:"exhaustive_max"`
+
+	// MaxConcurrent Answers generated at once.
+	MaxConcurrent int `json:"max_concurrent"`
+
+	// MinSimilarity Relevance floor for vector-only evidence.
+	MinSimilarity  float64 `json:"min_similarity"`
+	Temperature    float64 `json:"temperature"`
+	TimeoutSeconds int     `json:"timeout_seconds"`
+}
+
 // ActivityItem defines model for ActivityItem.
 type ActivityItem struct {
 	// Action Example: transition
@@ -305,6 +522,143 @@ type ActivityItemKind string
 // ActivityList defines model for ActivityList.
 type ActivityList struct {
 	Items []ActivityItem `json:"items"`
+}
+
+// AskClaim defines model for AskClaim.
+type AskClaim struct {
+	Cites []string `json:"cites"`
+	Text  string   `json:"text"`
+}
+
+// AskDetected defines model for AskDetected.
+type AskDetected struct {
+	// ClientIds Core work (all clients) is included.
+	ClientIds  *[]int64            `json:"client_ids,omitempty"`
+	ContactIds *[]int64            `json:"contact_ids,omitempty"`
+	From       *openapi_types.Date `json:"from,omitempty"`
+
+	// Keys Ticket keys named in the question.
+	Keys *[]string `json:"keys,omitempty"`
+
+	// NodeIds Sub-nodes are included.
+	NodeIds    *[]int64            `json:"node_ids,omitempty"`
+	ProjectIds *[]int64            `json:"project_ids,omitempty"`
+	To         *openapi_types.Date `json:"to,omitempty"`
+	UserIds    *[]int64            `json:"user_ids,omitempty"`
+}
+
+// AskItem defines model for AskItem.
+type AskItem struct {
+	// Client Null for core work.
+	Client *string `json:"client"`
+	Closed bool    `json:"closed"`
+
+	// Date The close date
+	Date        time.Time `json:"date"`
+	Key         string    `json:"key"`
+	RequestedBy string    `json:"requested_by"`
+	Status      string    `json:"status"`
+	Title       string    `json:"title"`
+}
+
+// AskRequest defines model for AskRequest.
+type AskRequest struct {
+	Language *AskRequestLanguage `json:"language,omitempty"`
+	Question string              `json:"question"`
+
+	// Scope Chips; an empty list means no filter. Dates are whole days in the asker's timezone.
+	Scope *AskScope `json:"scope,omitempty"`
+
+	// ThreadId Adds the question to one of the asker's threads.
+	ThreadId *int64 `json:"thread_id,omitempty"`
+}
+
+// AskRequestLanguage defines model for AskRequest.Language.
+type AskRequestLanguage string
+
+// AskResult defines model for AskResult.
+type AskResult struct {
+	Claims []AskClaim `json:"claims"`
+
+	// Closest With not enough information
+	Closest   []AskItem           `json:"closest"`
+	ErrorCode *AskResultErrorCode `json:"error_code,omitempty"`
+	Evidence  []AskItem           `json:"evidence"`
+	Language  AskResultLanguage   `json:"language"`
+
+	// Message The not-enough-information text
+	Message *string `json:"message,omitempty"`
+
+	// Model The badge
+	Model   *string `json:"model,omitempty"`
+	QueryId int64   `json:"query_id"`
+
+	// Results With AI off
+	Results  []AskItem       `json:"results"`
+	Scope    AskScopeEvent   `json:"scope"`
+	Status   AskResultStatus `json:"status"`
+	ThreadId int64           `json:"thread_id"`
+}
+
+// AskResultErrorCode defines model for AskResult.ErrorCode.
+type AskResultErrorCode string
+
+// AskResultLanguage defines model for AskResult.Language.
+type AskResultLanguage string
+
+// AskResultStatus defines model for AskResult.Status.
+type AskResultStatus string
+
+// AskScope Chips; an empty list means no filter. Dates are whole days in the asker's timezone.
+type AskScope struct {
+	// ClientIds Core work (all clients) is included.
+	ClientIds  *[]int64            `json:"client_ids,omitempty"`
+	ContactIds *[]int64            `json:"contact_ids,omitempty"`
+	From       *openapi_types.Date `json:"from,omitempty"`
+
+	// NodeIds Sub-nodes are included.
+	NodeIds    *[]int64            `json:"node_ids,omitempty"`
+	ProjectIds *[]int64            `json:"project_ids,omitempty"`
+	To         *openapi_types.Date `json:"to,omitempty"`
+	UserIds    *[]int64            `json:"user_ids,omitempty"`
+}
+
+// AskScopeEvent defines model for AskScopeEvent.
+type AskScopeEvent struct {
+	Detected AskDetected `json:"detected"`
+
+	// Explicit Chips; an empty list means no filter. Dates are whole days in the asker's timezone.
+	Explicit AskScope `json:"explicit"`
+}
+
+// AskThread defines model for AskThread.
+type AskThread struct {
+	CreatedAt time.Time `json:"created_at"`
+	Id        int64     `json:"id"`
+	Title     string    `json:"title"`
+}
+
+// AskThreadDetail defines model for AskThreadDetail.
+type AskThreadDetail struct {
+	CreatedAt time.Time        `json:"created_at"`
+	Id        int64            `json:"id"`
+	Queries   []AskThreadQuery `json:"queries"`
+	Title     string           `json:"title"`
+}
+
+// AskThreadList defines model for AskThreadList.
+type AskThreadList struct {
+	Items []AskThread `json:"items"`
+}
+
+// AskThreadQuery defines model for AskThreadQuery.
+type AskThreadQuery struct {
+	Claims    []AskClaim `json:"claims"`
+	CreatedAt time.Time  `json:"created_at"`
+	Id        int64      `json:"id"`
+	Model     *string    `json:"model,omitempty"`
+	Question  string     `json:"question"`
+	Status    string     `json:"status"`
 }
 
 // Attachment defines model for Attachment.
@@ -433,11 +787,38 @@ type DecisionRecord struct {
 // DecisionState defines model for DecisionState.
 type DecisionState string
 
+// FailedJob defines model for FailedJob.
+type FailedJob struct {
+	At       time.Time `json:"at"`
+	Attempts int       `json:"attempts"`
+	Error    string    `json:"error"`
+	Id       int64     `json:"id"`
+	TicketId int64     `json:"ticket_id"`
+}
+
 // FieldError defines model for FieldError.
 type FieldError struct {
 	Code    string `json:"code"`
 	Field   string `json:"field"`
 	Message string `json:"message"`
+}
+
+// IndexStatus defines model for IndexStatus.
+type IndexStatus struct {
+	ChunksByModel []ModelChunks `json:"chunks_by_model"`
+	EmbedModel    string        `json:"embed_model"`
+
+	// FailedJobs Index jobs that used up their 10 attempts, newest first, at most 50.
+	FailedJobs    []FailedJob `json:"failed_jobs"`
+	LastIndexedAt *time.Time  `json:"last_indexed_at,omitempty"`
+	Mode          AIMode      `json:"mode"`
+
+	// PendingChunks Chunks without a vector from the current embedding model.
+	PendingChunks int64 `json:"pending_chunks"`
+
+	// QueuedJobs Index jobs waiting or retrying.
+	QueuedJobs  int64 `json:"queued_jobs"`
+	TotalChunks int64 `json:"total_chunks"`
 }
 
 // Locale defines model for Locale.
@@ -487,6 +868,14 @@ type MemberList struct {
 // MembersUpdate defines model for MembersUpdate.
 type MembersUpdate struct {
 	Members []MemberInput `json:"members"`
+}
+
+// ModelChunks defines model for ModelChunks.
+type ModelChunks struct {
+	Chunks int64 `json:"chunks"`
+
+	// Model Empty for chunks without a vector.
+	Model string `json:"model"`
 }
 
 // MyTicket defines model for MyTicket.
@@ -704,6 +1093,19 @@ type Ref struct {
 // RefList defines model for RefList.
 type RefList struct {
 	Items []Ref `json:"items"`
+}
+
+// ReindexRequest defines model for ReindexRequest.
+type ReindexRequest struct {
+	Scope ReindexRequestScope `json:"scope"`
+}
+
+// ReindexRequestScope defines model for ReindexRequest.Scope.
+type ReindexRequestScope string
+
+// ReindexResult defines model for ReindexResult.
+type ReindexResult struct {
+	Queued int `json:"queued"`
 }
 
 // SearchNode defines model for SearchNode.
@@ -1075,11 +1477,23 @@ type TransitionTicketParams struct {
 	IfMatch *string `json:"If-Match,omitempty"`
 }
 
+// ReindexAIJSONRequestBody defines body for ReindexAI for application/json ContentType.
+type ReindexAIJSONRequestBody = ReindexRequest
+
+// TestAIJSONRequestBody defines body for TestAI for application/json ContentType.
+type TestAIJSONRequestBody = AISettingsUpdate
+
+// UpdateAISettingsJSONRequestBody defines body for UpdateAISettings for application/json ContentType.
+type UpdateAISettingsJSONRequestBody = AISettingsUpdate
+
 // CreateUserJSONRequestBody defines body for CreateUser for application/json ContentType.
 type CreateUserJSONRequestBody = UserCreate
 
 // UpdateUserJSONRequestBody defines body for UpdateUser for application/json ContentType.
 type UpdateUserJSONRequestBody = UserUpdate
+
+// AskJSONRequestBody defines body for Ask for application/json ContentType.
+type AskJSONRequestBody = AskRequest
 
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
@@ -1147,6 +1561,21 @@ type TransitionTicketJSONRequestBody = TransitionRequest
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
+	// (POST /admin/ai/reindex)
+	ReindexAI(w http.ResponseWriter, r *http.Request)
+
+	// (GET /admin/ai/status)
+	GetAIStatus(w http.ResponseWriter, r *http.Request)
+
+	// (POST /admin/ai/test)
+	TestAI(w http.ResponseWriter, r *http.Request)
+
+	// (GET /admin/settings/ai)
+	GetAISettings(w http.ResponseWriter, r *http.Request)
+
+	// (PUT /admin/settings/ai)
+	UpdateAISettings(w http.ResponseWriter, r *http.Request)
+
 	// (GET /admin/users)
 	ListUsers(w http.ResponseWriter, r *http.Request)
 
@@ -1158,6 +1587,18 @@ type ServerInterface interface {
 
 	// (POST /admin/users/{id}/setup-link)
 	CreateSetupLink(w http.ResponseWriter, r *http.Request, id int64)
+
+	// (POST /ask)
+	Ask(w http.ResponseWriter, r *http.Request)
+
+	// (GET /ask/threads)
+	ListAskThreads(w http.ResponseWriter, r *http.Request)
+
+	// (DELETE /ask/threads/{id})
+	HideAskThread(w http.ResponseWriter, r *http.Request, id int64)
+
+	// (GET /ask/threads/{id})
+	GetAskThread(w http.ResponseWriter, r *http.Request, id int64)
 
 	// (DELETE /attachments/{id})
 	DeleteAttachment(w http.ResponseWriter, r *http.Request, id int64)
@@ -1307,6 +1748,76 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
+// ReindexAI operation middleware
+func (siw *ServerInterfaceWrapper) ReindexAI(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReindexAI(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAIStatus operation middleware
+func (siw *ServerInterfaceWrapper) GetAIStatus(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAIStatus(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// TestAI operation middleware
+func (siw *ServerInterfaceWrapper) TestAI(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.TestAI(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAISettings operation middleware
+func (siw *ServerInterfaceWrapper) GetAISettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAISettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateAISettings operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAISettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateAISettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListUsers operation middleware
 func (siw *ServerInterfaceWrapper) ListUsers(w http.ResponseWriter, r *http.Request) {
 
@@ -1378,6 +1889,86 @@ func (siw *ServerInterfaceWrapper) CreateSetupLink(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateSetupLink(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// Ask operation middleware
+func (siw *ServerInterfaceWrapper) Ask(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.Ask(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListAskThreads operation middleware
+func (siw *ServerInterfaceWrapper) ListAskThreads(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAskThreads(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// HideAskThread operation middleware
+func (siw *ServerInterfaceWrapper) HideAskThread(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.HideAskThread(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAskThread operation middleware
+func (siw *ServerInterfaceWrapper) GetAskThread(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAskThread(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3083,6 +3674,15 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/attachments/{id}", wrapper.DeleteAttachment)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/attachments/{id}", wrapper.DownloadAttachment)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/search", wrapper.Search)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/settings/ai", wrapper.GetAISettings)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/admin/settings/ai", wrapper.UpdateAISettings)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/admin/ai/test", wrapper.TestAI)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/ai/status", wrapper.GetAIStatus)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/admin/ai/reindex", wrapper.ReindexAI)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/ask", wrapper.Ask)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/ask/threads", wrapper.ListAskThreads)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/ask/threads/{id}", wrapper.HideAskThread)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/ask/threads/{id}", wrapper.GetAskThread)
 
 	return m
 }

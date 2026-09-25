@@ -24,3 +24,16 @@ func TestUpIsIdempotentAndTheAuditLogIsAppendOnly(t *testing.T) {
 		t.Fatal("the app role must not update audit events")
 	}
 }
+
+// FSD §2 row 3: River's job table exists after migrate.Up, and the app role
+// can queue jobs in it, but not read River's migration history.
+func TestUpPreparesRiverForTheAppRole(t *testing.T) {
+	d := testdb.New(t)
+	ctx := context.Background()
+	if _, err := d.Pool.Exec(ctx, `INSERT INTO river_job (args, kind, max_attempts, queue, state) VALUES ('{}', 'probe', 1, 'default', 'available')`); err != nil {
+		t.Fatalf("the app role must queue River jobs: %v", err)
+	}
+	if _, err := d.Pool.Exec(ctx, `SELECT 1 FROM river_migration`); err == nil {
+		t.Fatal("the app role must not read River's migrations")
+	}
+}

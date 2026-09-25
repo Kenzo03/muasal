@@ -100,7 +100,7 @@ func (s *Server) UpdateClient(w http.ResponseWriter, r *http.Request, id int64) 
 	}
 	ctx := r.Context()
 	var updated db.Client
-	err := s.inTx(ctx, func(q *db.Queries) error {
+	err := s.inJobTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		before, err := q.GetClient(ctx, id)
 		if err != nil {
 			return err
@@ -109,6 +109,15 @@ func (s *Server) UpdateClient(w http.ResponseWriter, r *http.Request, id int64) 
 			ID: id, Name: trimmed(in.Name), Code: trimmed(in.Code), Aliases: aliases, Archived: in.Archived,
 		}); err != nil {
 			return err
+		}
+		if updated.Name != before.Name { // chunks name the client (§13.1)
+			ids, err := q.ListTicketIDsOfClient(ctx, id)
+			if err != nil {
+				return err
+			}
+			if err := s.index(ctx, tx, ids...); err != nil {
+				return err
+			}
 		}
 		return audit(ctx, q, webMeta(r), &admin.ID, "client", id, "update", changed(clientAudit(before), clientAudit(updated)))
 	})

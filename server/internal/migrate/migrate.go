@@ -12,16 +12,20 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" database/sql driver for goose
 	"github.com/pressly/goose/v3"
 	"github.com/pressly/goose/v3/lock"
+	"github.com/riverqueue/river/riverdriver/riverpgxv5"
+	"github.com/riverqueue/river/rivermigrate"
 
 	"github.com/kenzo03/muasal/server/migrations"
 )
 
 // Up applies pending migrations as the owner role under an advisory lock, then
-// creates or updates the app role from appURL's credentials and grants it data
-// access. Running it again is harmless.
+// River's own migrations for its job tables (FSD §2 row 3), then creates or
+// updates the app role from appURL's credentials and grants it data access.
+// Running it again is harmless.
 func Up(ctx context.Context, ownerURL, appURL string) error {
 	sqlDB, err := sql.Open("pgx", ownerURL)
 	if err != nil {
@@ -38,6 +42,9 @@ func Up(ctx context.Context, ownerURL, appURL string) error {
 	}
 	if _, err := p.Up(ctx); err != nil {
 		return fmt.Errorf("apply migrations: %w", err)
+	}
+	if err := riverUp(ctx, ownerURL); err != nil {
+		return fmt.Errorf("apply River migrations: %w", err)
 	}
 	conn, err := pgx.Connect(ctx, ownerURL)
 	if err != nil {
@@ -76,10 +83,26 @@ func ensureAppRole(ctx context.Context, conn *pgx.Conn, appURL string) error {
 		"GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO " + ident,
 		"REVOKE UPDATE, DELETE, TRUNCATE ON audit_events FROM " + ident, // append-only (FSD §8.7)
 		"REVOKE ALL ON goose_db_version FROM " + ident,
+		"REVOKE ALL ON river_migration FROM " + ident,
 	} {
 		if _, err := conn.Exec(ctx, stmt); err != nil {
 			return fmt.Errorf("%s: %w", stmt, err)
 		}
 	}
 	return nil
+}
+
+// riverUp creates or upgrades River's tables (river_job, river_queue, …).
+func riverUp(ctx context.Context, ownerURL string) error {
+	pool, err := pgxpool.New(ctx, ownerURL)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+	m, err := rivermigrate.New(riverpgxv5.New(pool), nil)
+	if err != nil {
+		return err
+	}
+	_, err = m.Migrate(ctx, rivermigrate.DirectionUp, nil)
+	return err
 }

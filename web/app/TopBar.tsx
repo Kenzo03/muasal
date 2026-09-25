@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Form from "next/form";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Avatar } from "@/components/Chips";
@@ -35,6 +35,8 @@ export default function TopBar({ me, projects }: { me: User; projects: Project[]
   // The `c` shortcut opens New ticket from anywhere (§6.1, §8.3), unless the
   // user is typing or a dialog is open. With several projects to choose from,
   // it opens the project menu instead.
+  // The links advertise `c` only once the listener is attached, not before hydration.
+  const [shortcut, setShortcut] = useState(false);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "c" || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
@@ -49,6 +51,7 @@ export default function TopBar({ me, projects }: { me: User; projects: Project[]
       }
     };
     document.addEventListener("keydown", onKey);
+    setShortcut(true);
     return () => document.removeEventListener("keydown", onKey);
   }, [newTicketKey, router]);
 
@@ -71,6 +74,7 @@ export default function TopBar({ me, projects }: { me: User; projects: Project[]
       ? [
           ["/admin/users", t("users")],
           ["/admin/clients", t("clients")],
+          ["/admin/ai", t("ai")],
         ]
       : [];
   const isActive = (href: string) => path.startsWith(href) || (href.endsWith("/tickets") && path.startsWith("/t/"));
@@ -138,13 +142,13 @@ export default function TopBar({ me, projects }: { me: User; projects: Project[]
           </Form>
           {project ? (
             project.role !== "viewer" && (
-              <Link href={`/p/${project.key}/tickets/new`} aria-label={t("newTicket")} aria-keyshortcuts="c" title={t("newTicketShortcut")} className={button.primary}>
+              <Link href={`/p/${project.key}/tickets/new`} aria-label={t("newTicket")} aria-keyshortcuts={shortcut ? "c" : undefined} title={t("newTicketShortcut")} className={button.primary}>
                 <Icon name="plus" />
                 <span className="hidden sm:inline">{t("newTicket")}</span>
               </Link>
             )
           ) : creatable.length === 1 ? (
-            <Link href={`/p/${creatable[0].key}/tickets/new`} aria-label={t("newTicket")} aria-keyshortcuts="c" title={t("newTicketShortcut")} className={button.primary}>
+            <Link href={`/p/${creatable[0].key}/tickets/new`} aria-label={t("newTicket")} aria-keyshortcuts={shortcut ? "c" : undefined} title={t("newTicketShortcut")} className={button.primary}>
               <Icon name="plus" />
               <span className="hidden sm:inline">{t("newTicket")}</span>
             </Link>

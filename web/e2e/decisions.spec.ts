@@ -90,8 +90,11 @@ test("a developer sees a menu's history newest first", async ({ page, browser })
 
   // AC-DC-4: the ticket has no reason, so the dialog asks for one and flags a weak one.
   await drag(pm, weekend, done);
+  // The dialog focuses its first button as it opens; typing before that can be lost.
+  await expect(dialog2.getByRole("button", { name: "Tutup dialog" })).toBeFocused();
   const reason = dialog2.getByLabel("Alasan");
   await reason.fill("sesuai permintaan klien");
+  await expect(reason).toHaveValue("sesuai permintaan klien");
   await expect(dialog2.getByText(/Jelaskan mengapa klien membutuhkannya/)).toBeVisible();
   await reason.fill("Arunika's new labor agreement pays weekend overtime at double rate.");
   await dialog2.getByLabel("Apa yang berubah").fill("Weekend overtime pays double for Arunika from October.");

@@ -68,8 +68,17 @@ func (s *Server) CreateComment(w http.ResponseWriter, r *http.Request, key strin
 	if !ok {
 		return
 	}
-	c, err := s.q.CreateComment(r.Context(), db.CreateCommentParams{
-		TicketID: row.Ticket.ID, AuthorID: pc.user.ID, Internal: in.Internal == nil || *in.Internal, Body: body,
+	ctx := r.Context()
+	var c db.Comment
+	err := s.inJobTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
+		var err error
+		c, err = q.CreateComment(ctx, db.CreateCommentParams{
+			TicketID: row.Ticket.ID, AuthorID: pc.user.ID, Internal: in.Internal == nil || *in.Internal, Body: body,
+		})
+		if err != nil {
+			return err
+		}
+		return s.index(ctx, tx, row.Ticket.ID)
 	})
 	if err != nil {
 		s.fail(w, r, err)
@@ -95,9 +104,12 @@ func (s *Server) UpdateComment(w http.ResponseWriter, r *http.Request, id int64)
 	}
 	ctx := r.Context()
 	var updated db.Comment
-	err := s.inTx(ctx, func(q *db.Queries) error {
+	err := s.inJobTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		var err error
 		if updated, err = q.UpdateCommentBody(ctx, db.UpdateCommentBodyParams{ID: id, Body: body}); err != nil {
+			return err
+		}
+		if err := s.index(ctx, tx, c.TicketID); err != nil {
 			return err
 		}
 		return audit(ctx, q, webMeta(r).inProject(pc.project.ID), &pc.user.ID, "ticket", c.TicketID, "comment_edit",
@@ -122,8 +134,11 @@ func (s *Server) DeleteComment(w http.ResponseWriter, r *http.Request, id int64)
 		return
 	}
 	ctx := r.Context()
-	err := s.inTx(ctx, func(q *db.Queries) error {
+	err := s.inJobTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		if err := q.DeleteComment(ctx, id); err != nil {
+			return err
+		}
+		if err := s.index(ctx, tx, c.TicketID); err != nil {
 			return err
 		}
 		return audit(ctx, q, webMeta(r).inProject(pc.project.ID), &pc.user.ID, "ticket", c.TicketID, "comment_delete",

@@ -629,6 +629,129 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/settings/ai": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description System admins. AI mode, endpoints, models and tuning (FSD §13.4). API keys are never returned, only whether one is saved. */
+        get: operations["getAISettings"];
+        /** @description System admins. Bring your own key needs a provider, a key and the acknowledgement that questions and ticket excerpts go to that provider, else 422 with byok_not_acknowledged (R-AI-1); nothing is sent to the provider. A key needs APP_SECRET_KEY on the server. Every save is audited, keys never. */
+        put: operations["updateAISettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/ai/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description System admins. Tries the given settings without saving them: lists the chat server's models, runs a one-sentence chat and one embedding, and reports latencies and the embedding dimension (§13.4). Keys left out come from the saved settings. BYOK without the acknowledgement answers 422 and calls nothing. */
+        post: operations["testAI"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/ai/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description System admins. Index status (FSD §13.3) - chunks per embedding model, chunks waiting for a vector, queued and failed index jobs. */
+        get: operations["getAIStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/ai/reindex": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description System admins. Queues an index job for every ticket (all), or retries the index jobs that used up their attempts (failed). */
+        post: operations["reindexAI"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Everyone signed in (FSD §10, §11). Answers from the tickets the asker may open, with a citation on every claim, or says it lacks information. With Accept text/event-stream the answer streams as events - queued, scope, evidence, claim, result, error (§11.6) - and a comment line every 15 seconds keeps proxies open; otherwise the final AskResult comes as JSON. With AI off it returns keyword results under the same scope. 10 questions a minute per user. */
+        post: operations["ask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ask/threads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The asker's own threads, newest first (§10.6). */
+        get: operations["listAskThreads"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ask/threads/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        /** @description One of the asker's threads with its questions and answers; anyone else's answers 404. */
+        get: operations["getAskThread"];
+        put?: never;
+        post?: never;
+        /** @description Hides the thread from the asker's list; the Ask log keeps it until retention expires (§10.6). */
+        delete: operations["hideAskThread"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1223,6 +1346,220 @@ export interface components {
         };
         RecentTicketList: {
             items: components["schemas"]["RecentTicket"][];
+        };
+        /** @enum {string} */
+        AIMode: "off" | "local" | "byok";
+        AIEndpoint: {
+            /** @example http://model:11434/v1 */
+            url: string;
+            /** @example qwen3.5:4b */
+            model: string;
+            api_key_set: boolean;
+        };
+        AIEndpointUpdate: {
+            url: string;
+            model: string;
+            /** @description Omitted keeps the saved key; an empty string removes it. */
+            api_key?: string;
+        };
+        AITuning: {
+            /** @description Evidence budget in tokens. */
+            context_tokens: number;
+            /** @description Answers generated at once. */
+            max_concurrent: number;
+            /** Format: double */
+            temperature: number;
+            timeout_seconds: number;
+            /**
+             * Format: double
+             * @description Relevance floor for vector-only evidence.
+             */
+            min_similarity: number;
+            /** @description At most this many matching items skip ranking. */
+            exhaustive_max: number;
+        };
+        AISettings: {
+            mode: components["schemas"]["AIMode"];
+            /** @description The BYOK provider's name. */
+            provider: string;
+            /** @description R-AI-1 */
+            acknowledged: boolean;
+            chat: components["schemas"]["AIEndpoint"];
+            embed: components["schemas"]["AIEndpoint"];
+            embed_dim: number;
+            tuning: components["schemas"]["AITuning"];
+            /** @example Local · qwen3.5:4b */
+            badge: string;
+            /** @description Whether APP_SECRET_KEY is set */
+            secret_key_set: boolean;
+        };
+        AISettingsUpdate: {
+            mode: components["schemas"]["AIMode"];
+            provider?: string;
+            acknowledged?: boolean;
+            chat: components["schemas"]["AIEndpointUpdate"];
+            embed: components["schemas"]["AIEndpointUpdate"];
+            tuning: components["schemas"]["AITuning"];
+            /** @description The new embedding model's dimension */
+            embed_dim?: number;
+            /** @description Confirms that a new embedding model re-embeds every chunk (§13.4). Changing the embedding URL, model or dimension without it answers 422 reindex_required. */
+            reindex?: boolean;
+        };
+        AIProbe: {
+            ok: boolean;
+            latency_ms: number;
+            error?: string;
+            models?: string[];
+            /** @description The embedding's dimension. */
+            dim?: number;
+        };
+        AITestResult: {
+            chat: components["schemas"]["AIProbe"];
+            embed: components["schemas"]["AIProbe"];
+        };
+        ModelChunks: {
+            /** @description Empty for chunks without a vector. */
+            model: string;
+            /** Format: int64 */
+            chunks: number;
+        };
+        FailedJob: {
+            /** Format: int64 */
+            id: number;
+            /** Format: int64 */
+            ticket_id: number;
+            attempts: number;
+            error: string;
+            /** Format: date-time */
+            at: string;
+        };
+        IndexStatus: {
+            mode: components["schemas"]["AIMode"];
+            embed_model: string;
+            /** Format: int64 */
+            total_chunks: number;
+            /**
+             * Format: int64
+             * @description Chunks without a vector from the current embedding model.
+             */
+            pending_chunks: number;
+            chunks_by_model: components["schemas"]["ModelChunks"][];
+            /**
+             * Format: int64
+             * @description Index jobs waiting or retrying.
+             */
+            queued_jobs: number;
+            /** @description Index jobs that used up their 10 attempts, newest first, at most 50. */
+            failed_jobs: components["schemas"]["FailedJob"][];
+            /** Format: date-time */
+            last_indexed_at?: string | null;
+        };
+        ReindexRequest: {
+            /** @enum {string} */
+            scope: "all" | "failed";
+        };
+        ReindexResult: {
+            queued: number;
+        };
+        /** @description Chips; an empty list means no filter. Dates are whole days in the asker's timezone. */
+        AskScope: {
+            project_ids?: number[];
+            /** @description Sub-nodes are included. */
+            node_ids?: number[];
+            /** @description Core work (all clients) is included. */
+            client_ids?: number[];
+            user_ids?: number[];
+            contact_ids?: number[];
+            /** Format: date */
+            from?: string;
+            /** Format: date */
+            to?: string;
+        };
+        AskDetected: components["schemas"]["AskScope"] & {
+            /** @description Ticket keys named in the question. */
+            keys?: string[];
+        };
+        AskScopeEvent: {
+            explicit: components["schemas"]["AskScope"];
+            detected: components["schemas"]["AskDetected"];
+        };
+        AskRequest: {
+            question: string;
+            /**
+             * Format: int64
+             * @description Adds the question to one of the asker's threads.
+             */
+            thread_id?: number;
+            /**
+             * @default auto
+             * @enum {string}
+             */
+            language: "auto" | "id" | "en";
+            scope?: components["schemas"]["AskScope"];
+        };
+        AskItem: {
+            key: string;
+            title: string;
+            /** @description Null for core work. */
+            client: string | null;
+            requested_by: string;
+            /**
+             * Format: date-time
+             * @description The close date
+             */
+            date: string;
+            status: string;
+            closed: boolean;
+        };
+        AskClaim: {
+            text: string;
+            cites: string[];
+        };
+        AskResult: {
+            /** @enum {string} */
+            status: "answered" | "not_enough_info" | "ai_off" | "error";
+            /** Format: int64 */
+            query_id: number;
+            /** Format: int64 */
+            thread_id: number;
+            /** @enum {string} */
+            language: "id" | "en";
+            /** @description The badge */
+            model?: string;
+            /** @description The not-enough-information text */
+            message?: string;
+            /** @enum {string} */
+            error_code?: "ai_unavailable" | "ai_busy" | "ai_timeout" | "ai_invalid";
+            scope: components["schemas"]["AskScopeEvent"];
+            evidence: components["schemas"]["AskItem"][];
+            claims: components["schemas"]["AskClaim"][];
+            /** @description With not enough information */
+            closest: components["schemas"]["AskItem"][];
+            /** @description With AI off */
+            results: components["schemas"]["AskItem"][];
+        };
+        AskThread: {
+            /** Format: int64 */
+            id: number;
+            title: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        AskThreadList: {
+            items: components["schemas"]["AskThread"][];
+        };
+        AskThreadQuery: {
+            /** Format: int64 */
+            id: number;
+            question: string;
+            status: string;
+            claims: components["schemas"]["AskClaim"][];
+            model?: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        AskThreadDetail: components["schemas"]["AskThread"] & {
+            queries: components["schemas"]["AskThreadQuery"][];
         };
         RecentNodes: {
             node_ids: number[];
@@ -2499,6 +2836,214 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SearchResults"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getAISettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The current settings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AISettings"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateAISettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AISettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description The saved settings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AISettings"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    testAI: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AISettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description One probe per endpoint; a failed probe carries its error. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AITestResult"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getAIStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The index now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexStatus"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    reindexAI: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReindexRequest"];
+            };
+        };
+        responses: {
+            /** @description Jobs queued. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReindexResult"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AskRequest"];
+            };
+        };
+        responses: {
+            /** @description The answer. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskResult"];
+                    "text/event-stream": string;
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listAskThreads: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description At most 100 threads. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskThreadList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getAskThread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The thread. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskThreadDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    hideAskThread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Hidden. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

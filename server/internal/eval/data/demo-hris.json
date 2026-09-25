@@ -1,0 +1,1207 @@
+{
+ "project": {
+  "key": "DEMO",
+  "name": "HRIS Demo"
+ },
+ "clients": [
+  {
+   "name": "Arunika Retail",
+   "code": "ARN",
+   "aliases": [
+    "Arunika"
+   ]
+  },
+  {
+   "name": "Bumi Logistik",
+   "code": "BML",
+   "aliases": [
+    "Bumi"
+   ]
+  },
+  {
+   "name": "Cahaya Farma",
+   "code": "CHF",
+   "aliases": [
+    "Cahaya"
+   ]
+  }
+ ],
+ "contacts": [
+  {
+   "name": "Budi Santoso",
+   "title": "HR Manager",
+   "client": "Arunika Retail"
+  },
+  {
+   "name": "Sari Dewi",
+   "title": "Payroll Lead",
+   "client": "Arunika Retail"
+  },
+  {
+   "name": "Agus Hartono",
+   "title": "Operations Director",
+   "client": "Bumi Logistik"
+  },
+  {
+   "name": "Maya Lestari",
+   "title": "HR Business Partner",
+   "client": "Bumi Logistik"
+  },
+  {
+   "name": "Wulan Prasetyo",
+   "title": "Compliance Manager",
+   "client": "Cahaya Farma"
+  },
+  {
+   "name": "Rizky Ramadhan",
+   "title": "HRIS Admin",
+   "client": "Cahaya Farma"
+  },
+  {
+   "name": "Rina Wijaya",
+   "title": "Product Manager",
+   "client": ""
+  }
+ ],
+ "users": [
+  {
+   "name": "Rina Wijaya",
+   "email": "rina@demo.muasal.local"
+  },
+  {
+   "name": "Dimas Pratama",
+   "email": "dimas@demo.muasal.local"
+  },
+  {
+   "name": "Fajar Nugroho",
+   "email": "fajar@demo.muasal.local"
+  }
+ ],
+ "tree": [
+  {
+   "path": "HR",
+   "type": "module",
+   "aliases": []
+  },
+  {
+   "path": "HR › Attendance",
+   "type": "module",
+   "aliases": [
+    "Absensi",
+    "Kehadiran"
+   ]
+  },
+  {
+   "path": "HR › Attendance › Overtime Approval",
+   "type": "menu",
+   "aliases": [
+    "approval lembur",
+    "lembur"
+   ]
+  },
+  {
+   "path": "HR › Attendance › Clock In",
+   "type": "menu",
+   "aliases": [
+    "absen masuk",
+    "clock-in"
+   ]
+  },
+  {
+   "path": "HR › Attendance › Shift Schedule",
+   "type": "menu",
+   "aliases": [
+    "jadwal shift"
+   ]
+  },
+  {
+   "path": "HR › Leave",
+   "type": "module",
+   "aliases": [
+    "Cuti"
+   ]
+  },
+  {
+   "path": "HR › Leave › Leave Request",
+   "type": "menu",
+   "aliases": [
+    "pengajuan cuti"
+   ]
+  },
+  {
+   "path": "HR › Leave › Leave Balance",
+   "type": "menu",
+   "aliases": [
+    "saldo cuti"
+   ]
+  },
+  {
+   "path": "HR › Employee Data",
+   "type": "module",
+   "aliases": [
+    "Data Karyawan"
+   ]
+  },
+  {
+   "path": "HR › Employee Data › Employee Profile",
+   "type": "menu",
+   "aliases": [
+    "profil karyawan"
+   ]
+  },
+  {
+   "path": "HR › Employee Data › Onboarding",
+   "type": "menu",
+   "aliases": []
+  },
+  {
+   "path": "Payroll",
+   "type": "module",
+   "aliases": [
+    "Penggajian"
+   ]
+  },
+  {
+   "path": "Payroll › Payslip",
+   "type": "menu",
+   "aliases": [
+    "slip gaji"
+   ]
+  },
+  {
+   "path": "Payroll › Tax PPh 21",
+   "type": "menu",
+   "aliases": [
+    "PPh21",
+    "pajak"
+   ]
+  },
+  {
+   "path": "Payroll › BPJS",
+   "type": "menu",
+   "aliases": []
+  },
+  {
+   "path": "Payroll › THR",
+   "type": "menu",
+   "aliases": [
+    "tunjangan hari raya"
+   ]
+  },
+  {
+   "path": "Payroll › Bank Transfer",
+   "type": "menu",
+   "aliases": [
+    "transfer gaji"
+   ]
+  },
+  {
+   "path": "Reports",
+   "type": "module",
+   "aliases": [
+    "Laporan"
+   ]
+  },
+  {
+   "path": "Reports › Attendance Report",
+   "type": "menu",
+   "aliases": [
+    "laporan absensi"
+   ]
+  },
+  {
+   "path": "Reports › Headcount Report",
+   "type": "menu",
+   "aliases": []
+  }
+ ],
+ "tickets": [
+  {
+   "type": "change_request",
+   "title": "Approval lembur Arunika langsung ke HR tanpa supervisor",
+   "client": "Arunika Retail",
+   "menus": [
+    "HR › Attendance › Overtime Approval"
+   ],
+   "requested_by": "Budi Santoso",
+   "reporter": "Rina Wijaya",
+   "reason": "Supervisor toko Arunika sering cuti, sehingga pengajuan lembur tertahan 3 sampai 5 hari.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-03-02",
+   "closed": "2025-03-20",
+   "comments": [
+    {
+     "by": "Rina Wijaya",
+     "on": "2025-03-05",
+     "text": "Dikonfirmasi dengan Pak Budi lewat telepon; berlaku untuk semua cabang Arunika.",
+     "internal": true
+    }
+   ],
+   "decision": {
+    "what_changed": "Pengajuan lembur karyawan toko Arunika langsung disetujui oleh HR Manager; langkah persetujuan supervisor dilewati.",
+    "why": "Persetujuan tertahan berhari-hari saat supervisor cuti, dan lembur terlambat dibayar.",
+    "alternatives": "Supervisor cadangan ditolak karena setiap toko Arunika hanya punya satu supervisor."
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "Two-level overtime approval for Bumi Logistik",
+   "client": "Bumi Logistik",
+   "menus": [
+    "HR › Attendance › Overtime Approval"
+   ],
+   "requested_by": "Agus Hartono",
+   "reporter": "Rina Wijaya",
+   "reason": "Driver overtime at Bumi Logistik ran 30% over budget in Q1 2025, and operations wants to check each request.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-04-14",
+   "closed": "2025-05-12",
+   "comments": [],
+   "decision": {
+    "what_changed": "Overtime requests at Bumi Logistik need two approvals: the operations manager first, then HR.",
+    "why": "Bumi's operations director wants to control driver overtime costs before HR approves pay.",
+    "alternatives": "A monthly overtime budget cap was rejected because trips cannot be planned that far ahead."
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "Block overtime above 18 hours per week",
+   "client": null,
+   "menus": [
+    "HR › Attendance › Overtime Approval"
+   ],
+   "requested_by": "Rina Wijaya",
+   "reporter": "Rina Wijaya",
+   "reason": "PP 35/2021 limits overtime to 4 hours a day and 18 hours a week; two clients were fined in audits.",
+   "description": "",
+   "status": "Done",
+   "created": "2024-10-10",
+   "closed": "2024-11-04",
+   "comments": [],
+   "decision": {
+    "what_changed": "Overtime requests are blocked when they would take an employee past 4 hours in a day or 18 hours in a week.",
+    "why": "Government Regulation PP 35/2021 sets these limits and labor audits check them.",
+    "alternatives": "A warning without blocking was rejected because HR approved over-limit requests anyway."
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "Auto-approve overtime under 2 hours for Arunika",
+   "client": "Arunika Retail",
+   "menus": [
+    "HR › Attendance › Overtime Approval"
+   ],
+   "requested_by": "Budi Santoso",
+   "reporter": "Rina Wijaya",
+   "reason": "Arunika store staff often work 30 to 90 minutes past closing and Budi wants less clicking.",
+   "description": "",
+   "status": "Cancelled",
+   "created": "2025-07-10",
+   "closed": "2025-08-02",
+   "comments": [],
+   "decision": {
+    "what_changed": "Not implemented: overtime is never approved automatically, not even under 2 hours.",
+    "why": "Every overtime payment needs a named human approver for labor audits and payroll disputes.",
+    "alternatives": "A bulk approval screen for HR was offered instead (see the follow-up ticket)."
+   }
+  },
+  {
+   "type": "feature",
+   "title": "Bulk approve overtime requests",
+   "client": "Arunika Retail",
+   "menus": [
+    "HR › Attendance › Overtime Approval"
+   ],
+   "requested_by": "Budi Santoso",
+   "reporter": "Rina Wijaya",
+   "reason": "HR at Arunika approves over 200 short overtime requests after each weekend.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-08-05",
+   "closed": "2025-09-15",
+   "comments": [],
+   "decision": {
+    "what_changed": "HR can select up to 50 pending overtime requests and approve them in one action; each request still records the approver.",
+    "why": "It keeps a human approver for audits while cutting HR's weekend backlog from hours to minutes.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "Nomor batch produksi wajib diisi saat pengajuan lembur Cahaya",
+   "client": "Cahaya Farma",
+   "menus": [
+    "HR › Attendance › Overtime Approval"
+   ],
+   "requested_by": "Wulan Prasetyo",
+   "reporter": "Rina Wijaya",
+   "reason": "Audit CPOB (GMP) meminta setiap jam lembur di pabrik Cahaya bisa dilacak ke batch produksi.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-12-08",
+   "closed": "2026-01-20",
+   "comments": [],
+   "decision": {
+    "what_changed": "Pengajuan lembur karyawan Cahaya Farma wajib menyertakan nomor batch produksi.",
+    "why": "Auditor CPOB harus bisa menelusuri jam lembur ke batch obat yang diproduksi.",
+    "alternatives": "Kode proyek bebas ditolak karena tidak bisa dicocokkan dengan catatan batch."
+   }
+  },
+  {
+   "type": "feature",
+   "title": "Compute driver overtime from GPS trip logs",
+   "client": "Bumi Logistik",
+   "menus": [
+    "HR › Attendance › Overtime Approval"
+   ],
+   "requested_by": "Agus Hartono",
+   "reporter": "Dimas Pratama",
+   "reason": "Drivers forget to submit overtime and disputes take weeks.",
+   "description": "",
+   "status": "In progress",
+   "created": "2026-08-10",
+   "closed": "",
+   "comments": []
+  },
+  {
+   "type": "change_request",
+   "title": "Geofence clock-in radius 100 m for Arunika stores",
+   "client": "Arunika Retail",
+   "menus": [
+    "HR › Attendance › Clock In"
+   ],
+   "requested_by": "Budi Santoso",
+   "reporter": "Rina Wijaya",
+   "reason": "Some Arunika staff clocked in from home before reaching the store.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-01-20",
+   "closed": "2025-02-10",
+   "comments": [],
+   "decision": {
+    "what_changed": "Arunika staff can clock in only within 100 metres of their assigned store.",
+    "why": "Clock-ins from home made attendance and overtime pay wrong.",
+    "alternatives": "A 500 m radius was rejected because several stores sit in the same mall."
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "Driver Bumi boleh absen masuk dari mana saja dengan selfie",
+   "client": "Bumi Logistik",
+   "menus": [
+    "HR › Attendance › Clock In"
+   ],
+   "requested_by": "Maya Lestari",
+   "reporter": "Rina Wijaya",
+   "reason": "Driver Bumi Logistik memulai kerja di jalan atau di gudang pelanggan, bukan di kantor.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-06-02",
+   "closed": "2025-06-30",
+   "comments": [],
+   "decision": {
+    "what_changed": "Driver Bumi Logistik dikecualikan dari geofence; mereka absen masuk dari lokasi mana pun dengan foto selfie.",
+    "why": "Driver bekerja di lapangan sehingga radius kantor tidak masuk akal.",
+    "alternatives": "Absen lewat GPS truk ditolak karena tidak semua truk punya GPS."
+   }
+  },
+  {
+   "type": "feature",
+   "title": "Selfie liveness check on clock in",
+   "client": null,
+   "menus": [
+    "HR › Attendance › Clock In"
+   ],
+   "requested_by": "Rina Wijaya",
+   "reporter": "Rina Wijaya",
+   "reason": "Two clients reported buddy punching: one employee clocking in for another with a photo.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-09-01",
+   "closed": "2025-10-05",
+   "comments": [],
+   "decision": {
+    "what_changed": "Clock in with a selfie now needs a liveness check: the employee blinks or turns their head on camera.",
+    "why": "Photos of photos let employees clock in for absent colleagues at Arunika and Bumi.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "feature",
+   "title": "Clock in through the Cahaya plant turnstiles",
+   "client": "Cahaya Farma",
+   "menus": [
+    "HR › Attendance › Clock In"
+   ],
+   "requested_by": "Rizky Ramadhan",
+   "reporter": "Dimas Pratama",
+   "reason": "Cahaya plant staff already badge through turnstiles at the gate.",
+   "description": "",
+   "status": "To do",
+   "created": "2026-09-01",
+   "closed": "",
+   "comments": []
+  },
+  {
+   "type": "change_request",
+   "title": "Split shifts for Arunika stores",
+   "client": "Arunika Retail",
+   "menus": [
+    "HR › Attendance › Shift Schedule"
+   ],
+   "requested_by": "Budi Santoso",
+   "reporter": "Rina Wijaya",
+   "reason": "Arunika stores need staff for the lunch and evening peaks but not in the afternoon.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-03-25",
+   "closed": "2025-04-18",
+   "comments": [],
+   "decision": {
+    "what_changed": "Arunika schedules may give one employee two shifts a day, with a break of at least 3 hours between them.",
+    "why": "Stores are busiest at lunch and in the evening.",
+    "alternatives": "Longer single shifts were rejected because they created overtime."
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "Tukar shift antar karyawan perlu persetujuan supervisor",
+   "client": null,
+   "menus": [
+    "HR › Attendance › Shift Schedule"
+   ],
+   "requested_by": "Rina Wijaya",
+   "reporter": "Rina Wijaya",
+   "reason": "Karyawan saling tukar shift tanpa sepengetahuan atasan sehingga jadwal kosong.",
+   "description": "",
+   "status": "Done",
+   "created": "2024-08-28",
+   "closed": "2024-09-12",
+   "comments": [],
+   "decision": {
+    "what_changed": "Tukar shift antar dua karyawan harus disetujui supervisor sebelum berlaku.",
+    "why": "Supervisor perlu tahu siapa yang bertugas agar tidak ada shift yang kosong.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "Night shift allowance for Bumi Logistik",
+   "client": "Bumi Logistik",
+   "menus": [
+    "HR › Attendance › Shift Schedule",
+    "Payroll › Payslip"
+   ],
+   "requested_by": "Maya Lestari",
+   "reporter": "Rina Wijaya",
+   "reason": "Bumi warehouse staff working nights were paid the allowance by hand, and some months were missed.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-10-30",
+   "closed": "2025-11-22",
+   "comments": [],
+   "decision": {
+    "what_changed": "Each night shift (22:00–06:00) at Bumi Logistik adds a Rp 25.000 allowance to the next payslip automatically.",
+    "why": "Manual allowances were missed, and the union asked for it to be guaranteed.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "Leave requests at least 3 days in advance",
+   "client": null,
+   "menus": [
+    "HR › Leave › Leave Request"
+   ],
+   "requested_by": "Rina Wijaya",
+   "reporter": "Rina Wijaya",
+   "reason": "Last-minute leave left stores and warehouses short of staff.",
+   "description": "",
+   "status": "Done",
+   "created": "2024-09-15",
+   "closed": "2024-10-01",
+   "comments": [],
+   "decision": {
+    "what_changed": "Annual leave must be requested at least 3 working days before it starts; sick leave is exempt.",
+    "why": "Supervisors need time to find cover.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "Blackout cuti Arunika menjelang Lebaran dan akhir tahun",
+   "client": "Arunika Retail",
+   "menus": [
+    "HR › Leave › Leave Request"
+   ],
+   "requested_by": "Budi Santoso",
+   "reporter": "Rina Wijaya",
+   "reason": "Toko Arunika paling ramai dua minggu sebelum Lebaran dan saat sale akhir tahun.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-06-20",
+   "closed": "2025-07-14",
+   "comments": [],
+   "decision": {
+    "what_changed": "Karyawan toko Arunika tidak bisa mengajukan cuti tahunan dua minggu sebelum Lebaran dan pada 15–31 Desember.",
+    "why": "Penjualan puncak butuh semua staf toko hadir.",
+    "alternatives": "Kuota cuti per toko ditolak karena sulit diatur untuk ratusan toko."
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "Doctor's letter for sick leave over 2 days at Cahaya",
+   "client": "Cahaya Farma",
+   "menus": [
+    "HR › Leave › Leave Request"
+   ],
+   "requested_by": "Wulan Prasetyo",
+   "reporter": "Rina Wijaya",
+   "reason": "Cahaya's clean-room rules require proof of health before staff return.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-11-12",
+   "closed": "2025-12-03",
+   "comments": [],
+   "decision": {
+    "what_changed": "Cahaya Farma staff must upload a doctor's letter for sick leave longer than 2 days.",
+    "why": "GMP clean-room hygiene rules require a medical clearance record.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "Unlimited unpaid leave for Bumi drivers",
+   "client": "Bumi Logistik",
+   "menus": [
+    "HR › Leave › Leave Request"
+   ],
+   "requested_by": "Agus Hartono",
+   "reporter": "Rina Wijaya",
+   "reason": "Some drivers want long unpaid breaks between contracts.",
+   "description": "",
+   "status": "Cancelled",
+   "created": "2026-01-15",
+   "closed": "2026-02-11",
+   "comments": [],
+   "decision": {
+    "what_changed": "Not implemented: unpaid leave stays capped at 30 days a year for Bumi drivers too.",
+    "why": "Longer unpaid leave breaks BPJS contributions and the employment status under labor law.",
+    "alternatives": "Contract pauses handled by HR outside the system were suggested instead."
+   }
+  },
+  {
+   "type": "feature",
+   "title": "Half-day leave",
+   "client": null,
+   "menus": [
+    "HR › Leave › Leave Request"
+   ],
+   "requested_by": "Rina Wijaya",
+   "reporter": "Dimas Pratama",
+   "reason": "Employees ask for half a day off for appointments.",
+   "description": "",
+   "status": "In progress",
+   "created": "2026-09-10",
+   "closed": "",
+   "comments": []
+  },
+  {
+   "type": "change_request",
+   "title": "Leave carry-over: at most 6 days, expiring 30 June",
+   "client": null,
+   "menus": [
+    "HR › Leave › Leave Balance"
+   ],
+   "requested_by": "Rina Wijaya",
+   "reporter": "Rina Wijaya",
+   "reason": "Unused leave piled up for years and became a liability.",
+   "description": "",
+   "status": "Done",
+   "created": "2024-12-12",
+   "closed": "2025-01-08",
+   "comments": [],
+   "decision": {
+    "what_changed": "At year end, at most 6 unused annual leave days carry over; they expire on 30 June of the new year.",
+    "why": "Unlimited carry-over created large leave liabilities for clients.",
+    "alternatives": "Paying out unused leave was rejected because most clients' policies do not allow it."
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "Arunika carry-over 12 days",
+   "client": "Arunika Retail",
+   "menus": [
+    "HR › Leave › Leave Balance"
+   ],
+   "requested_by": "Sari Dewi",
+   "reporter": "Rina Wijaya",
+   "reason": "Arunika's company regulation allows 12 days of carry-over.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-02-10",
+   "closed": "2025-03-03",
+   "comments": [],
+   "decision": {
+    "what_changed": "For Arunika, up to 12 unused leave days carry over instead of the default 6; they still expire on 30 June.",
+    "why": "Arunika's company regulation (peraturan perusahaan) sets 12 days, and it overrides the default.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "Saldo cuti Cahaya bertambah 1 hari per bulan",
+   "client": "Cahaya Farma",
+   "menus": [
+    "HR › Leave › Leave Balance"
+   ],
+   "requested_by": "Rizky Ramadhan",
+   "reporter": "Rina Wijaya",
+   "reason": "Cahaya ingin karyawan baru tidak langsung mendapat 12 hari cuti.",
+   "description": "",
+   "status": "Done",
+   "created": "2026-02-20",
+   "closed": "2026-03-15",
+   "comments": [],
+   "decision": {
+    "what_changed": "Saldo cuti karyawan Cahaya Farma bertambah 1 hari setiap bulan, bukan 12 hari sekaligus pada 1 Januari.",
+    "why": "Karyawan yang resign di awal tahun sempat memakai cuti yang belum menjadi haknya.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "Validasi NIK KTP 16 digit di profil karyawan",
+   "client": null,
+   "menus": [
+    "HR › Employee Data › Employee Profile"
+   ],
+   "requested_by": "Rina Wijaya",
+   "reporter": "Rina Wijaya",
+   "reason": "BPJS menolak data karena NIK salah ketik.",
+   "description": "",
+   "status": "Done",
+   "created": "2024-08-05",
+   "closed": "2024-08-20",
+   "comments": [],
+   "decision": {
+    "what_changed": "Profil karyawan hanya menerima NIK KTP 16 digit angka, dan NIK tidak boleh dipakai dua karyawan.",
+    "why": "Pendaftaran BPJS gagal karena NIK salah ketik atau ganda.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "feature",
+   "title": "Pharmacist licence (STRA) on Cahaya profiles",
+   "client": "Cahaya Farma",
+   "menus": [
+    "HR › Employee Data › Employee Profile"
+   ],
+   "requested_by": "Wulan Prasetyo",
+   "reporter": "Rina Wijaya",
+   "reason": "BPOM inspections check that every pharmacist has a valid licence.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-09-02",
+   "closed": "2025-09-30",
+   "comments": [],
+   "decision": {
+    "what_changed": "Cahaya employee profiles show the pharmacist licence (STRA) number and expiry, with a reminder 60 days before it expires.",
+    "why": "An expired licence found in a BPOM inspection can stop production.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "feature",
+   "title": "Store assignment history on Arunika profiles",
+   "client": "Arunika Retail",
+   "menus": [
+    "HR › Employee Data › Employee Profile"
+   ],
+   "requested_by": "Budi Santoso",
+   "reporter": "Dimas Pratama",
+   "reason": "HR needs to see which stores an employee worked at.",
+   "description": "",
+   "status": "To do",
+   "created": "2026-07-01",
+   "closed": "",
+   "comments": []
+  },
+  {
+   "type": "feature",
+   "title": "Onboarding checklist with document upload",
+   "client": null,
+   "menus": [
+    "HR › Employee Data › Onboarding"
+   ],
+   "requested_by": "Rina Wijaya",
+   "reporter": "Rina Wijaya",
+   "reason": "New hires' documents were collected by email and got lost.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-04-07",
+   "closed": "2025-05-02",
+   "comments": [],
+   "decision": {
+    "what_changed": "Onboarding has a checklist where new hires upload their KTP, NPWP and BPJS card before their first day.",
+    "why": "Documents sent by email went missing and delayed payroll registration.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "SIM B2 wajib untuk onboarding driver Bumi",
+   "client": "Bumi Logistik",
+   "menus": [
+    "HR › Employee Data › Onboarding"
+   ],
+   "requested_by": "Maya Lestari",
+   "reporter": "Rina Wijaya",
+   "reason": "Driver truk Bumi wajib punya SIM B2 umum sesuai aturan lalu lintas.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-07-28",
+   "closed": "2025-08-19",
+   "comments": [],
+   "decision": {
+    "what_changed": "Onboarding driver Bumi Logistik mewajibkan upload SIM B2 umum yang masih berlaku.",
+    "why": "Asuransi kargo menolak klaim bila driver tidak punya SIM yang sesuai.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "Payslip PDF password is the birth date",
+   "client": null,
+   "menus": [
+    "Payroll › Payslip"
+   ],
+   "requested_by": "Rina Wijaya",
+   "reporter": "Rina Wijaya",
+   "reason": "Payslips were emailed without protection.",
+   "description": "",
+   "status": "Done",
+   "created": "2024-11-18",
+   "closed": "2024-12-10",
+   "comments": [],
+   "decision": {
+    "what_changed": "Payslip PDFs are protected with the employee's birth date as the password, in DDMMYYYY format.",
+    "why": "Salary data was readable by anyone who got the email.",
+    "alternatives": "A separate password per employee was rejected because staff forgot it."
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "Rincian jam lembur per hari di slip gaji Arunika",
+   "client": "Arunika Retail",
+   "menus": [
+    "Payroll › Payslip",
+    "HR › Attendance › Overtime Approval"
+   ],
+   "requested_by": "Sari Dewi",
+   "reporter": "Rina Wijaya",
+   "reason": "Staf toko Arunika sering mempertanyakan bayaran lembur.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-05-12",
+   "closed": "2025-06-05",
+   "comments": [],
+   "decision": {
+    "what_changed": "Slip gaji Arunika menampilkan rincian jam lembur per hari beserta tarifnya.",
+    "why": "Karyawan bisa mencocokkan sendiri bayaran lembur sehingga keluhan ke HR berkurang.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "feature",
+   "title": "Bilingual payslips for Bumi Logistik",
+   "client": "Bumi Logistik",
+   "menus": [
+    "Payroll › Payslip"
+   ],
+   "requested_by": "Maya Lestari",
+   "reporter": "Rina Wijaya",
+   "reason": "Bumi has expatriate managers who do not read Indonesian.",
+   "description": "",
+   "status": "Done",
+   "created": "2026-03-25",
+   "closed": "2026-04-20",
+   "comments": [],
+   "decision": {
+    "what_changed": "Bumi Logistik payslips show every label in English and Indonesian.",
+    "why": "Expatriate managers could not read their payslips.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "Hide basic salary on Cahaya payslips",
+   "client": "Cahaya Farma",
+   "menus": [
+    "Payroll › Payslip"
+   ],
+   "requested_by": "Rizky Ramadhan",
+   "reporter": "Rina Wijaya",
+   "reason": "Cahaya did not want basic salary visible to line managers who print payslips.",
+   "description": "",
+   "status": "Cancelled",
+   "created": "2025-10-20",
+   "closed": "2025-11-10",
+   "comments": [],
+   "decision": {
+    "what_changed": "Not implemented: payslips keep showing basic salary.",
+    "why": "Regulations require every wage component on the payslip.",
+    "alternatives": "Restricting who can print payslips was proposed instead."
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "PPh 21 pakai tarif efektif rata-rata (TER) mulai Januari 2024",
+   "client": null,
+   "menus": [
+    "Payroll › Tax PPh 21"
+   ],
+   "requested_by": "Rina Wijaya",
+   "reporter": "Rina Wijaya",
+   "reason": "PP 58/2023 mengubah cara pemotongan PPh 21 bulanan mulai 1 Januari 2024.",
+   "description": "",
+   "status": "Done",
+   "created": "2023-12-04",
+   "closed": "2023-12-28",
+   "comments": [],
+   "decision": {
+    "what_changed": "PPh 21 bulanan dihitung dengan tarif efektif rata-rata (TER) sesuai kategori PTKP.",
+    "why": "PP 58/2023 dan PMK 168/2023 mewajibkan metode TER mulai Januari 2024.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "December PPh 21 annual true-up",
+   "client": null,
+   "menus": [
+    "Payroll › Tax PPh 21"
+   ],
+   "requested_by": "Rina Wijaya",
+   "reporter": "Rina Wijaya",
+   "reason": "With TER, the monthly tax does not match the annual tax.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-01-27",
+   "closed": "2025-02-25",
+   "comments": [],
+   "decision": {
+    "what_changed": "December PPh 21 is the full-year tax under Article 17 rates minus the tax withheld from January to November.",
+    "why": "PMK 168/2023 requires the annual reconciliation in the last month.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "Gross-up PPh 21 untuk driver Bumi",
+   "client": "Bumi Logistik",
+   "menus": [
+    "Payroll › Tax PPh 21"
+   ],
+   "requested_by": "Agus Hartono",
+   "reporter": "Rina Wijaya",
+   "reason": "Bumi menanggung pajak driver sebagai bagian dari paket kerja.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-09-22",
+   "closed": "2025-10-20",
+   "comments": [],
+   "decision": {
+    "what_changed": "PPh 21 driver Bumi Logistik dihitung dengan metode gross-up: perusahaan menanggung pajaknya sebagai tunjangan.",
+    "why": "Kontrak kerja driver Bumi menjanjikan gaji bersih tanpa potongan pajak.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "BPJS Kesehatan salary cap Rp 12 million",
+   "client": null,
+   "menus": [
+    "Payroll › BPJS"
+   ],
+   "requested_by": "Rina Wijaya",
+   "reporter": "Rina Wijaya",
+   "reason": "Contributions were computed on full salaries above the legal cap.",
+   "description": "",
+   "status": "Done",
+   "created": "2024-06-20",
+   "closed": "2024-07-15",
+   "comments": [],
+   "decision": {
+    "what_changed": "BPJS Kesehatan contributions use the salary up to Rp 12,000,000 as their base.",
+    "why": "Perpres 64/2020 sets the cap; above it employees were overcharged.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "BPJS untuk pegawai part-time Arunika sejak bulan pertama",
+   "client": "Arunika Retail",
+   "menus": [
+    "Payroll › BPJS"
+   ],
+   "requested_by": "Sari Dewi",
+   "reporter": "Rina Wijaya",
+   "reason": "Arunika ingin pegawai part-time toko terlindungi sejak awal.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-03-10",
+   "closed": "2025-04-01",
+   "comments": [],
+   "decision": {
+    "what_changed": "Arunika mendaftarkan dan membayar BPJS Ketenagakerjaan untuk pegawai part-time sejak bulan pertama, tidak menunggu masa percobaan.",
+    "why": "Kecelakaan kerja pegawai baru di toko tidak tertanggung saat masa percobaan.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "Prorated THR under 12 months of service",
+   "client": null,
+   "menus": [
+    "Payroll › THR"
+   ],
+   "requested_by": "Rina Wijaya",
+   "reporter": "Rina Wijaya",
+   "reason": "THR for new employees was calculated by hand each year.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-01-22",
+   "closed": "2025-02-20",
+   "comments": [],
+   "decision": {
+    "what_changed": "THR for employees with 1 to 12 months of service is months worked ÷ 12 × monthly wage, paid at least 7 days before Lebaran.",
+    "why": "Permenaker 6/2016 sets the proration and the deadline.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "THR pekerja harian Arunika dari rata-rata upah 12 bulan",
+   "client": "Arunika Retail",
+   "menus": [
+    "Payroll › THR"
+   ],
+   "requested_by": "Sari Dewi",
+   "reporter": "Rina Wijaya",
+   "reason": "Pekerja harian Arunika upahnya berubah tiap bulan.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-02-17",
+   "closed": "2025-03-10",
+   "comments": [],
+   "decision": {
+    "what_changed": "THR pekerja harian Arunika dihitung dari rata-rata upah 12 bulan terakhir.",
+    "why": "Permenaker 6/2016 mengatur THR pekerja harian berdasarkan rata-rata upah.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "THR in two installments for Cahaya",
+   "client": "Cahaya Farma",
+   "menus": [
+    "Payroll › THR"
+   ],
+   "requested_by": "Rizky Ramadhan",
+   "reporter": "Rina Wijaya",
+   "reason": "Cahaya wanted to spread the THR cash outflow.",
+   "description": "",
+   "status": "Cancelled",
+   "created": "2026-02-02",
+   "closed": "2026-02-28",
+   "comments": [],
+   "decision": {
+    "what_changed": "Not implemented: THR is paid in full, once, at least 7 days before Lebaran.",
+    "why": "Permenaker 6/2016 does not allow installments; late or partial THR is fined.",
+    "alternatives": "Paying the full THR earlier from a reserve was suggested."
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "Bank transfer file in KlikBCA Bisnis format",
+   "client": null,
+   "menus": [
+    "Payroll › Bank Transfer"
+   ],
+   "requested_by": "Rina Wijaya",
+   "reporter": "Rina Wijaya",
+   "reason": "Finance retyped salaries into the bank's portal.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-01-06",
+   "closed": "2025-01-30",
+   "comments": [],
+   "decision": {
+    "what_changed": "Payroll exports the salary transfer as a KlikBCA Bisnis bulk transfer CSV.",
+    "why": "Retyping hundreds of salaries caused transfer errors.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "Gaji karyawan Bumi dibagi ke dua rekening",
+   "client": "Bumi Logistik",
+   "menus": [
+    "Payroll › Bank Transfer"
+   ],
+   "requested_by": "Maya Lestari",
+   "reporter": "Rina Wijaya",
+   "reason": "Banyak driver Bumi ingin sebagian gaji langsung ke rekening keluarga.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-07-01",
+   "closed": "2025-07-25",
+   "comments": [],
+   "decision": {
+    "what_changed": "Karyawan Bumi Logistik dapat membagi gaji ke dua rekening (Mandiri dan BRI) dengan persentase tetap.",
+    "why": "Driver jarang pulang dan keluarga butuh uang belanja tepat waktu.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "feature",
+   "title": "Transfer file for Bank Syariah Indonesia at Cahaya",
+   "client": "Cahaya Farma",
+   "menus": [
+    "Payroll › Bank Transfer"
+   ],
+   "requested_by": "Rizky Ramadhan",
+   "reporter": "Dimas Pratama",
+   "reason": "Cahaya moved its payroll account to BSI.",
+   "description": "",
+   "status": "In review",
+   "created": "2026-08-25",
+   "closed": "",
+   "comments": []
+  },
+  {
+   "type": "change_request",
+   "title": "Arunika attendance report grouped by store",
+   "client": "Arunika Retail",
+   "menus": [
+    "Reports › Attendance Report"
+   ],
+   "requested_by": "Budi Santoso",
+   "reporter": "Rina Wijaya",
+   "reason": "Area managers compare stores every week.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-05-05",
+   "closed": "2025-05-28",
+   "comments": [],
+   "decision": {
+    "what_changed": "The Arunika attendance report groups employees by store and exports to Excel.",
+    "why": "Area managers review attendance per store each Monday.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "change_request",
+   "title": "Toleransi terlambat 10 menit di laporan keterlambatan",
+   "client": null,
+   "menus": [
+    "Reports › Attendance Report"
+   ],
+   "requested_by": "Rina Wijaya",
+   "reporter": "Rina Wijaya",
+   "reason": "Karyawan yang terlambat 1–2 menit ikut dihitung terlambat.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-11-24",
+   "closed": "2025-12-15",
+   "comments": [],
+   "decision": {
+    "what_changed": "Laporan keterlambatan memberi toleransi 10 menit; baru dihitung terlambat setelah 10 menit dari jam masuk.",
+    "why": "Terlambat beberapa menit karena antre absen tidak adil dihitung sebagai pelanggaran.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "feature",
+   "title": "Cahaya headcount by plant and department",
+   "client": "Cahaya Farma",
+   "menus": [
+    "Reports › Headcount Report"
+   ],
+   "requested_by": "Wulan Prasetyo",
+   "reporter": "Rina Wijaya",
+   "reason": "BPOM audits ask for monthly headcount per plant.",
+   "description": "",
+   "status": "Done",
+   "created": "2026-04-08",
+   "closed": "2026-05-06",
+   "comments": [],
+   "decision": {
+    "what_changed": "Cahaya Farma gets a monthly headcount report by plant and department.",
+    "why": "BPOM auditors ask for staffing levels per production plant.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "feature",
+   "title": "Turnover rate on the headcount report",
+   "client": null,
+   "menus": [
+    "Reports › Headcount Report"
+   ],
+   "requested_by": "Rina Wijaya",
+   "reporter": "Dimas Pratama",
+   "reason": "Clients want turnover rates.",
+   "description": "",
+   "status": "To do",
+   "created": "2026-09-05",
+   "closed": "",
+   "comments": []
+  },
+  {
+   "type": "bug",
+   "title": "Notifikasi approval lembur terkirim dua kali ke HR Arunika",
+   "client": "Arunika Retail",
+   "menus": [
+    "HR › Attendance › Overtime Approval"
+   ],
+   "requested_by": "Budi Santoso",
+   "reporter": "Dimas Pratama",
+   "reason": "HR Arunika menerima dua notifikasi untuk setiap pengajuan lembur.",
+   "description": "",
+   "status": "Done",
+   "created": "2025-10-01",
+   "closed": "2025-10-12",
+   "comments": [],
+   "decision": {
+    "what_changed": "Notifikasi approval lembur kini hanya dikirim sekali; pengiriman ganda dari retry sudah diperbaiki.",
+    "why": "Notifikasi ganda membuat HR menyetujui pengajuan dua kali.",
+    "alternatives": ""
+   }
+  },
+  {
+   "type": "bug",
+   "title": "Negative leave balance after carry-over expired",
+   "client": null,
+   "menus": [
+    "HR › Leave › Leave Balance"
+   ],
+   "requested_by": "Rina Wijaya",
+   "reporter": "Dimas Pratama",
+   "reason": "After 30 June, some balances showed minus days.",
+   "description": "",
+   "status": "Done",
+   "created": "2026-06-02",
+   "closed": "2026-06-18",
+   "comments": [],
+   "decision": {
+    "what_changed": "Expiring carried-over leave no longer takes the balance below zero; leave already taken from carry-over is kept.",
+    "why": "Employees who used carried-over days before 30 June saw negative balances.",
+    "alternatives": ""
+   }
+  }
+ ]
+}
