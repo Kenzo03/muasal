@@ -33,7 +33,8 @@
     "search": "Search tickets or menus",
     "searchPlaceholder": "Search, or type HRIS-231",
     "language": "Language",
-    "account": "Account of {name}"
+    "account": "Account of {name}",
+    "newTicketShortcut": "New ticket (C)"
   },
   "search": {
     "heading": "Search",
@@ -289,7 +290,16 @@
     "showArchived": "Show archived",
     "hideArchived": "Hide archived",
     "archivedBadge": "Archived",
-    "openPage": "Open page"
+    "openPage": "Open page",
+    "dragHandle": "Drag {name}",
+    "dnd": {
+      "instructions": "To move a menu or module, press Space, move it with the arrow keys, and press Space again to drop it above, below or inside another. Escape cancels.",
+      "start": "Picked up {name}.",
+      "over": "{name} is over {target}.",
+      "none": "{name} is not over a menu or module.",
+      "end": "Dropped {name} at {target}.",
+      "cancel": "Move cancelled."
+    }
   },
   "nodePage": {
     "path": "Path",
@@ -471,7 +481,14 @@
     "created": "{key} created.",
     "save": "Save",
     "cancel": "Cancel",
-    "reload": "Reload"
+    "reload": "Reload",
+    "descriptionHint": "Markdown works. Paste an image to attach it to the ticket.",
+    "descriptionHintNew": "Markdown works. Images can be pasted once the ticket exists.",
+    "pasteAfterCreate": "Create the ticket first; then paste the image into its description or a comment.",
+    "recent": "Recent",
+    "bugBehaviors": "Is it a bug, or how the menu was agreed to work? See the behaviors of",
+    "newIn": "New ticket in {project}",
+    "close": "Close"
   },
   "ticket": {
     "edit": "Edit",
@@ -589,7 +606,8 @@
       "outcome": "Outcome",
       "state": "State",
       "confirmed_by": "Confirmed by"
-    }
+    },
+    "markdownHint": "Markdown works: **bold**, lists, `code`, links. Paste an image to attach it."
   },
   "attachments": {
     "title": "Attachments",

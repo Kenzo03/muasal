@@ -33,7 +33,8 @@
     "search": "Cari tiket atau menu",
     "searchPlaceholder": "Cari tiket, menu, atau HRIS-231",
     "language": "Bahasa",
-    "account": "Akun {name}"
+    "account": "Akun {name}",
+    "newTicketShortcut": "Tiket baru (C)"
   },
   "search": {
     "heading": "Pencarian",
@@ -289,7 +290,16 @@
     "showArchived": "Tampilkan arsip",
     "hideArchived": "Sembunyikan arsip",
     "archivedBadge": "Diarsipkan",
-    "openPage": "Buka halaman"
+    "openPage": "Buka halaman",
+    "dragHandle": "Seret {name}",
+    "dnd": {
+      "instructions": "Untuk memindahkan menu atau modul, tekan Spasi, geser dengan tombol panah, lalu tekan Spasi lagi untuk meletakkannya di atas, di bawah, atau di dalam yang lain. Escape membatalkan.",
+      "start": "{name} diambil.",
+      "over": "{name} berada di atas {target}.",
+      "none": "{name} tidak berada di atas menu atau modul.",
+      "end": "{name} diletakkan di {target}.",
+      "cancel": "Pemindahan dibatalkan."
+    }
   },
   "nodePage": {
     "path": "Jejak",
@@ -471,7 +481,14 @@
     "created": "{key} dibuat.",
     "save": "Simpan",
     "cancel": "Batal",
-    "reload": "Muat ulang"
+    "reload": "Muat ulang",
+    "descriptionHint": "Mendukung Markdown. Tempel gambar untuk melampirkannya ke tiket.",
+    "descriptionHintNew": "Mendukung Markdown. Gambar bisa ditempel setelah tiket dibuat.",
+    "pasteAfterCreate": "Buat tiketnya dulu, lalu tempel gambar di deskripsi atau komentar.",
+    "recent": "Terakhir",
+    "bugBehaviors": "Bug, atau memang perilaku yang sudah disepakati? Lihat perilaku",
+    "newIn": "Tiket baru di {project}",
+    "close": "Tutup"
   },
   "ticket": {
     "edit": "Ubah",
@@ -589,7 +606,8 @@
       "outcome": "Hasil",
       "state": "Keadaan",
       "confirmed_by": "Dikonfirmasi oleh"
-    }
+    },
+    "markdownHint": "Mendukung Markdown: **tebal**, daftar, `kode`, tautan. Tempel gambar untuk melampirkannya."
   },
   "attachments": {
     "title": "Lampiran",

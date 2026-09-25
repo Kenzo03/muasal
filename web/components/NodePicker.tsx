@@ -12,16 +12,23 @@ type Props = {
   selected: Set<number>;
   onToggle: (id: number, on: boolean) => void;
   legend: string; // read by screen readers; the visible label sits beside the picker
+  recent?: number[]; // the user's recently used nodes, most recent first
 };
 
 // The menu picker of the ticket form and the close dialog (FSD §8.3): a filter
 // by path, alias or code, then a checkbox per menu or module, named by its path.
-export default function NodePicker({ nodes, selected, onToggle, legend }: Props) {
+// Recently used menus come first, marked "Recent" (§8.1).
+export default function NodePicker({ nodes, selected, onToggle, legend, recent = [] }: Props) {
   const t = useTranslations("ticketForm");
   const [filter, setFilter] = useState("");
   const pathOf = useMemo(() => nodePaths(nodes), [nodes]);
   const q = filter.trim().toLowerCase();
-  const choices = nodes.filter((n) => !q || [pathOf(n.id), n.code ?? "", ...n.aliases].some((s) => s.toLowerCase().includes(q)));
+  const rank = (id: number) => (recent.includes(id) ? recent.indexOf(id) : recent.length);
+  const choices = nodes
+    .filter((n) => !q || [pathOf(n.id), n.code ?? "", ...n.aliases].some((s) => s.toLowerCase().includes(q)))
+    .map((n, i) => ({ n, i }))
+    .sort((a, b) => rank(a.n.id) - rank(b.n.id) || a.i - b.i) // stable: the tree order stays within each group
+    .map(({ n }) => n);
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="sr-only">{legend}</legend>
@@ -40,6 +47,7 @@ export default function NodePicker({ nodes, selected, onToggle, legend }: Props)
           <label key={n.id} className={cx("flex items-center gap-2 border-b border-line-soft px-2.5 py-1.5 last:border-0", selected.has(n.id) && "bg-accent-soft")}>
             <input type="checkbox" checked={selected.has(n.id)} onChange={(e) => onToggle(n.id, e.target.checked)} className="size-4 accent-accent" />
             {pathOf(n.id)}
+            {recent.includes(n.id) && <span className="rounded-[3px] bg-paper px-1.5 text-[11px] font-semibold text-muted">{t("recent")}</span>}
             {n.code && <span className="ml-auto font-mono text-[11px] text-muted">{n.code}</span>}
           </label>
         ))}
