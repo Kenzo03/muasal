@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { setPassword, signIn } from "./helpers";
+import { drag, setPassword, signIn } from "./helpers";
 
 // api returns a JSON caller that acts as the page's signed-in user.
 function api(page: Page) {
@@ -82,14 +82,14 @@ test("a developer sees a menu's history newest first", async ({ page, browser })
   const todo = pm.getByRole("region", { name: "To do" });
   const done = pm.getByRole("region", { name: "Done" });
   const weekend = pm.getByRole("article").filter({ hasText: `${key}-2` });
-  await weekend.dragTo(done);
+  await drag(pm, weekend, done);
   const dialog2 = pm.getByRole("dialog", { name: `Tutup ${key}-2 sebagai Done` });
   await dialog2.getByRole("button", { name: "Batal" }).click();
   await expect(dialog2).toHaveCount(0);
   await expect(todo).toContainText(`${key}-2`);
 
   // AC-DC-4: the ticket has no reason, so the dialog asks for one and flags a weak one.
-  await weekend.dragTo(done);
+  await drag(pm, weekend, done);
   const reason = dialog2.getByLabel("Alasan");
   await reason.fill("sesuai permintaan klien");
   await expect(dialog2.getByText(/Jelaskan mengapa klien membutuhkannya/)).toBeVisible();
