@@ -258,7 +258,10 @@
     "newTicket": "New ticket",
     "addHere": "Add a ticket to {status}",
     "missing": "Reason or menus missing",
-    "closedLater": "Closing comes with the close dialog.",
+    "recentClosed": "Closed in the last 14 days",
+    "allClosed": "Every closed ticket",
+    "showAll": "Show all",
+    "showRecent": "Last 14 days",
     "moveTo": "Status of {key}",
     "noClient": "Core"
   },

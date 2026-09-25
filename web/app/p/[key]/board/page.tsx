@@ -21,11 +21,16 @@ export default async function BoardPage({
   const t = await getTranslations("project");
   const api = await serverApi();
   const path = { params: { path: { key } } };
-  const [clients, statuses, page] = await Promise.all([
+  const showAll = values.closed === "all";
+  const [clients, statuses, nodes, page] = await Promise.all([
     api.GET("/projects/{key}/clients", path),
     api.GET("/projects/{key}/statuses", path),
+    api.GET("/projects/{key}/nodes", path), // the close dialog's menu picker
     // ponytail: one page of up to 1,000 cards; per-column "Show more" comes with larger boards.
-    api.GET("/projects/{key}/tickets", { params: { path: { key }, query: { ...ticketQuery(values), sort: "priority", limit: 1000 } } }),
+    // Done and Cancelled hold the last 14 days unless "Show all" (FSD §8.4).
+    api.GET("/projects/{key}/tickets", {
+      params: { path: { key }, query: { ...ticketQuery(values), sort: "priority", limit: 1000, closed_days: showAll ? undefined : 14 } },
+    }),
   ]);
   return (
     <>
@@ -39,8 +44,10 @@ export default async function BoardPage({
           projectKey={key}
           statuses={statuses.data?.items ?? []}
           tickets={page.data?.items ?? []}
+          nodes={nodes.data?.items ?? []}
           canEdit={project.role !== "viewer"}
           today={new Date().toISOString().slice(0, 10)}
+          query={values}
         />
       </main>
     </>

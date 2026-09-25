@@ -258,7 +258,10 @@
     "newTicket": "Tiket baru",
     "addHere": "Tambah tiket ke {status}",
     "missing": "Alasan atau menu belum diisi",
-    "closedLater": "Penutupan hadir bersama dialog penutupan.",
+    "recentClosed": "Ditutup 14 hari terakhir",
+    "allClosed": "Semua tiket yang ditutup",
+    "showAll": "Tampilkan semua",
+    "showRecent": "14 hari terakhir",
     "moveTo": "Status {key}",
     "noClient": "Inti"
   },
