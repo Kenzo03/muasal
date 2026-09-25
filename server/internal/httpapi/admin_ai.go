@@ -4,12 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/kenzo03/muasal/server/internal/ai"
 	"github.com/kenzo03/muasal/server/internal/db"
+	"github.com/kenzo03/muasal/server/internal/indexer"
 	"github.com/kenzo03/muasal/server/internal/llm"
 	"github.com/kenzo03/muasal/server/internal/secret"
 )
@@ -45,13 +49,37 @@ func (s *Server) UpdateAISettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	next, fields := s.aiSettingsFrom(cur, in)
+	// A new embedding model re-embeds every chunk, so the admin confirms it (§13.4).
+	embedChanged := next.Embed.URL != cur.Embed.URL || next.Embed.Model != cur.Embed.Model || next.EmbedDim != cur.EmbedDim
+	if embedChanged && !deref(in.Reindex) {
+		chunks, err := s.q.CountChunks(ctx)
+		if err != nil {
+			s.fail(w, r, err)
+			return
+		}
+		if chunks > 0 {
+			fields = append(fields, FieldError{Field: "embed.model", Code: "reindex_required",
+				Message: fmt.Sprintf("A new embedding model re-embeds all %d chunks; confirm to continue", chunks)})
+		}
+	}
 	if len(fields) > 0 {
 		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields", fields...)
 		return
 	}
-	err = s.inTx(ctx, func(q *db.Queries) error {
+	err = s.inJobTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		if err := s.ai.Store.Put(ctx, q, next, u.ID); err != nil {
 			return err
+		}
+		switch {
+		case next.EmbedDim != cur.EmbedDim:
+			if _, err := s.jobs.InsertTx(ctx, tx, indexer.ChangeDimension{Dim: next.EmbedDim}, nil); err != nil {
+				return err
+			}
+		case embedChanged || (cur.Mode == ai.ModeOff && next.Mode != ai.ModeOff):
+			// Chunks written while AI was off, or embedded by the old model, get vectors now (R-AI-5).
+			if _, err := s.jobs.InsertTx(ctx, tx, indexer.EmbedPending{}, nil); err != nil {
+				return err
+			}
 		}
 		m := webMeta(r)
 		if d := changed(aiAudit(cur), aiAudit(next)); len(d) > 0 {
@@ -155,6 +183,9 @@ func (s *Server) aiSettingsFrom(cur ai.Settings, in AISettingsUpdate) (ai.Settin
 	next.ContextTokens, next.MaxConcurrent = in.Tuning.ContextTokens, in.Tuning.MaxConcurrent
 	next.Temperature, next.TimeoutSeconds = in.Tuning.Temperature, in.Tuning.TimeoutSeconds
 	next.MinSimilarity, next.ExhaustiveMax = in.Tuning.MinSimilarity, in.Tuning.ExhaustiveMax
+	if in.EmbedDim != nil {
+		next.EmbedDim = *in.EmbedDim
+	}
 	var fields []FieldError
 	for _, e := range []struct {
 		name string
@@ -208,4 +239,76 @@ func aiAudit(c ai.Settings) map[string]any {
 		"context_tokens": c.ContextTokens, "max_concurrent": c.MaxConcurrent, "temperature": c.Temperature,
 		"timeout_seconds": c.TimeoutSeconds, "min_similarity": c.MinSimilarity, "exhaustive_max": c.ExhaustiveMax,
 	}
+}
+
+// GetAIStatus is Index status (§13.3).
+func (s *Server) GetAIStatus(w http.ResponseWriter, r *http.Request) {
+	if s.requireAdmin(w, r) == nil {
+		return
+	}
+	ctx := r.Context()
+	cur, err := s.ai.Store.Get(ctx)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	st, err := indexer.ReadStatus(ctx, s.pool, cur.Embed.Model)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	out := IndexStatus{
+		Mode: AIMode(cur.Mode), EmbedModel: cur.Embed.Model, TotalChunks: st.Total, PendingChunks: st.Pending,
+		QueuedJobs: st.Queued, LastIndexedAt: st.LastIndexedAt,
+		ChunksByModel: make([]ModelChunks, len(st.ByModel)), FailedJobs: make([]FailedJob, len(st.Failed)),
+	}
+	for i, m := range st.ByModel {
+		out.ChunksByModel[i] = ModelChunks{Model: m.Model, Chunks: m.Chunks}
+	}
+	for i, f := range st.Failed {
+		out.FailedJobs[i] = FailedJob{Id: f.ID, TicketId: f.TicketID, Attempts: f.Attempts, Error: f.Error, At: f.At}
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+// ReindexAI queues every ticket, or retries the index jobs that failed for
+// good (§13.2); the admin sees the queue drain in Index status.
+func (s *Server) ReindexAI(w http.ResponseWriter, r *http.Request) {
+	u := s.requireAdmin(w, r)
+	if u == nil {
+		return
+	}
+	var in ReindexRequest
+	if !decodeJSON(w, r, &in) {
+		return
+	}
+	ctx := r.Context()
+	n := 0
+	var err error
+	switch in.Scope {
+	case ReindexRequestScopeAll:
+		n, err = indexer.QueueAll(ctx, s.pool, s.jobs)
+	case ReindexRequestScopeFailed:
+		var st indexer.Status
+		if st, err = indexer.ReadStatus(ctx, s.pool, ""); err == nil {
+			for _, f := range st.Failed {
+				if _, err = s.jobs.JobRetry(ctx, f.ID); err != nil {
+					break
+				}
+				n++
+			}
+		}
+	default:
+		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields",
+			FieldError{Field: "scope", Code: "invalid", Message: "Choose all or failed"})
+		return
+	}
+	if err == nil {
+		err = audit(ctx, s.q, webMeta(r), &u.ID, "ai_settings", 1, "reindex", map[string]any{"scope": string(in.Scope), "queued": n})
+	}
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusAccepted, ReindexResult{Queued: n})
 }

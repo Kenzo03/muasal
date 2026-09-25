@@ -234,6 +234,7 @@ func (w *embedWorker) Timeout(*river.Job[EmbedPending]) time.Duration { return 3
 type Options struct {
 	PollInterval time.Duration // default 1 s
 	Workers      int           // default 4
+	OwnerURL     string        // MIGRATE_DATABASE_URL, for ChangeDimension
 }
 
 // NewClient returns the River client that `app serve` starts: the index queue's
@@ -243,6 +244,7 @@ func NewClient(pool *pgxpool.Pool, rt *ai.Runtime, log *slog.Logger, opts Option
 	workers := river.NewWorkers()
 	river.AddWorker(workers, &indexWorker{ix: ix})
 	river.AddWorker(workers, &embedWorker{ix: ix})
+	river.AddWorker(workers, &dimensionWorker{ownerURL: opts.OwnerURL})
 	return river.NewClient(riverpgxv5.New(pool), &river.Config{
 		Logger:            log,
 		FetchPollInterval: cmp.Or(opts.PollInterval, time.Second),

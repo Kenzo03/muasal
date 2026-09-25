@@ -62,3 +62,6 @@ SELECT DISTINCT tn.ticket_id FROM ticket_nodes tn JOIN sub ON sub.id = tn.node_i
 
 -- name: ListTicketIDsOfClient :many
 SELECT id FROM tickets WHERE client_id = sqlc.arg('client_id')::bigint ORDER BY id;
+
+-- name: ListAllTicketIDs :many
+SELECT id FROM tickets ORDER BY id DESC;

@@ -16,6 +16,8 @@ import (
 	_ "time/tzdata" // timezone names also work in the distroless image
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/riverqueue/river"
+	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 
 	"github.com/kenzo03/muasal/server/internal/config"
 	"github.com/kenzo03/muasal/server/internal/httpapi"
@@ -27,6 +29,7 @@ const usage = `usage:
   app serve                                  run the API (migrates first when MIGRATE_DATABASE_URL is set)
   app migrate up                             apply migrations and prepare the app database role
   app admin create-admin --email E --name N  create an admin and print a one-time setup link
+  app admin reindex --all                    queue an index job for every ticket, e.g. after a restore
   app healthcheck                            exit 0 when the API on LISTEN_ADDR is ready`
 
 func main() {
@@ -57,6 +60,8 @@ func run(ctx context.Context, args []string, log *slog.Logger) error {
 		return migrate.Up(ctx, cfg.MigrateDatabaseURL, cfg.DatabaseURL)
 	case len(args) >= 2 && args[0] == "admin" && args[1] == "create-admin":
 		return createAdmin(ctx, cfg, log, args[2:])
+	case len(args) == 3 && args[0] == "admin" && args[1] == "reindex" && args[2] == "--all":
+		return reindexAll(ctx, cfg, log)
 	}
 	return errors.New(usage)
 }
@@ -77,7 +82,7 @@ func serve(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	api := httpapi.New(cfg, pool, log)
 	// The index workers share the API's AI runtime, so embedding pauses while
 	// an answer is generated (FSD §11.7).
-	workers, err := indexer.NewClient(pool, api.AI(), log, indexer.Options{})
+	workers, err := indexer.NewClient(pool, api.AI(), log, indexer.Options{OwnerURL: cfg.MigrateDatabaseURL})
 	if err != nil {
 		return err
 	}
@@ -120,6 +125,25 @@ func createAdmin(ctx context.Context, cfg config.Config, log *slog.Logger, args 
 		return err
 	}
 	fmt.Printf("Admin %s created. Open this link within 72 hours to set the password:\n%s\n", *email, link)
+	return nil
+}
+
+// reindexAll queues every ticket for the running workers (FSD §13.4, §19).
+func reindexAll(ctx context.Context, cfg config.Config, log *slog.Logger) error {
+	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+	client, err := river.NewClient(riverpgxv5.New(pool), &river.Config{Logger: log})
+	if err != nil {
+		return err
+	}
+	n, err := indexer.QueueAll(ctx, pool, client)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Queued %d tickets; Admin → AI → Index status shows the progress.\n", n)
 	return nil
 }
 

@@ -32,6 +32,7 @@ CREATE TABLE chunks (
   tsv          tsvector GENERATED ALWAYS AS (to_tsvector('simple', content)) STORED,
   embedding    halfvec(1024),                  -- NULL until embedded
   embed_model  text,
+  indexed_at   timestamptz NOT NULL DEFAULT now(), -- last written or embedded (Index status)
   UNIQUE (source_type, source_id, seq)
 );
 CREATE INDEX chunks_filter_idx ON chunks (project_id, client_id, occurred_at);

@@ -12,8 +12,19 @@ import (
 	pgvector "github.com/pgvector/pgvector-go"
 )
 
+const countChunks = `-- name: CountChunks :one
+SELECT count(*) FROM chunks
+`
+
+func (q *Queries) CountChunks(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countChunks)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countChunksByModel = `-- name: CountChunksByModel :many
-SELECT coalesce(embed_model, '') AS model, count(*) AS chunks, max(occurred_at)::timestamptz AS latest
+SELECT coalesce(embed_model, '') AS model, count(*) AS chunks, max(indexed_at)::timestamptz AS latest
 FROM chunks GROUP BY 1 ORDER BY 1
 `
 
@@ -165,7 +176,7 @@ func (q *Queries) ListTicketChunks(ctx context.Context, ticketID int64) ([]ListT
 }
 
 const setChunkEmbedding = `-- name: SetChunkEmbedding :exec
-UPDATE chunks SET embedding = $1::halfvec, embed_model = $2::text
+UPDATE chunks SET embedding = $1::halfvec, embed_model = $2::text, indexed_at = now()
 WHERE id = $3 AND content_hash = $4
 `
 
@@ -199,7 +210,7 @@ ON CONFLICT (source_type, source_id, seq) DO UPDATE SET
   internal = excluded.internal, occurred_at = excluded.occurred_at,
   embedding   = CASE WHEN chunks.content_hash = excluded.content_hash THEN chunks.embedding END,
   embed_model = CASE WHEN chunks.content_hash = excluded.content_hash THEN chunks.embed_model END,
-  content = excluded.content, content_hash = excluded.content_hash
+  content = excluded.content, content_hash = excluded.content_hash, indexed_at = now()
 `
 
 type UpsertChunkParams struct {

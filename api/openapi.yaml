@@ -825,6 +825,35 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/AITestResult" }
         default: { $ref: "#/components/responses/Problem" }
+  /admin/ai/status:
+    get:
+      operationId: getAIStatus
+      tags: [admin]
+      description: System admins. Index status (FSD §13.3) - chunks per embedding model, chunks waiting for a vector, queued and failed index jobs.
+      responses:
+        "200":
+          description: The index now.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IndexStatus" }
+        default: { $ref: "#/components/responses/Problem" }
+  /admin/ai/reindex:
+    post:
+      operationId: reindexAI
+      tags: [admin]
+      description: System admins. Queues an index job for every ticket (all), or retries the index jobs that used up their attempts (failed).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReindexRequest" }
+      responses:
+        "202":
+          description: Jobs queued.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReindexResult" }
+        default: { $ref: "#/components/responses/Problem" }
 components:
   responses:
     Problem:
@@ -1585,6 +1614,12 @@ components:
         chat: { $ref: "#/components/schemas/AIEndpointUpdate" }
         embed: { $ref: "#/components/schemas/AIEndpointUpdate" }
         tuning: { $ref: "#/components/schemas/AITuning" }
+        embed_dim: { type: integer, minimum: 1, maximum: 4000, description: The new embedding model's dimension, from Test connection; omitted keeps the current one. }
+        reindex:
+          type: boolean
+          description: >-
+            Confirms that a new embedding model re-embeds every chunk (§13.4). Changing the embedding URL, model or
+            dimension without it answers 422 reindex_required.
     AIProbe:
       type: object
       required: [ok, latency_ms]
@@ -1602,3 +1637,45 @@ components:
       properties:
         chat: { $ref: "#/components/schemas/AIProbe" }
         embed: { $ref: "#/components/schemas/AIProbe" }
+    ModelChunks:
+      type: object
+      required: [model, chunks]
+      properties:
+        model: { type: string, description: Empty for chunks without a vector. }
+        chunks: { type: integer, format: int64 }
+    FailedJob:
+      type: object
+      required: [id, ticket_id, attempts, error, at]
+      properties:
+        id: { type: integer, format: int64 }
+        ticket_id: { type: integer, format: int64 }
+        attempts: { type: integer }
+        error: { type: string }
+        at: { type: string, format: date-time }
+    IndexStatus:
+      type: object
+      required: [mode, embed_model, total_chunks, pending_chunks, chunks_by_model, queued_jobs, failed_jobs]
+      properties:
+        mode: { $ref: "#/components/schemas/AIMode" }
+        embed_model: { type: string }
+        total_chunks: { type: integer, format: int64 }
+        pending_chunks: { type: integer, format: int64, description: Chunks without a vector from the current embedding model. }
+        chunks_by_model:
+          type: array
+          items: { $ref: "#/components/schemas/ModelChunks" }
+        queued_jobs: { type: integer, format: int64, description: Index jobs waiting or retrying. }
+        failed_jobs:
+          type: array
+          description: Index jobs that used up their 10 attempts, newest first, at most 50.
+          items: { $ref: "#/components/schemas/FailedJob" }
+        last_indexed_at: { type: string, format: date-time, nullable: true }
+    ReindexRequest:
+      type: object
+      required: [scope]
+      properties:
+        scope: { type: string, enum: [all, failed] }
+    ReindexResult:
+      type: object
+      required: [queued]
+      properties:
+        queued: { type: integer }

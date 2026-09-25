@@ -12,7 +12,7 @@ ON CONFLICT (source_type, source_id, seq) DO UPDATE SET
   internal = excluded.internal, occurred_at = excluded.occurred_at,
   embedding   = CASE WHEN chunks.content_hash = excluded.content_hash THEN chunks.embedding END,
   embed_model = CASE WHEN chunks.content_hash = excluded.content_hash THEN chunks.embed_model END,
-  content = excluded.content, content_hash = excluded.content_hash;
+  content = excluded.content, content_hash = excluded.content_hash, indexed_at = now();
 
 -- name: DeleteChunksFrom :exec
 -- Removes a source's parts from seq on: all of them with 0, or the tail that
@@ -31,11 +31,11 @@ LIMIT sqlc.arg('lim');
 
 -- name: SetChunkEmbedding :exec
 -- The hash guard skips a vector whose text changed while it was embedded.
-UPDATE chunks SET embedding = sqlc.arg('embedding')::halfvec, embed_model = sqlc.arg('model')::text
+UPDATE chunks SET embedding = sqlc.arg('embedding')::halfvec, embed_model = sqlc.arg('model')::text, indexed_at = now()
 WHERE id = sqlc.arg('id') AND content_hash = sqlc.arg('content_hash');
 
 -- name: CountChunksByModel :many
-SELECT coalesce(embed_model, '') AS model, count(*) AS chunks, max(occurred_at)::timestamptz AS latest
+SELECT coalesce(embed_model, '') AS model, count(*) AS chunks, max(indexed_at)::timestamptz AS latest
 FROM chunks GROUP BY 1 ORDER BY 1;
 
 -- name: CountPendingChunks :one
@@ -44,3 +44,6 @@ SELECT count(*) FROM chunks WHERE embedding IS NULL OR embed_model IS DISTINCT F
 -- name: ListTicketChunks :many
 SELECT id, source_type, source_id, seq, content, content_hash, embed_model, (embedding IS NOT NULL)::boolean AS embedded
 FROM chunks WHERE ticket_id = $1 ORDER BY source_type, source_id, seq;
+
+-- name: CountChunks :one
+SELECT count(*) FROM chunks;

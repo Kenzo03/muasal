@@ -81,6 +81,7 @@ type Chunk struct {
 	Tsv         interface{}
 	Embedding   *pgvector.HalfVector
 	EmbedModel  *string
+	IndexedAt   time.Time
 }
 
 type Client struct {

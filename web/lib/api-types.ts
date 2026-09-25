@@ -645,6 +645,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/ai/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description System admins. Index status (FSD §13.3) - chunks per embedding model, chunks waiting for a vector, queued and failed index jobs. */
+        get: operations["getAIStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/ai/reindex": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description System admins. Queues an index job for every ticket (all), or retries the index jobs that used up their attempts (failed). */
+        post: operations["reindexAI"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1293,6 +1327,10 @@ export interface components {
             chat: components["schemas"]["AIEndpointUpdate"];
             embed: components["schemas"]["AIEndpointUpdate"];
             tuning: components["schemas"]["AITuning"];
+            /** @description The new embedding model's dimension */
+            embed_dim?: number;
+            /** @description Confirms that a new embedding model re-embeds every chunk (§13.4). Changing the embedding URL, model or dimension without it answers 422 reindex_required. */
+            reindex?: boolean;
         };
         AIProbe: {
             ok: boolean;
@@ -1305,6 +1343,50 @@ export interface components {
         AITestResult: {
             chat: components["schemas"]["AIProbe"];
             embed: components["schemas"]["AIProbe"];
+        };
+        ModelChunks: {
+            /** @description Empty for chunks without a vector. */
+            model: string;
+            /** Format: int64 */
+            chunks: number;
+        };
+        FailedJob: {
+            /** Format: int64 */
+            id: number;
+            /** Format: int64 */
+            ticket_id: number;
+            attempts: number;
+            error: string;
+            /** Format: date-time */
+            at: string;
+        };
+        IndexStatus: {
+            mode: components["schemas"]["AIMode"];
+            embed_model: string;
+            /** Format: int64 */
+            total_chunks: number;
+            /**
+             * Format: int64
+             * @description Chunks without a vector from the current embedding model.
+             */
+            pending_chunks: number;
+            chunks_by_model: components["schemas"]["ModelChunks"][];
+            /**
+             * Format: int64
+             * @description Index jobs waiting or retrying.
+             */
+            queued_jobs: number;
+            /** @description Index jobs that used up their 10 attempts, newest first, at most 50. */
+            failed_jobs: components["schemas"]["FailedJob"][];
+            /** Format: date-time */
+            last_indexed_at?: string | null;
+        };
+        ReindexRequest: {
+            /** @enum {string} */
+            scope: "all" | "failed";
+        };
+        ReindexResult: {
+            queued: number;
         };
     };
     responses: {
@@ -2625,6 +2707,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AITestResult"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getAIStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The index now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexStatus"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    reindexAI: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReindexRequest"];
+            };
+        };
+        responses: {
+            /** @description Jobs queued. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReindexResult"];
                 };
             };
             default: components["responses"]["Problem"];

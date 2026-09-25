@@ -195,6 +195,24 @@ func (e ProjectRole) Valid() bool {
 	}
 }
 
+// Defines values for ReindexRequestScope.
+const (
+	ReindexRequestScopeAll    ReindexRequestScope = "all"
+	ReindexRequestScopeFailed ReindexRequestScope = "failed"
+)
+
+// Valid indicates whether the value is a known member of the ReindexRequestScope enum.
+func (e ReindexRequestScope) Valid() bool {
+	switch e {
+	case ReindexRequestScopeAll:
+		return true
+	case ReindexRequestScopeFailed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for StatusCategory.
 const (
 	StatusCategoryCancelled  StatusCategory = "cancelled"
@@ -360,9 +378,15 @@ type AISettingsUpdate struct {
 	Acknowledged *bool            `json:"acknowledged,omitempty"`
 	Chat         AIEndpointUpdate `json:"chat"`
 	Embed        AIEndpointUpdate `json:"embed"`
-	Mode         AIMode           `json:"mode"`
-	Provider     *string          `json:"provider,omitempty"`
-	Tuning       AITuning         `json:"tuning"`
+
+	// EmbedDim The new embedding model's dimension
+	EmbedDim *int    `json:"embed_dim,omitempty"`
+	Mode     AIMode  `json:"mode"`
+	Provider *string `json:"provider,omitempty"`
+
+	// Reindex Confirms that a new embedding model re-embeds every chunk (§13.4). Changing the embedding URL, model or dimension without it answers 422 reindex_required.
+	Reindex *bool    `json:"reindex,omitempty"`
+	Tuning  AITuning `json:"tuning"`
 }
 
 // AITestResult defines model for AITestResult.
@@ -539,11 +563,38 @@ type DecisionRecord struct {
 // DecisionState defines model for DecisionState.
 type DecisionState string
 
+// FailedJob defines model for FailedJob.
+type FailedJob struct {
+	At       time.Time `json:"at"`
+	Attempts int       `json:"attempts"`
+	Error    string    `json:"error"`
+	Id       int64     `json:"id"`
+	TicketId int64     `json:"ticket_id"`
+}
+
 // FieldError defines model for FieldError.
 type FieldError struct {
 	Code    string `json:"code"`
 	Field   string `json:"field"`
 	Message string `json:"message"`
+}
+
+// IndexStatus defines model for IndexStatus.
+type IndexStatus struct {
+	ChunksByModel []ModelChunks `json:"chunks_by_model"`
+	EmbedModel    string        `json:"embed_model"`
+
+	// FailedJobs Index jobs that used up their 10 attempts, newest first, at most 50.
+	FailedJobs    []FailedJob `json:"failed_jobs"`
+	LastIndexedAt *time.Time  `json:"last_indexed_at,omitempty"`
+	Mode          AIMode      `json:"mode"`
+
+	// PendingChunks Chunks without a vector from the current embedding model.
+	PendingChunks int64 `json:"pending_chunks"`
+
+	// QueuedJobs Index jobs waiting or retrying.
+	QueuedJobs  int64 `json:"queued_jobs"`
+	TotalChunks int64 `json:"total_chunks"`
 }
 
 // Locale defines model for Locale.
@@ -593,6 +644,14 @@ type MemberList struct {
 // MembersUpdate defines model for MembersUpdate.
 type MembersUpdate struct {
 	Members []MemberInput `json:"members"`
+}
+
+// ModelChunks defines model for ModelChunks.
+type ModelChunks struct {
+	Chunks int64 `json:"chunks"`
+
+	// Model Empty for chunks without a vector.
+	Model string `json:"model"`
 }
 
 // MyTicket defines model for MyTicket.
@@ -805,6 +864,19 @@ type Ref struct {
 // RefList defines model for RefList.
 type RefList struct {
 	Items []Ref `json:"items"`
+}
+
+// ReindexRequest defines model for ReindexRequest.
+type ReindexRequest struct {
+	Scope ReindexRequestScope `json:"scope"`
+}
+
+// ReindexRequestScope defines model for ReindexRequest.Scope.
+type ReindexRequestScope string
+
+// ReindexResult defines model for ReindexResult.
+type ReindexResult struct {
+	Queued int `json:"queued"`
 }
 
 // SearchNode defines model for SearchNode.
@@ -1176,6 +1248,9 @@ type TransitionTicketParams struct {
 	IfMatch *string `json:"If-Match,omitempty"`
 }
 
+// ReindexAIJSONRequestBody defines body for ReindexAI for application/json ContentType.
+type ReindexAIJSONRequestBody = ReindexRequest
+
 // TestAIJSONRequestBody defines body for TestAI for application/json ContentType.
 type TestAIJSONRequestBody = AISettingsUpdate
 
@@ -1253,6 +1328,12 @@ type TransitionTicketJSONRequestBody = TransitionRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+
+	// (POST /admin/ai/reindex)
+	ReindexAI(w http.ResponseWriter, r *http.Request)
+
+	// (GET /admin/ai/status)
+	GetAIStatus(w http.ResponseWriter, r *http.Request)
 
 	// (POST /admin/ai/test)
 	TestAI(w http.ResponseWriter, r *http.Request)
@@ -1419,6 +1500,34 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// ReindexAI operation middleware
+func (siw *ServerInterfaceWrapper) ReindexAI(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReindexAI(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAIStatus operation middleware
+func (siw *ServerInterfaceWrapper) GetAIStatus(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAIStatus(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // TestAI operation middleware
 func (siw *ServerInterfaceWrapper) TestAI(w http.ResponseWriter, r *http.Request) {
@@ -3214,6 +3323,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/settings/ai", wrapper.GetAISettings)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/admin/settings/ai", wrapper.UpdateAISettings)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/admin/ai/test", wrapper.TestAI)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/ai/status", wrapper.GetAIStatus)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/admin/ai/reindex", wrapper.ReindexAI)
 
 	return m
 }

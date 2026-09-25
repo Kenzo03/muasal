@@ -96,6 +96,30 @@ func (q *Queries) GetTicketSource(ctx context.Context, id int64) (GetTicketSourc
 	return i, err
 }
 
+const listAllTicketIDs = `-- name: ListAllTicketIDs :many
+SELECT id FROM tickets ORDER BY id DESC
+`
+
+func (q *Queries) ListAllTicketIDs(ctx context.Context) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listAllTicketIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listCommentSources = `-- name: ListCommentSources :many
 SELECT c.id, u.name AS author, c.internal, c.body, c.created_at
 FROM comments c
