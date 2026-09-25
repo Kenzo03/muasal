@@ -7869,10 +7869,10 @@ diff --git a/server/internal/httpapi/permission_test.go b/server/internal/httpap
 +}
 ```
 
-- [ ] **Step 2: Run it to see it fail**
+- [ ] **Step 2: Run it**
 
 Run: `cd server && go test ./internal/httpapi/ -run PermissionSuite -v`
-Expected: compile error: `llmtest` is not imported yet; once written, the test passes against Task 14.
+Expected: it passes at once, because Task 14 already scopes Ask. The leak check in Step 4 shows that it fails when the scope breaks.
 
 - [ ] **Step 3: Implement**
 
