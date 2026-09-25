@@ -7,7 +7,35 @@ package db
 import (
 	"net/netip"
 	"time"
+
+	pgvector "github.com/pgvector/pgvector-go"
 )
+
+type AskQuery struct {
+	ID           int64
+	ThreadID     *int64
+	UserID       int64
+	Question     string
+	Lang         string
+	Scope        []byte
+	Evidence     []byte
+	LlmCalled    bool
+	Status       string
+	Answer       []byte
+	Dropped      []byte
+	Model        *string
+	LatencyMs    *int32
+	FirstClaimMs *int32
+	CreatedAt    time.Time
+}
+
+type AskThread struct {
+	ID        int64
+	UserID    int64
+	Title     string
+	CreatedAt time.Time
+	HiddenAt  *time.Time
+}
 
 type Attachment struct {
 	ID          int64
@@ -33,6 +61,26 @@ type AuditEvent struct {
 	Changes    []byte
 	RequestID  *string
 	Ip         *netip.Addr
+}
+
+type Chunk struct {
+	ID          int64
+	SourceType  string
+	SourceID    int64
+	Seq         int32
+	TicketID    int64
+	ProjectID   int64
+	ClientID    *int64
+	NodeIds     []int64
+	UserIds     []int64
+	ContactIds  []int64
+	Internal    bool
+	OccurredAt  time.Time
+	Content     string
+	ContentHash []byte
+	Tsv         interface{}
+	Embedding   *pgvector.HalfVector
+	EmbedModel  *string
 }
 
 type Client struct {
@@ -130,6 +178,13 @@ type Session struct {
 	ExpiresAt  time.Time
 	Ip         *netip.Addr
 	UserAgent  *string
+}
+
+type Setting struct {
+	Key       string
+	Value     []byte
+	UpdatedBy *int64
+	UpdatedAt time.Time
 }
 
 type SetupToken struct {
