@@ -10,8 +10,11 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/riverqueue/river"
+	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 
 	"github.com/kenzo03/muasal/server/internal/auth"
 	"github.com/kenzo03/muasal/server/internal/config"
@@ -26,10 +29,15 @@ type Server struct {
 	ipLimit *auth.Limiter
 	log     *slog.Logger
 	now     func() time.Time
+	jobs    *river.Client[pgx.Tx] // inserts jobs only; `serve` runs the workers (FSD §13.2)
 }
 
 // New wires a Server; it opens no connections of its own.
 func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) *Server {
+	jobs, err := river.NewClient(riverpgxv5.New(pool), &river.Config{Logger: log})
+	if err != nil {
+		panic(err) // an insert-only client with a fixed config cannot fail
+	}
 	return &Server{
 		cfg:     cfg,
 		pool:    pool,
@@ -37,6 +45,7 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) *Server {
 		ipLimit: auth.NewLimiter(20, time.Minute), // FSD §15.1: 20 sign-in attempts per IP per minute
 		log:     log,
 		now:     time.Now,
+		jobs:    jobs,
 	}
 }
 
@@ -67,12 +76,18 @@ func (s *Server) readyz(w http.ResponseWriter, r *http.Request) {
 
 // inTx runs fn in one transaction, so a change and its audit event commit together (FSD §4.2).
 func (s *Server) inTx(ctx context.Context, fn func(q *db.Queries) error) error {
+	return s.inJobTx(ctx, func(q *db.Queries, _ pgx.Tx) error { return fn(q) })
+}
+
+// inJobTx is inTx for changes that also queue jobs: fn gets the transaction
+// for River's InsertTx, so a job commits or rolls back with its change (§4.2).
+func (s *Server) inJobTx(ctx context.Context, fn func(q *db.Queries, tx pgx.Tx) error) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx) // no-op after Commit
-	if err := fn(s.q.WithTx(tx)); err != nil {
+	if err := fn(s.q.WithTx(tx), tx); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)
