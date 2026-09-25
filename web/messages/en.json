@@ -28,8 +28,23 @@
     "projects": "Projects",
     "allProjects": "All projects",
     "newTicket": "New ticket",
+    "search": "Search tickets or menus",
+    "searchPlaceholder": "Search, or type HRIS-231",
     "language": "Language",
     "account": "Account of {name}"
+  },
+  "search": {
+    "heading": "Search",
+    "title": "Results for “{q}”",
+    "hint": "Type a key such as HRIS-231 to open that ticket.",
+    "kinds": "Result types",
+    "all": "All",
+    "nodes": "Menus and modules",
+    "tickets": "Tickets",
+    "none": "Nothing matches “{q}”.",
+    "short": "Type at least 2 characters.",
+    "aliases": "Also called: {aliases}",
+    "core": "Core"
   },
   "home": {
     "signedInAs": "Signed in as {name}",

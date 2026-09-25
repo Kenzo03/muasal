@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Form from "next/form";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Avatar } from "@/components/Chips";
@@ -18,8 +19,8 @@ function currentKey(path: string): string | undefined {
 }
 
 // The dark top bar of the Terakota design: the project switcher and the
-// project's tabs, New ticket, the language switch and the account menu. Off
-// project pages, system admins get their admin pages as tabs instead.
+// project's tabs, search, New ticket, the language switch and the account menu.
+// Off project pages, system admins get their admin pages as tabs instead.
 export default function TopBar({ me, projects }: { me: User; projects: Project[] }) {
   const t = useTranslations("nav");
   const tp = useTranslations("project");
@@ -98,6 +99,19 @@ export default function TopBar({ me, projects }: { me: User; projects: Project[]
           </nav>
         )}
         <div className="ml-auto flex h-13 items-center gap-2">
+          <Form action="/search" role="search">
+            <label className="flex h-8 w-40 items-center gap-2 rounded border border-bar-line bg-bar-raised px-2.5 text-bar-muted focus-within:border-bar-accent sm:w-56 lg:w-80">
+              <Icon name="search" />
+              <input
+                type="search"
+                name="q"
+                required
+                aria-label={t("search")}
+                placeholder={t("searchPlaceholder")}
+                className="min-w-0 flex-1 bg-transparent text-[13px] text-white outline-none placeholder:text-bar-muted"
+              />
+            </label>
+          </Form>
           {project && project.role !== "viewer" && (
             <Link href={`/p/${project.key}/tickets/new`} aria-label={t("newTicket")} className={button.primary}>
               <Icon name="plus" />

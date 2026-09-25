@@ -28,8 +28,23 @@
     "projects": "Proyek",
     "allProjects": "Semua proyek",
     "newTicket": "Tiket baru",
+    "search": "Cari tiket atau menu",
+    "searchPlaceholder": "Cari tiket, menu, atau HRIS-231",
     "language": "Bahasa",
     "account": "Akun {name}"
+  },
+  "search": {
+    "heading": "Pencarian",
+    "title": "Hasil untuk “{q}”",
+    "hint": "Ketik kunci seperti HRIS-231 untuk langsung membuka tiketnya.",
+    "kinds": "Jenis hasil",
+    "all": "Semua",
+    "nodes": "Menu dan modul",
+    "tickets": "Tiket",
+    "none": "Tidak ada yang cocok dengan “{q}”.",
+    "short": "Ketik minimal 2 karakter.",
+    "aliases": "Alias: {aliases}",
+    "core": "Inti"
   },
   "home": {
     "signedInAs": "Masuk sebagai {name}",
