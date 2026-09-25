@@ -27,6 +27,8 @@ export default function TopBar({ me, projects }: { me: User; projects: Project[]
   const path = usePathname();
   const router = useRouter();
   const project = projects.find((p) => p.key === currentKey(path));
+  // Off a project page, New ticket asks which project (FSD §6.1).
+  const creatable = projects.filter((p) => p.role !== "viewer");
 
   async function setLocale(locale: "id" | "en") {
     if (locale === me.locale) return;
@@ -112,11 +114,45 @@ export default function TopBar({ me, projects }: { me: User; projects: Project[]
               />
             </label>
           </Form>
-          {project && project.role !== "viewer" && (
-            <Link href={`/p/${project.key}/tickets/new`} aria-label={t("newTicket")} className={button.primary}>
+          {project ? (
+            project.role !== "viewer" && (
+              <Link href={`/p/${project.key}/tickets/new`} aria-label={t("newTicket")} className={button.primary}>
+                <Icon name="plus" />
+                <span className="hidden sm:inline">{t("newTicket")}</span>
+              </Link>
+            )
+          ) : creatable.length === 1 ? (
+            <Link href={`/p/${creatable[0].key}/tickets/new`} aria-label={t("newTicket")} className={button.primary}>
               <Icon name="plus" />
               <span className="hidden sm:inline">{t("newTicket")}</span>
             </Link>
+          ) : (
+            creatable.length > 1 && (
+              <Menu
+                align="right"
+                label={t("newTicket")}
+                summaryClassName={button.primary}
+                summary={
+                  <>
+                    <Icon name="plus" />
+                    <span className="hidden sm:inline">{t("newTicket")}</span>
+                    <Icon name="chevron" className="size-4" />
+                  </>
+                }
+              >
+                <p className="px-3 pb-1 pt-1.5 text-xs text-muted">{t("chooseProject")}</p>
+                {creatable.map((p) => (
+                  <Link
+                    key={p.id}
+                    href={`/p/${p.key}/tickets/new`}
+                    className="flex items-baseline gap-2 px-3 py-2 text-sm text-ink no-underline hover:bg-paper hover:text-ink"
+                  >
+                    <span className="font-mono text-xs font-semibold text-muted">{p.key}</span>
+                    {p.name}
+                  </Link>
+                ))}
+              </Menu>
+            )
           )}
           <div role="group" aria-label={t("language")} className="flex h-8 overflow-hidden rounded border border-bar-line text-xs font-semibold">
             {(["id", "en"] as const).map((l) => (

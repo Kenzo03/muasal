@@ -28,6 +28,7 @@
     "projects": "Proyek",
     "allProjects": "Semua proyek",
     "newTicket": "Tiket baru",
+    "chooseProject": "Tiket baru di",
     "search": "Cari tiket atau menu",
     "searchPlaceholder": "Cari tiket, menu, atau HRIS-231",
     "language": "Bahasa",
@@ -47,11 +48,50 @@
     "core": "Inti"
   },
   "home": {
+    "title": "Beranda",
     "signedInAs": "Masuk sebagai {name}",
-    "projects": "Proyek",
     "newProject": "Proyek baru",
     "noProjects": "Anda belum tergabung dalam proyek. Minta admin menambahkan Anda.",
-    "noProjectsAdmin": "Belum ada proyek. Buat proyek pertama."
+    "noProjectsAdmin": "Belum ada proyek. Buat proyek pertama.",
+    "mine": "Tiket saya",
+    "mineHint": "Ditugaskan kepada Anda dan belum ditutup",
+    "mineViews": "Saring tiket saya",
+    "views": {
+      "all": "Semua",
+      "overdue": "Terlambat",
+      "week": "7 hari ke depan",
+      "incomplete": "Perlu dilengkapi"
+    },
+    "columns": {
+      "ticket": "Tiket",
+      "title": "Judul",
+      "status": "Status",
+      "client": "Klien",
+      "priority": "Prioritas",
+      "due": "Tenggat"
+    },
+    "missing": "Alasan atau menu belum diisi",
+    "menuMissing": "Menu belum diisi",
+    "reasonMissing": "Alasan belum diisi",
+    "overdue": "Terlambat",
+    "core": "Inti",
+    "noTickets": "Belum ada tiket yang ditugaskan kepada Anda.",
+    "openBoard": "Buka papan",
+    "noneInView": "Tidak ada tiket di sini.",
+    "more": "Tiket berikutnya",
+    "recent": "Baru diperbarui",
+    "recentHint": "di proyek Anda",
+    "noChanges": "Belum ada perubahan.",
+    "changed": "Diperbarui",
+    "ago": {
+      "now": "baru saja",
+      "minutes": "{n} menit lalu",
+      "hours": "{n} jam lalu",
+      "yesterday": "kemarin",
+      "days": "{n} hari lalu"
+    },
+    "projects": "Proyek saya",
+    "yourTickets": "{count, plural, =0 {belum ada tiket Anda} other {# tiket Anda}}"
   },
   "profile": {
     "title": "Profil",
