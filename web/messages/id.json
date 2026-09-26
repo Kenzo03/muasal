@@ -39,7 +39,8 @@
     "audit": "Audit",
     "backups": "Cadangan",
     "system": "Status sistem",
-    "tokens": "Token API"
+    "tokens": "Token API",
+    "imports": "Impor"
   },
   "search": {
     "heading": "Pencarian",
@@ -976,5 +977,77 @@
     "choose": "Pilih item",
     "merge": "Gabungkan",
     "confirm": "Gabungkan {name} ke {into}? {name} akan diarsipkan."
+  },
+  "imports": {
+    "title": "Impor",
+    "adminsOnly": "Hanya admin sistem yang dapat mengimpor tiket.",
+    "intro": "Masukkan tiket lama sekali dari berkas CSV atau \"Export Excel CSV (all fields)\" Jira, hingga 200 MB. Mengimpor berkas yang sama lagi memperbarui tiket, bukan menggandakannya.",
+    "new": "Impor baru",
+    "project": "Proyek",
+    "preset": "Format",
+    "presets": {
+      "jira": "Ekspor Jira",
+      "csv": "CSV lain"
+    },
+    "file": "Berkas",
+    "upload": "Unggah dan uji coba",
+    "uploading": "Membaca…",
+    "failed": "Berkas tidak dapat diunggah.",
+    "cols": {
+      "file": "Berkas",
+      "project": "Proyek",
+      "status": "Status",
+      "rows": "Baris",
+      "by": "Oleh",
+      "when": "Waktu"
+    },
+    "statuses": {
+      "uploaded": "Diunggah",
+      "dry_run": "Uji coba",
+      "running": "Berjalan",
+      "done": "Selesai",
+      "failed": "Gagal"
+    },
+    "detailTitle": "Impor {file}",
+    "dryRun": "Uji coba",
+    "stats": {
+      "status": "Status",
+      "create": "Akan dibuat",
+      "update": "Akan diperbarui",
+      "reject": "Ditolak",
+      "coverage": "Terpetakan ke menu"
+    },
+    "progress": "Kemajuan",
+    "running": "{done} dari {rows} baris ditulis…",
+    "finished": "Selesai: {tickets} tiket ditulis, {comments} komentar baru.",
+    "errors": "Kesalahan pertama",
+    "row": "Baris {line}:",
+    "mapping": "Pemetaan kolom",
+    "none": "—",
+    "values": "Peta nilai",
+    "valuesHint": "Satu per baris, mis. types: story = feature, statuses: in progress = In progress, nodes: payroll = 12.",
+    "badValues": "Setiap baris peta nilai berbentuk jenis: dari = ke.",
+    "replan": "Uji coba lagi",
+    "run": "{count, plural, other {Impor # tiket}}",
+    "coverageHint": "Component dan label menjadi menu bila cocok dengan nama, alias, atau kode menu. Tiket tanpa alasan atau menu muncul di filter Belum lengkap pada daftar tiket untuk ditautkan nanti.",
+    "needsLinking": "Buka tiket yang masih perlu menu",
+    "fields": {
+      "key": "Kunci",
+      "title": "Judul",
+      "description": "Deskripsi",
+      "reason": "Alasan",
+      "type": "Jenis",
+      "status": "Status",
+      "priority": "Prioritas",
+      "client": "Klien",
+      "created": "Dibuat",
+      "resolved": "Diselesaikan",
+      "reporter": "Diminta oleh",
+      "assignee": "Penanggung jawab",
+      "components": "Component",
+      "labels": "Label",
+      "comments": "Komentar",
+      "attachments": "Lampiran"
+    }
   }
 }
