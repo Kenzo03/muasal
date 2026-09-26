@@ -61,7 +61,7 @@ test("AI drafts a decision record and the builder previews a summary", async ({ 
   // The builder lists the closed ticket under its menu, ticked, ready to generate.
   await page.goto(`/p/${key}/summaries`);
   await page.getByRole("link", { name: "Ringkasan baru" }).click();
-  await page.getByLabel("Klien", { exact: true }).selectOption({ label: `Sentosa ${run}` });
+  await page.getByRole("combobox", { name: /^Klien/ }).selectOption({ label: `Sentosa ${run}` });
   await page.getByRole("button", { name: "Tampilkan item" }).click();
   const items = page.getByRole("region", { name: "1 dari 1 item dicentang" });
   await expect(items.getByRole("group", { name: "Payroll" })).toContainText(tk.key);
