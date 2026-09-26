@@ -77,7 +77,19 @@ func (s *Server) Handler() http.Handler {
 			writeProblem(w, http.StatusBadRequest, "invalid_parameter", err.Error())
 		},
 	})
-	return s.requestContext(mux)
+	return securityHeaders(s.requestContext(mux))
+}
+
+// securityHeaders sets FSD §18.2's headers on every response. The API serves
+// data, never pages, so its policy allows nothing to run or frame it.
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("Referrer-Policy", "same-origin")
+		h.Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) readyz(w http.ResponseWriter, r *http.Request) {

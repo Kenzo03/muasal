@@ -1,14 +1,49 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-// Only checks that a session cookie exists; the Go API decides whether it is valid.
+// Pages anyone may open: sign-in and password setup.
+const open = /^\/(login|setup)(\/|$)/;
+
+// Every page gets a nonce-based Content-Security-Policy (FSD §18.2): Next.js
+// reads the nonce from the request's policy and puts it on its own scripts, so
+// only those run. Styles allow inline style attributes, which React sets.
+// Pages other than sign-in and setup also need a session cookie; the Go API
+// decides whether it is valid.
 export function proxy(request: NextRequest) {
-  if (!request.cookies.has("sid")) {
+  if (!open.test(request.nextUrl.pathname) && !request.cookies.has("sid")) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
-  return NextResponse.next();
+  const nonce = btoa(crypto.randomUUID());
+  const csp = [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "font-src 'self'",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+  ].join("; ");
+  const headers = new Headers(request.headers);
+  headers.set("x-nonce", nonce);
+  headers.set("Content-Security-Policy", csp);
+  const response = NextResponse.next({ request: { headers } });
+  response.headers.set("Content-Security-Policy", csp);
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("Referrer-Policy", "same-origin");
+  return response;
 }
 
 export const config = {
-  // Everything except sign-in, password setup, the API and Next.js assets.
-  matcher: ["/((?!login|setup|api|_next|favicon.ico).*)"],
+  // Every page; not the API, Next.js assets or prefetches (which carry no nonce).
+  matcher: [
+    {
+      source: "/((?!api|_next/static|_next/image|favicon.ico).*)",
+      missing: [
+        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "purpose", value: "prefetch" },
+      ],
+    },
+  ],
 };
