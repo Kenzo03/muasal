@@ -5,6 +5,7 @@ const paths = {
   chevron: <path d="M4.5 6.5 8 10l3.5-3.5" />,
   chevronRight: <path d="M6.5 4.5 10 8l-3.5 3.5" />,
   plus: <path d="M8 3v10M3 8h10" />,
+  bell: <path d="M4 11.5V7a4 4 0 0 1 8 0v4.5l1 1H3l1-1ZM6.5 13.5a1.5 1.5 0 0 0 3 0" />,
   search: (
     <>
       <circle cx="7" cy="7" r="4.5" />

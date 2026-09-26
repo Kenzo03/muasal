@@ -662,7 +662,9 @@
         "out": "Terkait dengan",
         "in": "Terkait dengan"
       }
-    }
+    },
+    "mentions": "Anggota yang dapat disebut",
+    "mentionHint": "Ketik @ untuk menyebut anggota."
   },
   "attachments": {
     "title": "Lampiran",
@@ -1049,5 +1051,33 @@
       "comments": "Komentar",
       "attachments": "Lampiran"
     }
+  },
+  "bell": {
+    "label": "Notifikasi",
+    "labelUnread": "{count, plural, other {Notifikasi, # belum dibaca}}",
+    "title": "Notifikasi",
+    "readAll": "Tandai semua dibaca",
+    "none": "Tidak ada yang baru.",
+    "someone": "Seseorang",
+    "assigned": "{who} menugaskan {ticket} kepada Anda",
+    "comment": "{who} berkomentar di {ticket}",
+    "mention": "{who} menyebut Anda di {ticket}",
+    "status": "{who} memindahkan {ticket} ke {status}",
+    "jobDone": "{name} selesai"
+  },
+  "notifyPrefs": {
+    "title": "Notifikasi",
+    "events": {
+      "assigned": "Tiket ditugaskan kepada saya",
+      "comment": "Ada komentar di tiket saya",
+      "mention": "Seseorang menyebut saya",
+      "status": "Status tiket saya berubah",
+      "job_done": "Impor yang saya mulai selesai"
+    },
+    "browser": "Notifikasi browser saat aplikasi ada di tab latar",
+    "browserHint": "Aplikasi tidak mengirim email. Notifikasi butuh tab aplikasi yang terbuka.",
+    "save": "Simpan",
+    "saved": "Tersimpan.",
+    "failed": "Tidak dapat menyimpan."
   }
 }
