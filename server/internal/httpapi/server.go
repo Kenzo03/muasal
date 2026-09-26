@@ -80,6 +80,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
 	mux.HandleFunc("GET /readyz", s.readyz)
 	mux.HandleFunc("GET /metrics", s.metrics)
+	mux.HandleFunc("POST /webhooks/git/{repo_id}", s.gitWebhook)
 	HandlerWithOptions(s, StdHTTPServerOptions{
 		BaseURL:    "/api/v1",
 		BaseRouter: mux,

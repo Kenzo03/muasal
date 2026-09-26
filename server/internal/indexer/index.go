@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -114,6 +115,23 @@ func Load(ctx context.Context, q *db.Queries, ticketID int64) (Source, error) {
 	}
 	if src.Comments, err = q.ListCommentSources(ctx, ticketID); err != nil {
 		return Source{}, err
+	}
+	if src.Commits, err = q.ListTicketCommits(ctx, ticketID); err != nil {
+		return Source{}, err
+	}
+	if src.MRs, err = q.ListTicketMergeRequests(ctx, ticketID); err != nil {
+		return Source{}, err
+	}
+	var emails []string
+	for _, c := range src.Commits {
+		if c.AuthorEmail != nil {
+			emails = append(emails, strings.ToLower(*c.AuthorEmail))
+		}
+	}
+	if len(emails) > 0 {
+		if src.Coders, err = q.UserIDsByEmails(ctx, emails); err != nil {
+			return Source{}, err
+		}
 	}
 	d, err := q.GetDecision(ctx, ticketID)
 	switch {
