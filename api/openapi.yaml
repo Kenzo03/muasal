@@ -618,12 +618,18 @@ paths:
         - { name: sort, in: query, schema: { type: string, enum: [updated, created, key, priority, due] } }
         - { name: limit, in: query, schema: { type: integer, format: int32, minimum: 1, maximum: 1000 } }
         - { name: cursor, in: query, schema: { type: string } }
+        - name: format
+          in: query
+          schema: { type: string, enum: [json, csv] }
+          description: csv downloads every ticket of the filter, up to 10,000, as UTF-8 CSV instead of a page (FSD §8.5).
       responses:
         "200":
-          description: One page of tickets.
+          description: One page of tickets, or the whole filter as CSV.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/TicketPage" }
+            text/csv:
+              schema: { type: string }
         default: { $ref: "#/components/responses/Problem" }
     post:
       operationId: createTicket

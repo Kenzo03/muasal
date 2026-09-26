@@ -3088,6 +3088,8 @@ export interface operations {
                 sort?: "updated" | "created" | "key" | "priority" | "due";
                 limit?: number;
                 cursor?: string;
+                /** @description csv downloads every ticket of the filter, up to 10,000, as UTF-8 CSV instead of a page (FSD §8.5). */
+                format?: "json" | "csv";
             };
             header?: never;
             path: {
@@ -3097,13 +3099,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description One page of tickets. */
+            /** @description One page of tickets, or the whole filter as CSV. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["TicketPage"];
+                    "text/csv": string;
                 };
             };
             default: components["responses"]["Problem"];

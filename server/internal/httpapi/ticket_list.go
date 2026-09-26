@@ -1,9 +1,12 @@
 package httpapi
 
 import (
+	"encoding/csv"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -22,6 +25,10 @@ func (s *Server) ListTickets(w http.ResponseWriter, r *http.Request, key string,
 	limit, offset, ok := paging(w, params.Limit, params.Cursor)
 	if !ok {
 		return
+	}
+	csvOut := params.Format != nil && *params.Format == ListTicketsParamsFormatCsv
+	if csvOut {
+		limit, offset = exportMax, 0
 	}
 	filter := db.ListTicketsParams{
 		ProjectID: pc.project.ID, AllClients: pc.scope.AllClients, ClientIds: orEmpty(pc.scope.ClientIDs),
@@ -56,6 +63,10 @@ func (s *Server) ListTickets(w http.ResponseWriter, r *http.Request, key string,
 	rows, err := s.q.ListTickets(ctx, filter)
 	if err != nil {
 		s.fail(w, r, err)
+		return
+	}
+	if csvOut {
+		s.writeTicketsCSV(w, r, pc, rows[:min(len(rows), limit)])
 		return
 	}
 	page := TicketPage{Items: make([]TicketSummary, 0, len(rows))}
@@ -127,4 +138,47 @@ func toTicketSummary(t db.ListTicketsRow) TicketSummary {
 		out.Assignee = &Ref{Id: *t.AssigneeID, Name: deref(t.AssigneeName)}
 	}
 	return out
+}
+
+// exportMax bounds one CSV export; a larger filter is cut there.
+const exportMax = 10000
+
+// writeTicketsCSV sends the filtered tickets as a spreadsheet-friendly CSV
+// (FSD §8.5): UTF-8 with a byte-order mark, one row per ticket, the list's
+// columns plus the dates.
+func (s *Server) writeTicketsCSV(w http.ResponseWriter, r *http.Request, pc projectCtx, rows []db.ListTicketsRow) {
+	statuses, err := s.q.ListStatuses(r.Context(), pc.project.ID)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	statusName := map[int64]string{}
+	for _, st := range statuses {
+		statusName[st.ID] = st.Name
+	}
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s-tickets-%s.csv"`, pc.project.Key, s.now().Format("2006-01-02")))
+	_, _ = w.Write([]byte("\ufeff"))
+	cw := csv.NewWriter(w)
+	_ = cw.Write([]string{"key", "title", "type", "status", "client", "assignee", "requested_by", "menus", "priority", "updated", "due", "missing_reason"})
+	for _, t := range rows {
+		due := ""
+		if t.DueDate != nil {
+			due = t.DueDate.Format(time.DateOnly)
+		}
+		_ = cw.Write([]string{
+			t.Key, csvSafe(t.Title), t.Type, statusName[t.StatusID], csvSafe(deref(t.ClientName)), csvSafe(deref(t.AssigneeName)),
+			csvSafe(t.RequesterName), csvSafe(strings.Join(t.NodeNames, "; ")), t.Priority, t.UpdatedAt.UTC().Format(time.RFC3339), due,
+			strconv.FormatBool(t.MissingReason),
+		})
+	}
+	cw.Flush()
+}
+
+// csvSafe keeps a spreadsheet from running a cell as a formula (CSV injection).
+func csvSafe(v string) string {
+	if v != "" && strings.ContainsRune("=+-@\t\r", rune(v[0])) {
+		return "'" + v
+	}
+	return v
 }

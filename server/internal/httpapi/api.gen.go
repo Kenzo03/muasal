@@ -672,6 +672,24 @@ func (e ListTicketsParamsSort) Valid() bool {
 	}
 }
 
+// Defines values for ListTicketsParamsFormat.
+const (
+	ListTicketsParamsFormatCsv  ListTicketsParamsFormat = "csv"
+	ListTicketsParamsFormatJson ListTicketsParamsFormat = "json"
+)
+
+// Valid indicates whether the value is a known member of the ListTicketsParamsFormat enum.
+func (e ListTicketsParamsFormat) Valid() bool {
+	switch e {
+	case ListTicketsParamsFormatCsv:
+		return true
+	case ListTicketsParamsFormatJson:
+		return true
+	default:
+		return false
+	}
+}
+
 // AIEndpoint defines model for AIEndpoint.
 type AIEndpoint struct {
 	ApiKeySet bool `json:"api_key_set"`
@@ -2145,6 +2163,9 @@ type ListTicketsParams struct {
 	Sort    *ListTicketsParamsSort    `form:"sort,omitempty" json:"sort,omitempty"`
 	Limit   *int32                    `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor  *string                   `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Format csv downloads every ticket of the filter, up to 10,000, as UTF-8 CSV instead of a page (FSD §8.5).
+	Format *ListTicketsParamsFormat `form:"format,omitempty" json:"format,omitempty"`
 }
 
 // ListTicketsParamsMissing defines parameters for ListTickets.
@@ -2152,6 +2173,9 @@ type ListTicketsParamsMissing string
 
 // ListTicketsParamsSort defines parameters for ListTickets.
 type ListTicketsParamsSort string
+
+// ListTicketsParamsFormat defines parameters for ListTickets.
+type ListTicketsParamsFormat string
 
 // CreateTicketParams defines parameters for CreateTicket.
 type CreateTicketParams struct {
@@ -4552,6 +4576,19 @@ func (siw *ServerInterfaceWrapper) ListTickets(w http.ResponseWriter, r *http.Re
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "format" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "format", r.URL.Query(), &params.Format, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "format"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "format", Err: err})
 		}
 		return
 	}
