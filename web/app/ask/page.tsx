@@ -31,6 +31,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
     claims: q.claims,
     status: q.status as Turn["status"],
     model: q.model,
+    queryId: q.id,
+    feedback: q.feedback,
     closest: [],
     results: [],
   }));

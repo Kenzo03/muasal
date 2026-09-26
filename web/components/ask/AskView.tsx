@@ -45,7 +45,7 @@ export default function AskView({ chips: preset = [], threadId: initialThread, q
         else if (e.type === "error") update((x) => ({ ...x, error: e.code }));
         else if (e.type === "result") {
           const r = e.result;
-          update((x) => ({ ...x, streaming: false, status: r.status, model: r.model, closest: r.closest, results: r.results }));
+          update((x) => ({ ...x, streaming: false, status: r.status, model: r.model, closest: r.closest, results: r.results, queryId: r.query_id }));
           if (!threadId) {
             setThreadId(r.thread_id);
             onThread?.(r.thread_id);

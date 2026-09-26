@@ -51,7 +51,8 @@
     "none": "Tidak ada yang cocok dengan “{q}”.",
     "short": "Ketik minimal 2 karakter.",
     "aliases": "Alias: {aliases}",
-    "core": "Inti"
+    "core": "Inti",
+    "notes": "Catatan keputusan"
   },
   "home": {
     "title": "Beranda",
@@ -641,7 +642,23 @@
       "state": "Keadaan",
       "confirmed_by": "Dikonfirmasi oleh"
     },
-    "markdownHint": "Mendukung Markdown: **tebal**, daftar, `kode`, tautan. Tempel gambar untuk melampirkannya."
+    "markdownHint": "Mendukung Markdown: **tebal**, daftar, `kode`, tautan. Tempel gambar untuk melampirkannya.",
+    "linked": "{actor} menautkan: {link} {key}",
+    "unlinked": "{actor} menghapus tautan: {link} {key}",
+    "links": {
+      "reverses": {
+        "out": "Membatalkan",
+        "in": "Dibatalkan oleh"
+      },
+      "extends": {
+        "out": "Memperluas",
+        "in": "Diperluas oleh"
+      },
+      "related_to": {
+        "out": "Terkait dengan",
+        "in": "Terkait dengan"
+      }
+    }
   },
   "attachments": {
     "title": "Lampiran",
@@ -727,7 +744,26 @@
     "panelTitle": "Tanya",
     "openPage": "Buka halaman Tanya",
     "close": "Tutup",
-    "askAboutTicket": "Tanya tentang tiket ini"
+    "askAboutTicket": "Tanya tentang tiket ini",
+    "noteBy": "Catatan keputusan oleh {name} · {date}",
+    "noteKind": "Catatan keputusan",
+    "feedback": {
+      "question": "Apakah jawaban ini membantu?",
+      "up": "Ya",
+      "down": "Tidak",
+      "thanks": "Terima kasih, sudah dicatat.",
+      "failed": "Penilaian tidak dapat disimpan.",
+      "why": "Apa yang salah?",
+      "reasons": {
+        "wrong": "Salah",
+        "missing_tickets": "Tiket kurang",
+        "wrong_citation": "Kutipan salah",
+        "too_vague": "Terlalu umum"
+      },
+      "comment": "Ada lagi? (opsional)",
+      "send": "Kirim",
+      "cancel": "Batal"
+    }
   },
   "askLog": {
     "title": "Log Tanya",
@@ -768,7 +804,15 @@
     "date": "Tanggal",
     "score": "Skor",
     "scope": "Cakupan",
-    "dropped": "Dibuang oleh validasi"
+    "dropped": "Dibuang oleh validasi",
+    "thumbsDown": "Jempol ke bawah",
+    "feedback": "Masukan",
+    "reasons": {
+      "wrong": "Salah",
+      "missing_tickets": "Tiket kurang",
+      "wrong_citation": "Kutipan salah",
+      "too_vague": "Terlalu umum"
+    }
   },
   "audit": {
     "title": "Log audit",

@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { ClientChip, StatusDot } from "@/components/Chips";
 import Icon from "@/components/Icon";
 import PageBar from "@/components/PageBar";
+import { day } from "@/lib/format";
 import { serverApi } from "@/lib/server-api";
 import { one } from "@/lib/ticket-query";
 import { chip, cx, panel, sectionTitle } from "@/lib/ui";
@@ -21,24 +22,29 @@ function Highlight({ text, q }: { text: string; q: string }) {
   );
 }
 
-// Search (FSD §6.1–6.2): the tickets and menus the user may open, across their
+// Search (FSD §6.1–6.2): the tickets, menus and decision notes the user may open, across their
 // projects. A query that is a visible ticket's key opens that ticket.
 export default async function SearchPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { q = "", kind } = one(await searchParams);
   const query = q.trim();
   const t = await getTranslations("search");
   const tm = await getTranslations("modules");
+  const locale = await getLocale();
   const api = await serverApi();
   const res = query.length >= 2 ? (await api.GET("/search", { params: { query: { q: query } } })).data : undefined;
   const tickets = res?.tickets ?? [];
   const nodes = res?.nodes ?? [];
+  const notes = res?.notes ?? [];
+  if (notes[0]?.key === query.toUpperCase() && tickets[0]?.key !== query.toUpperCase()) redirect(`/notes/${notes[0].key}`);
   if (tickets[0]?.key === query.toUpperCase()) redirect(`/t/${tickets[0].key}`);
-  const showNodes = kind !== "tickets";
-  const showTickets = kind !== "nodes";
+  const showNodes = kind !== "tickets" && kind !== "notes";
+  const showTickets = kind !== "nodes" && kind !== "notes";
+  const showNotes = kind !== "nodes" && kind !== "tickets";
   const kinds: [string | undefined, string, number][] = [
-    [undefined, t("all"), nodes.length + tickets.length],
+    [undefined, t("all"), nodes.length + tickets.length + notes.length],
     ["nodes", t("nodes"), nodes.length],
     ["tickets", t("tickets"), tickets.length],
+    ["notes", t("notes"), notes.length],
   ];
 
   return (
@@ -50,7 +56,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       <main className="flex max-w-[1040px] flex-col gap-4 px-4 py-4 md:px-5">
         {query.length < 2 ? (
           <p className="text-muted">{t("short")}</p>
-        ) : nodes.length + tickets.length === 0 ? (
+        ) : nodes.length + tickets.length + notes.length === 0 ? (
           <p className="text-muted">{t("none", { q: query })}</p>
         ) : (
           <>
@@ -117,6 +123,26 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                         </span>
                         <ClientChip client={it.client} coreLabel={t("core")} />
                         <span className={cx(chip, "bg-ground font-mono text-[#4A423C]")}>{it.project_key}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+            {showNotes && notes.length > 0 && (
+              <section aria-labelledby="notes-title" className="flex flex-col gap-2">
+                <h2 id="notes-title" className={sectionTitle}>{t("notes")}</h2>
+                <ul className={cx(panel, "divide-y divide-line-soft")}>
+                  {notes.map((n) => (
+                    <li key={n.key}>
+                      <Link
+                        href={`/notes/${n.key}`}
+                        className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2.5 text-ink no-underline hover:bg-paper hover:text-ink"
+                      >
+                        <span className="w-24 font-mono text-[13px] font-semibold text-link">{n.key}</span>
+                        <span className="min-w-0 flex-1 text-sm font-semibold"><Highlight text={n.title} q={query} /></span>
+                        <span className="text-xs text-muted">{day(n.decided_on, locale)}</span>
+                        <span className={cx(chip, "bg-ground font-mono text-[#4A423C]")}>{n.project_key}</span>
                       </Link>
                     </li>
                   ))}

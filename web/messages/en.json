@@ -51,7 +51,8 @@
     "none": "Nothing matches “{q}”.",
     "short": "Type at least 2 characters.",
     "aliases": "Also called: {aliases}",
-    "core": "Core"
+    "core": "Core",
+    "notes": "Decision notes"
   },
   "home": {
     "title": "Home",
@@ -641,7 +642,23 @@
       "state": "State",
       "confirmed_by": "Confirmed by"
     },
-    "markdownHint": "Markdown works: **bold**, lists, `code`, links. Paste an image to attach it."
+    "markdownHint": "Markdown works: **bold**, lists, `code`, links. Paste an image to attach it.",
+    "linked": "{actor} linked: {link} {key}",
+    "unlinked": "{actor} removed the link: {link} {key}",
+    "links": {
+      "reverses": {
+        "out": "Reverses",
+        "in": "Reversed by"
+      },
+      "extends": {
+        "out": "Extends",
+        "in": "Extended by"
+      },
+      "related_to": {
+        "out": "Related to",
+        "in": "Related to"
+      }
+    }
   },
   "attachments": {
     "title": "Attachments",
@@ -727,7 +744,26 @@
     "panelTitle": "Ask",
     "openPage": "Open the Ask page",
     "close": "Close",
-    "askAboutTicket": "Ask about this ticket"
+    "askAboutTicket": "Ask about this ticket",
+    "noteBy": "Decision note by {name} · {date}",
+    "noteKind": "Decision note",
+    "feedback": {
+      "question": "Was this helpful?",
+      "up": "Yes",
+      "down": "No",
+      "thanks": "Thanks, noted.",
+      "failed": "Could not save your rating.",
+      "why": "What was wrong?",
+      "reasons": {
+        "wrong": "Wrong",
+        "missing_tickets": "Missing tickets",
+        "wrong_citation": "Wrong citation",
+        "too_vague": "Too vague"
+      },
+      "comment": "Anything else? (optional)",
+      "send": "Send",
+      "cancel": "Cancel"
+    }
   },
   "askLog": {
     "title": "Ask log",
@@ -768,7 +804,15 @@
     "date": "Date",
     "score": "Score",
     "scope": "Scope",
-    "dropped": "Dropped by validation"
+    "dropped": "Dropped by validation",
+    "thumbsDown": "Thumbs down",
+    "feedback": "Feedback",
+    "reasons": {
+      "wrong": "Wrong",
+      "missing_tickets": "Missing tickets",
+      "wrong_citation": "Wrong citation",
+      "too_vague": "Too vague"
+    }
   },
   "audit": {
     "title": "Audit log",

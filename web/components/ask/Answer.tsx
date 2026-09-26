@@ -4,9 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import Icon from "@/components/Icon";
-import { answerMarkdown, type AskClaim, type AskItem, type AskStatus } from "@/lib/ask";
+import { api } from "@/lib/api";
+import { answerMarkdown, itemHref, type AskClaim, type AskFeedback, type AskItem, type AskStatus } from "@/lib/ask";
 import { day } from "@/lib/format";
-import { button, chip, cx, sectionTitle } from "@/lib/ui";
+import { button, chip, cx, field, sectionTitle } from "@/lib/ui";
 
 export type Chip = {
   kind: "project" | "node" | "client" | "user" | "contact" | "date";
@@ -29,6 +30,8 @@ export type Turn = {
   closest: AskItem[];
   results: AskItem[];
   error?: string; // an AI error code (ai_busy, …) or a refused request's problem code
+  queryId?: number; // for feedback, once the answer is logged
+  feedback?: AskFeedback;
 };
 
 // One question and its answer, laid out as §10.3 lists: status line, claims
@@ -104,6 +107,9 @@ export default function Answer({ turn, onRemoveChip }: { turn: Turn; onRemoveChi
           {turn.claims.length > 0 && <CopyButton question={turn.question} claims={turn.claims} />}
         </div>
       )}
+      {!turn.streaming && turn.queryId && (turn.status === "answered" || turn.status === "not_enough_info") && (
+        <Feedback queryId={turn.queryId} initial={turn.feedback} />
+      )}
     </article>
   );
 }
@@ -116,7 +122,7 @@ function Cite({ itemKey, item }: { itemKey: string; item?: AskItem }) {
   return (
     <span className="group relative inline-flex">
       <Link
-        href={`/t/${itemKey}`}
+        href={itemHref(itemKey)}
         target="_blank"
         rel="noopener noreferrer"
         className={cx(chip, "bg-accent-soft font-mono text-accent-strong no-underline hover:underline")}
@@ -132,8 +138,14 @@ function Cite({ itemKey, item }: { itemKey: string; item?: AskItem }) {
         >
           <span className="block font-semibold">{item.title}</span>
           <span className="block text-muted">{item.client ?? t("core")}</span>
-          <span className="block text-muted">{t("requestedBy", { name: item.requested_by })}</span>
-          <span className="block text-muted">{t(item.closed ? "closedOn" : "createdOn", { date: day(item.date, locale) })}</span>
+          {item.kind === "note" ? (
+            <span className="block text-muted">{t("noteBy", { name: item.requested_by, date: day(item.date, locale) })}</span>
+          ) : (
+            <>
+              <span className="block text-muted">{t("requestedBy", { name: item.requested_by })}</span>
+              <span className="block text-muted">{t(item.closed ? "closedOn" : "createdOn", { date: day(item.date, locale) })}</span>
+            </>
+          )}
         </span>
       )}
     </span>
@@ -149,12 +161,12 @@ function ItemList({ title, items }: { title?: string; items: AskItem[] }) {
       <ul className="flex flex-col divide-y divide-line-soft rounded border border-line-soft text-[13px]">
         {items.map((it) => (
           <li key={it.key} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 px-2.5 py-1.5">
-            <Link href={`/t/${it.key}`} className="font-mono text-xs font-semibold">{it.key}</Link>
+            <Link href={itemHref(it.key)} className="font-mono text-xs font-semibold">{it.key}</Link>
             <span className="min-w-0 flex-1 font-medium">{it.title}</span>
             <span className="text-muted">{it.client ?? t("core")}</span>
             <span className="text-muted">{it.requested_by}</span>
             <span className="text-muted">{day(it.date, locale)}</span>
-            <span className="text-muted">{it.status}</span>
+            <span className="text-muted">{it.kind === "note" ? t("noteKind") : it.status}</span>
           </li>
         ))}
       </ul>
@@ -202,5 +214,66 @@ function CopyButton({ question, claims }: { question: string; claims: AskClaim[]
     >
       {copied ? t("copied") : t("copy")}
     </button>
+  );
+}
+
+const reasons = ["wrong", "missing_tickets", "wrong_citation", "too_vague"] as const;
+
+// Thumbs up or down on an answer (FSD §10.7). Down asks why, with reasons and
+// free text; the Ask log shows it to system admins.
+function Feedback({ queryId, initial }: { queryId: number; initial?: AskFeedback }) {
+  const t = useTranslations("ask.feedback");
+  const [rating, setRating] = useState(initial?.rating);
+  const [asking, setAsking] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState(false);
+
+  async function send(body: AskFeedback) {
+    const { error } = await api.POST("/ask/queries/{id}/feedback", { params: { path: { id: queryId } }, body });
+    setError(Boolean(error));
+    if (error) return;
+    setRating(body.rating);
+    setSent(true);
+    setAsking(false);
+  }
+
+  const thumb = (up: boolean) => cx(button.secondary, "h-7 px-2", rating === (up ? "up" : "down") && "border-accent bg-accent-soft");
+  return (
+    <div className="flex flex-col gap-2 text-xs">
+      <div className="flex items-center gap-2 text-muted">
+        <span>{t("question")}</span>
+        <button type="button" aria-pressed={rating === "up"} onClick={() => send({ rating: "up" })} className={thumb(true)}>👍 {t("up")}</button>
+        <button type="button" aria-pressed={rating === "down"} onClick={() => setAsking(true)} className={thumb(false)}>👎 {t("down")}</button>
+        {sent && <span role="status">{t("thanks")}</span>}
+        {error && <span role="alert" className="text-danger">{t("failed")}</span>}
+      </div>
+      {asking && (
+        <form
+          aria-label={t("why")}
+          className="flex flex-col gap-2 rounded border border-line bg-paper p-2.5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const form = new FormData(e.currentTarget);
+            const comment = String(form.get("comment") ?? "").trim();
+            send({ rating: "down", reasons: form.getAll("reason").map(String) as AskFeedback["reasons"], comment: comment || undefined });
+          }}
+        >
+          <fieldset className="flex flex-wrap gap-3">
+            <legend className="mb-1 font-medium text-ink">{t("why")}</legend>
+            {reasons.map((r) => (
+              <label key={r} className="flex items-center gap-1.5">
+                <input type="checkbox" name="reason" value={r} defaultChecked={initial?.reasons?.includes(r)} className="accent-accent" />
+                {t(`reasons.${r}`)}
+              </label>
+            ))}
+          </fieldset>
+          <textarea name="comment" maxLength={1000} rows={2} placeholder={t("comment")} aria-label={t("comment")} defaultValue={initial?.comment ?? ""} className={field.textarea} />
+          <div className="flex gap-2">
+            <button className={button.primary}>{t("send")}</button>
+            <button type="button" onClick={() => setAsking(false)} className={button.secondary}>{t("cancel")}</button>
+          </div>
+        </form>
+      )}
+    </div>
   );
 }
