@@ -94,6 +94,19 @@ func TestSmallScopesTakeEveryItem(t *testing.T) {
 	}
 }
 
+// §11.3: with AI off, a ticket holding all the question's words ranks above
+// tickets that repeat just one of them; tickets with one word still count.
+func TestKeywordSearchPutsAllTheWordsFirst(t *testing.T) {
+	w := newWorld(t)
+	one := w.ticket("Overtime overtime overtime", &w.a, w.ot, "Overtime again: overtime rules for overtime.", "", "")
+	both := w.ticket("Export for payroll", &w.a, w.ot, "Payroll imports the overtime hours.", "", "")
+	found, err := ask.Retrieve(context.Background(), w.d.Pool, w.asker(w.admin), ask.Scope{}, "overtime payroll", nil, nil, hybrid)
+	w.check(err)
+	if len(found.TicketIDs) != 2 || found.TicketIDs[0] != both.ID || found.TicketIDs[1] != one.ID {
+		t.Fatalf("keyword order: %v", keysOf(w, found.TicketIDs))
+	}
+}
+
 // §11.4: over budget, the lowest-ranked ticket loses its comments first, then goes.
 func TestPackKeepsTheBudget(t *testing.T) {
 	w := newWorld(t)

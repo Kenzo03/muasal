@@ -83,13 +83,26 @@ func Retrieve(ctx context.Context, pool *pgxpool.Pool, a Asker, s Scope, questio
 	from, to := dayBounds(s.From, s.To, a.TZ)
 	f := filter{a.IsAdmin, a.UserID, orEmpty(s.ProjectIDs), orEmpty(nodes), orEmpty(s.ClientIDs), orEmpty(s.UserIDs), orEmpty(s.ContactIDs), from, to}
 
+	// Chunks with all the words first; with fewer than 50 of those, chunks
+	// with any of them.
 	var kw []db.KeywordSearchRow
-	if terms := keywordTerms(question); terms != "" {
-		var err error
-		kw, err = q.KeywordSearch(ctx, db.KeywordSearchParams{Terms: terms, IsAdmin: f.admin, UserID: f.user, ProjectIds: f.projects,
-			NodeIds: f.nodes, ClientIds: f.clients, UserIds: f.users, ContactIds: f.contacts, FromTs: f.from, ToTs: f.to})
+	words := keywordTerms(question)
+	for i, op := range []string{" & ", " | "} {
+		if len(words) == 0 || (i == 0 && len(words) == 1) {
+			continue
+		}
+		rows, err := q.KeywordSearch(ctx, db.KeywordSearchParams{Terms: strings.Join(words, op), IsAdmin: f.admin, UserID: f.user, ProjectIds: f.projects,
+			NodeIds: f.nodes, ClientIds: f.clients, UserIds: f.users, ContactIds: f.contacts, FromTs: f.from, ToTs: f.to, Candidates: keywordCandidates})
 		if err != nil {
 			return found, err
+		}
+		for _, r := range rows {
+			if len(kw) < 50 && !slices.ContainsFunc(kw, func(k db.KeywordSearchRow) bool { return k.ID == r.ID }) {
+				kw = append(kw, r)
+			}
+		}
+		if len(kw) == 50 {
+			break
 		}
 	}
 	var vr []db.VectorSearchRow
@@ -228,8 +241,13 @@ func dayBounds(from, to *time.Time, tz *time.Location) (*time.Time, *time.Time) 
 	return f, t
 }
 
-// keywordTerms ORs the question's words, leaving out common words and one-letter words.
-func keywordTerms(question string) string {
+// keywordCandidates bounds how many matching chunks one keyword search ranks.
+// Ranking reads each row, so at 100,000 tickets a common word would otherwise
+// cost seconds (FSD §18 load test).
+const keywordCandidates = 5000
+
+// keywordTerms lists the question's words, leaving out common words and one-letter words.
+func keywordTerms(question string) []string {
 	var terms []string
 	for _, w := range tokenRe.FindAllString(strings.ToLower(question), -1) {
 		if len([]rune(w)) < 2 || indonesianSW[w] || englishSW[w] || slices.Contains(terms, w) || strings.Contains(w, "-") {
@@ -237,7 +255,7 @@ func keywordTerms(question string) string {
 		}
 		terms = append(terms, w)
 	}
-	return strings.Join(terms, " | ")
+	return terms
 }
 
 func orEmpty(ids []int64) []int64 {

@@ -47,8 +47,9 @@ services:
   db:
     image: pgvector/pgvector:0.8.6-pg18-trixie
     # Memory by tier (FSD §16, §18.1): install.sh writes 4GB and 16GB for the
-    # 32 GB server tiers; the defaults suit a laptop.
-    command: ["postgres", "-c", "shared_buffers=${PG_SHARED_BUFFERS:-512MB}", "-c", "effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-2GB}"]
+    # 32 GB server tiers; the defaults suit a laptop. JIT is off: it spends
+    # more compiling short queries than it saves.
+    command: ["postgres", "-c", "shared_buffers=${PG_SHARED_BUFFERS:-512MB}", "-c", "effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-2GB}", "-c", "jit=off"]
     environment:
       POSTGRES_DB: muasal
       POSTGRES_USER: owner
