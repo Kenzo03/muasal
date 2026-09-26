@@ -125,13 +125,16 @@ func (e AskIgnoreKind) Valid() bool {
 
 // Defines values for AskItemKind.
 const (
-	AskItemKindNote   AskItemKind = "note"
-	AskItemKindTicket AskItemKind = "ticket"
+	AskItemKindDocument AskItemKind = "document"
+	AskItemKindNote     AskItemKind = "note"
+	AskItemKindTicket   AskItemKind = "ticket"
 )
 
 // Valid indicates whether the value is a known member of the AskItemKind enum.
 func (e AskItemKind) Valid() bool {
 	switch e {
+	case AskItemKindDocument:
+		return true
 	case AskItemKindNote:
 		return true
 	case AskItemKindTicket:
@@ -215,13 +218,16 @@ func (e AskLogEntryStatus) Valid() bool {
 
 // Defines values for AskLogEvidenceKind.
 const (
-	AskLogEvidenceKindNote   AskLogEvidenceKind = "note"
-	AskLogEvidenceKindTicket AskLogEvidenceKind = "ticket"
+	AskLogEvidenceKindDocument AskLogEvidenceKind = "document"
+	AskLogEvidenceKindNote     AskLogEvidenceKind = "note"
+	AskLogEvidenceKindTicket   AskLogEvidenceKind = "ticket"
 )
 
 // Valid indicates whether the value is a known member of the AskLogEvidenceKind enum.
 func (e AskLogEvidenceKind) Valid() bool {
 	switch e {
+	case AskLogEvidenceKindDocument:
+		return true
 	case AskLogEvidenceKindNote:
 		return true
 	case AskLogEvidenceKindTicket:
@@ -786,6 +792,33 @@ func (e TicketType) Valid() bool {
 	case TicketTypeChangeRequest:
 		return true
 	case TicketTypeFeature:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TreeDraftStatus.
+const (
+	TreeDraftStatusApplied   TreeDraftStatus = "applied"
+	TreeDraftStatusDiscarded TreeDraftStatus = "discarded"
+	TreeDraftStatusFailed    TreeDraftStatus = "failed"
+	TreeDraftStatusReady     TreeDraftStatus = "ready"
+	TreeDraftStatusRunning   TreeDraftStatus = "running"
+)
+
+// Valid indicates whether the value is a known member of the TreeDraftStatus enum.
+func (e TreeDraftStatus) Valid() bool {
+	switch e {
+	case TreeDraftStatusApplied:
+		return true
+	case TreeDraftStatusDiscarded:
+		return true
+	case TreeDraftStatusFailed:
+		return true
+	case TreeDraftStatusReady:
+		return true
+	case TreeDraftStatusRunning:
 		return true
 	default:
 		return false
@@ -1540,6 +1573,55 @@ type DiskUse struct {
 
 // DiskUseVolume defines model for DiskUse.Volume.
 type DiskUseVolume string
+
+// Document defines model for Document.
+type Document struct {
+	Client    *Ref      `json:"client,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+	Drafts    []struct {
+		CreatedAt time.Time       `json:"created_at"`
+		Id        int64           `json:"id"`
+		Status    TreeDraftStatus `json:"status"`
+	} `json:"drafts"`
+	Filename     string            `json:"filename"`
+	Key          string            `json:"key"`
+	Markdown     string            `json:"markdown"`
+	ProjectKey   string            `json:"project_key"`
+	Sections     []DocumentSection `json:"sections"`
+	SupersededBy *string           `json:"superseded_by,omitempty"`
+	Title        string            `json:"title"`
+	UploadedBy   string            `json:"uploaded_by"`
+}
+
+// DocumentList defines model for DocumentList.
+type DocumentList struct {
+	Items []DocumentListItem `json:"items"`
+}
+
+// DocumentListItem defines model for DocumentListItem.
+type DocumentListItem struct {
+	Client    *Ref      `json:"client,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+	Filename  string    `json:"filename"`
+
+	// Key Example: HRIS-DOC1
+	Key          string  `json:"key"`
+	SupersededBy *string `json:"superseded_by,omitempty"`
+	Title        string  `json:"title"`
+	UploadedBy   string  `json:"uploaded_by"`
+}
+
+// DocumentSection defines model for DocumentSection.
+type DocumentSection struct {
+	Level int `json:"level"`
+
+	// Nodes The nodes this section produced.
+	Nodes []Ref `json:"nodes"`
+
+	// Number Example: 7.4
+	Number string `json:"number"`
+	Title  string `json:"title"`
+}
 
 // FailedJob defines model for FailedJob.
 type FailedJob struct {
@@ -2545,6 +2627,47 @@ type TransitionRequest struct {
 	StatusId int64   `json:"status_id"`
 }
 
+// TreeDraft defines model for TreeDraft.
+type TreeDraft struct {
+	CreatedAt     time.Time       `json:"created_at"`
+	DocumentKey   string          `json:"document_key"`
+	DocumentTitle string          `json:"document_title"`
+	DoneParts     int             `json:"done_parts"`
+	Error         *string         `json:"error,omitempty"`
+	Id            int64           `json:"id"`
+	Proposal      []TreeDraftNode `json:"proposal"`
+	Status        TreeDraftStatus `json:"status"`
+	TotalParts    int             `json:"total_parts"`
+
+	// UsedAi False when the proposal came from the headings (AI off).
+	UsedAi bool `json:"used_ai"`
+}
+
+// TreeDraftNode defines model for TreeDraftNode.
+type TreeDraftNode struct {
+	Aliases     []string `json:"aliases"`
+	Description string   `json:"description"`
+
+	// Duplicate A sibling's tmp_id whose name is nearly the same.
+	Duplicate *string `json:"duplicate,omitempty"`
+
+	// Exists The tree already has this path; applying leaves it unchanged.
+	Exists bool   `json:"exists"`
+	Keep   bool   `json:"keep"`
+	Name   string `json:"name"`
+
+	// Parent Another node's tmp_id
+	Parent string `json:"parent"`
+
+	// Sections Source section numbers.
+	Sections []string `json:"sections"`
+	TmpId    string   `json:"tmp_id"`
+	Type     NodeType `json:"type"`
+}
+
+// TreeDraftStatus defines model for TreeDraftStatus.
+type TreeDraftStatus string
+
 // User defines model for User.
 type User struct {
 	CreatedAt   time.Time  `json:"created_at"`
@@ -2686,6 +2809,17 @@ type MarkNotificationsReadJSONBody struct {
 	Id *int64 `json:"id,omitempty"`
 }
 
+// UploadDocumentMultipartBody defines parameters for UploadDocument.
+type UploadDocumentMultipartBody struct {
+	ClientId *int64             `json:"client_id,omitempty"`
+	File     openapi_types.File `json:"file"`
+	Markdown string             `json:"markdown"`
+
+	// Supersedes An older document's key
+	Supersedes *string `json:"supersedes,omitempty"`
+	Title      string  `json:"title"`
+}
+
 // ListNodesParams defines parameters for ListNodes.
 type ListNodesParams struct {
 	// Archived Project admins only; also list archived nodes.
@@ -2784,6 +2918,11 @@ type TransitionTicketParams struct {
 	IfMatch *string `json:"If-Match,omitempty"`
 }
 
+// SaveTreeDraftJSONBody defines parameters for SaveTreeDraft.
+type SaveTreeDraftJSONBody struct {
+	Proposal []TreeDraftNode `json:"proposal"`
+}
+
 // ReindexAIJSONRequestBody defines body for ReindexAI for application/json ContentType.
 type ReindexAIJSONRequestBody = ReindexRequest
 
@@ -2859,6 +2998,9 @@ type UpdateProjectJSONRequestBody = ProjectUpdate
 // SetProjectClientsJSONRequestBody defines body for SetProjectClients for application/json ContentType.
 type SetProjectClientsJSONRequestBody = ProjectClientsUpdate
 
+// UploadDocumentMultipartRequestBody defines body for UploadDocument for multipart/form-data ContentType.
+type UploadDocumentMultipartRequestBody UploadDocumentMultipartBody
+
 // SetProjectMembersJSONRequestBody defines body for SetProjectMembers for application/json ContentType.
 type SetProjectMembersJSONRequestBody = MembersUpdate
 
@@ -2912,6 +3054,9 @@ type CreateLinkJSONRequestBody = LinkCreate
 
 // TransitionTicketJSONRequestBody defines body for TransitionTicket for application/json ContentType.
 type TransitionTicketJSONRequestBody = TransitionRequest
+
+// SaveTreeDraftJSONRequestBody defines body for SaveTreeDraft for application/json ContentType.
+type SaveTreeDraftJSONRequestBody SaveTreeDraftJSONBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -3018,6 +3163,15 @@ type ServerInterface interface {
 	// (PATCH /contacts/{id})
 	UpdateContact(w http.ResponseWriter, r *http.Request, id int64)
 
+	// (GET /documents/{key})
+	GetDocument(w http.ResponseWriter, r *http.Request, key string)
+
+	// (GET /documents/{key}/file)
+	DownloadDocument(w http.ResponseWriter, r *http.Request, key string)
+
+	// (POST /documents/{key}/tree-drafts)
+	StartTreeDraft(w http.ResponseWriter, r *http.Request, key string)
+
 	// (GET /imports)
 	ListImports(w http.ResponseWriter, r *http.Request)
 
@@ -3110,6 +3264,12 @@ type ServerInterface interface {
 
 	// (PUT /projects/{key}/clients)
 	SetProjectClients(w http.ResponseWriter, r *http.Request, key string)
+
+	// (GET /projects/{key}/documents)
+	ListDocuments(w http.ResponseWriter, r *http.Request, key string)
+
+	// (POST /projects/{key}/documents)
+	UploadDocument(w http.ResponseWriter, r *http.Request, key string)
 
 	// (GET /projects/{key}/members)
 	ListProjectMembers(w http.ResponseWriter, r *http.Request, key string)
@@ -3206,6 +3366,18 @@ type ServerInterface interface {
 
 	// (POST /tickets/{key}/transition)
 	TransitionTicket(w http.ResponseWriter, r *http.Request, key string, params TransitionTicketParams)
+
+	// (GET /tree-drafts/{id})
+	GetTreeDraft(w http.ResponseWriter, r *http.Request, id int64)
+
+	// (PUT /tree-drafts/{id})
+	SaveTreeDraft(w http.ResponseWriter, r *http.Request, id int64)
+
+	// (POST /tree-drafts/{id}/apply)
+	ApplyTreeDraft(w http.ResponseWriter, r *http.Request, id int64)
+
+	// (POST /tree-drafts/{id}/discard)
+	DiscardTreeDraft(w http.ResponseWriter, r *http.Request, id int64)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -4134,6 +4306,84 @@ func (siw *ServerInterfaceWrapper) UpdateContact(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// GetDocument operation middleware
+func (siw *ServerInterfaceWrapper) GetDocument(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDocument(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DownloadDocument operation middleware
+func (siw *ServerInterfaceWrapper) DownloadDocument(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DownloadDocument(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartTreeDraft operation middleware
+func (siw *ServerInterfaceWrapper) StartTreeDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartTreeDraft(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListImports operation middleware
 func (siw *ServerInterfaceWrapper) ListImports(w http.ResponseWriter, r *http.Request) {
 
@@ -4943,6 +5193,58 @@ func (siw *ServerInterfaceWrapper) SetProjectClients(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SetProjectClients(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListDocuments operation middleware
+func (siw *ServerInterfaceWrapper) ListDocuments(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDocuments(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UploadDocument operation middleware
+func (siw *ServerInterfaceWrapper) UploadDocument(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadDocument(w, r, key)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -6093,6 +6395,110 @@ func (siw *ServerInterfaceWrapper) TransitionTicket(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetTreeDraft operation middleware
+func (siw *ServerInterfaceWrapper) GetTreeDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTreeDraft(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SaveTreeDraft operation middleware
+func (siw *ServerInterfaceWrapper) SaveTreeDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveTreeDraft(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ApplyTreeDraft operation middleware
+func (siw *ServerInterfaceWrapper) ApplyTreeDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApplyTreeDraft(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DiscardTreeDraft operation middleware
+func (siw *ServerInterfaceWrapper) DiscardTreeDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DiscardTreeDraft(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -6263,6 +6669,15 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/tickets/{key}", wrapper.GetTicket)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/tickets/{key}", wrapper.UpdateTicket)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/transition", wrapper.TransitionTicket)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/documents", wrapper.ListDocuments)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/documents", wrapper.UploadDocument)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/documents/{key}", wrapper.GetDocument)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/documents/{key}/file", wrapper.DownloadDocument)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/documents/{key}/tree-drafts", wrapper.StartTreeDraft)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/tree-drafts/{id}", wrapper.GetTreeDraft)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/tree-drafts/{id}", wrapper.SaveTreeDraft)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tree-drafts/{id}/apply", wrapper.ApplyTreeDraft)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tree-drafts/{id}/discard", wrapper.DiscardTreeDraft)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/decision-draft", wrapper.DraftDecision)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/summaries/preview", wrapper.PreviewSummary)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/summaries", wrapper.ListSummaries)

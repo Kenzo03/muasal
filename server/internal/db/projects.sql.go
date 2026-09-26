@@ -12,7 +12,7 @@ import (
 const createProject = `-- name: CreateProject :one
 INSERT INTO projects (key, name, description)
 VALUES ($1, $2, $3)
-RETURNING id, key, name, description, created_at, ticket_seq, note_seq
+RETURNING id, key, name, description, created_at, ticket_seq, note_seq, doc_seq
 `
 
 type CreateProjectParams struct {
@@ -32,12 +32,13 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 		&i.CreatedAt,
 		&i.TicketSeq,
 		&i.NoteSeq,
+		&i.DocSeq,
 	)
 	return i, err
 }
 
 const getProjectByID = `-- name: GetProjectByID :one
-SELECT id, key, name, description, created_at, ticket_seq, note_seq FROM projects WHERE id = $1
+SELECT id, key, name, description, created_at, ticket_seq, note_seq, doc_seq FROM projects WHERE id = $1
 `
 
 func (q *Queries) GetProjectByID(ctx context.Context, id int64) (Project, error) {
@@ -51,12 +52,13 @@ func (q *Queries) GetProjectByID(ctx context.Context, id int64) (Project, error)
 		&i.CreatedAt,
 		&i.TicketSeq,
 		&i.NoteSeq,
+		&i.DocSeq,
 	)
 	return i, err
 }
 
 const getProjectByKey = `-- name: GetProjectByKey :one
-SELECT id, key, name, description, created_at, ticket_seq, note_seq FROM projects WHERE key = $1
+SELECT id, key, name, description, created_at, ticket_seq, note_seq, doc_seq FROM projects WHERE key = $1
 `
 
 func (q *Queries) GetProjectByKey(ctx context.Context, key string) (Project, error) {
@@ -70,6 +72,7 @@ func (q *Queries) GetProjectByKey(ctx context.Context, key string) (Project, err
 		&i.CreatedAt,
 		&i.TicketSeq,
 		&i.NoteSeq,
+		&i.DocSeq,
 	)
 	return i, err
 }
@@ -131,7 +134,7 @@ func (q *Queries) ListProjectClients(ctx context.Context, arg ListProjectClients
 }
 
 const listProjects = `-- name: ListProjects :many
-SELECT p.id, p.key, p.name, p.description, p.created_at, p.ticket_seq, p.note_seq, m.role
+SELECT p.id, p.key, p.name, p.description, p.created_at, p.ticket_seq, p.note_seq, p.doc_seq, m.role
 FROM projects p
 LEFT JOIN memberships m ON m.project_id = p.id AND m.user_id = $1
 WHERE $2::boolean OR m.user_id IS NOT NULL
@@ -166,6 +169,7 @@ func (q *Queries) ListProjects(ctx context.Context, arg ListProjectsParams) ([]L
 			&i.Project.CreatedAt,
 			&i.Project.TicketSeq,
 			&i.Project.NoteSeq,
+			&i.Project.DocSeq,
 			&i.Role,
 		); err != nil {
 			return nil, err
@@ -209,7 +213,7 @@ UPDATE projects SET
   name        = coalesce($2, name),
   description = coalesce($3, description)
 WHERE id = $4
-RETURNING id, key, name, description, created_at, ticket_seq, note_seq
+RETURNING id, key, name, description, created_at, ticket_seq, note_seq, doc_seq
 `
 
 type UpdateProjectParams struct {
@@ -235,6 +239,7 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (P
 		&i.CreatedAt,
 		&i.TicketSeq,
 		&i.NoteSeq,
+		&i.DocSeq,
 	)
 	return i, err
 }

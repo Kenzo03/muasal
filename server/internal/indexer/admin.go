@@ -89,12 +89,19 @@ func QueueAll(ctx context.Context, pool *pgxpool.Pool, client *river.Client[pgx.
 	if err != nil {
 		return 0, err
 	}
-	args := make([]river.JobArgs, 0, len(ids)+len(notes))
+	sections, err := q.ListAllSectionIDs(ctx)
+	if err != nil {
+		return 0, err
+	}
+	args := make([]river.JobArgs, 0, len(ids)+len(notes)+len(sections))
 	for _, id := range ids {
 		args = append(args, IndexTicket{TicketID: id})
 	}
 	for _, id := range notes {
 		args = append(args, IndexNote{NoteID: id})
+	}
+	for _, id := range sections {
+		args = append(args, IndexSection{SectionID: id})
 	}
 	for start := 0; start < len(args); start += 1000 {
 		batch := args[start:min(start+1000, len(args))]

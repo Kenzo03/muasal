@@ -23,6 +23,7 @@ import (
 	"github.com/kenzo03/muasal/server/internal/ask"
 	"github.com/kenzo03/muasal/server/internal/config"
 	"github.com/kenzo03/muasal/server/internal/db"
+	"github.com/kenzo03/muasal/server/internal/draft"
 	"github.com/kenzo03/muasal/server/internal/eval"
 	"github.com/kenzo03/muasal/server/internal/gitlink"
 	"github.com/kenzo03/muasal/server/internal/httpapi"
@@ -101,6 +102,7 @@ func serve(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 		Register: func(ws *river.Workers) {
 			river.AddWorker(ws, &ticketimport.Worker{Pool: pool})
 			river.AddWorker(ws, &gitlink.Worker{Pool: pool})
+			river.AddWorker(ws, &draft.TreeWorker{Pool: pool, AI: api.AI()})
 		},
 	})
 	if err != nil {

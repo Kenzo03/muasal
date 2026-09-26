@@ -10,16 +10,20 @@ import (
 
 var typeNames = map[string]string{"bug": "Bug", "change_request": "Change request", "feature": "Feature"}
 
-// Evidence is one packed item: a ticket or a decision note.
+// Evidence is one packed item: a ticket, a decision note or a document section.
 type Evidence struct {
-	Ticket *indexer.Source
-	Note   *indexer.NoteSource
+	Ticket  *indexer.Source
+	Note    *indexer.NoteSource
+	Section *indexer.SectionSource
 }
 
-// Key is the item's citation key, e.g. HRIS-231 or HRIS-DN7.
+// Key is the item's citation key, e.g. HRIS-231, HRIS-DN7 or HRIS-DOC1/7.4.
 func (e Evidence) Key() string {
 	if e.Note != nil {
 		return e.Note.Note.DecisionNote.Key
+	}
+	if e.Section != nil {
+		return e.Section.Key()
 	}
 	return e.Ticket.Ticket.Key
 }
@@ -37,6 +41,8 @@ func Pack(items []Evidence, budgetTokens int) (string, []string) {
 	for i, it := range items {
 		if it.Note != nil {
 			core[i], full[i] = noteBlock(*it.Note, false), noteBlock(*it.Note, true)
+		} else if it.Section != nil {
+			core[i], full[i] = sectionBlock(*it.Section, false), sectionBlock(*it.Section, true)
 		} else {
 			core[i], full[i] = block(*it.Ticket, false), block(*it.Ticket, true)
 		}
@@ -144,6 +150,36 @@ func noteBlock(it indexer.NoteSource, details bool) string {
 	}
 	body := strings.TrimSpace(n.Body)
 	if !details {
+		body = cut(body, 400)
+	}
+	b.WriteString(body)
+	return strings.TrimSpace(b.String())
+}
+
+// sectionBlock is one document section's evidence; with details, more of its body.
+func sectionBlock(it indexer.SectionSource, details bool) string {
+	s := it.Section
+	var b strings.Builder
+	client := "All clients"
+	if s.ClientName != nil {
+		client = *s.ClientName
+	}
+	fmt.Fprintf(&b, "[%s] Document section · %s · uploaded %s", it.Key(), client, day(s.DocumentCreatedAt))
+	if s.SupersededByKey != nil {
+		b.WriteString(" · superseded by " + *s.SupersededByKey + ", history only")
+	}
+	fmt.Fprintf(&b, "\nTitle: %s › %s %s\n", s.DocumentTitle, s.Number, s.Title)
+	if len(it.Menus) > 0 {
+		paths := make([]string, len(it.Menus))
+		for i, m := range it.Menus {
+			paths[i] = strings.Join(m.Path, " › ")
+		}
+		b.WriteString("Menus: " + strings.Join(paths, "; ") + "\n")
+	}
+	body := strings.TrimSpace(s.Body)
+	if details {
+		body = cut(body, 1500)
+	} else {
 		body = cut(body, 400)
 	}
 	b.WriteString(body)

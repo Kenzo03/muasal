@@ -18,14 +18,18 @@ import (
 
 // loggedEvidence is one row of ask_queries.evidence: a ticket or a note.
 type loggedEvidence struct {
-	TicketID int64   `json:"ticket_id"`
-	NoteID   int64   `json:"note_id"`
-	Score    float64 `json:"score"`
+	TicketID  int64   `json:"ticket_id"`
+	NoteID    int64   `json:"note_id"`
+	SectionID int64   `json:"section_id"`
+	Score     float64 `json:"score"`
 }
 
 func (l loggedEvidence) ref() ask.Ref {
 	if l.NoteID != 0 {
-		return ask.Ref{ID: l.NoteID, Note: true}
+		return ask.Ref{ID: l.NoteID, Kind: ask.KindNote}
+	}
+	if l.SectionID != 0 {
+		return ask.Ref{ID: l.SectionID, Kind: ask.KindSection}
 	}
 	return ask.Ref{ID: l.TicketID}
 }

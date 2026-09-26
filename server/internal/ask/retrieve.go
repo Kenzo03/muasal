@@ -53,11 +53,21 @@ type Tuning struct {
 	ExhaustiveMax int     // small sets skip ranking
 }
 
-// Ref names one piece of evidence: a ticket, or a decision note (FSD §9.4).
+// Ref names one piece of evidence: a ticket, a decision note (FSD §9.4) or
+// a document section (§7.7).
 type Ref struct {
 	ID   int64
-	Note bool
+	Kind RefKind
 }
+
+// RefKind says what a Ref names.
+type RefKind uint8
+
+const (
+	KindTicket RefKind = iota
+	KindNote
+	KindSection
+)
 
 // Found is what retrieval chose.
 type Found struct {
@@ -68,15 +78,15 @@ type Found struct {
 }
 
 // TicketIDs are the tickets among the evidence, in order.
-func (f Found) TicketIDs() []int64 { return idsOf(f.Refs, false) }
+func (f Found) TicketIDs() []int64 { return idsOf(f.Refs, KindTicket) }
 
 // NoteIDs are the decision notes among the evidence, in order.
-func (f Found) NoteIDs() []int64 { return idsOf(f.Refs, true) }
+func (f Found) NoteIDs() []int64 { return idsOf(f.Refs, KindNote) }
 
-func idsOf(refs []Ref, notes bool) []int64 {
+func idsOf(refs []Ref, kind RefKind) []int64 {
 	var out []int64
 	for _, r := range refs {
-		if r.Note == notes {
+		if r.Kind == kind {
 			out = append(out, r.ID)
 		}
 	}
@@ -138,20 +148,23 @@ func Retrieve(ctx context.Context, pool *pgxpool.Pool, a Asker, s Scope, questio
 	// Reciprocal rank fusion over both lists; an item scores by its best chunk.
 	chunkScore := map[int64]float64{}
 	chunkItem := map[int64]Ref{}
-	owner := func(ticketID, noteID *int64) Ref {
-		if noteID != nil {
-			return Ref{ID: *noteID, Note: true}
+	owner := func(ticketID, noteID, sectionID *int64) Ref {
+		switch {
+		case noteID != nil:
+			return Ref{ID: *noteID, Kind: KindNote}
+		case sectionID != nil:
+			return Ref{ID: *sectionID, Kind: KindSection}
 		}
 		return Ref{ID: *ticketID}
 	}
 	for i, r := range kw {
 		chunkScore[r.ID] += 1.0 / float64(rrfK+i+1)
-		chunkItem[r.ID] = owner(r.TicketID, r.NoteID)
+		chunkItem[r.ID] = owner(r.TicketID, r.NoteID, r.SectionID)
 	}
 	best := 0.0
 	for i, r := range vr {
 		chunkScore[r.ID] += 1.0 / float64(rrfK+i+1)
-		chunkItem[r.ID] = owner(r.TicketID, r.NoteID)
+		chunkItem[r.ID] = owner(r.TicketID, r.NoteID, r.SectionID)
 		best = max(best, r.Similarity)
 	}
 	found.Scores = map[Ref]float64{}
@@ -171,11 +184,8 @@ func Retrieve(ctx context.Context, pool *pgxpool.Pool, a Asker, s Scope, questio
 			}
 			return -1
 		}
-		if x.Note != y.Note { // tickets before notes on a tie
-			if x.Note {
-				return 1
-			}
-			return -1
+		if x.Kind != y.Kind { // tickets, then notes, then sections on a tie
+			return int(x.Kind) - int(y.Kind)
 		}
 		return int(y.ID - x.ID) // newer first on a tie
 	})
@@ -195,7 +205,7 @@ func Retrieve(ctx context.Context, pool *pgxpool.Pool, a Asker, s Scope, questio
 			return found, err
 		}
 		for _, r := range notes {
-			named = append(named, Ref{ID: r.ID, Note: true})
+			named = append(named, Ref{ID: r.ID, Kind: KindNote})
 		}
 	}
 
@@ -241,7 +251,7 @@ func Retrieve(ctx context.Context, pool *pgxpool.Pool, a Asker, s Scope, questio
 			}
 		}
 		for _, id := range allNotes {
-			if r := (Ref{ID: id, Note: true}); !slices.Contains(pick, r) {
+			if r := (Ref{ID: id, Kind: KindNote}); !slices.Contains(pick, r) {
 				pick = append(pick, r)
 			}
 		}

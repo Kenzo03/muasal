@@ -69,7 +69,7 @@ LIMIT sqlc.arg('lim');
 -- model. A chunk belongs to a ticket or to a decision note (§9.4); a note's
 -- date is its decision date. The caller sets hnsw.iterative_scan and hnsw.ef_search for its
 -- transaction, so filtered searches still find enough rows (§11.3).
-SELECT ch.id, ch.ticket_id, ch.note_id, (1 - (ch.embedding <=> sqlc.arg('vec')::halfvec))::float8 AS similarity
+SELECT ch.id, ch.ticket_id, ch.note_id, ch.section_id, (1 - (ch.embedding <=> sqlc.arg('vec')::halfvec))::float8 AS similarity
 FROM chunks ch
 LEFT JOIN tickets t ON t.id = ch.ticket_id
 WHERE ch.embed_model = sqlc.arg('model')::text
@@ -95,9 +95,9 @@ LIMIT 50;
 -- IDs and names (§11.3). Ranking reads every candidate row, so it ranks at
 -- most `candidates` of them: a word found in thousands of chunks says little
 -- on its own, and the caller tries all the words together first.
-SELECT c.id, c.ticket_id, c.note_id, c.rank
+SELECT c.id, c.ticket_id, c.note_id, c.section_id, c.rank
 FROM (
-SELECT ch.id, ch.ticket_id, ch.note_id, ts_rank_cd(ch.tsv, query)::float8 AS rank
+SELECT ch.id, ch.ticket_id, ch.note_id, ch.section_id, ts_rank_cd(ch.tsv, query)::float8 AS rank
 FROM chunks ch
 LEFT JOIN tickets t ON t.id = ch.ticket_id,
      to_tsquery('simple', sqlc.arg('terms')::text) AS query

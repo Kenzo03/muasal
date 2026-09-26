@@ -281,10 +281,7 @@ func (e *Engine) finish(ctx context.Context, r Request, res Result, l logEntry, 
 	res.ThreadID = *threadID
 	evidence := make([]map[string]any, 0, len(l.evidence.Refs))
 	for _, ref := range l.evidence.Refs {
-		idKey := "ticket_id"
-		if ref.Note {
-			idKey = "note_id"
-		}
+		idKey := map[RefKind]string{KindTicket: "ticket_id", KindNote: "note_id", KindSection: "section_id"}[ref.Kind]
 		evidence = append(evidence, map[string]any{idKey: ref.ID, "score": l.evidence.Scores[ref]})
 	}
 	scope, _ := json.Marshal(l.scope)
@@ -314,9 +311,13 @@ func (e *Engine) finish(ctx context.Context, r Request, res Result, l logEntry, 
 
 // load reads one ticket or note as evidence.
 func (e *Engine) load(ctx context.Context, ref Ref) (Evidence, error) {
-	if ref.Note {
+	switch ref.Kind {
+	case KindNote:
 		src, err := indexer.LoadNote(ctx, e.q, ref.ID)
 		return Evidence{Note: &src}, err
+	case KindSection:
+		src, err := indexer.LoadSection(ctx, e.q, ref.ID)
+		return Evidence{Section: &src}, err
 	}
 	src, err := indexer.Load(ctx, e.q, ref.ID)
 	return Evidence{Ticket: &src}, err
@@ -344,17 +345,24 @@ func (e *Engine) items(ctx context.Context, refs []Ref, n int) ([]Item, error) {
 // them (the Ask log, for system admins).
 func (e *Engine) ItemsFor(ctx context.Context, a *Asker, refs []Ref) ([]Item, error) {
 	if a != nil && len(refs) > 0 {
-		tickets, err := e.q.VisibleTicketIDs(ctx, db.VisibleTicketIDsParams{Ids: orEmpty(idsOf(refs, false)), IsAdmin: a.IsAdmin, UserID: a.UserID})
+		tickets, err := e.q.VisibleTicketIDs(ctx, db.VisibleTicketIDsParams{Ids: orEmpty(idsOf(refs, KindTicket)), IsAdmin: a.IsAdmin, UserID: a.UserID})
 		if err != nil {
 			return nil, err
 		}
-		notes, err := e.q.VisibleNoteIDs(ctx, db.VisibleNoteIDsParams{Ids: orEmpty(idsOf(refs, true)), IsAdmin: a.IsAdmin, UserID: a.UserID})
+		notes, err := e.q.VisibleNoteIDs(ctx, db.VisibleNoteIDsParams{Ids: orEmpty(idsOf(refs, KindNote)), IsAdmin: a.IsAdmin, UserID: a.UserID})
+		if err != nil {
+			return nil, err
+		}
+		sections, err := e.q.VisibleSectionIDs(ctx, db.VisibleSectionIDsParams{Ids: orEmpty(idsOf(refs, KindSection)), IsAdmin: a.IsAdmin, UserID: a.UserID})
 		if err != nil {
 			return nil, err
 		}
 		refs = slices.DeleteFunc(slices.Clone(refs), func(r Ref) bool {
-			if r.Note {
+			switch r.Kind {
+			case KindNote:
 				return !slices.Contains(notes, r.ID)
+			case KindSection:
+				return !slices.Contains(sections, r.ID)
 			}
 			return !slices.Contains(tickets, r.ID)
 		})
@@ -363,6 +371,11 @@ func (e *Engine) ItemsFor(ctx context.Context, a *Asker, refs []Ref) ([]Item, er
 }
 
 func itemOf(ev Evidence) Item {
+	if sc := ev.Section; sc != nil {
+		s := sc.Section
+		return Item{Kind: "document", Key: sc.Key(), Title: s.DocumentTitle + " › " + s.Number + " " + s.Title, Client: s.ClientName,
+			Date: s.DocumentCreatedAt, Closed: true}
+	}
 	if n := ev.Note; n != nil {
 		d := n.Note.DecisionNote
 		return Item{Kind: "note", Key: d.Key, Title: d.Title, Client: n.Note.ClientName, RequestedBy: n.Note.AuthorName,

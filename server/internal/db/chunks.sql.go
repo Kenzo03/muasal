@@ -208,13 +208,13 @@ func (q *Queries) SetChunkEmbedding(ctx context.Context, arg SetChunkEmbeddingPa
 }
 
 const upsertChunk = `-- name: UpsertChunk :exec
-INSERT INTO chunks (source_type, source_id, seq, ticket_id, note_id, project_id, client_id, node_ids, user_ids, contact_ids,
+INSERT INTO chunks (source_type, source_id, seq, ticket_id, note_id, section_id, project_id, client_id, node_ids, user_ids, contact_ids,
                     internal, occurred_at, content, content_hash)
-VALUES ($1, $2, $3, $4::bigint, $5::bigint, $6,
-        $7, $8::bigint[], $9::bigint[], $10::bigint[],
-        $11, $12, $13, $14)
+VALUES ($1, $2, $3, $4::bigint, $5::bigint, $6::bigint, $7,
+        $8, $9::bigint[], $10::bigint[], $11::bigint[],
+        $12, $13, $14, $15)
 ON CONFLICT (source_type, source_id, seq) DO UPDATE SET
-  ticket_id = excluded.ticket_id, note_id = excluded.note_id, project_id = excluded.project_id, client_id = excluded.client_id,
+  ticket_id = excluded.ticket_id, note_id = excluded.note_id, section_id = excluded.section_id, project_id = excluded.project_id, client_id = excluded.client_id,
   node_ids = excluded.node_ids, user_ids = excluded.user_ids, contact_ids = excluded.contact_ids,
   internal = excluded.internal, occurred_at = excluded.occurred_at,
   embedding   = CASE WHEN chunks.content_hash = excluded.content_hash THEN chunks.embedding END,
@@ -228,6 +228,7 @@ type UpsertChunkParams struct {
 	Seq         int32
 	TicketID    *int64
 	NoteID      *int64
+	SectionID   *int64
 	ProjectID   int64
 	ClientID    *int64
 	NodeIds     []int64
@@ -248,6 +249,7 @@ func (q *Queries) UpsertChunk(ctx context.Context, arg UpsertChunkParams) error 
 		arg.Seq,
 		arg.TicketID,
 		arg.NoteID,
+		arg.SectionID,
 		arg.ProjectID,
 		arg.ClientID,
 		arg.NodeIds,
