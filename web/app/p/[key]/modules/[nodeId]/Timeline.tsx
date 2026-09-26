@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ClientChip, StatusDot } from "@/components/Chips";
 import { day } from "@/lib/format";
-import type { Client, TimelineEntry } from "@/lib/problem";
+import type { Client, TimelineEntry, TimelineNote } from "@/lib/problem";
 import { button, chip, cx, field, sectionTitle } from "@/lib/ui";
 
 const types = ["bug", "change_request", "feature"] as const;
@@ -22,9 +22,12 @@ function Rail({ color, open }: { color: string; open?: boolean }) {
 
 // The Timeline tab (FSD §7.4, story 1): open tickets pinned under "In progress",
 // then closed ones newest first by close date, each with what changed and why.
+// Decision notes sit among them by decision date (§9.4); while more tickets
+// wait to load, notes older than the last loaded one wait too.
 // The filters are a plain GET form, so the URL holds them.
-export default async function Timeline({ items, failed, more, limit, clients, values }: {
+export default async function Timeline({ items, notes, failed, more, limit, clients, values }: {
   items: TimelineEntry[];
+  notes: TimelineNote[];
   failed: boolean;
   more: boolean;
   limit: number;
@@ -35,7 +38,14 @@ export default async function Timeline({ items, failed, more, limit, clients, va
   const tt = await getTranslations("ticketTypes");
   const locale = await getLocale();
   const open = items.filter((it) => !it.closed_at);
-  const closed = items.filter((it) => it.closed_at);
+  const closedTickets = items.filter((it) => it.closed_at);
+  const oldest = closedTickets.at(-1)?.closed_at?.slice(0, 10) ?? "";
+  const shownNotes = more ? notes.filter((n) => n.decided_on >= oldest) : notes;
+  type Row = { kind: "ticket"; at: string; it: TimelineEntry } | { kind: "note"; at: string; note: TimelineNote };
+  const closed: Row[] = [
+    ...closedTickets.map((it): Row => ({ kind: "ticket", at: it.closed_at!, it })),
+    ...shownNotes.map((note): Row => ({ kind: "note", at: note.decided_on, note })),
+  ].sort((a, b) => (a.at.slice(0, 10) === b.at.slice(0, 10) ? 0 : a.at < b.at ? 1 : -1));
   const requester = (it: TimelineEntry) => `${it.requester.name}${it.requester.title ? ` (${it.requester.title})` : ""}`;
   const grid = "grid grid-cols-[88px_22px_minmax(0,1fr)] gap-x-3 md:grid-cols-[140px_22px_minmax(0,1fr)] md:gap-x-3.5";
   const label = "flex flex-col gap-1 text-xs text-muted";
@@ -80,7 +90,7 @@ export default async function Timeline({ items, failed, more, limit, clients, va
       </form>
       {failed ? (
         <p role="alert" className={field.error}>{t("filterError")}</p>
-      ) : items.length === 0 ? (
+      ) : items.length === 0 && notes.length === 0 ? (
         <p className="text-muted">{t("empty")}</p>
       ) : (
         <>
@@ -114,7 +124,32 @@ export default async function Timeline({ items, failed, more, limit, clients, va
             <section aria-labelledby="closed-title" className="flex flex-col gap-2">
               <h2 id="closed-title" className={sectionTitle}>{t("closed", { count: closed.length })}</h2>
               <ol className="flex flex-col">
-                {closed.map((it) => {
+                {closed.map((row) => {
+                  if (row.kind === "note") {
+                    const n = row.note;
+                    return (
+                      <li key={n.key} className={grid}>
+                        <div className="flex flex-col items-end gap-0.5 pt-3">
+                          <span className="text-sm font-semibold">{day(n.decided_on, locale)}</span>
+                          <span className="text-xs text-muted">{t("note")}</span>
+                        </div>
+                        <Rail color="#8A7F76" />
+                        <article aria-label={`${n.key} ${n.title}`} className="mb-3 flex flex-col gap-2 rounded border border-dashed border-line bg-paper px-3.5 py-3">
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+                            <Link href={`/notes/${n.key}`} className="font-mono text-[13px] font-semibold">{n.key}</Link>
+                            <span className={cx(chip, "bg-well text-[#4A423C]")}>{t("note")}</span>
+                            <ClientChip client={n.client} coreLabel={t("core")} />
+                            {n.attendees && <span>{t("attendees", { names: n.attendees })}</span>}
+                          </div>
+                          <Link href={`/notes/${n.key}`} className="text-[15px] font-semibold text-ink no-underline hover:text-ink hover:underline">
+                            {n.title}
+                          </Link>
+                          <p className="line-clamp-3 whitespace-pre-wrap text-[13px] leading-normal">{n.body}</p>
+                        </article>
+                      </li>
+                    );
+                  }
+                  const it = row.it;
                   const implemented = it.decision?.outcome === "implemented";
                   return (
                     <li key={it.key} className={grid}>
@@ -130,6 +165,9 @@ export default async function Timeline({ items, failed, more, limit, clients, va
                             <span className={cx(chip, implemented ? "bg-ok-soft text-ok" : "bg-well text-[#4A423C]")}>
                               {implemented ? t("implemented") : t("rejected")}
                             </span>
+                          )}
+                          {it.decision?.superseded_by && (
+                            <span className={cx(chip, "bg-warn-soft text-warn")}>{t("supersededBy", { key: it.decision.superseded_by })}</span>
                           )}
                           <ClientChip client={it.client} coreLabel={t("core")} />
                           <span>{tt(it.type)} · {t("requestedBy", { name: requester(it) })}</span>

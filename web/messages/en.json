@@ -143,7 +143,8 @@
     "modules": "Modules",
     "settings": "Settings",
     "board": "Board",
-    "tickets": "Tickets"
+    "tickets": "Tickets",
+    "notes": "Notes"
   },
   "settings": {
     "adminsOnly": "Only project admins can change settings.",
@@ -339,7 +340,10 @@
     "filterError": "These filters could not be applied.",
     "noBehaviors": "No decisions in force yet. Closing tickets on this menu adds them.",
     "because": "Why: {why}",
-    "ask": "Ask"
+    "ask": "Ask",
+    "note": "Decision note",
+    "attendees": "With {names}",
+    "supersededBy": "Superseded by {key}"
   },
   "errors": {
     "generic": "Something went wrong. Try again.",
@@ -828,5 +832,34 @@
     "restore2": "Run",
     "restore3": "The script stops the app, restores the database and the attachments, starts it again and re-indexes.",
     "offsite": "Copying the backups folder off the server (NAS or tape) is up to you."
+  },
+  "notes": {
+    "heading": "Decision notes",
+    "intro": "Decisions made outside tickets, such as in meetings, calls and emails. Ask cites them like tickets.",
+    "new": "New note",
+    "newTitle": "New decision note",
+    "editTitle": "Edit the decision note",
+    "edit": "Edit",
+    "none": "No decision notes yet.",
+    "key": "Key",
+    "title": "Title",
+    "client": "Client",
+    "allClients": "All clients",
+    "decidedOn": "Decision date",
+    "decidedOnDate": "Decided {date}",
+    "attendees": "Attendees",
+    "attendeesHint": "Who was there",
+    "menus": "Menus",
+    "tickets": "Related tickets",
+    "ticketsHint": "Keys, separated by commas.",
+    "body": "Note",
+    "archived": "Archived",
+    "archivedLabel": "(archived)",
+    "showArchived": "Show archived",
+    "hideArchived": "Hide archived",
+    "save": "Save",
+    "cancel": "Cancel",
+    "path": "Location",
+    "byline": "By {name} · updated {at}"
   }
 }

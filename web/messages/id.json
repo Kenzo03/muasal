@@ -143,7 +143,8 @@
     "modules": "Modul",
     "settings": "Pengaturan",
     "board": "Papan",
-    "tickets": "Tiket"
+    "tickets": "Tiket",
+    "notes": "Catatan"
   },
   "settings": {
     "adminsOnly": "Hanya admin proyek yang dapat mengubah pengaturan.",
@@ -339,7 +340,10 @@
     "filterError": "Saringan ini tidak dapat diterapkan.",
     "noBehaviors": "Belum ada keputusan yang berlaku. Menutup tiket pada menu ini akan menambahkannya.",
     "because": "Mengapa: {why}",
-    "ask": "Tanya"
+    "ask": "Tanya",
+    "note": "Catatan keputusan",
+    "attendees": "Bersama {names}",
+    "supersededBy": "Digantikan oleh {key}"
   },
   "errors": {
     "generic": "Terjadi kesalahan. Coba lagi.",
@@ -828,5 +832,34 @@
     "restore2": "Jalankan",
     "restore3": "Skrip menghentikan aplikasi, memulihkan basis data dan lampiran, menyalakannya lagi, lalu mengindeks ulang.",
     "offsite": "Menyalin folder cadangan ke luar server (NAS atau pita) adalah tanggung jawab Anda."
+  },
+  "notes": {
+    "heading": "Catatan keputusan",
+    "intro": "Keputusan yang dibuat di luar tiket, misalnya di rapat, telepon, dan email. Ask mengutipnya seperti tiket.",
+    "new": "Catatan baru",
+    "newTitle": "Catatan keputusan baru",
+    "editTitle": "Ubah catatan keputusan",
+    "edit": "Ubah",
+    "none": "Belum ada catatan keputusan.",
+    "key": "Kunci",
+    "title": "Judul",
+    "client": "Klien",
+    "allClients": "Semua klien",
+    "decidedOn": "Tanggal keputusan",
+    "decidedOnDate": "Diputuskan {date}",
+    "attendees": "Peserta",
+    "attendeesHint": "Siapa yang hadir",
+    "menus": "Menu",
+    "tickets": "Tiket terkait",
+    "ticketsHint": "Kunci tiket, dipisah koma.",
+    "body": "Catatan",
+    "archived": "Diarsipkan",
+    "archivedLabel": "(diarsipkan)",
+    "showArchived": "Tampilkan yang diarsipkan",
+    "hideArchived": "Sembunyikan yang diarsipkan",
+    "save": "Simpan",
+    "cancel": "Batal",
+    "path": "Lokasi",
+    "byline": "Oleh {name} · diperbarui {at}"
   }
 }
