@@ -768,6 +768,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/backups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description System admins (FSD §15.6). The database dumps in the backups volume, newest first, and whether a run is waiting. */
+        get: operations["listBackups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/backups/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description System admins. Asks the backup service for a backup now; it starts within 30 seconds (§19.4). */
+        post: operations["runBackup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/system/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description System admins (FSD §18.3). Database size, job queue depth, model server health and the disk use of the attachments and backups volumes; warnings from 80% disk use. */
+        get: operations["getSystemStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ask": {
         parameters: {
             query?: never;
@@ -1716,6 +1767,48 @@ export interface components {
             items: components["schemas"]["AuditEvent"][];
             /** Format: int64 */
             next_before?: number;
+        };
+        Backup: {
+            /** @example db-20260926-0100.dump */
+            file: string;
+            /** Format: int64 */
+            size_bytes: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        BackupList: {
+            /** @description Where the backups live on the server. */
+            location: string;
+            /** @description A "Run backup now" is waiting for the backup service. */
+            requested: boolean;
+            items: components["schemas"]["Backup"][];
+        };
+        SystemStatus: {
+            /** Format: int64 */
+            database_bytes: number;
+            /** @description River jobs by state (available, scheduled, running, retryable, discarded). */
+            jobs: {
+                [key: string]: number;
+            };
+            model: {
+                mode: components["schemas"]["AIMode"];
+                /** @description Absent when AI is off. */
+                reachable?: boolean;
+                error?: string;
+            };
+            disks: components["schemas"]["DiskUse"][];
+            warnings: ("disk_attachments" | "disk_backups" | "model_unreachable" | "jobs_failed")[];
+        };
+        DiskUse: {
+            /** @enum {string} */
+            volume: "attachments" | "backups";
+            path: string;
+            /** Format: int64 */
+            used_bytes: number;
+            /** Format: int64 */
+            total_bytes: number;
+            /** @description The folder does not exist on this server. */
+            missing?: boolean;
         };
         RecentNodes: {
             node_ids: number[];
@@ -3215,6 +3308,67 @@ export interface operations {
                 };
                 content: {
                     "text/csv": string;
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listBackups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The backups. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    runBackup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Requested. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getSystemStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The status. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemStatus"];
                 };
             };
             default: components["responses"]["Problem"];

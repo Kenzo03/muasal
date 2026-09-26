@@ -13,22 +13,28 @@ import (
 )
 
 const countScopeTickets = `-- name: CountScopeTickets :one
-SELECT count(DISTINCT ch.ticket_id)
-FROM chunks ch
-JOIN tickets t ON t.id = ch.ticket_id
-WHERE ($1::boolean OR EXISTS (
-        SELECT 1 FROM memberships m
-        WHERE m.user_id = $2::bigint AND m.project_id = ch.project_id
-          AND (m.all_clients OR ch.client_id IS NULL OR EXISTS (
-                SELECT 1 FROM membership_clients mc
-                WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = ch.client_id))))
-  AND (cardinality($3::bigint[]) = 0 OR ch.project_id = ANY ($3::bigint[]))
-  AND (cardinality($4::bigint[]) = 0 OR ch.node_ids && $4::bigint[])
-  AND (cardinality($5::bigint[]) = 0 OR ch.client_id IS NULL OR ch.client_id = ANY ($5::bigint[]))
-  AND ((cardinality($6::bigint[]) = 0 AND cardinality($7::bigint[]) = 0)
-       OR ch.user_ids && $6::bigint[] OR ch.contact_ids && $7::bigint[])
-  AND ($8::timestamptz IS NULL OR coalesce(t.closed_at, t.created_at) >= $8::timestamptz)
-  AND ($9::timestamptz IS NULL OR coalesce(t.closed_at, t.created_at) < $9::timestamptz)
+SELECT count(*)
+FROM (
+  SELECT t.id
+  FROM tickets t
+  WHERE EXISTS (
+    SELECT 1 FROM chunks ch
+    WHERE ch.ticket_id = t.id
+      AND ($1::boolean OR EXISTS (
+            SELECT 1 FROM memberships m
+            WHERE m.user_id = $2::bigint AND m.project_id = ch.project_id
+              AND (m.all_clients OR ch.client_id IS NULL OR EXISTS (
+                    SELECT 1 FROM membership_clients mc
+                    WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = ch.client_id))))
+      AND (cardinality($3::bigint[]) = 0 OR ch.project_id = ANY ($3::bigint[]))
+      AND (cardinality($4::bigint[]) = 0 OR ch.node_ids && $4::bigint[])
+      AND (cardinality($5::bigint[]) = 0 OR ch.client_id IS NULL OR ch.client_id = ANY ($5::bigint[]))
+      AND ((cardinality($6::bigint[]) = 0 AND cardinality($7::bigint[]) = 0)
+           OR ch.user_ids && $6::bigint[] OR ch.contact_ids && $7::bigint[]))
+    AND ($8::timestamptz IS NULL OR coalesce(t.closed_at, t.created_at) >= $8::timestamptz)
+    AND ($9::timestamptz IS NULL OR coalesce(t.closed_at, t.created_at) < $9::timestamptz)
+  LIMIT $10
+) scoped
 `
 
 type CountScopeTicketsParams struct {
@@ -41,8 +47,12 @@ type CountScopeTicketsParams struct {
 	ContactIds []int64
 	FromTs     *time.Time
 	ToTs       *time.Time
+	Cap        int32
 }
 
+// How many tickets are in scope, counting no further than cap: retrieval only
+// asks whether the set is small (§11.3). Driven from tickets with LIMIT, it
+// stops early on a broad scope instead of scanning every chunk.
 func (q *Queries) CountScopeTickets(ctx context.Context, arg CountScopeTicketsParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countScopeTickets,
 		arg.IsAdmin,
@@ -54,6 +64,7 @@ func (q *Queries) CountScopeTickets(ctx context.Context, arg CountScopeTicketsPa
 		arg.ContactIds,
 		arg.FromTs,
 		arg.ToTs,
+		arg.Cap,
 	)
 	var count int64
 	err := row.Scan(&count)

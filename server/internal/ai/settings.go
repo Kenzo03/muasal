@@ -64,6 +64,31 @@ func Defaults() Settings {
 	}
 }
 
+// tiers are §18.1's presets for an Ollama server: chat model, evidence budget
+// and concurrent answers. The large vLLM tier is set up by hand in Admin → AI.
+var tiers = map[string]struct {
+	chat          string
+	budget, slots int
+}{
+	"dev":         {"qwen3.5:4b", 2500, 1},
+	"minimum":     {"qwen3.5:4b", 2500, 1},
+	"recommended": {"qwen3.5:9b", 6000, 2},
+}
+
+// LocalForTier switches to Local mode on one model server with a tier's
+// presets, as the installer does (§19.3); embeddings are bge-m3 on every tier.
+func (s Settings) LocalForTier(baseURL, tier string) (Settings, error) {
+	t, ok := tiers[tier]
+	if !ok {
+		return s, fmt.Errorf("unknown tier %q; use dev, minimum or recommended", tier)
+	}
+	s.Mode = ModeLocal
+	s.Chat = Endpoint{URL: baseURL, Model: t.chat}
+	s.Embed = Endpoint{URL: baseURL, Model: "bge-m3"}
+	s.ContextTokens, s.MaxConcurrent = t.budget, t.slots
+	return s, nil
+}
+
 // Problem is one invalid field, named as the API names it.
 type Problem struct{ Field, Code, Message string }
 

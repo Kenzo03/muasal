@@ -34,6 +34,7 @@ const usage = `usage:
   app migrate up                             apply migrations and prepare the app database role
   app admin create-admin --email E --name N  create an admin and print a one-time setup link
   app admin reindex --all                    queue an index job for every ticket, e.g. after a restore
+  app admin ai-local --url URL --tier T      set AI to Local on one model server with a tier's presets (dev, minimum, recommended)
   app eval [--seed] [--use-local URL] [--set FILE] [--data FILE] [--strict-latency]
                                              run the Ask golden set (FSD §11.8); --seed loads the demo project first
   app healthcheck                            exit 0 when the API on LISTEN_ADDR is ready`
@@ -66,6 +67,8 @@ func run(ctx context.Context, args []string, log *slog.Logger) error {
 		return migrate.Up(ctx, cfg.MigrateDatabaseURL, cfg.DatabaseURL)
 	case len(args) >= 2 && args[0] == "admin" && args[1] == "create-admin":
 		return createAdmin(ctx, cfg, log, args[2:])
+	case len(args) >= 2 && args[0] == "admin" && args[1] == "ai-local":
+		return aiLocal(ctx, cfg, args[2:])
 	case len(args) == 3 && args[0] == "admin" && args[1] == "reindex" && args[2] == "--all":
 		return reindexAll(ctx, cfg, log)
 	case args[0] == "eval":
@@ -133,6 +136,44 @@ func createAdmin(ctx context.Context, cfg config.Config, log *slog.Logger, args 
 		return err
 	}
 	fmt.Printf("Admin %s created. Open this link within 72 hours to set the password:\n%s\n", *email, link)
+	return nil
+}
+
+// aiLocal switches AI to Local with a tier's presets, as the installer does
+// (FSD §19.3). The change is recorded as the first system admin's.
+func aiLocal(ctx context.Context, cfg config.Config, args []string) error {
+	fs := flag.NewFlagSet("ai-local", flag.ContinueOnError)
+	url := fs.String("url", "http://model:11434/v1", "the model server's OpenAI-compatible base URL")
+	tier := fs.String("tier", "minimum", "hardware tier: dev, minimum or recommended (§18.1)")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+	var adminID int64
+	if err := pool.QueryRow(ctx, "SELECT id FROM users WHERE is_admin AND disabled_at IS NULL ORDER BY id LIMIT 1").Scan(&adminID); err != nil {
+		return fmt.Errorf("no system admin yet; run `app admin create-admin` first: %w", err)
+	}
+	q := db.New(pool)
+	store := ai.NewStore(q)
+	cur, err := store.Get(ctx)
+	if err != nil {
+		return err
+	}
+	s, err := cur.LocalForTier(*url, *tier)
+	if err != nil {
+		return err
+	}
+	if p := s.Validate(); len(p) > 0 {
+		return fmt.Errorf("%s: %s", p[0].Field, p[0].Message)
+	}
+	if err := store.Put(ctx, q, s, adminID); err != nil {
+		return err
+	}
+	fmt.Printf("AI set to Local at %s: chat %s, embeddings %s (%s tier).\n", *url, s.Chat.Model, s.Embed.Model, *tier)
 	return nil
 }
 

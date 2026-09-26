@@ -49,4 +49,10 @@ export default async function globalSetup() {
   const askAdmin = createAdmin("Ask Admin");
   process.env.E2E_ASK_ADMIN_EMAIL = askAdmin.email;
   process.env.E2E_ASK_ADMIN_LINK = askAdmin.link;
+  const security = createAdmin("Security Admin");
+  process.env.E2E_SECURITY_ADMIN_EMAIL = security.email;
+  process.env.E2E_SECURITY_ADMIN_LINK = security.link;
+  const ops = createAdmin("Ops Admin");
+  process.env.E2E_OPS_ADMIN_EMAIL = ops.email;
+  process.env.E2E_OPS_ADMIN_LINK = ops.link;
 }

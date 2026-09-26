@@ -276,6 +276,24 @@ func (e DecisionState) Valid() bool {
 	}
 }
 
+// Defines values for DiskUseVolume.
+const (
+	DiskUseVolumeAttachments DiskUseVolume = "attachments"
+	DiskUseVolumeBackups     DiskUseVolume = "backups"
+)
+
+// Valid indicates whether the value is a known member of the DiskUseVolume enum.
+func (e DiskUseVolume) Valid() bool {
+	switch e {
+	case DiskUseVolumeAttachments:
+		return true
+	case DiskUseVolumeBackups:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Locale.
 const (
 	LocaleEn Locale = "en"
@@ -417,6 +435,30 @@ func (e StatusCategory) Valid() bool {
 	case StatusCategoryInProgress:
 		return true
 	case StatusCategoryTodo:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SystemStatusWarnings.
+const (
+	SystemStatusWarningsDiskAttachments  SystemStatusWarnings = "disk_attachments"
+	SystemStatusWarningsDiskBackups      SystemStatusWarnings = "disk_backups"
+	SystemStatusWarningsJobsFailed       SystemStatusWarnings = "jobs_failed"
+	SystemStatusWarningsModelUnreachable SystemStatusWarnings = "model_unreachable"
+)
+
+// Valid indicates whether the value is a known member of the SystemStatusWarnings enum.
+func (e SystemStatusWarnings) Valid() bool {
+	switch e {
+	case SystemStatusWarningsDiskAttachments:
+		return true
+	case SystemStatusWarningsDiskBackups:
+		return true
+	case SystemStatusWarningsJobsFailed:
+		return true
+	case SystemStatusWarningsModelUnreachable:
 		return true
 	default:
 		return false
@@ -916,6 +958,26 @@ type AuditPage struct {
 	NextBefore *int64       `json:"next_before,omitempty"`
 }
 
+// Backup defines model for Backup.
+type Backup struct {
+	CreatedAt time.Time `json:"created_at"`
+
+	// File Example: db-20260926-0100.dump
+	File      string `json:"file"`
+	SizeBytes int64  `json:"size_bytes"`
+}
+
+// BackupList defines model for BackupList.
+type BackupList struct {
+	Items []Backup `json:"items"`
+
+	// Location Where the backups live on the server.
+	Location string `json:"location"`
+
+	// Requested A "Run backup now" is waiting for the backup service.
+	Requested bool `json:"requested"`
+}
+
 // Behavior defines model for Behavior.
 type Behavior struct {
 	Alternatives string     `json:"alternatives"`
@@ -1031,6 +1093,19 @@ type DecisionRecord struct {
 
 // DecisionState defines model for DecisionState.
 type DecisionState string
+
+// DiskUse defines model for DiskUse.
+type DiskUse struct {
+	// Missing The folder does not exist on this server.
+	Missing    *bool         `json:"missing,omitempty"`
+	Path       string        `json:"path"`
+	TotalBytes int64         `json:"total_bytes"`
+	UsedBytes  int64         `json:"used_bytes"`
+	Volume     DiskUseVolume `json:"volume"`
+}
+
+// DiskUseVolume defines model for DiskUse.Volume.
+type DiskUseVolume string
 
 // FailedJob defines model for FailedJob.
 type FailedJob struct {
@@ -1440,6 +1515,26 @@ type StatusesUpdate struct {
 	MoveTo   *[]StatusMove `json:"move_to,omitempty"`
 	Statuses []StatusInput `json:"statuses"`
 }
+
+// SystemStatus defines model for SystemStatus.
+type SystemStatus struct {
+	DatabaseBytes int64     `json:"database_bytes"`
+	Disks         []DiskUse `json:"disks"`
+
+	// Jobs River jobs by state (available, scheduled, running, retryable, discarded).
+	Jobs  map[string]int64 `json:"jobs"`
+	Model struct {
+		Error *string `json:"error,omitempty"`
+		Mode  AIMode  `json:"mode"`
+
+		// Reachable Absent when AI is off.
+		Reachable *bool `json:"reachable,omitempty"`
+	} `json:"model"`
+	Warnings []SystemStatusWarnings `json:"warnings"`
+}
+
+// SystemStatusWarnings defines model for SystemStatus.Warnings.
+type SystemStatusWarnings string
 
 // Ticket defines model for Ticket.
 type Ticket struct {
@@ -1861,11 +1956,20 @@ type ServerInterface interface {
 	// (GET /admin/audit/export)
 	ExportAudit(w http.ResponseWriter, r *http.Request, params ExportAuditParams)
 
+	// (GET /admin/backups)
+	ListBackups(w http.ResponseWriter, r *http.Request)
+
+	// (POST /admin/backups/run)
+	RunBackup(w http.ResponseWriter, r *http.Request)
+
 	// (GET /admin/settings/ai)
 	GetAISettings(w http.ResponseWriter, r *http.Request)
 
 	// (PUT /admin/settings/ai)
 	UpdateAISettings(w http.ResponseWriter, r *http.Request)
+
+	// (GET /admin/system/status)
+	GetSystemStatus(w http.ResponseWriter, r *http.Request)
 
 	// (GET /admin/users)
 	ListUsers(w http.ResponseWriter, r *http.Request)
@@ -2388,6 +2492,34 @@ func (siw *ServerInterfaceWrapper) ExportAudit(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// ListBackups operation middleware
+func (siw *ServerInterfaceWrapper) ListBackups(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListBackups(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RunBackup operation middleware
+func (siw *ServerInterfaceWrapper) RunBackup(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RunBackup(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetAISettings operation middleware
 func (siw *ServerInterfaceWrapper) GetAISettings(w http.ResponseWriter, r *http.Request) {
 
@@ -2407,6 +2539,20 @@ func (siw *ServerInterfaceWrapper) UpdateAISettings(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateAISettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSystemStatus operation middleware
+func (siw *ServerInterfaceWrapper) GetSystemStatus(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSystemStatus(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4281,6 +4427,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/ask-log/{id}", wrapper.GetAskLogEntry)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/audit", wrapper.ListAudit)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/audit/export", wrapper.ExportAudit)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/backups", wrapper.ListBackups)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/admin/backups/run", wrapper.RunBackup)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/system/status", wrapper.GetSystemStatus)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/ask", wrapper.Ask)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/ask/threads", wrapper.ListAskThreads)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/ask/threads/{id}", wrapper.HideAskThread)

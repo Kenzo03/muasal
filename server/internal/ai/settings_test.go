@@ -54,3 +54,22 @@ func TestLocalNeedsURLsAndModels(t *testing.T) {
 		t.Fatal("local badge")
 	}
 }
+
+// §18.1: the installer switches to Local with the chosen tier's presets.
+func TestLocalForTier(t *testing.T) {
+	for tier, want := range map[string]struct {
+		chat          string
+		budget, slots int
+	}{
+		"dev": {"qwen3.5:4b", 2500, 1}, "minimum": {"qwen3.5:4b", 2500, 1}, "recommended": {"qwen3.5:9b", 6000, 2},
+	} {
+		s, err := ai.Defaults().LocalForTier("http://model:11434/v1", tier)
+		if err != nil || s.Mode != ai.ModeLocal || s.Chat.Model != want.chat || s.Embed.Model != "bge-m3" || s.Chat.URL != "http://model:11434/v1" ||
+			s.ContextTokens != want.budget || s.MaxConcurrent != want.slots || len(s.Validate()) != 0 {
+			t.Errorf("%s: %+v %v", tier, s, err)
+		}
+	}
+	if _, err := ai.Defaults().LocalForTier("http://model:11434/v1", "huge"); err == nil {
+		t.Error("an unknown tier should fail")
+	}
+}

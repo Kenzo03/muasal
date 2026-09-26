@@ -78,6 +78,8 @@ export default function TopBar({ me, projects }: { me: User; projects: Project[]
           ["/admin/ai", t("ai")],
           ["/admin/ask-log", t("askLog")],
           ["/admin/audit", t("audit")],
+          ["/admin/backups", t("backups")],
+          ["/admin/system", t("system")],
         ]
       : [];
   const isActive = (href: string) => path.startsWith(href) || (href.endsWith("/tickets") && path.startsWith("/t/"));

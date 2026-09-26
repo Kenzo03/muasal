@@ -1,4 +1,10 @@
 {$PUBLIC_URL} {
+	# TLS for an https URL: install.sh writes caddy.d/tls.caddy with the
+	# certificate you gave it, or Caddy's internal CA (FSD §19.3).
+	import caddy.d/*.caddy
+	# FSD §18.2: browsers keep to HTTPS for a year once they have seen it.
+	header Strict-Transport-Security "max-age=31536000"
+	header -Server
 	handle /api/* {
 		reverse_proxy app:8080 {
 			flush_interval -1

@@ -8,6 +8,8 @@ services:
       PUBLIC_URL: ${PUBLIC_URL}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy.d:/etc/caddy/caddy.d:ro
+      - ./certs:/certs:ro
       - caddy_data:/data
     depends_on: [web, app]
     networks: [edge, app]
@@ -32,7 +34,7 @@ services:
       PUBLIC_URL: ${PUBLIC_URL}
       APP_SECRET_KEY: ${APP_SECRET_KEY:-} # seals AI API keys (BYOK); `openssl rand -base64 32`
       ASK_LOG_RETENTION_DAYS: ${ASK_LOG_RETENTION_DAYS:-365} # 0 keeps the Ask log for good
-    volumes: [attachments:/data/attachments]
+    volumes: [attachments:/data/attachments, backups:/backups]
     healthcheck:
       test: ["CMD", "/app", "healthcheck"]
       interval: 5s
@@ -44,6 +46,9 @@ services:
 
   db:
     image: pgvector/pgvector:0.8.6-pg18-trixie
+    # Memory by tier (FSD §16, §18.1): install.sh writes 4GB and 16GB for the
+    # 32 GB server tiers; the defaults suit a laptop.
+    command: ["postgres", "-c", "shared_buffers=${PG_SHARED_BUFFERS:-512MB}", "-c", "effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-2GB}"]
     environment:
       POSTGRES_DB: muasal
       POSTGRES_USER: owner
@@ -53,6 +58,23 @@ services:
       test: ["CMD", "pg_isready", "-U", "owner", "-d", "muasal"]
       interval: 5s
       retries: 20
+    networks: [app]
+    restart: unless-stopped
+
+  # Daily database dumps and attachment copies into the backups volume (FSD §19.4).
+  backup:
+    image: pgvector/pgvector:0.8.6-pg18-trixie
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    environment:
+      PGPASSWORD: ${DB_OWNER_PASSWORD}
+      TZ: ${TZ:-Asia/Jakarta}
+      BACKUP_INCLUDE_VECTORS: ${BACKUP_INCLUDE_VECTORS:-false}
+    volumes:
+      - ./backup.sh:/backup.sh:ro
+      - backups:/backups
+      - attachments:/data/attachments:ro
+    depends_on:
+      db: { condition: service_healthy }
     networks: [app]
     restart: unless-stopped
 
@@ -79,4 +101,5 @@ volumes:
   caddy_data: {}
   pgdata: {}
   attachments: {}
+  backups: {}
   models: {}

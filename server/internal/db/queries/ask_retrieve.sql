@@ -15,22 +15,31 @@ WITH RECURSIVE sub AS (
 SELECT id FROM sub ORDER BY id;
 
 -- name: CountScopeTickets :one
-SELECT count(DISTINCT ch.ticket_id)
-FROM chunks ch
-JOIN tickets t ON t.id = ch.ticket_id
-WHERE (sqlc.arg('is_admin')::boolean OR EXISTS (
-        SELECT 1 FROM memberships m
-        WHERE m.user_id = sqlc.arg('user_id')::bigint AND m.project_id = ch.project_id
-          AND (m.all_clients OR ch.client_id IS NULL OR EXISTS (
-                SELECT 1 FROM membership_clients mc
-                WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = ch.client_id))))
-  AND (cardinality(sqlc.arg('project_ids')::bigint[]) = 0 OR ch.project_id = ANY (sqlc.arg('project_ids')::bigint[]))
-  AND (cardinality(sqlc.arg('node_ids')::bigint[]) = 0 OR ch.node_ids && sqlc.arg('node_ids')::bigint[])
-  AND (cardinality(sqlc.arg('client_ids')::bigint[]) = 0 OR ch.client_id IS NULL OR ch.client_id = ANY (sqlc.arg('client_ids')::bigint[]))
-  AND ((cardinality(sqlc.arg('user_ids')::bigint[]) = 0 AND cardinality(sqlc.arg('contact_ids')::bigint[]) = 0)
-       OR ch.user_ids && sqlc.arg('user_ids')::bigint[] OR ch.contact_ids && sqlc.arg('contact_ids')::bigint[])
-  AND (sqlc.narg('from_ts')::timestamptz IS NULL OR coalesce(t.closed_at, t.created_at) >= sqlc.narg('from_ts')::timestamptz)
-  AND (sqlc.narg('to_ts')::timestamptz IS NULL OR coalesce(t.closed_at, t.created_at) < sqlc.narg('to_ts')::timestamptz);
+-- How many tickets are in scope, counting no further than cap: retrieval only
+-- asks whether the set is small (§11.3). Driven from tickets with LIMIT, it
+-- stops early on a broad scope instead of scanning every chunk.
+SELECT count(*)
+FROM (
+  SELECT t.id
+  FROM tickets t
+  WHERE EXISTS (
+    SELECT 1 FROM chunks ch
+    WHERE ch.ticket_id = t.id
+      AND (sqlc.arg('is_admin')::boolean OR EXISTS (
+            SELECT 1 FROM memberships m
+            WHERE m.user_id = sqlc.arg('user_id')::bigint AND m.project_id = ch.project_id
+              AND (m.all_clients OR ch.client_id IS NULL OR EXISTS (
+                    SELECT 1 FROM membership_clients mc
+                    WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = ch.client_id))))
+      AND (cardinality(sqlc.arg('project_ids')::bigint[]) = 0 OR ch.project_id = ANY (sqlc.arg('project_ids')::bigint[]))
+      AND (cardinality(sqlc.arg('node_ids')::bigint[]) = 0 OR ch.node_ids && sqlc.arg('node_ids')::bigint[])
+      AND (cardinality(sqlc.arg('client_ids')::bigint[]) = 0 OR ch.client_id IS NULL OR ch.client_id = ANY (sqlc.arg('client_ids')::bigint[]))
+      AND ((cardinality(sqlc.arg('user_ids')::bigint[]) = 0 AND cardinality(sqlc.arg('contact_ids')::bigint[]) = 0)
+           OR ch.user_ids && sqlc.arg('user_ids')::bigint[] OR ch.contact_ids && sqlc.arg('contact_ids')::bigint[]))
+    AND (sqlc.narg('from_ts')::timestamptz IS NULL OR coalesce(t.closed_at, t.created_at) >= sqlc.narg('from_ts')::timestamptz)
+    AND (sqlc.narg('to_ts')::timestamptz IS NULL OR coalesce(t.closed_at, t.created_at) < sqlc.narg('to_ts')::timestamptz)
+  LIMIT sqlc.arg('cap')
+) scoped;
 
 -- name: ListScopeTicketIDs :many
 -- Every ticket in scope, newest first by item date: the small-set path.

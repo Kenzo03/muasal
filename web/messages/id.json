@@ -36,7 +36,9 @@
     "account": "Akun {name}",
     "newTicketShortcut": "Tiket baru (C)",
     "askLog": "Log Tanya",
-    "audit": "Audit"
+    "audit": "Audit",
+    "backups": "Cadangan",
+    "system": "Status sistem"
   },
   "search": {
     "heading": "Pencarian",
@@ -381,7 +383,8 @@
     "byok_not_acknowledged": "Konfirmasi bahwa pertanyaan dan kutipan tiket akan dikirim ke penyedia",
     "secret_key_missing": "Atur APP_SECRET_KEY di server sebelum menyimpan kunci API",
     "reindex_required": "Model embedding baru akan meng-embed ulang semua potongan; konfirmasi untuk melanjutkan",
-    "rate_limited": "Terlalu banyak pertanyaan; tunggu sebentar"
+    "rate_limited": "Terlalu banyak pertanyaan; tunggu sebentar",
+    "backup_unavailable": "Layanan cadangan belum disiapkan di server ini."
   },
   "ticketTypes": {
     "bug": "Bug",
@@ -759,5 +762,47 @@
     "changes": "Perubahan",
     "system": "Sistem",
     "older": "Lebih lama"
+  },
+  "system": {
+    "title": "Status sistem",
+    "adminsOnly": "Hanya admin sistem yang dapat melihat status sistem.",
+    "database": "Basis data",
+    "jobs": "Antrean tugas",
+    "jobCounts": "{waiting} menunggu, {running} berjalan, {failed} gagal",
+    "model": "Server model",
+    "aiOff": "AI dimatikan",
+    "reachable": "Terhubung",
+    "unreachable": "Tidak terhubung",
+    "disks": "Penyimpanan",
+    "volumes": {
+      "attachments": "Lampiran",
+      "backups": "Cadangan"
+    },
+    "missing": "Folder tidak ada di server ini",
+    "used": "{used} dari {total} ({pct}%)",
+    "warnings": {
+      "disk_attachments": "Disk lampiran terisi 80% atau lebih.",
+      "disk_backups": "Disk cadangan terisi 80% atau lebih.",
+      "model_unreachable": "Server model tidak terhubung; Tanya dan pengindeksan menunggu.",
+      "jobs_failed": "Ada tugas latar yang gagal; lihat Admin → AI → Status indeks."
+    }
+  },
+  "backups": {
+    "title": "Cadangan",
+    "adminsOnly": "Hanya admin sistem yang dapat mengelola cadangan.",
+    "runNow": "Cadangkan sekarang",
+    "requested": "Diminta; pencadangan dimulai dalam 30 detik.",
+    "last": "Cadangan terakhir",
+    "none": "Belum ada",
+    "size": "Ukuran",
+    "location": "Lokasi",
+    "file": "Berkas",
+    "when": "Waktu",
+    "restoreTitle": "Memulihkan cadangan",
+    "schedule": "Basis data dicadangkan setiap hari pukul 01.00 waktu server, tanpa vektor (dapat dibangun ulang); cadangan disimpan 14 hari.",
+    "restore1": "Masuk ke server, ke folder instalasi Muasal.",
+    "restore2": "Jalankan",
+    "restore3": "Skrip menghentikan aplikasi, memulihkan basis data dan lampiran, menyalakannya lagi, lalu mengindeks ulang.",
+    "offsite": "Menyalin folder cadangan ke luar server (NAS atau pita) adalah tanggung jawab Anda."
   }
 }

@@ -153,7 +153,8 @@ func Retrieve(ctx context.Context, pool *pgxpool.Pool, a Asker, s Scope, questio
 	}
 
 	count, err := q.CountScopeTickets(ctx, db.CountScopeTicketsParams{IsAdmin: f.admin, UserID: f.user, ProjectIds: f.projects,
-		NodeIds: f.nodes, ClientIds: f.clients, UserIds: f.users, ContactIds: f.contacts, FromTs: f.from, ToTs: f.to})
+		NodeIds: f.nodes, ClientIds: f.clients, UserIds: f.users, ContactIds: f.contacts, FromTs: f.from, ToTs: f.to,
+		Cap: int32(t.ExhaustiveMax) + 1})
 	if err != nil {
 		return found, err
 	}
