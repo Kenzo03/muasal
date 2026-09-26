@@ -1,10 +1,11 @@
 // The load test (FSD §18, §21.1): 50 virtual users browse 100,000 tickets
 // while 5 ask questions. Targets: Go JSON under 200 ms at p95, ticket pages
-// under 1 s, fewer than 1% failed requests. Ask runs on the keyword path, as
+// under 1 s, an Ask median under 15 s, fewer than 1% failed requests. Ask runs on the keyword path, as
 // the seeded chunks have no vectors; model latency is measured by `app eval`.
 //   k6 run -e BASE=http://localhost -e TICKETS=100000 k6.js   (tokens.txt from seed.sql beside it)
 import http from "k6/http";
 import { check, sleep } from "k6";
+import exec from "k6/execution";
 
 const base = __ENV.BASE || "http://localhost";
 const tickets = Number(__ENV.TICKETS || 100000);
@@ -19,7 +20,7 @@ export const options = {
   thresholds: {
     "http_req_duration{kind:api}": ["p(95)<200"],
     "http_req_duration{kind:page}": ["p(95)<1000"],
-    "http_req_duration{kind:ask}": ["p(95)<3000"],
+    "http_req_duration{kind:ask}": ["med<15000"], // FSD §18: Ask median under 15 s
     http_req_failed: ["rate<0.01"],
   },
 };
@@ -46,9 +47,10 @@ export function browse() {
   sleep(1);
 }
 
-// Ask takes 10 questions a minute per user, so each asker waits 7 s.
+// Ask takes 10 questions a minute per user: the five askers take the five
+// users in turn and wait 7 s, so no user goes over.
 export function ask() {
-  const me = 45 + ((__VU - 1) % 5);
+  const me = 45 + (exec.scenario.iterationInTest % 5); // users 46–50 in turn, about 7 questions a minute each
   const r = http.post(
     `${base}/api/v1/ask`,
     JSON.stringify({ question: `Kenapa ${pick(words)} ${pick(words)} berubah?`, scope: {} }),

@@ -45,7 +45,18 @@ Admin → System status warns when the attachments or backups disk reaches 80%.
 
 ## Measured
 
-Load test on the development container (4 vCPU, 15 GB, all services and k6 on one host, AI off; `deploy/loadtest/run.sh 100000`) is recorded in the Iteration 5b pull request. Run it on your own server before a pilot: it seeds project LOAD in a scratch install and prints the p95 latencies against the FSD targets.
+The load test, `deploy/loadtest/run.sh 100000`, ran on the development container: 4 vCPU and 15 GB, with every service and k6 on one host and AI off. It uses 100,000 tickets (1,000,000 chunks), 50 users browsing and 5 asking, for 3 minutes:
+
+| Measure | Target (FSD §18) | Result |
+| --- | --- | --- |
+| API p95 | under 200 ms | 142 ms |
+| Ticket page p95 | under 1 s | 680 ms |
+| Ask median, keyword path | under 15 s | 0.25 s |
+| Failed requests | under 1% | 0% |
+
+Before Iteration 6, the API p95 was 313 ms and the page p95 1.03 s. Ask's keyword search ranked every chunk that held any word of the question, about 136,000 rows and 3 s of database time for a common word. It now ranks the chunks with all the words first, and at most 5,000 candidates per search.
+
+The Ask figure leaves out the model: add the chat model's time from the tier table above, as measured by `app eval`. Run the test on your own server before a pilot. It seeds project LOAD in a scratch install and prints each measure against its target.
 
 ## Network
 
