@@ -1,0 +1,30 @@
+site_name: Muasal
+site_description: Self-hosted ticketing that remembers why every screen works the way it does.
+site_url: https://kenzo03.github.io/muasal/
+repo_url: https://github.com/Kenzo03/muasal
+edit_uri: edit/main/docs/
+docs_dir: docs
+strict: true
+exclude_docs: |
+  superpowers/
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - content.code.copy
+    - search.highlight
+  palette:
+    primary: deep orange
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+nav:
+  - Home: index.md
+  - Hardware guide: hardware.md
+  - Running Muasal: operations.md
+  - User guide: user-guide.md
+  - Pilot kit: pilot.md
+  - Security review: security/asvs-l1.md

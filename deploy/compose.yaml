@@ -17,7 +17,7 @@ services:
 
   web:
     build: ../web
-    image: muasal-web:${VERSION:-dev}
+    image: ${IMAGE_PREFIX:-muasal}-web:${VERSION:-dev}
     environment:
       API_INTERNAL_URL: http://app:8080
       NEXT_TELEMETRY_DISABLED: "1"
@@ -26,7 +26,7 @@ services:
 
   app:
     build: ../server
-    image: muasal-app:${VERSION:-dev}
+    image: ${IMAGE_PREFIX:-muasal}-app:${VERSION:-dev}
     command: ["serve"]
     environment:
       DATABASE_URL: postgres://app:${DB_APP_PASSWORD}@db:5432/muasal?sslmode=disable
