@@ -675,6 +675,60 @@ func (e StatusCategory) Valid() bool {
 	}
 }
 
+// Defines values for SummaryAudience.
+const (
+	SummaryAudienceClient   SummaryAudience = "client"
+	SummaryAudienceInternal SummaryAudience = "internal"
+)
+
+// Valid indicates whether the value is a known member of the SummaryAudience enum.
+func (e SummaryAudience) Valid() bool {
+	switch e {
+	case SummaryAudienceClient:
+		return true
+	case SummaryAudienceInternal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SummaryItemKind.
+const (
+	SummaryItemKindNote   SummaryItemKind = "note"
+	SummaryItemKindTicket SummaryItemKind = "ticket"
+)
+
+// Valid indicates whether the value is a known member of the SummaryItemKind enum.
+func (e SummaryItemKind) Valid() bool {
+	switch e {
+	case SummaryItemKindNote:
+		return true
+	case SummaryItemKindTicket:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SummaryLanguage.
+const (
+	SummaryLanguageEn SummaryLanguage = "en"
+	SummaryLanguageId SummaryLanguage = "id"
+)
+
+// Valid indicates whether the value is a known member of the SummaryLanguage enum.
+func (e SummaryLanguage) Valid() bool {
+	switch e {
+	case SummaryLanguageEn:
+		return true
+	case SummaryLanguageId:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SystemStatusWarnings.
 const (
 	SystemStatusWarningsDiskAttachments  SystemStatusWarnings = "disk_attachments"
@@ -1432,8 +1486,22 @@ type CreatedUser struct {
 	User      User      `json:"user"`
 }
 
+// DecisionDraft defines model for DecisionDraft.
+type DecisionDraft struct {
+	Alternatives string `json:"alternatives"`
+
+	// Model Example: Local · qwen3.5:9b
+	Model       string `json:"model"`
+	WhatChanged string `json:"what_changed"`
+
+	// Why Empty when the thread never says why (AC-DC-7).
+	Why string `json:"why"`
+}
+
 // DecisionInput defines model for DecisionInput.
 type DecisionInput struct {
+	// AiDrafted The fields started from "Draft with AI" (§9.3).
+	AiDrafted    *bool   `json:"ai_drafted,omitempty"`
 	Alternatives *string `json:"alternatives,omitempty"`
 	WhatChanged  string  `json:"what_changed"`
 	Why          string  `json:"why"`
@@ -1444,6 +1512,7 @@ type DecisionOutcome string
 
 // DecisionRecord defines model for DecisionRecord.
 type DecisionRecord struct {
+	AiDrafted    *bool           `json:"ai_drafted,omitempty"`
 	Alternatives string          `json:"alternatives"`
 	ConfirmedAt  *time.Time      `json:"confirmed_at,omitempty"`
 	ConfirmedBy  *Ref            `json:"confirmed_by,omitempty"`
@@ -2180,6 +2249,106 @@ type StatusesUpdate struct {
 	Statuses []StatusInput `json:"statuses"`
 }
 
+// Summary defines model for Summary.
+type Summary struct {
+	CreatedAt  time.Time     `json:"created_at"`
+	CreatedBy  Ref           `json:"created_by"`
+	Id         int64         `json:"id"`
+	Items      []SummaryItem `json:"items"`
+	Markdown   string        `json:"markdown"`
+	Model      string        `json:"model"`
+	ProjectKey string        `json:"project_key"`
+	Scope      SummaryScope  `json:"scope"`
+	Title      string        `json:"title"`
+	UpdatedAt  time.Time     `json:"updated_at"`
+}
+
+// SummaryAudience defines model for SummaryAudience.
+type SummaryAudience string
+
+// SummaryCreate defines model for SummaryCreate.
+type SummaryCreate struct {
+	Audience SummaryAudience `json:"audience"`
+
+	// ClientId One client; omitted for all.
+	ClientId         *int64             `json:"client_id,omitempty"`
+	From             openapi_types.Date `json:"from"`
+	IncludeCancelled *bool              `json:"include_cancelled,omitempty"`
+	Keys             []string           `json:"keys"`
+	Language         SummaryLanguage    `json:"language"`
+
+	// NodeId The node
+	NodeId     int64              `json:"node_id"`
+	ProjectKey string             `json:"project_key"`
+	To         openapi_types.Date `json:"to"`
+}
+
+// SummaryItem defines model for SummaryItem.
+type SummaryItem struct {
+	Cancelled *bool   `json:"cancelled,omitempty"`
+	Client    *string `json:"client,omitempty"`
+
+	// Date The close date
+	Date        openapi_types.Date `json:"date"`
+	Key         string             `json:"key"`
+	Kind        SummaryItemKind    `json:"kind"`
+	Menu        string             `json:"menu"`
+	RequestedBy *string            `json:"requested_by,omitempty"`
+	Title       string             `json:"title"`
+}
+
+// SummaryItemKind defines model for SummaryItemKind.
+type SummaryItemKind string
+
+// SummaryLanguage defines model for SummaryLanguage.
+type SummaryLanguage string
+
+// SummaryList defines model for SummaryList.
+type SummaryList struct {
+	Items []SummaryListItem `json:"items"`
+}
+
+// SummaryListItem defines model for SummaryListItem.
+type SummaryListItem struct {
+	CreatedAt  time.Time `json:"created_at"`
+	Creator    string    `json:"creator"`
+	Id         int64     `json:"id"`
+	ProjectKey string    `json:"project_key"`
+	Title      string    `json:"title"`
+}
+
+// SummaryPreview defines model for SummaryPreview.
+type SummaryPreview struct {
+	// Cloud The ticked items go to a cloud provider (BYOK).
+	Cloud bool          `json:"cloud"`
+	Items []SummaryItem `json:"items"`
+
+	// Model The model badge
+	Model string `json:"model"`
+}
+
+// SummaryScope defines model for SummaryScope.
+type SummaryScope struct {
+	Audience SummaryAudience `json:"audience"`
+
+	// ClientId One client; omitted for all.
+	ClientId         *int64             `json:"client_id,omitempty"`
+	From             openapi_types.Date `json:"from"`
+	IncludeCancelled *bool              `json:"include_cancelled,omitempty"`
+	Language         SummaryLanguage    `json:"language"`
+
+	// NodeId The node
+	NodeId     int64              `json:"node_id"`
+	ProjectKey string             `json:"project_key"`
+	To         openapi_types.Date `json:"to"`
+}
+
+// SummaryUpdate defines model for SummaryUpdate.
+type SummaryUpdate struct {
+	Markdown string `json:"markdown"`
+	Title    string `json:"title"`
+}
+
 // SystemStatus defines model for SystemStatus.
 type SystemStatus struct {
 	DatabaseBytes int64     `json:"database_bytes"`
@@ -2589,6 +2758,12 @@ type SearchParams struct {
 	Q string `form:"q" json:"q"`
 }
 
+// ListSummariesParams defines parameters for ListSummaries.
+type ListSummariesParams struct {
+	// Project A project key.
+	Project *string `form:"project,omitempty" json:"project,omitempty"`
+}
+
 // UpdateTicketParams defines parameters for UpdateTicket.
 type UpdateTicketParams struct {
 	IfMatch string `json:"If-Match"`
@@ -2597,6 +2772,11 @@ type UpdateTicketParams struct {
 // UploadAttachmentMultipartBody defines parameters for UploadAttachment.
 type UploadAttachmentMultipartBody struct {
 	File openapi_types.File `json:"file"`
+}
+
+// DraftDecisionJSONBody defines parameters for DraftDecision.
+type DraftDecisionJSONBody struct {
+	Language *SummaryLanguage `json:"language,omitempty"`
 }
 
 // TransitionTicketParams defines parameters for TransitionTicket.
@@ -2703,6 +2883,15 @@ type CreateTicketJSONRequestBody = TicketCreate
 // UpdateRepoJSONRequestBody defines body for UpdateRepo for application/json ContentType.
 type UpdateRepoJSONRequestBody = RepoUpdate
 
+// CreateSummaryJSONRequestBody defines body for CreateSummary for application/json ContentType.
+type CreateSummaryJSONRequestBody = SummaryCreate
+
+// PreviewSummaryJSONRequestBody defines body for PreviewSummary for application/json ContentType.
+type PreviewSummaryJSONRequestBody = SummaryScope
+
+// UpdateSummaryJSONRequestBody defines body for UpdateSummary for application/json ContentType.
+type UpdateSummaryJSONRequestBody = SummaryUpdate
+
 // UpdateTicketJSONRequestBody defines body for UpdateTicket for application/json ContentType.
 type UpdateTicketJSONRequestBody = TicketUpdate
 
@@ -2714,6 +2903,9 @@ type CreateCommentJSONRequestBody = CommentInput
 
 // UpdateDecisionJSONRequestBody defines body for UpdateDecision for application/json ContentType.
 type UpdateDecisionJSONRequestBody = DecisionInput
+
+// DraftDecisionJSONRequestBody defines body for DraftDecision for application/json ContentType.
+type DraftDecisionJSONRequestBody DraftDecisionJSONBody
 
 // CreateLinkJSONRequestBody defines body for CreateLink for application/json ContentType.
 type CreateLinkJSONRequestBody = LinkCreate
@@ -2970,6 +3162,21 @@ type ServerInterface interface {
 	// (GET /search)
 	Search(w http.ResponseWriter, r *http.Request, params SearchParams)
 
+	// (GET /summaries)
+	ListSummaries(w http.ResponseWriter, r *http.Request, params ListSummariesParams)
+
+	// (POST /summaries)
+	CreateSummary(w http.ResponseWriter, r *http.Request)
+
+	// (POST /summaries/preview)
+	PreviewSummary(w http.ResponseWriter, r *http.Request)
+
+	// (GET /summaries/{id})
+	GetSummary(w http.ResponseWriter, r *http.Request, id int64)
+
+	// (PATCH /summaries/{id})
+	UpdateSummary(w http.ResponseWriter, r *http.Request, id int64)
+
 	// (GET /tickets/{key})
 	GetTicket(w http.ResponseWriter, r *http.Request, key string)
 
@@ -2987,6 +3194,9 @@ type ServerInterface interface {
 
 	// (PUT /tickets/{key}/decision)
 	UpdateDecision(w http.ResponseWriter, r *http.Request, key string)
+
+	// (POST /tickets/{key}/decision-draft)
+	DraftDecision(w http.ResponseWriter, r *http.Request, key string)
 
 	// (POST /tickets/{key}/links)
 	CreateLink(w http.ResponseWriter, r *http.Request, key string)
@@ -5458,6 +5668,119 @@ func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request
 	handler.ServeHTTP(w, r)
 }
 
+// ListSummaries operation middleware
+func (siw *ServerInterfaceWrapper) ListSummaries(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListSummariesParams
+
+	// ------------- Optional query parameter "project" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "project", r.URL.Query(), &params.Project, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "project"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSummaries(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateSummary operation middleware
+func (siw *ServerInterfaceWrapper) CreateSummary(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateSummary(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewSummary operation middleware
+func (siw *ServerInterfaceWrapper) PreviewSummary(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewSummary(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSummary operation middleware
+func (siw *ServerInterfaceWrapper) GetSummary(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSummary(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateSummary operation middleware
+func (siw *ServerInterfaceWrapper) UpdateSummary(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateSummary(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetTicket operation middleware
 func (siw *ServerInterfaceWrapper) GetTicket(w http.ResponseWriter, r *http.Request) {
 
@@ -5633,6 +5956,32 @@ func (siw *ServerInterfaceWrapper) UpdateDecision(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateDecision(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DraftDecision operation middleware
+func (siw *ServerInterfaceWrapper) DraftDecision(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DraftDecision(w, r, key)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -5914,6 +6263,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/tickets/{key}", wrapper.GetTicket)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/tickets/{key}", wrapper.UpdateTicket)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/transition", wrapper.TransitionTicket)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/decision-draft", wrapper.DraftDecision)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/summaries/preview", wrapper.PreviewSummary)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/summaries", wrapper.ListSummaries)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/summaries", wrapper.CreateSummary)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/summaries/{id}", wrapper.GetSummary)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/summaries/{id}", wrapper.UpdateSummary)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/tickets/{key}/decision", wrapper.UpdateDecision)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/links", wrapper.CreateLink)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/links/{id}", wrapper.DeleteLink)

@@ -342,7 +342,7 @@ func (s *Server) TransitionTicket(w http.ResponseWriter, r *http.Request, key st
 			}
 			if _, err := q.ConfirmDecision(ctx, db.ConfirmDecisionParams{
 				TicketID: row.Ticket.ID, WhatChanged: text.WhatChanged, Why: text.Why, Alternatives: text.Alternatives,
-				Outcome: string(outcome), ConfirmedBy: pc.user.ID,
+				Outcome: string(outcome), ConfirmedBy: pc.user.ID, AiDrafted: text.AIDrafted,
 			}); err != nil {
 				return err
 			}

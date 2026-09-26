@@ -10,13 +10,14 @@ import (
 )
 
 const confirmDecision = `-- name: ConfirmDecision :one
-INSERT INTO decision_records (ticket_id, what_changed, why, alternatives, outcome, state, confirmed_by, confirmed_at)
+INSERT INTO decision_records (ticket_id, what_changed, why, alternatives, outcome, state, confirmed_by, confirmed_at, ai_drafted)
 VALUES ($1::bigint, $2::text, $3::text, $4::text,
-        $5::text, 'confirmed', $6::bigint, now())
+        $5::text, 'confirmed', $6::bigint, now(), $7::boolean)
 ON CONFLICT (ticket_id) DO UPDATE SET
   what_changed = excluded.what_changed, why = excluded.why, alternatives = excluded.alternatives,
-  outcome = excluded.outcome, state = 'confirmed', confirmed_by = excluded.confirmed_by, confirmed_at = excluded.confirmed_at
-RETURNING ticket_id, what_changed, why, alternatives, outcome, state, confirmed_by, confirmed_at, superseded_by
+  outcome = excluded.outcome, state = 'confirmed', confirmed_by = excluded.confirmed_by, confirmed_at = excluded.confirmed_at,
+  ai_drafted = excluded.ai_drafted
+RETURNING ticket_id, what_changed, why, alternatives, outcome, state, confirmed_by, confirmed_at, superseded_by, ai_drafted
 `
 
 type ConfirmDecisionParams struct {
@@ -26,6 +27,7 @@ type ConfirmDecisionParams struct {
 	Alternatives string
 	Outcome      string
 	ConfirmedBy  int64
+	AiDrafted    bool
 }
 
 // A close writes the record, or confirms a reopened ticket's draft again, with
@@ -38,6 +40,7 @@ func (q *Queries) ConfirmDecision(ctx context.Context, arg ConfirmDecisionParams
 		arg.Alternatives,
 		arg.Outcome,
 		arg.ConfirmedBy,
+		arg.AiDrafted,
 	)
 	var i DecisionRecord
 	err := row.Scan(
@@ -50,6 +53,7 @@ func (q *Queries) ConfirmDecision(ctx context.Context, arg ConfirmDecisionParams
 		&i.ConfirmedBy,
 		&i.ConfirmedAt,
 		&i.SupersededBy,
+		&i.AiDrafted,
 	)
 	return i, err
 }
@@ -65,7 +69,7 @@ func (q *Queries) DraftDecision(ctx context.Context, ticketID int64) error {
 }
 
 const getDecision = `-- name: GetDecision :one
-SELECT d.ticket_id, d.what_changed, d.why, d.alternatives, d.outcome, d.state, d.confirmed_by, d.confirmed_at, d.superseded_by, u.name AS confirmer_name, sk.key AS superseded_by_key
+SELECT d.ticket_id, d.what_changed, d.why, d.alternatives, d.outcome, d.state, d.confirmed_by, d.confirmed_at, d.superseded_by, d.ai_drafted, u.name AS confirmer_name, sk.key AS superseded_by_key
 FROM decision_records d
 LEFT JOIN users u ON u.id = d.confirmed_by
 LEFT JOIN tickets sk ON sk.id = d.superseded_by
@@ -91,6 +95,7 @@ func (q *Queries) GetDecision(ctx context.Context, ticketID int64) (GetDecisionR
 		&i.DecisionRecord.ConfirmedBy,
 		&i.DecisionRecord.ConfirmedAt,
 		&i.DecisionRecord.SupersededBy,
+		&i.DecisionRecord.AiDrafted,
 		&i.ConfirmerName,
 		&i.SupersededByKey,
 	)
