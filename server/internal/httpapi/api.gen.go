@@ -54,6 +54,33 @@ func (e ActivityItemKind) Valid() bool {
 	}
 }
 
+// Defines values for AskIgnoreKind.
+const (
+	AskIgnoreKindClient  AskIgnoreKind = "client"
+	AskIgnoreKindContact AskIgnoreKind = "contact"
+	AskIgnoreKindDate    AskIgnoreKind = "date"
+	AskIgnoreKindNode    AskIgnoreKind = "node"
+	AskIgnoreKindUser    AskIgnoreKind = "user"
+)
+
+// Valid indicates whether the value is a known member of the AskIgnoreKind enum.
+func (e AskIgnoreKind) Valid() bool {
+	switch e {
+	case AskIgnoreKindClient:
+		return true
+	case AskIgnoreKindContact:
+		return true
+	case AskIgnoreKindDate:
+		return true
+	case AskIgnoreKindNode:
+		return true
+	case AskIgnoreKindUser:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AskLabelKind.
 const (
 	AskLabelKindClient  AskLabelKind = "client"
@@ -646,6 +673,15 @@ type AskDetected struct {
 	UserIds    *[]int64            `json:"user_ids,omitempty"`
 }
 
+// AskIgnore defines model for AskIgnore.
+type AskIgnore struct {
+	Id   *int64        `json:"id,omitempty"`
+	Kind AskIgnoreKind `json:"kind"`
+}
+
+// AskIgnoreKind defines model for AskIgnore.Kind.
+type AskIgnoreKind string
+
 // AskItem defines model for AskItem.
 type AskItem struct {
 	// Client Null for core work.
@@ -746,6 +782,8 @@ type AskLogPage struct {
 
 // AskRequest defines model for AskRequest.
 type AskRequest struct {
+	// Ignore Detected chips the asker removed; detection leaves them out (§10.2). A date entry drops the detected range.
+	Ignore   *[]AskIgnore        `json:"ignore,omitempty"`
 	Language *AskRequestLanguage `json:"language,omitempty"`
 	Question string              `json:"question"`
 

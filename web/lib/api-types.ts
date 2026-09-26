@@ -1576,6 +1576,14 @@ export interface components {
              */
             language: "auto" | "id" | "en";
             scope?: components["schemas"]["AskScope"];
+            /** @description Detected chips the asker removed; detection leaves them out (§10.2). A date entry drops the detected range. */
+            ignore?: components["schemas"]["AskIgnore"][];
+        };
+        AskIgnore: {
+            /** @enum {string} */
+            kind: "client" | "node" | "user" | "contact" | "date";
+            /** Format: int64 */
+            id?: number;
         };
         AskItem: {
             key: string;

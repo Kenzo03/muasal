@@ -1863,6 +1863,16 @@ components:
         thread_id: { type: integer, format: int64, description: Adds the question to one of the asker's threads. }
         language: { type: string, enum: [auto, id, en], default: auto }
         scope: { $ref: "#/components/schemas/AskScope" }
+        ignore:
+          type: array
+          description: Detected chips the asker removed; detection leaves them out (§10.2). A date entry drops the detected range.
+          items: { $ref: "#/components/schemas/AskIgnore" }
+    AskIgnore:
+      type: object
+      required: [kind]
+      properties:
+        kind: { type: string, enum: [client, node, user, contact, date] }
+        id: { type: integer, format: int64 }
     AskItem:
       type: object
       required: [key, title, client, requested_by, date, status, closed]

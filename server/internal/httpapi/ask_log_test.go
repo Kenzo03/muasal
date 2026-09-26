@@ -131,3 +131,24 @@ func TestAuditLogFiltersAndExports(t *testing.T) {
 		}
 	}
 }
+
+// §10.2: one click removes a detected chip and re-runs the question; the
+// request names the chips to leave out, so detection does not bring them back.
+func TestRemovedDetectedChipsStayOff(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	q := "Why does overtime approval skip the supervisor for Client A in 2026?"
+	var first, again httpapi.AskResult
+	e.call(w.pm, http.MethodPost, "/ask", map[string]any{"question": q}, &first)
+	d := first.Scope.Detected
+	if d.ClientIds == nil || len(*d.ClientIds) != 1 || d.NodeIds == nil || d.From == nil || d.Labels == nil || len(*d.Labels) != 2 {
+		t.Fatalf("detected: %+v", d)
+	}
+	e.call(w.pm, http.MethodPost, "/ask", map[string]any{"question": q, "ignore": []map[string]any{
+		{"kind": "client", "id": w.a.ID}, {"kind": "date"},
+	}}, &again)
+	d = again.Scope.Detected
+	if d.ClientIds != nil || d.From != nil || d.To != nil || d.NodeIds == nil || len(*d.Labels) != 1 || (*d.Labels)[0].Kind != "node" {
+		t.Fatalf("after removing the client and the dates: %+v", d)
+	}
+}

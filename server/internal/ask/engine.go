@@ -47,6 +47,7 @@ type Request struct {
 	Explicit Scope
 	Language string // "", "id" or "en"; "" detects it (§10.5)
 	ThreadID *int64
+	Ignore   []Label // detected chips the asker removed (§10.2); kind "date" drops the range
 }
 
 // Sink receives the answer as it forms; the HTTP handler turns each call into
@@ -106,7 +107,7 @@ func (e *Engine) Ask(ctx context.Context, r Request, sink Sink) (Result, error) 
 	if err != nil {
 		return Result{}, err
 	}
-	detected := Detect(cat, r.Question, start.In(tz))
+	detected := Detect(cat, r.Question, start.In(tz)).Without(r.Ignore)
 	scope := Merge(r.Explicit, detected)
 	if sink.Scope != nil {
 		sink.Scope(r.Explicit, detected)

@@ -56,6 +56,11 @@ func (s *Server) Ask(w http.ResponseWriter, r *http.Request) {
 		Asker:    ask.Asker{UserID: u.ID, IsAdmin: u.IsAdmin, Locale: u.Locale, TZ: tz},
 		Question: question, Explicit: scopeFrom(in.Scope), ThreadID: in.ThreadId,
 	}
+	if in.Ignore != nil {
+		for _, ig := range *in.Ignore {
+			req.Ignore = append(req.Ignore, ask.Label{Kind: string(ig.Kind), ID: deref(ig.Id)})
+		}
+	}
 	if in.Language != nil && *in.Language != AskRequestLanguageAuto {
 		req.Language = string(*in.Language)
 	}
