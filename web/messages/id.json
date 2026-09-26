@@ -52,7 +52,7 @@
     "short": "Ketik minimal 2 karakter.",
     "aliases": "Alias: {aliases}",
     "core": "Inti",
-    "notes": "Catatan keputusan"
+    "notes": "Notulen keputusan"
   },
   "home": {
     "title": "Beranda",
@@ -145,7 +145,7 @@
     "settings": "Pengaturan",
     "board": "Papan",
     "tickets": "Tiket",
-    "notes": "Catatan"
+    "notes": "Notulen"
   },
   "settings": {
     "adminsOnly": "Hanya admin proyek yang dapat mengubah pengaturan.",
@@ -342,7 +342,7 @@
     "noBehaviors": "Belum ada keputusan yang berlaku. Menutup tiket pada menu ini akan menambahkannya.",
     "because": "Mengapa: {why}",
     "ask": "Tanya",
-    "note": "Catatan keputusan",
+    "note": "Notulen keputusan",
     "attendees": "Bersama {names}",
     "supersededBy": "Digantikan oleh {key}"
   },
@@ -745,8 +745,8 @@
     "openPage": "Buka halaman Tanya",
     "close": "Tutup",
     "askAboutTicket": "Tanya tentang tiket ini",
-    "noteBy": "Catatan keputusan oleh {name} · {date}",
-    "noteKind": "Catatan keputusan",
+    "noteBy": "Notulen keputusan oleh {name} · {date}",
+    "noteKind": "Notulen keputusan",
     "feedback": {
       "question": "Apakah jawaban ini membantu?",
       "up": "Ya",
@@ -878,13 +878,13 @@
     "offsite": "Menyalin folder cadangan ke luar server (NAS atau pita) adalah tanggung jawab Anda."
   },
   "notes": {
-    "heading": "Catatan keputusan",
+    "heading": "Notulen keputusan",
     "intro": "Keputusan yang dibuat di luar tiket, misalnya di rapat, telepon, dan email. Ask mengutipnya seperti tiket.",
-    "new": "Catatan baru",
-    "newTitle": "Catatan keputusan baru",
-    "editTitle": "Ubah catatan keputusan",
+    "new": "Notulen baru",
+    "newTitle": "Notulen keputusan baru",
+    "editTitle": "Ubah notulen keputusan",
     "edit": "Ubah",
-    "none": "Belum ada catatan keputusan.",
+    "none": "Belum ada notulen keputusan.",
     "key": "Kunci",
     "title": "Judul",
     "client": "Klien",
@@ -896,7 +896,7 @@
     "menus": "Menu",
     "tickets": "Tiket terkait",
     "ticketsHint": "Kunci tiket, dipisah koma.",
-    "body": "Catatan",
+    "body": "Isi",
     "archived": "Diarsipkan",
     "archivedLabel": "(diarsipkan)",
     "showArchived": "Tampilkan yang diarsipkan",
