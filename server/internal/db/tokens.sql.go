@@ -141,6 +141,20 @@ func (q *Queries) ListAPITokens(ctx context.Context, userID int64) ([]ApiToken, 
 	return items, nil
 }
 
+const lockIdempotencyKey = `-- name: LockIdempotencyKey :exec
+SELECT pg_advisory_xact_lock(hashtextextended('idempotency:' || $1::bigint::text || ':' || $2::text, 0))
+`
+
+type LockIdempotencyKeyParams struct {
+	UserID int64
+	Key    string
+}
+
+func (q *Queries) LockIdempotencyKey(ctx context.Context, arg LockIdempotencyKeyParams) error {
+	_, err := q.db.Exec(ctx, lockIdempotencyKey, arg.UserID, arg.Key)
+	return err
+}
+
 const purgeIdempotencyKeys = `-- name: PurgeIdempotencyKeys :execrows
 DELETE FROM idempotency_keys WHERE created_at < now() - interval '24 hours'
 `

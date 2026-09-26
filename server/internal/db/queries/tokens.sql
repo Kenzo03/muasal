@@ -32,3 +32,6 @@ WHERE idempotency_keys.created_at <= now() - interval '24 hours';
 
 -- name: PurgeIdempotencyKeys :execrows
 DELETE FROM idempotency_keys WHERE created_at < now() - interval '24 hours';
+
+-- name: LockIdempotencyKey :exec
+SELECT pg_advisory_xact_lock(hashtextextended('idempotency:' || sqlc.arg('user_id')::bigint::text || ':' || sqlc.arg('key')::text, 0));

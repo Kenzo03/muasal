@@ -629,6 +629,13 @@ paths:
       operationId: createTicket
       tags: [tickets]
       description: Members and project admins. The ticket starts in the default status unless an open status_id is given.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          schema: { type: string, maxLength: 200 }
+          description: >-
+            A retry with the same key within 24 hours returns the ticket the first request created (200, with
+            Idempotent-Replayed true) instead of a second ticket (FSD §17.1).
       requestBody:
         required: true
         content:

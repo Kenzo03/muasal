@@ -2153,6 +2153,12 @@ type ListTicketsParamsMissing string
 // ListTicketsParamsSort defines parameters for ListTickets.
 type ListTicketsParamsSort string
 
+// CreateTicketParams defines parameters for CreateTicket.
+type CreateTicketParams struct {
+	// IdempotencyKey A retry with the same key within 24 hours returns the ticket the first request created (200, with Idempotent-Replayed true) instead of a second ticket (FSD §17.1).
+	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
+}
+
 // SearchParams defines parameters for Search.
 type SearchParams struct {
 	Q string `form:"q" json:"q"`
@@ -2471,7 +2477,7 @@ type ServerInterface interface {
 	ListTickets(w http.ResponseWriter, r *http.Request, key string, params ListTicketsParams)
 
 	// (POST /projects/{key}/tickets)
-	CreateTicket(w http.ResponseWriter, r *http.Request, key string)
+	CreateTicket(w http.ResponseWriter, r *http.Request, key string, params CreateTicketParams)
 
 	// (GET /search)
 	Search(w http.ResponseWriter, r *http.Request, params SearchParams)
@@ -4576,8 +4582,32 @@ func (siw *ServerInterfaceWrapper) CreateTicket(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateTicketParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateTicket(w, r, key)
+		siw.Handler.CreateTicket(w, r, key, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

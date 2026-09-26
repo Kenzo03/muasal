@@ -38,9 +38,14 @@ type ticketInput struct {
 	DueDate     *openapi_types.Date
 }
 
-func (s *Server) CreateTicket(w http.ResponseWriter, r *http.Request, key string) {
+func (s *Server) CreateTicket(w http.ResponseWriter, r *http.Request, key string, params CreateTicketParams) {
 	pc, ok := s.projectFor(w, r, key, access.Member)
 	if !ok {
+		return
+	}
+	idem := strings.TrimSpace(deref(params.IdempotencyKey))
+	if utf8.RuneCountInString(idem) > 200 {
+		writeProblem(w, http.StatusBadRequest, "invalid_parameter", "Idempotency-Key takes at most 200 characters")
 		return
 	}
 	var in TicketCreate
@@ -70,7 +75,23 @@ func (s *Server) CreateTicket(w http.ResponseWriter, r *http.Request, key string
 		return
 	}
 	var out Ticket
+	replayed := false
 	err = s.inJobTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
+		// A retry with the same Idempotency-Key waits for the first request, then gets its ticket (§17.1).
+		if idem != "" {
+			if err := q.LockIdempotencyKey(ctx, db.LockIdempotencyKeyParams{UserID: pc.user.ID, Key: idem}); err != nil {
+				return err
+			}
+			prev, err := q.GetIdempotentTicket(ctx, db.GetIdempotentTicketParams{UserID: pc.user.ID, Key: idem})
+			if err == nil {
+				replayed = true
+				out, err = readTicket(ctx, q, prev, pc.user)
+				return err
+			}
+			if !errors.Is(err, pgx.ErrNoRows) {
+				return err
+			}
+		}
 		n, err := q.NextTicketNumber(ctx, pc.project.ID)
 		if err != nil {
 			return err
@@ -89,6 +110,11 @@ func (s *Server) CreateTicket(w http.ResponseWriter, r *http.Request, key string
 		if err := s.index(ctx, tx, created.ID); err != nil {
 			return err
 		}
+		if idem != "" {
+			if err := q.SaveIdempotencyKey(ctx, db.SaveIdempotencyKeyParams{UserID: pc.user.ID, Key: idem, TicketID: created.ID}); err != nil {
+				return err
+			}
+		}
 		return audit(ctx, q, webMeta(r).inProject(pc.project.ID), &pc.user.ID, "ticket", created.ID, "create", ticketAudit(out))
 	})
 	if constraintOf(err) == "tickets_client_linked" {
@@ -100,6 +126,11 @@ func (s *Server) CreateTicket(w http.ResponseWriter, r *http.Request, key string
 		return
 	}
 	w.Header().Set("ETag", etag(out.Version))
+	if replayed {
+		w.Header().Set("Idempotent-Replayed", "true")
+		writeJSON(w, http.StatusOK, out)
+		return
+	}
 	writeJSON(w, http.StatusCreated, out)
 }
 

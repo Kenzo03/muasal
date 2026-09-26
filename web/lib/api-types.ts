@@ -102,6 +102,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The caller's live API tokens, newest first (FSD §14.3). Never the secrets. */
+        get: operations["listTokens"];
+        put?: never;
+        /** @description Creates a personal access token. The secret is in this response only; it is stored as a SHA-256 hash. Needs a signed-in session: a token cannot make tokens (403 session_required). */
+        post: operations["createToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/tokens/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Revokes one of the caller's tokens at once; requests with it then get 401. Needs a signed-in session. */
+        delete: operations["revokeToken"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/users": {
         parameters: {
             query?: never;
@@ -1614,6 +1651,34 @@ export interface components {
         NoteList: {
             items: components["schemas"]["NoteSummary"][];
         };
+        APIToken: {
+            /** Format: int64 */
+            id: number;
+            name: string;
+            read_only: boolean;
+            /** Format: date-time */
+            expires_at?: string | null;
+            /** Format: date-time */
+            last_used_at?: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        APITokenList: {
+            items: components["schemas"]["APIToken"][];
+        };
+        APITokenCreate: {
+            name: string;
+            read_only: boolean;
+            /**
+             * Format: date
+             * @description The last day the token works; omitted for no expiry.
+             */
+            expires_on?: string;
+        };
+        APITokenCreated: components["schemas"]["APIToken"] & {
+            /** @description The secret, e.g. msl_…; shown once. */
+            token: string;
+        };
         SearchResults: {
             tickets: components["schemas"]["SearchTicket"][];
             notes: components["schemas"]["SearchNote"][];
@@ -2205,6 +2270,73 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["RecentTicketList"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listTokens: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The tokens. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APITokenList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["APITokenCreate"];
+            };
+        };
+        responses: {
+            /** @description The token, with its secret. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APITokenCreated"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    revokeToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };
@@ -2980,7 +3112,10 @@ export interface operations {
     createTicket: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description A retry with the same key within 24 hours returns the ticket the first request created (200, with Idempotent-Replayed true) instead of a second ticket (FSD §17.1). */
+                "Idempotency-Key"?: string;
+            };
             path: {
                 key: string;
             };

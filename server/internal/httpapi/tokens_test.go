@@ -138,3 +138,29 @@ func TestTokensAreRateLimited(t *testing.T) {
 		t.Fatalf("the owner's session is not limited: %d", code)
 	}
 }
+
+// §17.1: a retried create with the same Idempotency-Key returns the first
+// ticket instead of a second one; another key creates another ticket.
+func TestIdempotentTicketCreation(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	body := map[string]any{"type": "bug", "title": "Created by a flaky network", "node_ids": []int64{w.ot.ID}, "client_id": w.a.ID}
+	var first, again, other httpapi.Ticket
+	code, _ := e.callWith(w.pm, http.MethodPost, "/projects/HRIS/tickets", map[string]string{"Idempotency-Key": "sync-42"}, body, &first)
+	if code != http.StatusCreated {
+		t.Fatalf("first: %d", code)
+	}
+	code, h := e.callWith(w.pm, http.MethodPost, "/projects/HRIS/tickets", map[string]string{"Idempotency-Key": "sync-42"}, body, &again)
+	if code != http.StatusOK || h.Get("Idempotent-Replayed") != "true" || again.Key != first.Key {
+		t.Fatalf("retry: %d %q %s", code, h.Get("Idempotent-Replayed"), again.Key)
+	}
+	e.callWith(w.pm, http.MethodPost, "/projects/HRIS/tickets", map[string]string{"Idempotency-Key": "sync-43"}, body, &other)
+	if other.Key == first.Key {
+		t.Fatalf("another key reused %s", other.Key)
+	}
+	var n int
+	e.d.Pool.QueryRow(t.Context(), "SELECT count(*) FROM tickets").Scan(&n)
+	if n != 2 {
+		t.Fatalf("%d tickets", n)
+	}
+}
