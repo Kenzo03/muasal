@@ -66,6 +66,7 @@ fi
 
 if [ ! -f .env ]; then
   secret() { head -c "$1" /dev/urandom | base64 | tr -d '\n/+=' | head -c "$2"; }
+  mem_gb() { awk '/^MemTotal:/ { print int($2 / 1048576) }' /proc/meminfo 2>/dev/null || echo 0; }
   port=$(echo "$url" | sed -n 's#^[a-z]*://[^/:]*:\([0-9]*\).*#\1#p')
   [ -n "$port" ] || { case "$url" in https://*) port=443 ;; *) port=80 ;; esac; }
   cat >.env <<EOF
@@ -78,6 +79,9 @@ DB_APP_PASSWORD=$(secret 48 32)
 APP_SECRET_KEY=$(head -c 32 /dev/urandom | base64)
 TZ=${TZ:-Asia/Jakarta}
 ASK_LOG_RETENTION_DAYS=365
+# PostgreSQL memory: 4GB and 16GB on a 32 GB server (FSD §16); lower both on smaller hosts.
+PG_SHARED_BUFFERS=$([ "$(mem_gb)" -ge 30 ] && echo 4GB || echo 512MB)
+PG_EFFECTIVE_CACHE_SIZE=$([ "$(mem_gb)" -ge 30 ] && echo 16GB || echo 2GB)
 EOF
   chmod 600 .env
   echo "Wrote .env with new secrets."
