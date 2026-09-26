@@ -5,6 +5,7 @@ import { getProject, serverApi } from "@/lib/server-api";
 import ProjectClients from "./ProjectClients";
 import ProjectForm from "./ProjectForm";
 import ProjectMembers from "./ProjectMembers";
+import Repos from "./Repos";
 import StatusesForm from "./StatusesForm";
 
 export default async function SettingsPage({ params }: { params: Promise<{ key: string }> }) {
@@ -29,11 +30,12 @@ export default async function SettingsPage({ params }: { params: Promise<{ key: 
   }
   const api = await serverApi();
   const path = { params: { path: { key } } };
-  const [all, linked, members, statuses] = await Promise.all([
+  const [all, linked, members, statuses, repos] = await Promise.all([
     api.GET("/clients"),
     api.GET("/projects/{key}/clients", path),
     api.GET("/projects/{key}/members", path),
     api.GET("/projects/{key}/statuses", path),
+    api.GET("/projects/{key}/repos", path),
   ]);
   const linkedClients = linked.data?.items ?? [];
   return (
@@ -44,6 +46,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ key: 
         <StatusesForm projectKey={key} statuses={statuses.data?.items ?? []} />
         <ProjectClients projectKey={key} all={all.data?.items ?? []} linked={linkedClients} />
         <ProjectMembers projectKey={key} members={members.data?.items ?? []} clients={linkedClients} />
+        <Repos projectKey={key} repos={repos.data?.items ?? []} />
       </main>
     </>
   );

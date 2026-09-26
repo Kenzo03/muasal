@@ -909,6 +909,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{key}/repos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description Project admins. The project's Git repositories with their webhook URLs (FSD §14.1). */
+        get: operations["listRepos"];
+        put?: never;
+        /** @description Project admins add a repository. The answer carries the webhook URL and a generated secret, shown this once, to paste into the Git server. Needs APP_SECRET_KEY (409 secret_key_missing). */
+        post: operations["createRepo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/repos/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Project admins remove a repository with its commits and merge requests. */
+        delete: operations["deleteRepo"];
+        options?: never;
+        head?: never;
+        /** @description Project admins rename a repository or, with new_secret, replace its secret (shown once in the answer). */
+        patch: operations["updateRepo"];
+        trace?: never;
+    };
     "/search": {
         parameters: {
             query?: never;
@@ -1598,6 +1638,7 @@ export interface components {
             decision?: components["schemas"]["DecisionRecord"];
             /** @description Links to tickets the reader can see, oldest first (FSD §8.8). */
             links: components["schemas"]["TicketLink"][];
+            code?: components["schemas"]["TicketCode"];
         };
         TicketCreate: {
             type: components["schemas"]["TicketType"];
@@ -1987,6 +2028,57 @@ export interface components {
         };
         MentionableList: {
             items: components["schemas"]["Mentionable"][];
+        };
+        /** @enum {string} */
+        RepoProvider: "github" | "gitlab" | "gitea";
+        RepoInput: {
+            provider: components["schemas"]["RepoProvider"];
+            name: string;
+            web_url: string;
+        };
+        RepoUpdate: {
+            name: string;
+            web_url: string;
+            new_secret?: boolean;
+        };
+        Repo: {
+            /** Format: int64 */
+            id: number;
+            provider: components["schemas"]["RepoProvider"];
+            name: string;
+            web_url: string;
+            /** @example https://muasal.example.com/webhooks/git/3 */
+            webhook_url: string;
+            /** @description Only when just created or replaced. */
+            secret?: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        RepoList: {
+            items: components["schemas"]["Repo"][];
+        };
+        TicketCode: {
+            merge_requests: components["schemas"]["CodeMergeRequest"][];
+            commits: components["schemas"]["CodeCommit"][];
+        };
+        CodeMergeRequest: {
+            repo: string;
+            number: number;
+            title: string;
+            state: string;
+            /** Format: date-time */
+            merged_at?: string | null;
+            url?: string | null;
+        };
+        CodeCommit: {
+            repo: string;
+            sha: string;
+            /** @description The first line. */
+            message: string;
+            author?: string | null;
+            /** Format: date-time */
+            committed_at?: string | null;
+            url?: string | null;
         };
         SearchResults: {
             tickets: components["schemas"]["SearchTicket"][];
@@ -4155,6 +4247,104 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImportRun"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listRepos: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The repositories. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepoList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createRepo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RepoInput"];
+            };
+        };
+        responses: {
+            /** @description The repository with its secret. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Repo"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteRepo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateRepo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RepoUpdate"];
+            };
+        };
+        responses: {
+            /** @description The repository. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Repo"];
                 };
             };
             default: components["responses"]["Problem"];

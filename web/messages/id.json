@@ -389,7 +389,7 @@
     "file_type_not_allowed": "Jenis berkas ini tidak dapat dilampirkan",
     "invalid_upload": "Berkas tidak dapat dibaca. Coba lagi.",
     "byok_not_acknowledged": "Konfirmasi bahwa pertanyaan dan kutipan tiket akan dikirim ke penyedia",
-    "secret_key_missing": "Atur APP_SECRET_KEY di server sebelum menyimpan kunci API",
+    "secret_key_missing": "Atur APP_SECRET_KEY di server sebelum menyimpan rahasia (kunci API, rahasia webhook)",
     "reindex_required": "Model embedding baru akan meng-embed ulang semua potongan; konfirmasi untuk melanjutkan",
     "rate_limited": "Terlalu banyak pertanyaan; tunggu sebentar",
     "backup_unavailable": "Layanan cadangan belum disiapkan di server ini."
@@ -1079,5 +1079,43 @@
     "save": "Simpan",
     "saved": "Tersimpan.",
     "failed": "Tidak dapat menyimpan."
+  },
+  "repos": {
+    "title": "Repositori",
+    "intro": "Commit dan merge request yang menyebut kunci tiket (HRIS-123) tampil di tiket itu dan menjadi bahan Tanya. Tambahkan repositori, lalu tempel URL webhook dan rahasianya di server Git Anda.",
+    "none": "Belum ada repositori.",
+    "name": "Nama",
+    "provider": "Penyedia",
+    "webUrl": "Alamat repositori",
+    "webhookUrl": "URL webhook",
+    "secret": "Rahasia",
+    "actions": "Aksi",
+    "add": "Tambah repositori",
+    "newSecret": "Rahasia baru",
+    "newSecretConfirm": "Ganti rahasia webhook {name}? Kiriman gagal sampai server Git memakai yang baru.",
+    "remove": "Hapus",
+    "removeConfirm": "Hapus {name}? Tautannya di tiket tetap ada.",
+    "done": "Selesai",
+    "once": "Salin sekarang untuk {name}: rahasia ini tidak akan ditampilkan lagi.",
+    "providers": {
+      "github": "GitHub",
+      "gitlab": "GitLab",
+      "gitea": "Gitea"
+    },
+    "howTo": {
+      "github": "Di GitHub: Settings → Webhooks → Add webhook. Content type application/json; event: push dan pull request.",
+      "gitlab": "Di GitLab: Settings → Webhooks. Tempel rahasia sebagai secret token; trigger: push events dan merge request events.",
+      "gitea": "Di Gitea: Settings → Webhooks → Add webhook → Gitea. Content type application/json; event: push dan pull request."
+    }
+  },
+  "code": {
+    "title": "Kode",
+    "mergeRequests": "Merge request",
+    "commits": "Commit",
+    "state": {
+      "open": "Terbuka",
+      "merged": "Digabung",
+      "closed": "Ditutup"
+    }
   }
 }

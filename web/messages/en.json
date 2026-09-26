@@ -389,7 +389,7 @@
     "file_type_not_allowed": "This file type cannot be attached",
     "invalid_upload": "The file could not be read. Try again.",
     "byok_not_acknowledged": "Confirm that questions and ticket excerpts will be sent to the provider",
-    "secret_key_missing": "Set APP_SECRET_KEY on the server before saving an API key",
+    "secret_key_missing": "Set APP_SECRET_KEY on the server before saving secrets (API keys, webhook secrets)",
     "reindex_required": "A new embedding model re-embeds every chunk; confirm to continue",
     "rate_limited": "Too many questions; wait a moment",
     "backup_unavailable": "The backup service is not set up on this server."
@@ -1079,5 +1079,43 @@
     "save": "Save",
     "saved": "Saved.",
     "failed": "Could not save."
+  },
+  "repos": {
+    "title": "Repositories",
+    "intro": "Commits and merge requests that name a ticket key (HRIS-123) show on that ticket and feed Ask. Add the repository, then paste the webhook URL and secret into your Git server.",
+    "none": "No repositories yet.",
+    "name": "Name",
+    "provider": "Provider",
+    "webUrl": "Repository address",
+    "webhookUrl": "Webhook URL",
+    "secret": "Secret",
+    "actions": "Actions",
+    "add": "Add repository",
+    "newSecret": "New secret",
+    "newSecretConfirm": "Replace the webhook secret of {name}? Deliveries fail until the Git server has the new one.",
+    "remove": "Remove",
+    "removeConfirm": "Remove {name}? Its links on tickets stay.",
+    "done": "Done",
+    "once": "Copy these now for {name}: the secret will not be shown again.",
+    "providers": {
+      "github": "GitHub",
+      "gitlab": "GitLab",
+      "gitea": "Gitea"
+    },
+    "howTo": {
+      "github": "In GitHub: Settings → Webhooks → Add webhook. Content type application/json; events: pushes and pull requests.",
+      "gitlab": "In GitLab: Settings → Webhooks. Paste the secret as the secret token; triggers: push events and merge request events.",
+      "gitea": "In Gitea: Settings → Webhooks → Add webhook → Gitea. Content type application/json; events: push and pull request."
+    }
+  },
+  "code": {
+    "title": "Code",
+    "mergeRequests": "Merge requests",
+    "commits": "Commits",
+    "state": {
+      "open": "Open",
+      "merged": "Merged",
+      "closed": "Closed"
+    }
   }
 }

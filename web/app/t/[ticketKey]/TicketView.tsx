@@ -15,6 +15,7 @@ import { day, utc } from "@/lib/format";
 import { nodePaths } from "@/lib/nodes";
 import { useProblemText, type Client, type Node, type Ref, type Status, type Ticket } from "@/lib/problem";
 import { button, cx, field, panel, sectionTitle } from "@/lib/ui";
+import Code from "./Code";
 import DecisionCard from "./DecisionCard";
 import Links from "./Links";
 
@@ -177,6 +178,7 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
               </section>
               {ticket.decision && <DecisionCard ticketKey={ticket.key} decision={ticket.decision} canEdit={canEditDecision} />}
               <Links ticketKey={ticket.key} links={ticket.links} canEdit={canEdit} />
+              {ticket.code && <Code code={ticket.code} />}
               {activity}
             </div>
             <aside className="flex flex-col gap-4">
