@@ -1,13 +1,13 @@
 -- name: UpsertChunk :exec
 -- A chunk whose text is unchanged keeps its vector and only takes the new
 -- filter columns; changed text clears the vector for the embedder (§13.2).
-INSERT INTO chunks (source_type, source_id, seq, ticket_id, note_id, project_id, client_id, node_ids, user_ids, contact_ids,
+INSERT INTO chunks (source_type, source_id, seq, ticket_id, note_id, section_id, project_id, client_id, node_ids, user_ids, contact_ids,
                     internal, occurred_at, content, content_hash)
-VALUES (sqlc.arg('source_type'), sqlc.arg('source_id'), sqlc.arg('seq'), sqlc.narg('ticket_id')::bigint, sqlc.narg('note_id')::bigint, sqlc.arg('project_id'),
+VALUES (sqlc.arg('source_type'), sqlc.arg('source_id'), sqlc.arg('seq'), sqlc.narg('ticket_id')::bigint, sqlc.narg('note_id')::bigint, sqlc.narg('section_id')::bigint, sqlc.arg('project_id'),
         sqlc.narg('client_id'), sqlc.arg('node_ids')::bigint[], sqlc.arg('user_ids')::bigint[], sqlc.arg('contact_ids')::bigint[],
         sqlc.arg('internal'), sqlc.arg('occurred_at'), sqlc.arg('content'), sqlc.arg('content_hash'))
 ON CONFLICT (source_type, source_id, seq) DO UPDATE SET
-  ticket_id = excluded.ticket_id, note_id = excluded.note_id, project_id = excluded.project_id, client_id = excluded.client_id,
+  ticket_id = excluded.ticket_id, note_id = excluded.note_id, section_id = excluded.section_id, project_id = excluded.project_id, client_id = excluded.client_id,
   node_ids = excluded.node_ids, user_ids = excluded.user_ids, contact_ids = excluded.contact_ids,
   internal = excluded.internal, occurred_at = excluded.occurred_at,
   embedding   = CASE WHEN chunks.content_hash = excluded.content_hash THEN chunks.embedding END,

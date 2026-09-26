@@ -167,9 +167,9 @@ func (q *Queries) ExpandNodes(ctx context.Context, nodeIds []int64) ([]int64, er
 }
 
 const keywordSearch = `-- name: KeywordSearch :many
-SELECT c.id, c.ticket_id, c.note_id, c.rank
+SELECT c.id, c.ticket_id, c.note_id, c.section_id, c.rank
 FROM (
-SELECT ch.id, ch.ticket_id, ch.note_id, ts_rank_cd(ch.tsv, query)::float8 AS rank
+SELECT ch.id, ch.ticket_id, ch.note_id, ch.section_id, ts_rank_cd(ch.tsv, query)::float8 AS rank
 FROM chunks ch
 LEFT JOIN tickets t ON t.id = ch.ticket_id,
      to_tsquery('simple', $1::text) AS query
@@ -208,10 +208,11 @@ type KeywordSearchParams struct {
 }
 
 type KeywordSearchRow struct {
-	ID       int64
-	TicketID *int64
-	NoteID   *int64
-	Rank     float64
+	ID        int64
+	TicketID  *int64
+	NoteID    *int64
+	SectionID *int64
+	Rank      float64
 }
 
 // The 50 chunks whose words best match the question. The 'simple'
@@ -244,6 +245,7 @@ func (q *Queries) KeywordSearch(ctx context.Context, arg KeywordSearchParams) ([
 			&i.ID,
 			&i.TicketID,
 			&i.NoteID,
+			&i.SectionID,
 			&i.Rank,
 		); err != nil {
 			return nil, err
@@ -394,7 +396,7 @@ func (q *Queries) ListScopeTicketIDs(ctx context.Context, arg ListScopeTicketIDs
 }
 
 const vectorSearch = `-- name: VectorSearch :many
-SELECT ch.id, ch.ticket_id, ch.note_id, (1 - (ch.embedding <=> $1::halfvec))::float8 AS similarity
+SELECT ch.id, ch.ticket_id, ch.note_id, ch.section_id, (1 - (ch.embedding <=> $1::halfvec))::float8 AS similarity
 FROM chunks ch
 LEFT JOIN tickets t ON t.id = ch.ticket_id
 WHERE ch.embed_model = $2::text
@@ -433,6 +435,7 @@ type VectorSearchRow struct {
 	ID         int64
 	TicketID   *int64
 	NoteID     *int64
+	SectionID  *int64
 	Similarity float64
 }
 
@@ -465,6 +468,7 @@ func (q *Queries) VectorSearch(ctx context.Context, arg VectorSearchParams) ([]V
 			&i.ID,
 			&i.TicketID,
 			&i.NoteID,
+			&i.SectionID,
 			&i.Similarity,
 		); err != nil {
 			return nil, err

@@ -148,7 +148,8 @@
     "board": "Board",
     "tickets": "Tickets",
     "notes": "Notes",
-    "summaries": "Summaries"
+    "summaries": "Summaries",
+    "documents": "Documents"
   },
   "settings": {
     "adminsOnly": "Only project admins can change settings.",
@@ -779,7 +780,9 @@
       "comment": "Anything else? (optional)",
       "send": "Send",
       "cancel": "Cancel"
-    }
+    },
+    "docUploaded": "Document section, uploaded {date}",
+    "docKind": "Document"
   },
   "askLog": {
     "title": "Ask log",
@@ -1171,5 +1174,69 @@
     "markdown": "Markdown",
     "previewLabel": "Preview",
     "meta": "{audience} · {items} items · {model}. Editing never changes tickets."
+  },
+  "documents": {
+    "heading": "Documents",
+    "intro": "Specifications and manuals of this project. Ask cites them by section, and admins draft the module tree from them.",
+    "none": "No documents yet.",
+    "key": "Key",
+    "title": "Title",
+    "client": "Client",
+    "allClients": "All clients",
+    "uploaded": "Uploaded",
+    "supersededBy": "Superseded by {key}",
+    "upload": "Upload",
+    "file": "File (PDF, DOCX or Markdown, up to 20 MB)",
+    "supersedes": "Replaces",
+    "supersedesNone": "Nothing",
+    "tooLarge": "The file is larger than 20 MB.",
+    "converting": "Reading the file…",
+    "uploading": "Uploading…",
+    "unreadable": "Muasal could not read text from this file.",
+    "uploadHint": "The file is read in your browser; its headings become sections. Scanned PDFs without text cannot be read.",
+    "download": "Download {name}",
+    "uploadedBy": "Uploaded by {name}, {date}",
+    "outline": "Outline",
+    "drafts": "Tree drafts",
+    "draftTree": "Draft module tree",
+    "status": {
+      "running": "running",
+      "ready": "ready to review",
+      "applied": "applied",
+      "discarded": "discarded",
+      "failed": "failed"
+    },
+    "reviewHint": "Applying creates the ticked nodes the tree lacks, and links every node to its sections so Ask can cite them."
+  },
+  "treeDraft": {
+    "heading": "Tree draft",
+    "running": "Reading the document: part {done} of {total}.",
+    "runningHint": "You can leave this page; the bell tells you when the draft is ready.",
+    "failed": "The draft failed ({code}). Check Admin → AI and try again from the document.",
+    "introAI": "The AI read the document and proposes these modules and menus. Rename, retype, untick or add nodes, then apply.",
+    "introHeadings": "AI is off, so the headings propose the tree: level-2 headings become modules and level-3 headings menus.",
+    "keep": "Keep {name}",
+    "name": "Name",
+    "type": "Type",
+    "module": "Module",
+    "menu": "Menu",
+    "exists": "Already in the tree",
+    "duplicate": "Possible duplicate of {name}",
+    "aliases": "Aliases",
+    "proposal": "Proposed tree",
+    "empty": "The document proposes no nodes.",
+    "addUnder": "Add a node under",
+    "top": "The top of the tree",
+    "add": "Add node",
+    "newName": "New node",
+    "willCreate": "{count, plural, =0 {Nothing will be created} one {# node will be created} other {# nodes will be created}}",
+    "discard": "Discard",
+    "discardConfirm": "Discard this draft? The tree does not change.",
+    "save": "Save",
+    "apply": "Apply to the tree",
+    "applied": "Applied: {created} nodes created, {linked} section links.",
+    "openTree": "Open the module tree",
+    "discarded": "This draft was discarded.",
+    "alreadyApplied": "This draft was applied."
   }
 }

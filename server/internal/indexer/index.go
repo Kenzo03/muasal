@@ -266,6 +266,7 @@ func NewClient(pool *pgxpool.Pool, rt *ai.Runtime, log *slog.Logger, opts Option
 	river.AddWorker(workers, &indexWorker{ix: ix})
 	river.AddWorker(workers, &embedWorker{ix: ix})
 	river.AddWorker(workers, &noteWorker{ix: ix})
+	river.AddWorker(workers, &sectionWorker{ix: ix})
 	river.AddWorker(workers, &dimensionWorker{ownerURL: opts.OwnerURL})
 	river.AddWorker(workers, &purgeWorker{pool: pool, days: opts.AskLogDays})
 	if opts.Register != nil {

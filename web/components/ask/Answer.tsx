@@ -138,7 +138,9 @@ function Cite({ itemKey, item }: { itemKey: string; item?: AskItem }) {
         >
           <span className="block font-semibold">{item.title}</span>
           <span className="block text-muted">{item.client ?? t("core")}</span>
-          {item.kind === "note" ? (
+          {item.kind === "document" ? (
+            <span className="block text-muted">{t("docUploaded", { date: day(item.date, locale) })}</span>
+          ) : item.kind === "note" ? (
             <span className="block text-muted">{t("noteBy", { name: item.requested_by, date: day(item.date, locale) })}</span>
           ) : (
             <>
@@ -166,7 +168,7 @@ function ItemList({ title, items }: { title?: string; items: AskItem[] }) {
             <span className="text-muted">{it.client ?? t("core")}</span>
             <span className="text-muted">{it.requested_by}</span>
             <span className="text-muted">{day(it.date, locale)}</span>
-            <span className="text-muted">{it.kind === "note" ? t("noteKind") : it.status}</span>
+            <span className="text-muted">{it.kind === "note" ? t("noteKind") : it.kind === "document" ? t("docKind") : it.status}</span>
           </li>
         ))}
       </ul>

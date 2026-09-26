@@ -56,7 +56,7 @@ func TestDraftDecisionFromTheThread(t *testing.T) {
 	// The person completes Why and closes; the record keeps ai_drafted.
 	e.call(w.pm, http.MethodPost, "/tickets/"+tk.Key+"/transition", map[string]any{
 		"status_id": statusID(e, w.pm, "Done"),
-		"decision": map[string]any{"what_changed": d.WhatChanged, "why": "Client A supervisors are often on leave.", "alternatives": d.Alternatives, "ai_drafted": true},
+		"decision":  map[string]any{"what_changed": d.WhatChanged, "why": "Client A supervisors are often on leave.", "alternatives": d.Alternatives, "ai_drafted": true},
 	}, &got)
 	if got.Decision == nil || got.Decision.AiDrafted == nil || !*got.Decision.AiDrafted || got.Decision.State != httpapi.DecisionStateConfirmed {
 		t.Fatalf("closed: %+v", got.Decision)

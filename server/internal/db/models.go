@@ -104,6 +104,7 @@ type Chunk struct {
 	EmbedModel  *string
 	IndexedAt   time.Time
 	NoteID      *int64
+	SectionID   *int64
 }
 
 type Client struct {
@@ -184,6 +185,39 @@ type DecisionRecord struct {
 	ConfirmedAt  *time.Time
 	SupersededBy *int64
 	AiDrafted    bool
+}
+
+type Document struct {
+	ID           int64
+	ProjectID    int64
+	Number       int64
+	Key          string
+	Title        string
+	ClientID     *int64
+	Filename     string
+	ContentType  string
+	SizeBytes    int64
+	Sha256       []byte
+	Markdown     string
+	SupersededBy *int64
+	UploadedBy   int64
+	CreatedAt    time.Time
+	ArchivedAt   *time.Time
+}
+
+type DocumentSection struct {
+	ID         int64
+	DocumentID int64
+	Number     string
+	Title      string
+	Level      int32
+	Position   int32
+	Body       string
+}
+
+type DocumentSectionNode struct {
+	SectionID int64
+	NodeID    int64
 }
 
 type GitRepo struct {
@@ -281,6 +315,7 @@ type Project struct {
 	CreatedAt   time.Time
 	TicketSeq   int64
 	NoteSeq     int64
+	DocSeq      int64
 }
 
 type ProjectClient struct {
@@ -383,6 +418,21 @@ type TicketMergeRequest struct {
 type TicketNode struct {
 	TicketID int64
 	NodeID   int64
+}
+
+type TreeDraft struct {
+	ID         int64
+	ProjectID  int64
+	DocumentID int64
+	Status     string
+	Proposal   []byte
+	UsedAi     bool
+	DoneParts  int32
+	TotalParts int32
+	Error      string
+	CreatedBy  int64
+	CreatedAt  time.Time
+	AppliedAt  *time.Time
 }
 
 type User struct {

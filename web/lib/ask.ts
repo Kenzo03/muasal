@@ -11,8 +11,12 @@ export type AskRequest = components["schemas"]["AskRequest"];
 export type AskStatus = components["schemas"]["AskResult"]["status"];
 export type AskFeedback = components["schemas"]["AskFeedback"];
 
-/** Where a cited key opens: a decision note such as HRIS-DN7, or a ticket. */
-export const itemHref = (key: string) => (/-DN\d+$/i.test(key) ? `/notes/${key}` : `/t/${key}`);
+/** Where a cited key opens: a document section, a decision note such as HRIS-DN7, or a ticket. */
+export const itemHref = (key: string) => {
+  const doc = /^([A-Z][A-Z0-9]*-DOC\d+)\/(.+)$/i.exec(key); // a document section, e.g. HRIS-DOC1/7.4
+  if (doc) return `/documents/${doc[1]}#s-${doc[2]}`;
+  return /-DN\d+$/i.test(key) ? `/notes/${key}` : `/t/${key}`;
+};
 
 // What the `result` event carries (FSD §11.6).
 export type AskDone = {

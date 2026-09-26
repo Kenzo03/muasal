@@ -396,4 +396,3 @@ func toAPISummary(x db.Summary, projectKey, creator string) Summary {
 	_ = json.Unmarshal(x.Items, &out.Items)
 	return out
 }
-
