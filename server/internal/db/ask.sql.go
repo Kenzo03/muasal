@@ -117,7 +117,7 @@ func (q *Queries) InsertAskQuery(ctx context.Context, arg InsertAskQueryParams) 
 }
 
 const listThreadQueries = `-- name: ListThreadQueries :many
-SELECT id, question, lang, status, answer, model, created_at FROM ask_queries WHERE thread_id = $1 ORDER BY created_at, id
+SELECT id, question, lang, status, answer, evidence, model, created_at FROM ask_queries WHERE thread_id = $1 ORDER BY created_at, id
 `
 
 type ListThreadQueriesRow struct {
@@ -126,6 +126,7 @@ type ListThreadQueriesRow struct {
 	Lang      string
 	Status    string
 	Answer    []byte
+	Evidence  []byte
 	Model     *string
 	CreatedAt time.Time
 }
@@ -145,6 +146,7 @@ func (q *Queries) ListThreadQueries(ctx context.Context, threadID *int64) ([]Lis
 			&i.Lang,
 			&i.Status,
 			&i.Answer,
+			&i.Evidence,
 			&i.Model,
 			&i.CreatedAt,
 		); err != nil {

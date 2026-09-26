@@ -698,6 +698,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/ask-log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description System admins (FSD §10.8, §15.4). Every question, newest first. Quick filters - not enough information, slower than 30 seconds - plus status and asker; page with before, the last id of the previous page. */
+        get: operations["listAskLog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/ask-log/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        /** @description System admins. One question with its exact scope, evidence and scores, answer and dropped claims (§15.4). */
+        get: operations["getAskLogEntry"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description System admins. The audit log, newest first, filtered by actor, entity, action and date (§15.4); read-only. */
+        get: operations["listAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/audit/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description System admins. The filtered audit log as CSV, newest first, at most 100,000 rows. */
+        get: operations["exportAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ask": {
         parameters: {
             query?: never;
@@ -1478,6 +1548,16 @@ export interface components {
         AskDetected: components["schemas"]["AskScope"] & {
             /** @description Ticket keys named in the question. */
             keys?: string[];
+            /** @description Names for the detected clients */
+            labels?: components["schemas"]["AskLabel"][];
+        };
+        AskLabel: {
+            /** @enum {string} */
+            kind: "client" | "node" | "user" | "contact";
+            /** Format: int64 */
+            id: number;
+            /** @description A node's label is its path */
+            label: string;
         };
         AskScopeEvent: {
             explicit: components["schemas"]["AskScope"];
@@ -1557,9 +1637,77 @@ export interface components {
             model?: string;
             /** Format: date-time */
             created_at: string;
+            /** @description The evidence the asker may still open. */
+            evidence?: components["schemas"]["AskItem"][];
         };
         AskThreadDetail: components["schemas"]["AskThread"] & {
             queries: components["schemas"]["AskThreadQuery"][];
+        };
+        AskLogEntry: {
+            /** Format: int64 */
+            id: number;
+            /** Format: date-time */
+            created_at: string;
+            user: components["schemas"]["Ref"];
+            question: string;
+            /** @enum {string} */
+            status: "answered" | "not_enough_info" | "ai_off" | "error";
+            llm_called: boolean;
+            latency_ms?: number;
+            model?: string;
+            evidence_count: number;
+            /** @description Distinct tickets cited by the answer. */
+            citations: number;
+        };
+        AskLogPage: {
+            items: components["schemas"]["AskLogEntry"][];
+            /**
+             * Format: int64
+             * @description Pass as before for the next page; absent on the last.
+             */
+            next_before?: number;
+        };
+        AskLogEvidence: components["schemas"]["AskItem"] & {
+            /** @description Fused retrieval score; absent on the small-set path. */
+            score?: number;
+        };
+        AskLogDetail: components["schemas"]["AskLogEntry"] & {
+            /** Format: int64 */
+            thread_id?: number;
+            language: string;
+            first_claim_ms?: number;
+            /** @description The explicit and detected chips as logged. */
+            scope: {
+                [key: string]: unknown;
+            };
+            evidence: components["schemas"]["AskLogEvidence"][];
+            claims: components["schemas"]["AskClaim"][];
+            /** @description Claims and citations removed by validation */
+            dropped?: {
+                [key: string]: unknown;
+            };
+        };
+        AuditEvent: {
+            /** Format: int64 */
+            id: number;
+            /** Format: date-time */
+            occurred_at: string;
+            actor?: components["schemas"]["Ref"];
+            via: string;
+            entity: string;
+            /** Format: int64 */
+            entity_id: number;
+            /** @description The project key */
+            project?: string;
+            action: string;
+            changes: {
+                [key: string]: unknown;
+            };
+        };
+        AuditPage: {
+            items: components["schemas"]["AuditEvent"][];
+            /** Format: int64 */
+            next_before?: number;
         };
         RecentNodes: {
             node_ids: number[];
@@ -2952,6 +3100,113 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReindexResult"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listAskLog: {
+        parameters: {
+            query?: {
+                status?: "answered" | "not_enough_info" | "ai_off" | "error";
+                /** @description Only answers slower than 30 seconds. */
+                slow?: boolean;
+                user_id?: number;
+                before?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskLogPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getAskLogEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The entry. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskLogDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listAudit: {
+        parameters: {
+            query?: {
+                actor_id?: number;
+                entity?: string;
+                action?: string;
+                from?: string;
+                to?: string;
+                before?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    exportAudit: {
+        parameters: {
+            query?: {
+                actor_id?: number;
+                entity?: string;
+                action?: string;
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CSV with a header row. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
                 };
             };
             default: components["responses"]["Problem"];

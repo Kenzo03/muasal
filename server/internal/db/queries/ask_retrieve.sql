@@ -115,3 +115,16 @@ WHERE t.key = ANY (sqlc.arg('keys')::text[])
           AND (m.all_clients OR t.client_id IS NULL OR EXISTS (
                 SELECT 1 FROM membership_clients mc
                 WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = t.client_id))));
+
+-- name: VisibleTicketIDs :many
+-- Of the given tickets, those the asker may open now, for re-showing a
+-- thread's evidence (§10.6).
+SELECT t.id
+FROM tickets t
+WHERE t.id = ANY (sqlc.arg('ids')::bigint[])
+  AND (sqlc.arg('is_admin')::boolean OR EXISTS (
+        SELECT 1 FROM memberships m
+        WHERE m.user_id = sqlc.arg('user_id')::bigint AND m.project_id = t.project_id
+          AND (m.all_clients OR t.client_id IS NULL OR EXISTS (
+                SELECT 1 FROM membership_clients mc
+                WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = t.client_id))));

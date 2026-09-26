@@ -318,6 +318,46 @@ func (q *Queries) VectorSearch(ctx context.Context, arg VectorSearchParams) ([]V
 	return items, nil
 }
 
+const visibleTicketIDs = `-- name: VisibleTicketIDs :many
+SELECT t.id
+FROM tickets t
+WHERE t.id = ANY ($1::bigint[])
+  AND ($2::boolean OR EXISTS (
+        SELECT 1 FROM memberships m
+        WHERE m.user_id = $3::bigint AND m.project_id = t.project_id
+          AND (m.all_clients OR t.client_id IS NULL OR EXISTS (
+                SELECT 1 FROM membership_clients mc
+                WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = t.client_id))))
+`
+
+type VisibleTicketIDsParams struct {
+	Ids     []int64
+	IsAdmin bool
+	UserID  int64
+}
+
+// Of the given tickets, those the asker may open now, for re-showing a
+// thread's evidence (§10.6).
+func (q *Queries) VisibleTicketIDs(ctx context.Context, arg VisibleTicketIDsParams) ([]int64, error) {
+	rows, err := q.db.Query(ctx, visibleTicketIDs, arg.Ids, arg.IsAdmin, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const visibleTicketIDsByKey = `-- name: VisibleTicketIDsByKey :many
 SELECT t.id, t.key
 FROM tickets t
