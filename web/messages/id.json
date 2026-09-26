@@ -38,7 +38,8 @@
     "askLog": "Log Tanya",
     "audit": "Audit",
     "backups": "Cadangan",
-    "system": "Status sistem"
+    "system": "Status sistem",
+    "tokens": "Token API"
   },
   "search": {
     "heading": "Pencarian",
@@ -305,7 +306,8 @@
       "none": "{name} tidak berada di atas menu atau modul.",
       "end": "{name} diletakkan di {target}.",
       "cancel": "Pemindahan dibatalkan."
-    }
+    },
+    "importCsv": "Impor CSV"
   },
   "nodePage": {
     "path": "Jejak",
@@ -455,7 +457,8 @@
     "updated": "Diubah",
     "due": "Tenggat",
     "none": "Tidak ada tiket yang cocok dengan saringan ini.",
-    "next": "Halaman berikutnya"
+    "next": "Halaman berikutnya",
+    "exportCsv": "Ekspor CSV"
   },
   "ticketForm": {
     "newTitle": "Tiket baru",
@@ -905,5 +908,73 @@
     "cancel": "Batal",
     "path": "Lokasi",
     "byline": "Oleh {name} · diperbarui {at}"
+  },
+  "tokens": {
+    "title": "Token API",
+    "intro": "Token akses pribadi memungkinkan skrip memakai API sebagai Anda, dengan proyek dan klien Anda. Kirim sebagai Authorization: Bearer msl_…",
+    "new": "Token baru",
+    "name": "Nama",
+    "namePlaceholder": "mis. sinkron Jira",
+    "access": "Akses",
+    "readOnly": "Hanya baca",
+    "readWrite": "Baca dan tulis",
+    "expiresOn": "Hari terakhir (opsional)",
+    "create": "Buat token",
+    "once": "Salin token ini sekarang. Token tidak akan ditampilkan lagi.",
+    "secret": "Token",
+    "copy": "Salin",
+    "copied": "Tersalin",
+    "none": "Belum ada token.",
+    "created": "Dibuat",
+    "lastUsed": "Terakhir dipakai",
+    "expires": "Kedaluwarsa",
+    "never": "Belum pernah",
+    "noExpiry": "Tanpa batas",
+    "revoke": "Cabut",
+    "revokeConfirm": "Cabut {name}? Skrip yang memakainya langsung berhenti bekerja.",
+    "usage": "Satu token boleh 60 permintaan per menit. Token hanya-baca bisa membaca dan bertanya, tetapi tidak bisa mengubah apa pun."
+  },
+  "treeImport": {
+    "title": "Impor pohon modul",
+    "intro": "Unggah CSV dengan satu node per baris, berdasarkan path atau id dan parent_id. Baris dicocokkan dengan item yang ada menurut kode, atau menurut path; tidak ada yang dihapus.",
+    "file": "Berkas CSV",
+    "preview": "Pratinjau",
+    "plan": "Pratinjau impor",
+    "summary": "{created} baru, {changed} berubah, {unchanged} tetap.",
+    "applied": "Terimpor: {created} baru, {changed} berubah.",
+    "problems": "{count, plural, other {# baris bermasalah}}: perbaiki berkas lalu pratinjau lagi",
+    "row": "Baris {line}:",
+    "new": "Baru",
+    "changed": "Berubah",
+    "missing": "{count, plural, other {# item tidak ada di berkas}} (arsipkan manual jika sudah tidak dipakai)",
+    "apply": "Impor",
+    "back": "Kembali ke pohon modul",
+    "failed": "Berkas tidak dapat dibaca.",
+    "codes": {
+      "duplicate_name": "Nama ganda di bawah {path}",
+      "missing_parent": "Induk {path} tidak ada",
+      "unknown_client": "Klien {path} tidak dikenal",
+      "cycle": "parent_id berputar kembali ke baris ini",
+      "duplicate_code": "Kode ini ada di baris lain",
+      "bad_type": "type harus module atau menu",
+      "bad_client_scope": "client_scope harus shared atau client_specific",
+      "no_clients": "Item khusus klien harus menyebut minimal satu klien",
+      "empty_name": "Ada nama kosong di path",
+      "long_name": "Nama paling banyak 100 karakter",
+      "unknown_shape": "Pakai kolom path,type,code,client_scope,clients,aliases atau id,parent_id,name,type,code",
+      "empty": "Berkas tidak punya baris di bawah header",
+      "too_many_rows": "Impor paling banyak 5.000 baris sekaligus",
+      "unreadable": "Berkas bukan CSV yang terbaca",
+      "missing_id": "Setiap baris perlu id",
+      "duplicate_id": "id muncul dua kali"
+    }
+  },
+  "merge": {
+    "title": "Gabungkan ke item lain",
+    "hint": "Untuk duplikat: tiket, notulen, dan sub-itemnya pindah ke item lain, namanya menjadi alias di sana, lalu item ini diarsipkan.",
+    "into": "Gabungkan ke",
+    "choose": "Pilih item",
+    "merge": "Gabungkan",
+    "confirm": "Gabungkan {name} ke {into}? {name} akan diarsipkan."
   }
 }

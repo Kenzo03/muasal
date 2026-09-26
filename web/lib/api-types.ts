@@ -3223,14 +3223,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description One page of tickets, or the whole filter as CSV. */
+            /** @description One page of tickets; with format=csv, the whole filter as text/csv instead. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["TicketPage"];
-                    "text/csv": string;
                 };
             };
             default: components["responses"]["Problem"];

@@ -88,7 +88,8 @@ export default async function NodePage({
     content = <Behaviors items={data?.items ?? []} />;
   } else {
     const canEdit = project.role === "admin";
-    content = <NodeDetails projectKey={key} node={node} clients={canEdit ? await clientsOf() : []} canEdit={canEdit} />;
+    const others = canEdit ? ((await api.GET("/projects/{key}/nodes", { params: { path: { key } } })).data?.items ?? []) : [];
+    content = <NodeDetails projectKey={key} node={node} clients={canEdit ? await clientsOf() : []} canEdit={canEdit} nodes={others} />;
   }
 
   return (

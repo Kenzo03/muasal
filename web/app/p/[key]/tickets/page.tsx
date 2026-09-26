@@ -44,6 +44,9 @@ export default async function TicketsPage({
         <h1 className="text-base font-semibold">{tp("tickets")}</h1>
         <span className="mr-2 text-[13px] text-muted">{project.name}</span>
         <TicketFilters action={`/p/${key}/tickets`} values={values} clients={clients.data?.items ?? []} statuses={statuses.data?.items ?? []} />
+        <a href={`/api/v1/projects/${key}/tickets?${new URLSearchParams({ ...exportQuery(ticketQuery(values)), format: "csv" })}`} download className={button.secondary}>
+          {t("exportCsv")}
+        </a>
       </PageBar>
       <main className="flex flex-col gap-3 px-4 py-4 md:px-5">
         {items.length === 0 ? (
@@ -114,4 +117,11 @@ export default async function TicketsPage({
       </main>
     </>
   );
+}
+
+// The list's filter as query strings, for the CSV download (FSD §8.5).
+function exportQuery(q: Record<string, unknown>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== null && k !== "cursor" && k !== "limit") out[k] = String(v);
+  return out;
 }

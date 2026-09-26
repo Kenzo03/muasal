@@ -677,12 +677,10 @@ paths:
           description: csv downloads every ticket of the filter, up to 10,000, as UTF-8 CSV instead of a page (FSD §8.5).
       responses:
         "200":
-          description: One page of tickets, or the whole filter as CSV.
+          description: One page of tickets; with format=csv, the whole filter as text/csv instead.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/TicketPage" }
-            text/csv:
-              schema: { type: string }
         default: { $ref: "#/components/responses/Problem" }
     post:
       operationId: createTicket

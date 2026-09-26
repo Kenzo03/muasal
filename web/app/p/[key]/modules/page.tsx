@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import PageBar from "@/components/PageBar";
+import { button, cx } from "@/lib/ui";
 import { getProject, serverApi } from "@/lib/server-api";
 import ModuleTree from "./ModuleTree";
 
@@ -29,6 +31,7 @@ export default async function ModulesPage({
       <PageBar>
         <h1 className="text-base font-semibold">{t("tree")}</h1>
         <span className="text-[13px] text-muted">{project.name}</span>
+        {canEdit && <Link href={`/p/${key}/modules/import`} className={cx(button.secondary, "ml-auto")}>{t("importCsv")}</Link>}
       </PageBar>
       <main className="px-4 py-4 md:px-5">
         <ModuleTree projectKey={key} nodes={nodes} clients={clients} canEdit={canEdit} showArchived={showArchived} />
