@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -243,7 +245,8 @@ func (s *Server) GetAskThread(w http.ResponseWriter, r *http.Request, id int64) 
 			return
 		}
 		evidence := toAPIItems(items)
-		out.Queries[i] = AskThreadQuery{Id: q.ID, Question: q.Question, Status: q.Status, Claims: claims, Model: q.Model, CreatedAt: q.CreatedAt, Evidence: &evidence}
+		out.Queries[i] = AskThreadQuery{Id: q.ID, Question: q.Question, Status: q.Status, Claims: claims, Model: q.Model, CreatedAt: q.CreatedAt,
+			Evidence: &evidence, Feedback: feedbackOf(q.Rating, q.Reasons, q.Comment)}
 	}
 	writeJSON(w, http.StatusOK, out)
 }
@@ -330,5 +333,75 @@ func toAPIItems(items []ask.Item) []AskItem {
 	for i, it := range items {
 		out[i] = AskItem{Kind: AskItemKind(it.Kind), Key: it.Key, Title: it.Title, Client: it.Client, RequestedBy: it.RequestedBy, Date: it.Date, Status: it.Status, Closed: it.Closed}
 	}
+	return out
+}
+
+// SendAskFeedback stores the asker's thumbs up or down on one answer (FSD
+// §10.7). It feeds the helpful rate and the Ask log's thumbs-down filter.
+func (s *Server) SendAskFeedback(w http.ResponseWriter, r *http.Request, id int64) {
+	u := s.requireUser(w, r)
+	if u == nil {
+		return
+	}
+	var in AskFeedback
+	if !decodeJSON(w, r, &in) {
+		return
+	}
+	var fields []FieldError
+	if !in.Rating.Valid() {
+		fields = append(fields, FieldError{Field: "rating", Code: "invalid", Message: "Choose up or down"})
+	}
+	reasons := []string{}
+	for _, reason := range deref(in.Reasons) {
+		if !reason.Valid() {
+			fields = append(fields, FieldError{Field: "reasons", Code: "invalid", Message: "Choose wrong, missing tickets, wrong citation or too vague"})
+			break
+		}
+		if in.Rating == AskFeedbackRatingDown && !slices.Contains(reasons, string(reason)) {
+			reasons = append(reasons, string(reason))
+		}
+	}
+	comment := strings.TrimSpace(deref(in.Comment))
+	if utf8.RuneCountInString(comment) > 1000 {
+		fields = append(fields, FieldError{Field: "comment", Code: "invalid", Message: "Use at most 1,000 characters"})
+	}
+	if len(fields) > 0 {
+		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields", fields...)
+		return
+	}
+	rating := int16(1)
+	if in.Rating == AskFeedbackRatingDown {
+		rating = -1
+	}
+	p := db.SaveAskFeedbackParams{QueryID: id, UserID: u.ID, Rating: rating, Reasons: reasons}
+	if comment != "" {
+		p.Comment = &comment
+	}
+	n, err := s.q.SaveAskFeedback(r.Context(), p)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	if n == 0 {
+		writeProblem(w, http.StatusNotFound, "not_found", "Question not found")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// feedbackOf is a stored rating as the API shows it; nil when there is none.
+func feedbackOf(rating *int16, reasons []string, comment *string) *AskFeedback {
+	if rating == nil {
+		return nil
+	}
+	out := &AskFeedback{Rating: AskFeedbackRatingUp, Comment: comment}
+	if *rating < 0 {
+		out.Rating = AskFeedbackRatingDown
+	}
+	rs := make([]AskFeedbackReasons, len(reasons))
+	for i, r := range reasons {
+		rs[i] = AskFeedbackReasons(r)
+	}
+	out.Reasons = &rs
 	return out
 }

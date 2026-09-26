@@ -970,11 +970,12 @@ paths:
       operationId: listAskLog
       tags: [admin]
       description: >-
-        System admins (FSD §10.8, §15.4). Every question, newest first. Quick filters - not enough information,
-        slower than 30 seconds - plus status and asker; page with before, the last id of the previous page.
+        System admins (FSD §10.8, §15.4). Every question, newest first. Quick filters - thumbs-down, not enough
+        information, slower than 30 seconds - plus status and asker; page with before, the last id of the previous page.
       parameters:
         - { name: status, in: query, schema: { type: string, enum: [answered, not_enough_info, ai_off, error] } }
         - { name: slow, in: query, schema: { type: boolean }, description: Only answers slower than 30 seconds. }
+        - { name: down, in: query, schema: { type: boolean }, description: Only answers rated thumbs-down. }
         - { name: user_id, in: query, schema: { type: integer, format: int64 } }
         - { name: before, in: query, schema: { type: integer, format: int64 } }
         - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
@@ -1094,6 +1095,23 @@ paths:
               schema: { $ref: "#/components/schemas/AskResult" }
             text/event-stream:
               schema: { type: string }
+        default: { $ref: "#/components/responses/Problem" }
+  /ask/queries/{id}/feedback:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    post:
+      operationId: sendAskFeedback
+      tags: [ask]
+      description: >-
+        The asker rates an answer (FSD §10.7, AK-8): thumbs up, or down with reasons and free text. A later rating
+        replaces the earlier one. Another user's question answers 404.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AskFeedback" }
+      responses:
+        "204": { description: Saved. }
         default: { $ref: "#/components/responses/Problem" }
   /ask/threads:
     get:
@@ -2163,6 +2181,16 @@ components:
         claims: { type: array, items: { $ref: "#/components/schemas/AskClaim" } }
         closest: { type: array, items: { $ref: "#/components/schemas/AskItem" }, description: With not enough information, up to five nearest tickets. }
         results: { type: array, items: { $ref: "#/components/schemas/AskItem" }, description: With AI off, the keyword results. }
+    AskFeedback:
+      type: object
+      required: [rating]
+      properties:
+        rating: { type: string, enum: [up, down] }
+        reasons:
+          type: array
+          description: With down.
+          items: { type: string, enum: [wrong, missing_tickets, wrong_citation, too_vague] }
+        comment: { type: string, maxLength: 1000 }
     AskThread:
       type: object
       required: [id, title, created_at]
@@ -2186,6 +2214,7 @@ components:
         model: { type: string }
         created_at: { type: string, format: date-time }
         evidence: { type: array, items: { $ref: "#/components/schemas/AskItem" }, description: The evidence the asker may still open. }
+        feedback: { $ref: "#/components/schemas/AskFeedback" }
     AskThreadDetail:
       allOf:
         - $ref: "#/components/schemas/AskThread"
@@ -2206,7 +2235,8 @@ components:
         latency_ms: { type: integer }
         model: { type: string }
         evidence_count: { type: integer }
-        citations: { type: integer, description: Distinct tickets cited by the answer. }
+        citations: { type: integer, description: Distinct tickets and notes cited by the answer. }
+        feedback: { $ref: "#/components/schemas/AskFeedback" }
     AskLogPage:
       type: object
       required: [items]

@@ -18,4 +18,16 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 RETURNING id;
 
 -- name: ListThreadQueries :many
-SELECT id, question, lang, status, answer, evidence, model, created_at FROM ask_queries WHERE thread_id = $1 ORDER BY created_at, id;
+SELECT q.id, q.question, q.lang, q.status, q.answer, q.evidence, q.model, q.created_at, f.rating, f.reasons, f.comment
+FROM ask_queries q
+LEFT JOIN ask_feedback f ON f.query_id = q.id
+WHERE q.thread_id = $1 ORDER BY q.created_at, q.id;
+
+-- name: SaveAskFeedback :execrows
+-- The asker's rating of one answer (§10.7); a later one replaces it. Zero
+-- rows when the question is not theirs.
+INSERT INTO ask_feedback (query_id, user_id, rating, reasons, comment)
+SELECT q.id, q.user_id, sqlc.arg('rating'), sqlc.arg('reasons')::text[], sqlc.narg('comment')
+FROM ask_queries q
+WHERE q.id = sqlc.arg('query_id') AND q.user_id = sqlc.arg('user_id')
+ON CONFLICT (query_id) DO UPDATE SET rating = excluded.rating, reasons = excluded.reasons, comment = excluded.comment, created_at = now();

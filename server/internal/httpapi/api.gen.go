@@ -54,6 +54,48 @@ func (e ActivityItemKind) Valid() bool {
 	}
 }
 
+// Defines values for AskFeedbackRating.
+const (
+	AskFeedbackRatingDown AskFeedbackRating = "down"
+	AskFeedbackRatingUp   AskFeedbackRating = "up"
+)
+
+// Valid indicates whether the value is a known member of the AskFeedbackRating enum.
+func (e AskFeedbackRating) Valid() bool {
+	switch e {
+	case AskFeedbackRatingDown:
+		return true
+	case AskFeedbackRatingUp:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AskFeedbackReasons.
+const (
+	AskFeedbackReasonsMissingTickets AskFeedbackReasons = "missing_tickets"
+	AskFeedbackReasonsTooVague       AskFeedbackReasons = "too_vague"
+	AskFeedbackReasonsWrong          AskFeedbackReasons = "wrong"
+	AskFeedbackReasonsWrongCitation  AskFeedbackReasons = "wrong_citation"
+)
+
+// Valid indicates whether the value is a known member of the AskFeedbackReasons enum.
+func (e AskFeedbackReasons) Valid() bool {
+	switch e {
+	case AskFeedbackReasonsMissingTickets:
+		return true
+	case AskFeedbackReasonsTooVague:
+		return true
+	case AskFeedbackReasonsWrong:
+		return true
+	case AskFeedbackReasonsWrongCitation:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AskIgnoreKind.
 const (
 	AskIgnoreKindClient  AskIgnoreKind = "client"
@@ -772,6 +814,21 @@ type AskDetected struct {
 	UserIds    *[]int64            `json:"user_ids,omitempty"`
 }
 
+// AskFeedback defines model for AskFeedback.
+type AskFeedback struct {
+	Comment *string           `json:"comment,omitempty"`
+	Rating  AskFeedbackRating `json:"rating"`
+
+	// Reasons With down.
+	Reasons *[]AskFeedbackReasons `json:"reasons,omitempty"`
+}
+
+// AskFeedbackRating defines model for AskFeedback.Rating.
+type AskFeedbackRating string
+
+// AskFeedbackReasons defines model for AskFeedback.Reasons.
+type AskFeedbackReasons string
+
 // AskIgnore defines model for AskIgnore.
 type AskIgnore struct {
 	Id   *int64        `json:"id,omitempty"`
@@ -817,7 +874,7 @@ type AskLabelKind string
 
 // AskLogDetail defines model for AskLogDetail.
 type AskLogDetail struct {
-	// Citations Distinct tickets cited by the answer.
+	// Citations Distinct tickets and notes cited by the answer.
 	Citations int        `json:"citations"`
 	Claims    []AskClaim `json:"claims"`
 	CreatedAt time.Time  `json:"created_at"`
@@ -826,6 +883,7 @@ type AskLogDetail struct {
 	Dropped       *map[string]interface{} `json:"dropped,omitempty"`
 	Evidence      []AskLogEvidence        `json:"evidence"`
 	EvidenceCount int                     `json:"evidence_count"`
+	Feedback      *AskFeedback            `json:"feedback,omitempty"`
 	FirstClaimMs  *int                    `json:"first_claim_ms,omitempty"`
 	Id            int64                   `json:"id"`
 	Language      string                  `json:"language"`
@@ -846,10 +904,11 @@ type AskLogDetailStatus string
 
 // AskLogEntry defines model for AskLogEntry.
 type AskLogEntry struct {
-	// Citations Distinct tickets cited by the answer.
+	// Citations Distinct tickets and notes cited by the answer.
 	Citations     int               `json:"citations"`
 	CreatedAt     time.Time         `json:"created_at"`
 	EvidenceCount int               `json:"evidence_count"`
+	Feedback      *AskFeedback      `json:"feedback,omitempty"`
 	Id            int64             `json:"id"`
 	LatencyMs     *int              `json:"latency_ms,omitempty"`
 	LlmCalled     bool              `json:"llm_called"`
@@ -993,11 +1052,12 @@ type AskThreadQuery struct {
 	CreatedAt time.Time  `json:"created_at"`
 
 	// Evidence The evidence the asker may still open.
-	Evidence *[]AskItem `json:"evidence,omitempty"`
-	Id       int64      `json:"id"`
-	Model    *string    `json:"model,omitempty"`
-	Question string     `json:"question"`
-	Status   string     `json:"status"`
+	Evidence *[]AskItem   `json:"evidence,omitempty"`
+	Feedback *AskFeedback `json:"feedback,omitempty"`
+	Id       int64        `json:"id"`
+	Model    *string      `json:"model,omitempty"`
+	Question string       `json:"question"`
+	Status   string       `json:"status"`
 }
 
 // Attachment defines model for Attachment.
@@ -1937,7 +1997,10 @@ type ListAskLogParams struct {
 	Status *ListAskLogParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
 	// Slow Only answers slower than 30 seconds.
-	Slow   *bool  `form:"slow,omitempty" json:"slow,omitempty"`
+	Slow *bool `form:"slow,omitempty" json:"slow,omitempty"`
+
+	// Down Only answers rated thumbs-down.
+	Down   *bool  `form:"down,omitempty" json:"down,omitempty"`
 	UserId *int64 `form:"user_id,omitempty" json:"user_id,omitempty"`
 	Before *int64 `form:"before,omitempty" json:"before,omitempty"`
 	Limit  *int   `form:"limit,omitempty" json:"limit,omitempty"`
@@ -2092,6 +2155,9 @@ type UpdateUserJSONRequestBody = UserUpdate
 // AskJSONRequestBody defines body for Ask for application/json ContentType.
 type AskJSONRequestBody = AskRequest
 
+// SendAskFeedbackJSONRequestBody defines body for SendAskFeedback for application/json ContentType.
+type SendAskFeedbackJSONRequestBody = AskFeedback
+
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
 
@@ -2217,6 +2283,9 @@ type ServerInterface interface {
 
 	// (POST /ask)
 	Ask(w http.ResponseWriter, r *http.Request)
+
+	// (POST /ask/queries/{id}/feedback)
+	SendAskFeedback(w http.ResponseWriter, r *http.Request, id int64)
 
 	// (GET /ask/threads)
 	ListAskThreads(w http.ResponseWriter, r *http.Request)
@@ -2466,6 +2535,19 @@ func (siw *ServerInterfaceWrapper) ListAskLog(w http.ResponseWriter, r *http.Req
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "slow"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slow", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "down" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "down", r.URL.Query(), &params.Down, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "down"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "down", Err: err})
 		}
 		return
 	}
@@ -2897,6 +2979,32 @@ func (siw *ServerInterfaceWrapper) Ask(w http.ResponseWriter, r *http.Request) {
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.Ask(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SendAskFeedback operation middleware
+func (siw *ServerInterfaceWrapper) SendAskFeedback(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SendAskFeedback(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4859,6 +4967,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/admin/backups/run", wrapper.RunBackup)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/system/status", wrapper.GetSystemStatus)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/ask", wrapper.Ask)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/ask/queries/{id}/feedback", wrapper.SendAskFeedback)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/ask/threads", wrapper.ListAskThreads)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/ask/threads/{id}", wrapper.HideAskThread)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/ask/threads/{id}", wrapper.GetAskThread)

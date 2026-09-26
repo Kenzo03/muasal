@@ -36,7 +36,7 @@ func (s *Server) ListAskLog(w http.ResponseWriter, r *http.Request, params ListA
 		return
 	}
 	lim := min(cmp.Or(deref(params.Limit), 50), 100)
-	p := db.ListAskLogParams{Slow: deref(params.Slow), UserID: params.UserId, Before: params.Before, Lim: int32(lim) + 1}
+	p := db.ListAskLogParams{Slow: deref(params.Slow), Down: deref(params.Down), UserID: params.UserId, Before: params.Before, Lim: int32(lim) + 1}
 	if params.Status != nil {
 		p.Status = ptr(string(*params.Status))
 	}
@@ -54,7 +54,7 @@ func (s *Server) ListAskLog(w http.ResponseWriter, r *http.Request, params ListA
 		out.Items = append(out.Items, AskLogEntry{
 			Id: row.ID, CreatedAt: row.CreatedAt, User: Ref{Id: row.UserID, Name: row.UserName}, Question: row.Question,
 			Status: AskLogEntryStatus(row.Status), LlmCalled: row.LlmCalled, LatencyMs: intPtr(row.LatencyMs), Model: row.Model,
-			EvidenceCount: int(row.EvidenceCount), Citations: int(row.Citations),
+			EvidenceCount: int(row.EvidenceCount), Citations: int(row.Citations), Feedback: feedbackOf(row.Rating, row.Reasons, row.Comment),
 		})
 	}
 	writeJSON(w, http.StatusOK, out)
@@ -112,6 +112,7 @@ func (s *Server) GetAskLogEntry(w http.ResponseWriter, r *http.Request, id int64
 		Status: AskLogDetailStatus(q.Status), LlmCalled: q.LlmCalled, LatencyMs: intPtr(q.LatencyMs), Model: q.Model,
 		EvidenceCount: int(q.EvidenceCount), Citations: int(q.Citations), ThreadId: q.ThreadID, Language: q.Lang,
 		FirstClaimMs: intPtr(q.FirstClaimMs), Scope: scope, Evidence: evidence, Claims: claims, Dropped: dropped,
+		Feedback: feedbackOf(q.Rating, q.Reasons, q.Comment),
 	})
 }
 

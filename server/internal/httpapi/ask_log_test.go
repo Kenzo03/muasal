@@ -152,3 +152,47 @@ func TestRemovedDetectedChipsStayOff(t *testing.T) {
 		t.Fatalf("after removing the client and the dates: %+v", d)
 	}
 }
+
+// AC-AK-8: a thumbs-down with reason "Wrong citation" shows in the Ask log and
+// its thumbs-down filter; only the asker rates, and a later rating replaces it.
+func TestThumbsDownReachesTheAskLog(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	admin, _ := e.signedIn("admin@example.com", true)
+	e.localAI(admin)
+	tk := e.seedTicket(w.p, w.pmUser, "Overtime approval skips the supervisor", &w.a, w.ot)
+	e.indexNow(tk.ID)
+	var up, down httpapi.AskResult
+	e.call(w.pm, http.MethodPost, "/ask", map[string]any{"question": "Why does overtime approval skip the supervisor?"}, &up)
+	e.call(w.pm, http.MethodPost, "/ask", map[string]any{"question": "Who asked to skip the supervisor for overtime?"}, &down)
+
+	path := fmt.Sprintf("/ask/queries/%d/feedback", down.QueryId)
+	if code := e.call(admin, http.MethodPost, path, map[string]any{"rating": "up"}, nil); code != http.StatusNotFound {
+		t.Fatalf("someone else's question: %d", code)
+	}
+	var p httpapi.Problem
+	if code := e.call(w.pm, http.MethodPost, path, map[string]any{"rating": "meh"}, &p); code != http.StatusUnprocessableEntity {
+		t.Fatalf("bad rating: %d", code)
+	}
+	e.call(w.pm, http.MethodPost, path, map[string]any{"rating": "up"}, nil)
+	if code := e.call(w.pm, http.MethodPost, path, map[string]any{"rating": "down", "reasons": []string{"wrong_citation"}, "comment": "Cites the wrong ticket."}, nil); code != http.StatusNoContent {
+		t.Fatalf("down: %d", code)
+	}
+	e.call(w.pm, http.MethodPost, fmt.Sprintf("/ask/queries/%d/feedback", up.QueryId), map[string]any{"rating": "up", "reasons": []string{"wrong"}}, nil)
+
+	var page httpapi.AskLogPage
+	e.call(admin, http.MethodGet, "/admin/ask-log?down=true", nil, &page)
+	if len(page.Items) != 1 || page.Items[0].Id != down.QueryId {
+		t.Fatalf("thumbs-down filter: %+v", page.Items)
+	}
+	f := page.Items[0].Feedback
+	if f == nil || f.Rating != httpapi.AskFeedbackRatingDown || f.Reasons == nil || len(*f.Reasons) != 1 || (*f.Reasons)[0] != httpapi.AskFeedbackReasonsWrongCitation ||
+		f.Comment == nil || *f.Comment != "Cites the wrong ticket." {
+		t.Fatalf("feedback: %+v", f)
+	}
+	var detail httpapi.AskThreadDetail
+	e.call(w.pm, http.MethodGet, fmt.Sprintf("/ask/threads/%d", up.ThreadId), nil, &detail)
+	if fb := detail.Queries[0].Feedback; fb == nil || fb.Rating != httpapi.AskFeedbackRatingUp || len(*fb.Reasons) != 0 {
+		t.Fatalf("thread feedback: %+v", fb)
+	}
+}
