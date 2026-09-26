@@ -2104,6 +2104,11 @@ type GetNodeBehaviorsParams struct {
 	SubNodes *bool `form:"sub_nodes,omitempty" json:"sub_nodes,omitempty"`
 }
 
+// MergeNodeJSONBody defines parameters for MergeNode.
+type MergeNodeJSONBody struct {
+	IntoId int64 `json:"into_id"`
+}
+
 // GetNodeTimelineParams defines parameters for GetNodeTimeline.
 type GetNodeTimelineParams struct {
 	SubNodes *bool  `form:"sub_nodes,omitempty" json:"sub_nodes,omitempty"`
@@ -2253,6 +2258,9 @@ type CreateTokenJSONRequestBody = APITokenCreate
 
 // UpdateNodeJSONRequestBody defines body for UpdateNode for application/json ContentType.
 type UpdateNodeJSONRequestBody = NodeUpdate
+
+// MergeNodeJSONRequestBody defines body for MergeNode for application/json ContentType.
+type MergeNodeJSONRequestBody MergeNodeJSONBody
 
 // UpdateNoteJSONRequestBody defines body for UpdateNote for application/json ContentType.
 type UpdateNoteJSONRequestBody = NoteUpdate
@@ -2439,6 +2447,9 @@ type ServerInterface interface {
 
 	// (GET /nodes/{id}/behaviors)
 	GetNodeBehaviors(w http.ResponseWriter, r *http.Request, id int64, params GetNodeBehaviorsParams)
+
+	// (POST /nodes/{id}/merge)
+	MergeNode(w http.ResponseWriter, r *http.Request, id int64)
 
 	// (GET /nodes/{id}/timeline)
 	GetNodeTimeline(w http.ResponseWriter, r *http.Request, id int64, params GetNodeTimelineParams)
@@ -3749,6 +3760,32 @@ func (siw *ServerInterfaceWrapper) GetNodeBehaviors(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetNodeBehaviors(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// MergeNode operation middleware
+func (siw *ServerInterfaceWrapper) MergeNode(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MergeNode(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -5101,6 +5138,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/nodes/{id}", wrapper.DeleteNode)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/nodes/{id}", wrapper.GetNode)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/nodes/{id}", wrapper.UpdateNode)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/nodes/{id}/merge", wrapper.MergeNode)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/nodes/{id}/timeline", wrapper.GetNodeTimeline)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/nodes/{id}/behaviors", wrapper.GetNodeBehaviors)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/statuses", wrapper.GetStatuses)

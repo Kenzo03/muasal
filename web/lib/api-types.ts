@@ -399,6 +399,25 @@ export interface paths {
         patch: operations["updateNode"];
         trace?: never;
     };
+    "/nodes/{id}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Project admins merge a duplicate into another node of the project (R-MR-6): its tickets, notes and live sub-nodes move to the target, its name and aliases become the target's aliases, and it is archived. The target cannot be the node, a node under it, or archived (422). */
+        post: operations["mergeNode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/nodes/{id}/timeline": {
         parameters: {
             query?: never;
@@ -2920,6 +2939,36 @@ export interface operations {
         };
         responses: {
             /** @description The updated node. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Node"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    mergeNode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: int64 */
+                    into_id: number;
+                };
+            };
+        };
+        responses: {
+            /** @description The target as it is now. */
             200: {
                 headers: {
                     [name: string]: unknown;

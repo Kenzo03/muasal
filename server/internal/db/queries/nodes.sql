@@ -142,3 +142,21 @@ WHERE t.project_id = sqlc.arg('project_id') AND t.reporter_id = sqlc.arg('report
 GROUP BY tn.node_id
 ORDER BY max(t.created_at) DESC, tn.node_id DESC
 LIMIT 8;
+
+-- name: MoveNodeLinks :exec
+-- Merge (R-MR-6): every ticket and note on from_id moves to into_id.
+WITH t AS (
+  INSERT INTO ticket_nodes (ticket_id, node_id)
+  SELECT ticket_id, sqlc.arg('into_id')::bigint FROM ticket_nodes WHERE node_id = sqlc.arg('from_id')::bigint
+  ON CONFLICT DO NOTHING
+), td AS (
+  DELETE FROM ticket_nodes WHERE node_id = sqlc.arg('from_id')::bigint
+), n AS (
+  INSERT INTO decision_note_nodes (note_id, node_id)
+  SELECT note_id, sqlc.arg('into_id')::bigint FROM decision_note_nodes WHERE node_id = sqlc.arg('from_id')::bigint
+  ON CONFLICT DO NOTHING
+)
+DELETE FROM decision_note_nodes WHERE node_id = sqlc.arg('from_id')::bigint;
+
+-- name: ListChildIDs :many
+SELECT id FROM nodes WHERE parent_id = $1 AND archived_at IS NULL ORDER BY position, id;

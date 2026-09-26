@@ -510,6 +510,32 @@ paths:
       responses:
         "204": { description: Deleted. }
         default: { $ref: "#/components/responses/Problem" }
+  /nodes/{id}/merge:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    post:
+      operationId: mergeNode
+      tags: [nodes]
+      description: >-
+        Project admins merge a duplicate into another node of the project (R-MR-6): its tickets, notes and live
+        sub-nodes move to the target, its name and aliases become the target's aliases, and it is archived. The target
+        cannot be the node, a node under it, or archived (422).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [into_id]
+              properties:
+                into_id: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: The target as it is now.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Node" }
+        default: { $ref: "#/components/responses/Problem" }
   /nodes/{id}/timeline:
     parameters:
       - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }

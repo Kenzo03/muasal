@@ -179,6 +179,30 @@ func (q *Queries) IsSelfOrDescendant(ctx context.Context, arg IsSelfOrDescendant
 	return exists, err
 }
 
+const listChildIDs = `-- name: ListChildIDs :many
+SELECT id FROM nodes WHERE parent_id = $1 AND archived_at IS NULL ORDER BY position, id
+`
+
+func (q *Queries) ListChildIDs(ctx context.Context, parentID *int64) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listChildIDs, parentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listNodeClients = `-- name: ListNodeClients :many
 SELECT c.id, c.name FROM node_clients nc
 JOIN clients c ON c.id = nc.client_id
@@ -398,6 +422,32 @@ func (q *Queries) ListSiblingIDs(ctx context.Context, arg ListSiblingIDsParams) 
 		return nil, err
 	}
 	return items, nil
+}
+
+const moveNodeLinks = `-- name: MoveNodeLinks :exec
+WITH t AS (
+  INSERT INTO ticket_nodes (ticket_id, node_id)
+  SELECT ticket_id, $2::bigint FROM ticket_nodes WHERE node_id = $1::bigint
+  ON CONFLICT DO NOTHING
+), td AS (
+  DELETE FROM ticket_nodes WHERE node_id = $1::bigint
+), n AS (
+  INSERT INTO decision_note_nodes (note_id, node_id)
+  SELECT note_id, $2::bigint FROM decision_note_nodes WHERE node_id = $1::bigint
+  ON CONFLICT DO NOTHING
+)
+DELETE FROM decision_note_nodes WHERE node_id = $1::bigint
+`
+
+type MoveNodeLinksParams struct {
+	FromID int64
+	IntoID int64
+}
+
+// Merge (R-MR-6): every ticket and note on from_id moves to into_id.
+func (q *Queries) MoveNodeLinks(ctx context.Context, arg MoveNodeLinksParams) error {
+	_, err := q.db.Exec(ctx, moveNodeLinks, arg.FromID, arg.IntoID)
+	return err
 }
 
 const placeNodes = `-- name: PlaceNodes :exec
