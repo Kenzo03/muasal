@@ -23,8 +23,20 @@ func TestSystemStatus(t *testing.T) {
 		t.Fatalf("status: %d", code)
 	}
 	if st.DatabaseBytes <= 0 || st.Model.Mode != httpapi.AIModeOff || st.Model.Reachable != nil || len(st.Disks) != 2 ||
-		st.Disks[0].Volume != "attachments" || st.Disks[1].Volume != "backups" || st.Disks[1].TotalBytes <= 0 || len(st.Warnings) != 0 {
+		st.Disks[0].Volume != "attachments" || st.Disks[1].Volume != "backups" || st.Disks[1].TotalBytes <= 0 {
 		t.Fatalf("status: %+v", st)
+	}
+	// Disk warnings follow the host's real disk use, from 80%; nothing else warns.
+	for _, d := range st.Disks {
+		full := d.UsedBytes*10 >= d.TotalBytes*8
+		if warned := contains(st.Warnings, httpapi.SystemStatusWarnings("disk_"+string(d.Volume))); warned != full {
+			t.Errorf("%s at %d of %d bytes: warned %v", d.Volume, d.UsedBytes, d.TotalBytes, warned)
+		}
+	}
+	for _, w := range st.Warnings {
+		if !strings.HasPrefix(string(w), "disk_") {
+			t.Errorf("unexpected warning %q", w)
+		}
 	}
 	if code := e.call(member, http.MethodGet, "/admin/system/status", nil, nil); code != http.StatusForbidden {
 		t.Fatalf("as a member: %d", code)

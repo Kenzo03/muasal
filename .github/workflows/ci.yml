@@ -32,7 +32,11 @@ jobs:
       - name: Generated Go code is up to date
         run: git diff --exit-code
       - run: go vet ./...
-      - run: go test ./...
+      - name: go test
+        # Failing tests become annotations on the check run, readable without the log.
+        run: |
+          set -o pipefail
+          go test ./... 2>&1 | tee test.log || { grep -E -- '--- FAIL|_test\.go:[0-9]+:' test.log | head -50 | sed 's/^/::error::/'; exit 1; }
 
   web:
     runs-on: ubuntu-latest
