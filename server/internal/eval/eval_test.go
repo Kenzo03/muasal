@@ -17,7 +17,8 @@ import (
 )
 
 // The embedded golden set follows §11.8: 10 unanswerable questions, at least
-// 40% Indonesian or mixed, and every expected key exists in the dataset.
+// 40% Indonesian or mixed, and every expected key exists in the dataset; and
+// §11.9: 10 follow-ups, each after the question it follows.
 func TestGoldenSetV0IsWellFormed(t *testing.T) {
 	qs, err := LoadQuestions("")
 	if err != nil {
@@ -27,8 +28,16 @@ func TestGoldenSetV0IsWellFormed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	unanswerable, indonesian := 0, 0
+	unanswerable, indonesian, followUps := 0, 0, 0
+	seen := map[string]bool{}
 	for _, q := range qs {
+		if q.Follows != "" {
+			followUps++
+			if !seen[q.Follows] {
+				t.Errorf("%s follows %s, which comes later or not at all", q.ID, q.Follows)
+			}
+		}
+		seen[q.ID] = true
 		if len(q.Expected) == 0 {
 			unanswerable++
 		}
@@ -42,8 +51,8 @@ func TestGoldenSetV0IsWellFormed(t *testing.T) {
 			}
 		}
 	}
-	if unanswerable != 10 || float64(indonesian)/float64(len(qs)) < 0.4 {
-		t.Fatalf("%d questions: %d unanswerable, %d Indonesian", len(qs), unanswerable, indonesian)
+	if unanswerable != 10 || followUps != 10 || float64(indonesian)/float64(len(qs)) < 0.4 {
+		t.Fatalf("%d questions: %d unanswerable, %d follow-ups, %d Indonesian", len(qs), unanswerable, followUps, indonesian)
 	}
 }
 

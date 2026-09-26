@@ -99,6 +99,9 @@ func seedWorld(e *env) world {
 	w.inProgress, w.done = statuses[1].ID, statuses[3].ID
 	e.seedClose(closedA, w.done, u["hana"], "Client A approves overtime in HR")
 	e.seedClose(closedB, w.done, u["hana"], "Client B exports leave balances")
+	e.seedNote(hris, u["hana"], "Client A overtime meeting", &a, w.nodes["Overtime Approval"]) // HRIS-DN1
+	e.seedNote(hris, u["hana"], "Leave carry-over call", nil, w.nodes["Leave Request"])        // HRIS-DN2
+	e.seedNote(hris, u["hana"], "Client B leave email", &b, w.nodes["Leave Request"])          // HRIS-DN3
 	return w
 }
 
@@ -182,6 +185,10 @@ func TestPermissionSuiteReads(t *testing.T) {
 			"admin": {"HRIS-2", "HRIS-3"}, "hana": {"HRIS-2", "HRIS-3"}, "ani": {"HRIS-2", "HRIS-3"},
 			"budi": {"HRIS-3"}, "citra": {"HRIS-2"},
 		}, map[string]int{"dodi": 404}},
+		{"/projects/HRIS/notes", map[string][]string{
+			"admin": {"HRIS-DN1", "HRIS-DN2", "HRIS-DN3"}, "hana": {"HRIS-DN1", "HRIS-DN2", "HRIS-DN3"}, "ani": {"HRIS-DN1", "HRIS-DN2", "HRIS-DN3"},
+			"budi": {"HRIS-DN2", "HRIS-DN3"}, "citra": {"HRIS-DN1", "HRIS-DN2"},
+		}, map[string]int{"dodi": 404}},
 		{"/me/updates", map[string][]string{
 			"admin": {"HRIS-1", "HRIS-2", "HRIS-3", "HRIS-4", "PAY-1"}, "hana": hrisTickets, "ani": hrisTickets,
 			"budi": {"HRIS-1", "HRIS-3"}, "citra": {"HRIS-1", "HRIS-2", "HRIS-4", "PAY-1"}, "dodi": {"PAY-1"},
@@ -206,6 +213,8 @@ func TestPermissionSuiteReads(t *testing.T) {
 		"/tickets/HRIS-3":                       {"admin", "hana", "ani", "budi"},
 		fmt.Sprintf("/attachments/%d", w.fileB): {"admin", "hana", "ani", "budi"},
 		nodePath("Overtime Approval", ""):       {"admin", "hana", "ani", "citra"},
+		"/notes/HRIS-DN1":                       {"admin", "hana", "ani", "citra"},
+		"/notes/HRIS-DN3":                       {"admin", "hana", "ani", "budi"},
 	} {
 		for _, user := range suiteUsers {
 			want := http.StatusNotFound
@@ -377,10 +386,11 @@ func TestPermissionSuiteAsk(t *testing.T) {
 	}
 	e.indexNow(ids...)
 
-	hrisTickets := []string{"HRIS-1", "HRIS-2", "HRIS-3", "HRIS-4"}
+	// Decision notes are evidence under the same predicate (§9.4).
+	hris := []string{"HRIS-1", "HRIS-2", "HRIS-3", "HRIS-4", "HRIS-DN1", "HRIS-DN2", "HRIS-DN3"}
 	for user, want := range map[string][]string{
-		"admin": {"HRIS-1", "HRIS-2", "HRIS-3", "HRIS-4", "PAY-1"}, "hana": hrisTickets, "ani": hrisTickets,
-		"budi": {"HRIS-1", "HRIS-3"}, "citra": {"HRIS-1", "HRIS-2", "HRIS-4", "PAY-1"}, "dodi": {"PAY-1"},
+		"admin": append(slices.Clone(hris), "PAY-1"), "hana": hris, "ani": hris,
+		"budi": {"HRIS-1", "HRIS-3", "HRIS-DN2", "HRIS-DN3"}, "citra": {"HRIS-1", "HRIS-2", "HRIS-4", "HRIS-DN1", "HRIS-DN2", "PAY-1"}, "dodi": {"PAY-1"},
 	} {
 		var res httpapi.AskResult
 		if code := e.call(w.as[user], http.MethodPost, "/ask", map[string]any{"question": "Which request or fix changed what, for Client A, Client B and Client C?"}, &res); code != http.StatusOK {

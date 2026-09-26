@@ -54,6 +54,48 @@ func (e ActivityItemKind) Valid() bool {
 	}
 }
 
+// Defines values for AskFeedbackRating.
+const (
+	AskFeedbackRatingDown AskFeedbackRating = "down"
+	AskFeedbackRatingUp   AskFeedbackRating = "up"
+)
+
+// Valid indicates whether the value is a known member of the AskFeedbackRating enum.
+func (e AskFeedbackRating) Valid() bool {
+	switch e {
+	case AskFeedbackRatingDown:
+		return true
+	case AskFeedbackRatingUp:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AskFeedbackReasons.
+const (
+	AskFeedbackReasonsMissingTickets AskFeedbackReasons = "missing_tickets"
+	AskFeedbackReasonsTooVague       AskFeedbackReasons = "too_vague"
+	AskFeedbackReasonsWrong          AskFeedbackReasons = "wrong"
+	AskFeedbackReasonsWrongCitation  AskFeedbackReasons = "wrong_citation"
+)
+
+// Valid indicates whether the value is a known member of the AskFeedbackReasons enum.
+func (e AskFeedbackReasons) Valid() bool {
+	switch e {
+	case AskFeedbackReasonsMissingTickets:
+		return true
+	case AskFeedbackReasonsTooVague:
+		return true
+	case AskFeedbackReasonsWrong:
+		return true
+	case AskFeedbackReasonsWrongCitation:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AskIgnoreKind.
 const (
 	AskIgnoreKindClient  AskIgnoreKind = "client"
@@ -75,6 +117,24 @@ func (e AskIgnoreKind) Valid() bool {
 	case AskIgnoreKindNode:
 		return true
 	case AskIgnoreKindUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AskItemKind.
+const (
+	AskItemKindNote   AskItemKind = "note"
+	AskItemKindTicket AskItemKind = "ticket"
+)
+
+// Valid indicates whether the value is a known member of the AskItemKind enum.
+func (e AskItemKind) Valid() bool {
+	switch e {
+	case AskItemKindNote:
+		return true
+	case AskItemKindTicket:
 		return true
 	default:
 		return false
@@ -147,6 +207,24 @@ func (e AskLogEntryStatus) Valid() bool {
 	case AskLogEntryStatusError:
 		return true
 	case AskLogEntryStatusNotEnoughInfo:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AskLogEvidenceKind.
+const (
+	AskLogEvidenceKindNote   AskLogEvidenceKind = "note"
+	AskLogEvidenceKindTicket AskLogEvidenceKind = "ticket"
+)
+
+// Valid indicates whether the value is a known member of the AskLogEvidenceKind enum.
+func (e AskLogEvidenceKind) Valid() bool {
+	switch e {
+	case AskLogEvidenceKindNote:
+		return true
+	case AskLogEvidenceKindTicket:
 		return true
 	default:
 		return false
@@ -288,6 +366,27 @@ func (e DiskUseVolume) Valid() bool {
 	case DiskUseVolumeAttachments:
 		return true
 	case DiskUseVolumeBackups:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LinkType.
+const (
+	LinkTypeExtends   LinkType = "extends"
+	LinkTypeRelatedTo LinkType = "related_to"
+	LinkTypeReverses  LinkType = "reverses"
+)
+
+// Valid indicates whether the value is a known member of the LinkType enum.
+func (e LinkType) Valid() bool {
+	switch e {
+	case LinkTypeExtends:
+		return true
+	case LinkTypeRelatedTo:
+		return true
+	case LinkTypeReverses:
 		return true
 	default:
 		return false
@@ -715,6 +814,21 @@ type AskDetected struct {
 	UserIds    *[]int64            `json:"user_ids,omitempty"`
 }
 
+// AskFeedback defines model for AskFeedback.
+type AskFeedback struct {
+	Comment *string           `json:"comment,omitempty"`
+	Rating  AskFeedbackRating `json:"rating"`
+
+	// Reasons With down.
+	Reasons *[]AskFeedbackReasons `json:"reasons,omitempty"`
+}
+
+// AskFeedbackRating defines model for AskFeedback.Rating.
+type AskFeedbackRating string
+
+// AskFeedbackReasons defines model for AskFeedback.Reasons.
+type AskFeedbackReasons string
+
 // AskIgnore defines model for AskIgnore.
 type AskIgnore struct {
 	Id   *int64        `json:"id,omitempty"`
@@ -731,12 +845,20 @@ type AskItem struct {
 	Closed bool    `json:"closed"`
 
 	// Date The close date
-	Date        time.Time `json:"date"`
-	Key         string    `json:"key"`
-	RequestedBy string    `json:"requested_by"`
-	Status      string    `json:"status"`
-	Title       string    `json:"title"`
+	Date time.Time `json:"date"`
+	Key  string    `json:"key"`
+
+	// Kind A ticket
+	Kind AskItemKind `json:"kind"`
+
+	// RequestedBy A note's author.
+	RequestedBy string `json:"requested_by"`
+	Status      string `json:"status"`
+	Title       string `json:"title"`
 }
+
+// AskItemKind A ticket
+type AskItemKind string
 
 // AskLabel defines model for AskLabel.
 type AskLabel struct {
@@ -752,7 +874,7 @@ type AskLabelKind string
 
 // AskLogDetail defines model for AskLogDetail.
 type AskLogDetail struct {
-	// Citations Distinct tickets cited by the answer.
+	// Citations Distinct tickets and notes cited by the answer.
 	Citations int        `json:"citations"`
 	Claims    []AskClaim `json:"claims"`
 	CreatedAt time.Time  `json:"created_at"`
@@ -761,6 +883,7 @@ type AskLogDetail struct {
 	Dropped       *map[string]interface{} `json:"dropped,omitempty"`
 	Evidence      []AskLogEvidence        `json:"evidence"`
 	EvidenceCount int                     `json:"evidence_count"`
+	Feedback      *AskFeedback            `json:"feedback,omitempty"`
 	FirstClaimMs  *int                    `json:"first_claim_ms,omitempty"`
 	Id            int64                   `json:"id"`
 	Language      string                  `json:"language"`
@@ -781,10 +904,11 @@ type AskLogDetailStatus string
 
 // AskLogEntry defines model for AskLogEntry.
 type AskLogEntry struct {
-	// Citations Distinct tickets cited by the answer.
+	// Citations Distinct tickets and notes cited by the answer.
 	Citations     int               `json:"citations"`
 	CreatedAt     time.Time         `json:"created_at"`
 	EvidenceCount int               `json:"evidence_count"`
+	Feedback      *AskFeedback      `json:"feedback,omitempty"`
 	Id            int64             `json:"id"`
 	LatencyMs     *int              `json:"latency_ms,omitempty"`
 	LlmCalled     bool              `json:"llm_called"`
@@ -804,15 +928,23 @@ type AskLogEvidence struct {
 	Closed bool    `json:"closed"`
 
 	// Date The close date
-	Date        time.Time `json:"date"`
-	Key         string    `json:"key"`
-	RequestedBy string    `json:"requested_by"`
+	Date time.Time `json:"date"`
+	Key  string    `json:"key"`
+
+	// Kind A ticket
+	Kind AskLogEvidenceKind `json:"kind"`
+
+	// RequestedBy A note's author.
+	RequestedBy string `json:"requested_by"`
 
 	// Score Fused retrieval score; absent on the small-set path.
 	Score  *float32 `json:"score,omitempty"`
 	Status string   `json:"status"`
 	Title  string   `json:"title"`
 }
+
+// AskLogEvidenceKind A ticket
+type AskLogEvidenceKind string
 
 // AskLogPage defines model for AskLogPage.
 type AskLogPage struct {
@@ -920,11 +1052,12 @@ type AskThreadQuery struct {
 	CreatedAt time.Time  `json:"created_at"`
 
 	// Evidence The evidence the asker may still open.
-	Evidence *[]AskItem `json:"evidence,omitempty"`
-	Id       int64      `json:"id"`
-	Model    *string    `json:"model,omitempty"`
-	Question string     `json:"question"`
-	Status   string     `json:"status"`
+	Evidence *[]AskItem   `json:"evidence,omitempty"`
+	Feedback *AskFeedback `json:"feedback,omitempty"`
+	Id       int64        `json:"id"`
+	Model    *string      `json:"model,omitempty"`
+	Question string       `json:"question"`
+	Status   string       `json:"status"`
 }
 
 // Attachment defines model for Attachment.
@@ -1087,8 +1220,11 @@ type DecisionRecord struct {
 	ConfirmedBy  *Ref            `json:"confirmed_by,omitempty"`
 	Outcome      DecisionOutcome `json:"outcome"`
 	State        DecisionState   `json:"state"`
-	WhatChanged  string          `json:"what_changed"`
-	Why          string          `json:"why"`
+
+	// SupersededBy The key of the ticket that reverses this decision (R-TK-5).
+	SupersededBy *string `json:"superseded_by,omitempty"`
+	WhatChanged  string  `json:"what_changed"`
+	Why          string  `json:"why"`
 }
 
 // DecisionState defines model for DecisionState.
@@ -1139,6 +1275,24 @@ type IndexStatus struct {
 	// QueuedJobs Index jobs waiting or retrying.
 	QueuedJobs  int64 `json:"queued_jobs"`
 	TotalChunks int64 `json:"total_chunks"`
+}
+
+// LinkCreate defines model for LinkCreate.
+type LinkCreate struct {
+	// Key The other ticket
+	Key  string   `json:"key"`
+	Type LinkType `json:"type"`
+}
+
+// LinkType defines model for LinkType.
+type LinkType string
+
+// LinkedTicket defines model for LinkedTicket.
+type LinkedTicket struct {
+	ClosedAt *time.Time `json:"closed_at,omitempty"`
+	Key      string     `json:"key"`
+	Status   Status     `json:"status"`
+	Title    string     `json:"title"`
 }
 
 // Locale defines model for Locale.
@@ -1324,6 +1478,91 @@ type NodeUpdate struct {
 	Type        *NodeType `json:"type,omitempty"`
 }
 
+// Note defines model for Note.
+type Note struct {
+	Archived  bool   `json:"archived"`
+	Attendees string `json:"attendees"`
+	Author    Ref    `json:"author"`
+	Body      string `json:"body"`
+
+	// CanEdit The reader is the author or a project admin.
+	CanEdit   bool               `json:"can_edit"`
+	Client    *Ref               `json:"client,omitempty"`
+	CreatedAt time.Time          `json:"created_at"`
+	DecidedOn openapi_types.Date `json:"decided_on"`
+	Id        int64              `json:"id"`
+
+	// Key Example: HRIS-DN7
+	Key        string    `json:"key"`
+	Nodes      []NodeRef `json:"nodes"`
+	ProjectKey string    `json:"project_key"`
+
+	// Tickets Linked tickets the reader can see.
+	Tickets   []NoteTicket `json:"tickets"`
+	Title     string       `json:"title"`
+	UpdatedAt time.Time    `json:"updated_at"`
+}
+
+// NoteInput defines model for NoteInput.
+type NoteInput struct {
+	Attendees *string `json:"attendees,omitempty"`
+
+	// Body Markdown; the form starts with Decision
+	Body string `json:"body"`
+
+	// ClientId Omitted for all clients.
+	ClientId  *int64             `json:"client_id,omitempty"`
+	DecidedOn openapi_types.Date `json:"decided_on"`
+
+	// NodeIds One or more menus or modules of the project.
+	NodeIds []int64 `json:"node_ids"`
+
+	// TicketKeys Tickets the decision relates to, in any project the author can see.
+	TicketKeys *[]string `json:"ticket_keys,omitempty"`
+	Title      string    `json:"title"`
+}
+
+// NoteList defines model for NoteList.
+type NoteList struct {
+	Items []NoteSummary `json:"items"`
+}
+
+// NoteSummary defines model for NoteSummary.
+type NoteSummary struct {
+	Archived  bool               `json:"archived"`
+	Client    *Ref               `json:"client,omitempty"`
+	DecidedOn openapi_types.Date `json:"decided_on"`
+	Key       string             `json:"key"`
+	Title     string             `json:"title"`
+}
+
+// NoteTicket defines model for NoteTicket.
+type NoteTicket struct {
+	Key   string `json:"key"`
+	Title string `json:"title"`
+}
+
+// NoteUpdate defines model for NoteUpdate.
+type NoteUpdate struct {
+	// Archived Archive (true) or restore (false).
+	Archived  *bool   `json:"archived,omitempty"`
+	Attendees *string `json:"attendees,omitempty"`
+
+	// Body Markdown; the form starts with Decision
+	Body string `json:"body"`
+
+	// ClientId Omitted for all clients.
+	ClientId  *int64             `json:"client_id,omitempty"`
+	DecidedOn openapi_types.Date `json:"decided_on"`
+
+	// NodeIds One or more menus or modules of the project.
+	NodeIds []int64 `json:"node_ids"`
+
+	// TicketKeys Tickets the decision relates to, in any project the author can see.
+	TicketKeys *[]string `json:"ticket_keys,omitempty"`
+	Title      string    `json:"title"`
+}
+
 // Priority defines model for Priority.
 type Priority string
 
@@ -1441,9 +1680,18 @@ type SearchNode struct {
 	Type       NodeType `json:"type"`
 }
 
+// SearchNote defines model for SearchNote.
+type SearchNote struct {
+	DecidedOn  openapi_types.Date `json:"decided_on"`
+	Key        string             `json:"key"`
+	ProjectKey string             `json:"project_key"`
+	Title      string             `json:"title"`
+}
+
 // SearchResults defines model for SearchResults.
 type SearchResults struct {
 	Nodes   []SearchNode   `json:"nodes"`
+	Notes   []SearchNote   `json:"notes"`
 	Tickets []SearchTicket `json:"tickets"`
 }
 
@@ -1551,7 +1799,10 @@ type Ticket struct {
 	Id          int64               `json:"id"`
 
 	// Key Example: HRIS-231
-	Key        string          `json:"key"`
+	Key string `json:"key"`
+
+	// Links Links to tickets the reader can see, oldest first (FSD §8.8).
+	Links      []TicketLink    `json:"links"`
 	Nodes      []NodeRef       `json:"nodes"`
 	Priority   Priority        `json:"priority"`
 	ProjectKey string          `json:"project_key"`
@@ -1585,6 +1836,16 @@ type TicketCreate struct {
 	StatusId *int64     `json:"status_id,omitempty"`
 	Title    string     `json:"title"`
 	Type     TicketType `json:"type"`
+}
+
+// TicketLink defines model for TicketLink.
+type TicketLink struct {
+	Id int64 `json:"id"`
+
+	// Outgoing True when this ticket is the one that reverses or extends; false reads "Reversed by".
+	Outgoing bool         `json:"outgoing"`
+	Ticket   LinkedTicket `json:"ticket"`
+	Type     LinkType     `json:"type"`
 }
 
 // TicketPage defines model for TicketPage.
@@ -1658,10 +1919,26 @@ type TimelineEntry struct {
 	Type      TicketType      `json:"type"`
 }
 
+// TimelineNote defines model for TimelineNote.
+type TimelineNote struct {
+	Attendees string             `json:"attendees"`
+	Author    string             `json:"author"`
+	Body      string             `json:"body"`
+	Client    *Ref               `json:"client,omitempty"`
+	DecidedOn openapi_types.Date `json:"decided_on"`
+
+	// Key Example: HRIS-DN7
+	Key   string `json:"key"`
+	Title string `json:"title"`
+}
+
 // TimelinePage defines model for TimelinePage.
 type TimelinePage struct {
 	Items      []TimelineEntry `json:"items"`
 	NextCursor *string         `json:"next_cursor"`
+
+	// Notes Decision notes on the node, newest decision first (FSD §9.4). Only the first page carries them, all of them; later pages, and a ticket type filter, leave the list empty.
+	Notes []TimelineNote `json:"notes"`
 }
 
 // TransitionRequest defines model for TransitionRequest.
@@ -1720,7 +1997,10 @@ type ListAskLogParams struct {
 	Status *ListAskLogParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
 	// Slow Only answers slower than 30 seconds.
-	Slow   *bool  `form:"slow,omitempty" json:"slow,omitempty"`
+	Slow *bool `form:"slow,omitempty" json:"slow,omitempty"`
+
+	// Down Only answers rated thumbs-down.
+	Down   *bool  `form:"down,omitempty" json:"down,omitempty"`
 	UserId *int64 `form:"user_id,omitempty" json:"user_id,omitempty"`
 	Before *int64 `form:"before,omitempty" json:"before,omitempty"`
 	Limit  *int   `form:"limit,omitempty" json:"limit,omitempty"`
@@ -1791,6 +2071,12 @@ type GetNodeTimelineParams struct {
 // ListNodesParams defines parameters for ListNodes.
 type ListNodesParams struct {
 	// Archived Project admins only; also list archived nodes.
+	Archived *bool `form:"archived,omitempty" json:"archived,omitempty"`
+}
+
+// ListNotesParams defines parameters for ListNotes.
+type ListNotesParams struct {
+	// Archived Include archived notes.
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty"`
 }
 
@@ -1869,6 +2155,9 @@ type UpdateUserJSONRequestBody = UserUpdate
 // AskJSONRequestBody defines body for Ask for application/json ContentType.
 type AskJSONRequestBody = AskRequest
 
+// SendAskFeedbackJSONRequestBody defines body for SendAskFeedback for application/json ContentType.
+type SendAskFeedbackJSONRequestBody = AskFeedback
+
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
 
@@ -1896,6 +2185,9 @@ type UpdateMeJSONRequestBody = MeUpdate
 // UpdateNodeJSONRequestBody defines body for UpdateNode for application/json ContentType.
 type UpdateNodeJSONRequestBody = NodeUpdate
 
+// UpdateNoteJSONRequestBody defines body for UpdateNote for application/json ContentType.
+type UpdateNoteJSONRequestBody = NoteUpdate
+
 // CreateProjectJSONRequestBody defines body for CreateProject for application/json ContentType.
 type CreateProjectJSONRequestBody = ProjectCreate
 
@@ -1910,6 +2202,9 @@ type SetProjectMembersJSONRequestBody = MembersUpdate
 
 // CreateNodeJSONRequestBody defines body for CreateNode for application/json ContentType.
 type CreateNodeJSONRequestBody = NodeCreate
+
+// CreateNoteJSONRequestBody defines body for CreateNote for application/json ContentType.
+type CreateNoteJSONRequestBody = NoteInput
 
 // SetStatusesJSONRequestBody defines body for SetStatuses for application/json ContentType.
 type SetStatusesJSONRequestBody = StatusesUpdate
@@ -1928,6 +2223,9 @@ type CreateCommentJSONRequestBody = CommentInput
 
 // UpdateDecisionJSONRequestBody defines body for UpdateDecision for application/json ContentType.
 type UpdateDecisionJSONRequestBody = DecisionInput
+
+// CreateLinkJSONRequestBody defines body for CreateLink for application/json ContentType.
+type CreateLinkJSONRequestBody = LinkCreate
 
 // TransitionTicketJSONRequestBody defines body for TransitionTicket for application/json ContentType.
 type TransitionTicketJSONRequestBody = TransitionRequest
@@ -1986,6 +2284,9 @@ type ServerInterface interface {
 	// (POST /ask)
 	Ask(w http.ResponseWriter, r *http.Request)
 
+	// (POST /ask/queries/{id}/feedback)
+	SendAskFeedback(w http.ResponseWriter, r *http.Request, id int64)
+
 	// (GET /ask/threads)
 	ListAskThreads(w http.ResponseWriter, r *http.Request)
 
@@ -2034,6 +2335,9 @@ type ServerInterface interface {
 	// (PATCH /contacts/{id})
 	UpdateContact(w http.ResponseWriter, r *http.Request, id int64)
 
+	// (DELETE /links/{id})
+	DeleteLink(w http.ResponseWriter, r *http.Request, id int64)
+
 	// (GET /me)
 	GetMe(w http.ResponseWriter, r *http.Request)
 
@@ -2060,6 +2364,12 @@ type ServerInterface interface {
 
 	// (GET /nodes/{id}/timeline)
 	GetNodeTimeline(w http.ResponseWriter, r *http.Request, id int64, params GetNodeTimelineParams)
+
+	// (GET /notes/{noteKey})
+	GetNote(w http.ResponseWriter, r *http.Request, noteKey string)
+
+	// (PATCH /notes/{noteKey})
+	UpdateNote(w http.ResponseWriter, r *http.Request, noteKey string)
 
 	// (GET /projects)
 	ListProjects(w http.ResponseWriter, r *http.Request)
@@ -2097,6 +2407,12 @@ type ServerInterface interface {
 	// (GET /projects/{key}/nodes/recent)
 	ListRecentNodes(w http.ResponseWriter, r *http.Request, key string)
 
+	// (GET /projects/{key}/notes)
+	ListNotes(w http.ResponseWriter, r *http.Request, key string, params ListNotesParams)
+
+	// (POST /projects/{key}/notes)
+	CreateNote(w http.ResponseWriter, r *http.Request, key string)
+
 	// (GET /projects/{key}/statuses)
 	GetStatuses(w http.ResponseWriter, r *http.Request, key string)
 
@@ -2129,6 +2445,9 @@ type ServerInterface interface {
 
 	// (PUT /tickets/{key}/decision)
 	UpdateDecision(w http.ResponseWriter, r *http.Request, key string)
+
+	// (POST /tickets/{key}/links)
+	CreateLink(w http.ResponseWriter, r *http.Request, key string)
 
 	// (POST /tickets/{key}/transition)
 	TransitionTicket(w http.ResponseWriter, r *http.Request, key string, params TransitionTicketParams)
@@ -2216,6 +2535,19 @@ func (siw *ServerInterfaceWrapper) ListAskLog(w http.ResponseWriter, r *http.Req
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "slow"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slow", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "down" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "down", r.URL.Query(), &params.Down, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "down"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "down", Err: err})
 		}
 		return
 	}
@@ -2656,6 +2988,32 @@ func (siw *ServerInterfaceWrapper) Ask(w http.ResponseWriter, r *http.Request) {
 	handler.ServeHTTP(w, r)
 }
 
+// SendAskFeedback operation middleware
+func (siw *ServerInterfaceWrapper) SendAskFeedback(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SendAskFeedback(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListAskThreads operation middleware
 func (siw *ServerInterfaceWrapper) ListAskThreads(w http.ResponseWriter, r *http.Request) {
 
@@ -3021,6 +3379,32 @@ func (siw *ServerInterfaceWrapper) UpdateContact(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// DeleteLink operation middleware
+func (siw *ServerInterfaceWrapper) DeleteLink(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteLink(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMe operation middleware
 func (siw *ServerInterfaceWrapper) GetMe(w http.ResponseWriter, r *http.Request) {
 
@@ -3375,6 +3759,58 @@ func (siw *ServerInterfaceWrapper) GetNodeTimeline(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// GetNote operation middleware
+func (siw *ServerInterfaceWrapper) GetNote(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "noteKey" -------------
+	var noteKey string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "noteKey", r.PathValue("noteKey"), &noteKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "noteKey", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetNote(w, r, noteKey)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateNote operation middleware
+func (siw *ServerInterfaceWrapper) UpdateNote(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "noteKey" -------------
+	var noteKey string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "noteKey", r.PathValue("noteKey"), &noteKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "noteKey", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateNote(w, r, noteKey)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListProjects operation middleware
 func (siw *ServerInterfaceWrapper) ListProjects(w http.ResponseWriter, r *http.Request) {
 
@@ -3670,6 +4106,74 @@ func (siw *ServerInterfaceWrapper) ListRecentNodes(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListRecentNodes(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListNotes operation middleware
+func (siw *ServerInterfaceWrapper) ListNotes(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListNotesParams
+
+	// ------------- Optional query parameter "archived" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "archived", r.URL.Query(), &params.Archived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "archived"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "archived", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListNotes(w, r, key, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateNote operation middleware
+func (siw *ServerInterfaceWrapper) CreateNote(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateNote(w, r, key)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4198,6 +4702,32 @@ func (siw *ServerInterfaceWrapper) UpdateDecision(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// CreateLink operation middleware
+func (siw *ServerInterfaceWrapper) CreateLink(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateLink(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // TransitionTicket operation middleware
 func (siw *ServerInterfaceWrapper) TransitionTicket(w http.ResponseWriter, r *http.Request) {
 
@@ -4410,6 +4940,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/tickets/{key}", wrapper.UpdateTicket)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/transition", wrapper.TransitionTicket)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/tickets/{key}/decision", wrapper.UpdateDecision)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/links", wrapper.CreateLink)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/links/{id}", wrapper.DeleteLink)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/tickets/{key}/activity", wrapper.GetTicketActivity)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/comments", wrapper.CreateComment)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/comments/{id}", wrapper.DeleteComment)
@@ -4417,6 +4949,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/attachments", wrapper.UploadAttachment)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/attachments/{id}", wrapper.DeleteAttachment)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/attachments/{id}", wrapper.DownloadAttachment)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/notes", wrapper.ListNotes)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/notes", wrapper.CreateNote)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/notes/{noteKey}", wrapper.GetNote)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/notes/{noteKey}", wrapper.UpdateNote)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/search", wrapper.Search)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/settings/ai", wrapper.GetAISettings)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/admin/settings/ai", wrapper.UpdateAISettings)
@@ -4431,6 +4967,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/admin/backups/run", wrapper.RunBackup)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/system/status", wrapper.GetSystemStatus)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/ask", wrapper.Ask)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/ask/queries/{id}/feedback", wrapper.SendAskFeedback)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/ask/threads", wrapper.ListAskThreads)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/ask/threads/{id}", wrapper.HideAskThread)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/ask/threads/{id}", wrapper.GetAskThread)

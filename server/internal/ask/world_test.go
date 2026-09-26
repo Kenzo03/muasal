@@ -112,3 +112,23 @@ func itoa(n int64) string {
 	}
 	return string(b)
 }
+
+// note seeds and indexes one decision note on node.
+func (w *world) note(title string, client *db.Client, node db.Node, decided, body string) db.DecisionNote {
+	w.t.Helper()
+	ctx := context.Background()
+	n := must(w.q.NextNoteNumber(ctx, w.p.ID))
+	on, _ := time.Parse(time.DateOnly, decided)
+	params := db.CreateNoteParams{ProjectID: w.p.ID, Number: n, Key: "HRIS-DN" + itoa(n), Title: title, DecidedOn: on,
+		Attendees: "Hana, Budi", Body: body, CreatedBy: w.admin.ID}
+	if client != nil {
+		params.ClientID = &client.ID
+	}
+	note := must(w.q.CreateNote(ctx, params))
+	w.check(w.q.SetNoteNodes(ctx, db.SetNoteNodesParams{NoteID: note.ID, NodeIds: []int64{node.ID}}))
+	w.check(w.q.SetNoteTickets(ctx, db.SetNoteTicketsParams{NoteID: note.ID, TicketIds: []int64{}}))
+	ix := indexer.New(w.d.Pool, w.rt)
+	w.check(ix.RebuildNote(ctx, note.ID))
+	w.check(ix.EmbedNote(ctx, note.ID))
+	return note
+}

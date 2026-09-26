@@ -33,8 +33,9 @@ type Question struct {
 	ID       string   `json:"id"`
 	Question string   `json:"question"`
 	Expected []string `json:"expected"`
-	Node     string   `json:"node,omitempty"`   // an explicit node chip, by path: "HR › Attendance › Overtime Approval"
-	Client   string   `json:"client,omitempty"` // an explicit client chip, by name
+	Node     string   `json:"node,omitempty"`    // an explicit node chip, by path: "HR › Attendance › Overtime Approval"
+	Client   string   `json:"client,omitempty"`  // an explicit client chip, by name
+	Follows  string   `json:"follows,omitempty"` // a follow-up in the thread of this earlier question (§11.9)
 }
 
 // LoadQuestions reads a JSONL golden set; "" reads the embedded v0.
@@ -115,6 +116,7 @@ func Run(ctx context.Context, pool *pgxpool.Pool, rt *ai.Runtime, asker ask.Aske
 	engine := ask.NewEngine(pool, rt)
 	engine.Seed = &seed
 	rep := Report{Model: s.Badge()}
+	threads := map[string]int64{}
 	for i, gq := range questions {
 		explicit, err := chips(ctx, q, gq)
 		if err != nil {
@@ -122,7 +124,15 @@ func Run(ctx context.Context, pool *pgxpool.Pool, rt *ai.Runtime, asker ask.Aske
 		}
 		var evidence []string
 		start := time.Now()
-		res, err := engine.Ask(ctx, ask.Request{Asker: asker, Question: gq.Question, Explicit: explicit}, ask.Sink{
+		req := ask.Request{Asker: asker, Question: gq.Question, Explicit: explicit}
+		if gq.Follows != "" {
+			th, ok := threads[gq.Follows]
+			if !ok {
+				return rep, fmt.Errorf("%s follows %s, which has not run", gq.ID, gq.Follows)
+			}
+			req.ThreadID = &th
+		}
+		res, err := engine.Ask(ctx, req, ask.Sink{
 			Evidence: func(items []ask.Item) {
 				for _, it := range items[:min(12, len(items))] {
 					evidence = append(evidence, it.Key)
@@ -132,6 +142,7 @@ func Run(ctx context.Context, pool *pgxpool.Pool, rt *ai.Runtime, asker ask.Aske
 		if err != nil {
 			return rep, fmt.Errorf("%s: %w", gq.ID, err)
 		}
+		threads[gq.ID] = res.ThreadID
 		row := Row{Question: gq, Status: res.Status, Evidence: evidence, Latency: time.Since(start)}
 		for _, c := range res.Claims {
 			for _, k := range c.Cites {

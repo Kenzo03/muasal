@@ -45,7 +45,7 @@ func Build(src Source) []db.UpsertChunkParams {
 			content := contextLine(src) + "\n" + part
 			sum := sha256.Sum256([]byte(content))
 			out = append(out, db.UpsertChunkParams{
-				SourceType: sourceType, SourceID: sourceID, Seq: int32(i), TicketID: t.ID, ProjectID: t.ProjectID,
+				SourceType: sourceType, SourceID: sourceID, Seq: int32(i), TicketID: &t.ID, ProjectID: t.ProjectID,
 				ClientID: t.ClientID, NodeIds: menuIDs(src), UserIds: userIDs(t), ContactIds: contactIDs(t),
 				Internal: internal, OccurredAt: at, Content: content, ContentHash: sum[:],
 			})
@@ -97,6 +97,9 @@ func Build(src Source) []db.UpsertChunkParams {
 		b.WriteString("Why: " + r.Why)
 		if s := strings.TrimSpace(r.Alternatives); s != "" {
 			b.WriteString("\nAlternatives rejected: " + s)
+		}
+		if d.SupersededByKey != nil {
+			b.WriteString("\nSuperseded by " + *d.SupersededByKey + ": no longer how it works")
 		}
 		add("decision", t.ID, *r.ConfirmedAt, false, b.String())
 	}

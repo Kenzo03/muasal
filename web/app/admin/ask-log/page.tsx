@@ -11,7 +11,7 @@ const statuses = ["answered", "not_enough_info", "ai_off", "error"] as const;
 type Status = (typeof statuses)[number];
 
 // Admin → Ask log (FSD §15.4): every question, newest first, with quick
-// filters for the unanswered and the slow; an entry opens to its evidence.
+// filters for thumbs-down, the unanswered and the slow; an entry opens to its evidence.
 export default async function AskLogPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const me = await getMe();
   if (!me) redirect("/login");
@@ -20,14 +20,16 @@ export default async function AskLogPage({ searchParams }: { searchParams: Promi
   const v = one(await searchParams);
   const status = statuses.includes(v.status as Status) ? (v.status as Status) : undefined;
   const slow = v.slow === "true";
+  const down = v.down === "true";
   const { data } = me.is_admin
     ? await (await serverApi()).GET("/admin/ask-log", {
-        params: { query: { status, slow: slow || undefined, before: Number(v.before) || undefined } },
+        params: { query: { status, slow: slow || undefined, down: down || undefined, before: Number(v.before) || undefined } },
       })
     : { data: undefined };
-  const filters = { ...(status ? { status } : {}), ...(slow ? { slow: "true" } : {}) };
+  const filters = { ...(status ? { status } : {}), ...(slow ? { slow: "true" } : {}), ...(down ? { down: "true" } : {}) };
   const quick: [string, Record<string, string>][] = [
     [t("all"), {}],
+    [t("thumbsDown"), { down: "true" }],
     [t("notEnough"), { status: "not_enough_info" }],
     [t("slow"), { slow: "true" }],
   ];
@@ -77,6 +79,7 @@ export default async function AskLogPage({ searchParams }: { searchParams: Promi
                       <th className={table.th}>{t("question")}</th>
                       <th className={table.th}>{t("status")}</th>
                       <th className={table.th}>{t("citations")}</th>
+                      <th className={table.th}>{t("feedback")}</th>
                       <th className={table.th}>{t("latency")}</th>
                     </tr>
                   </thead>
@@ -90,6 +93,9 @@ export default async function AskLogPage({ searchParams }: { searchParams: Promi
                         </td>
                         <td className={cx(table.td, "whitespace-nowrap")}>{t(`statuses.${q.status}`)}</td>
                         <td className={table.td}>{q.citations}</td>
+                        <td className={table.td} title={q.feedback?.comment ?? undefined}>
+                          {q.feedback ? `${q.feedback.rating === "up" ? "👍" : "👎"} ${(q.feedback.reasons ?? []).map((r) => t(`reasons.${r}`)).join(", ")}` : "—"}
+                        </td>
                         <td className={cx(table.td, "whitespace-nowrap", (q.latency_ms ?? 0) > 30000 && "font-semibold text-danger")}>
                           {q.latency_ms != null ? t("seconds", { s: (q.latency_ms / 1000).toFixed(1) }) : "—"}
                         </td>

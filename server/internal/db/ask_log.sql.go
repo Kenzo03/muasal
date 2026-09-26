@@ -14,9 +14,11 @@ const getAskLogEntry = `-- name: GetAskLogEntry :one
 SELECT q.id, q.thread_id, q.user_id, q.question, q.lang, q.scope, q.evidence, q.llm_called, q.status, q.answer, q.dropped, q.model, q.latency_ms, q.first_claim_ms, q.created_at, u.name AS user_name,
        jsonb_array_length(q.evidence)::int AS evidence_count,
        (SELECT count(DISTINCT c.key)
-        FROM jsonb_array_elements(coalesce(q.answer, '[]'::jsonb)) a, jsonb_array_elements_text(a -> 'cites') AS c(key))::int AS citations
+        FROM jsonb_array_elements(coalesce(q.answer, '[]'::jsonb)) a, jsonb_array_elements_text(a -> 'cites') AS c(key))::int AS citations,
+       f.rating, f.reasons, f.comment
 FROM ask_queries q
 JOIN users u ON u.id = q.user_id
+LEFT JOIN ask_feedback f ON f.query_id = q.id
 WHERE q.id = $1
 `
 
@@ -39,6 +41,9 @@ type GetAskLogEntryRow struct {
 	UserName      string
 	EvidenceCount int32
 	Citations     int32
+	Rating        *int16
+	Reasons       []string
+	Comment       *string
 }
 
 func (q *Queries) GetAskLogEntry(ctx context.Context, id int64) (GetAskLogEntryRow, error) {
@@ -63,6 +68,9 @@ func (q *Queries) GetAskLogEntry(ctx context.Context, id int64) (GetAskLogEntryR
 		&i.UserName,
 		&i.EvidenceCount,
 		&i.Citations,
+		&i.Rating,
+		&i.Reasons,
+		&i.Comment,
 	)
 	return i, err
 }
@@ -71,20 +79,24 @@ const listAskLog = `-- name: ListAskLog :many
 SELECT q.id, q.created_at, q.user_id, u.name AS user_name, q.question, q.status, q.llm_called, q.latency_ms, q.model,
        jsonb_array_length(q.evidence)::int AS evidence_count,
        (SELECT count(DISTINCT c.key)
-        FROM jsonb_array_elements(coalesce(q.answer, '[]'::jsonb)) a, jsonb_array_elements_text(a -> 'cites') AS c(key))::int AS citations
+        FROM jsonb_array_elements(coalesce(q.answer, '[]'::jsonb)) a, jsonb_array_elements_text(a -> 'cites') AS c(key))::int AS citations,
+       f.rating, f.reasons, f.comment
 FROM ask_queries q
 JOIN users u ON u.id = q.user_id
+LEFT JOIN ask_feedback f ON f.query_id = q.id
 WHERE ($1::text IS NULL OR q.status = $1::text)
   AND (NOT $2::boolean OR q.latency_ms > 30000)
-  AND ($3::bigint IS NULL OR q.user_id = $3::bigint)
-  AND ($4::bigint IS NULL OR q.id < $4::bigint)
+  AND (NOT $3::boolean OR f.rating = -1)
+  AND ($4::bigint IS NULL OR q.user_id = $4::bigint)
+  AND ($5::bigint IS NULL OR q.id < $5::bigint)
 ORDER BY q.id DESC
-LIMIT $5
+LIMIT $6
 `
 
 type ListAskLogParams struct {
 	Status *string
 	Slow   bool
+	Down   bool
 	UserID *int64
 	Before *int64
 	Lim    int32
@@ -102,6 +114,9 @@ type ListAskLogRow struct {
 	Model         *string
 	EvidenceCount int32
 	Citations     int32
+	Rating        *int16
+	Reasons       []string
+	Comment       *string
 }
 
 // The Ask log for system admins, newest first (FSD §15.4).
@@ -109,6 +124,7 @@ func (q *Queries) ListAskLog(ctx context.Context, arg ListAskLogParams) ([]ListA
 	rows, err := q.db.Query(ctx, listAskLog,
 		arg.Status,
 		arg.Slow,
+		arg.Down,
 		arg.UserID,
 		arg.Before,
 		arg.Lim,
@@ -132,6 +148,9 @@ func (q *Queries) ListAskLog(ctx context.Context, arg ListAskLogParams) ([]ListA
 			&i.Model,
 			&i.EvidenceCount,
 			&i.Citations,
+			&i.Rating,
+			&i.Reasons,
+			&i.Comment,
 		); err != nil {
 			return nil, err
 		}

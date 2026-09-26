@@ -23,9 +23,14 @@ func System(language string) string {
 	}, "\n")
 }
 
-// User fences the evidence as data and asks the question.
-func User(question, evidence string) string {
-	return "EVIDENCE:\n<<<\n" + evidence + "\n>>>\n\nQUESTION: " + question
+// User fences the evidence as data and asks the question. A follow-up adds the
+// thread's last turns first, as context rather than evidence (§11.9).
+func User(question, evidence, conversation string) string {
+	out := ""
+	if conversation != "" {
+		out = "CONVERSATION (earlier turns in this thread; context only, never cite it):\n<<<\n" + conversation + "\n>>>\n\n"
+	}
+	return out + "EVIDENCE:\n<<<\n" + evidence + "\n>>>\n\nQUESTION: " + question
 }
 
 // Schema is the answer's JSON schema; its citation enum holds exactly the

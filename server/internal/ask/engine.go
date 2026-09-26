@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/kenzo03/muasal/server/internal/ai"
@@ -28,14 +29,16 @@ const (
 	StatusError     = "error"
 )
 
-// Item is one ticket as sources, citation chips and the closest list show it,
-// read from the database, so names and dates are exact (§10.3).
+// Item is one ticket or decision note as sources, citation chips and the
+// closest list show it, read from the database, so names and dates are exact
+// (§10.3).
 type Item struct {
+	Kind        string    `json:"kind"` // "ticket" or "note"
 	Key         string    `json:"key"`
 	Title       string    `json:"title"`
 	Client      *string   `json:"client"`
 	RequestedBy string    `json:"requested_by"`
-	Date        time.Time `json:"date"` // closed date, or created date while open
+	Date        time.Time `json:"date"` // closed date, or created date while open; a note's decision date
 	Status      string    `json:"status"`
 	Closed      bool      `json:"closed"`
 }
@@ -108,7 +111,22 @@ func (e *Engine) Ask(ctx context.Context, r Request, sink Sink) (Result, error) 
 		return Result{}, err
 	}
 	detected := Detect(cat, r.Question, start.In(tz)).Without(r.Ignore)
+	turns, err := e.history(ctx, r.ThreadID)
+	if err != nil {
+		return Result{}, err
+	}
+	if len(turns) > 0 {
+		// A follow-up keeps the chips it does not replace (§11.9).
+		detected = CarryOver(turns[len(turns)-1].detected, detected).Without(r.Ignore)
+	}
 	scope := Merge(r.Explicit, detected)
+	fu := plan(turns, r.Question, scope)
+	keys := slices.Clone(detected.Keys)
+	for _, k := range fu.cited {
+		if !slices.Contains(keys, k) {
+			keys = append(keys, k)
+		}
+	}
 	if sink.Scope != nil {
 		sink.Scope(r.Explicit, detected)
 	}
@@ -121,11 +139,11 @@ func (e *Engine) Ask(ctx context.Context, r Request, sink Sink) (Result, error) 
 
 	// Off: keyword search under the same scope, no model call (§13.4, AC-IX-5).
 	if s.Mode == ai.ModeOff {
-		found, err := Retrieve(ctx, e.pool, r.Asker, scope, r.Question, nil, detected.Keys, tuning)
+		found, err := Retrieve(ctx, e.pool, r.Asker, scope, fu.retrieval, nil, keys, tuning)
 		if err != nil {
 			return Result{}, err
 		}
-		if res.Results, err = e.items(ctx, found.TicketIDs, 12); err != nil {
+		if res.Results, err = e.items(ctx, found.Refs, 12); err != nil {
 			return Result{}, err
 		}
 		res.Status = StatusAIOff
@@ -142,17 +160,17 @@ func (e *Engine) Ask(ctx context.Context, r Request, sink Sink) (Result, error) 
 	if err != nil {
 		return fail("ai_unavailable")
 	}
-	vecs, err := embed.Embed(ctx, []string{r.Question})
+	vecs, err := embed.Embed(ctx, []string{fu.retrieval})
 	if err != nil {
 		return fail("ai_unavailable")
 	}
 	tuning.EmbedModel = s.Embed.Model
-	found, err := Retrieve(ctx, e.pool, r.Asker, scope, r.Question, vecs[0], detected.Keys, tuning)
+	found, err := Retrieve(ctx, e.pool, r.Asker, scope, fu.retrieval, vecs[0], keys, tuning)
 	if err != nil {
 		return Result{}, err
 	}
 	logRow.evidence = found
-	if len(found.TicketIDs) == 0 {
+	if len(found.Refs) == 0 {
 		// Nothing in scope passes the floor: the chat model is not called (AC-AK-5).
 		if res.Closest, err = e.items(ctx, found.Closest, 5); err != nil {
 			return Result{}, err
@@ -160,18 +178,21 @@ func (e *Engine) Ask(ctx context.Context, r Request, sink Sink) (Result, error) 
 		res.Status = StatusNotEnough
 		return e.finish(ctx, r, res, logRow, start)
 	}
-	sources := make([]indexer.Source, 0, len(found.TicketIDs))
-	for _, id := range found.TicketIDs {
-		src, err := indexer.Load(ctx, e.q, id)
+	sources := make([]Evidence, 0, len(found.Refs))
+	for _, ref := range found.Refs {
+		ev, err := e.load(ctx, ref)
 		if err != nil {
 			return Result{}, err
 		}
-		sources = append(sources, src)
+		sources = append(sources, ev)
 	}
-	text, keys := Pack(sources, s.ContextTokens)
-	evidence := make([]Item, 0, len(keys))
-	for _, src := range sources[:len(keys)] {
-		evidence = append(evidence, itemOf(src))
+	// The conversation counts inside the context budget (§11.9).
+	text, packed := Pack(sources, s.ContextTokens-int(float64(len([]rune(fu.conversation)))/3.5))
+	evidence := make([]Item, 0, len(packed))
+	for _, ev := range sources {
+		if slices.Contains(packed, ev.Key()) {
+			evidence = append(evidence, itemOf(ev))
+		}
 	}
 	if sink.Evidence != nil {
 		sink.Evidence(evidence)
@@ -190,12 +211,12 @@ func (e *Engine) Ask(ctx context.Context, r Request, sink Sink) (Result, error) 
 	logRow.llmCalled = true
 	genCtx, cancel := context.WithTimeout(ctx, time.Duration(s.TimeoutSeconds)*time.Second)
 	body, err := chat.ChatStream(genCtx, llm.ChatRequest{
-		System: System(res.Language), User: User(r.Question, text), Schema: Schema(keys),
+		System: System(res.Language), User: User(r.Question, text, fu.conversation), Schema: Schema(packed),
 		Temperature: s.Temperature, MaxTokens: 600, Seed: e.Seed,
 	})
 	if err == nil {
 		err = Claims(body, func(c Claim) {
-			valid, dropped := Validate(c, keys)
+			valid, dropped := Validate(c, packed)
 			if dropped != nil {
 				logRow.dropped = append(logRow.dropped, *dropped)
 			}
@@ -258,9 +279,13 @@ func (e *Engine) finish(ctx context.Context, r Request, res Result, l logEntry, 
 		threadID = &th.ID
 	}
 	res.ThreadID = *threadID
-	evidence := make([]map[string]any, 0, len(l.evidence.TicketIDs))
-	for _, id := range l.evidence.TicketIDs {
-		evidence = append(evidence, map[string]any{"ticket_id": id, "score": l.evidence.Scores[id]})
+	evidence := make([]map[string]any, 0, len(l.evidence.Refs))
+	for _, ref := range l.evidence.Refs {
+		idKey := "ticket_id"
+		if ref.Note {
+			idKey = "note_id"
+		}
+		evidence = append(evidence, map[string]any{idKey: ref.ID, "score": l.evidence.Scores[ref]})
 	}
 	scope, _ := json.Marshal(l.scope)
 	ev, _ := json.Marshal(evidence)
@@ -287,36 +312,64 @@ func (e *Engine) finish(ctx context.Context, r Request, res Result, l logEntry, 
 	return res, err
 }
 
-// items reads up to n tickets as Items, in order.
-func (e *Engine) items(ctx context.Context, ids []int64, n int) ([]Item, error) {
+// load reads one ticket or note as evidence.
+func (e *Engine) load(ctx context.Context, ref Ref) (Evidence, error) {
+	if ref.Note {
+		src, err := indexer.LoadNote(ctx, e.q, ref.ID)
+		return Evidence{Note: &src}, err
+	}
+	src, err := indexer.Load(ctx, e.q, ref.ID)
+	return Evidence{Ticket: &src}, err
+}
+
+// items reads up to n tickets and notes as Items, in order. An item gone since
+// (an archived note) is left out.
+func (e *Engine) items(ctx context.Context, refs []Ref, n int) ([]Item, error) {
 	out := []Item{}
-	for _, id := range ids[:min(n, len(ids))] {
-		src, err := indexer.Load(ctx, e.q, id)
+	for _, ref := range refs[:min(n, len(refs))] {
+		ev, err := e.load(ctx, ref)
+		if errors.Is(err, pgx.ErrNoRows) {
+			continue
+		}
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, itemOf(src))
+		out = append(out, itemOf(ev))
 	}
 	return out, nil
 }
 
-// ItemsFor reads the given tickets as Items, in order. With an asker, only
-// those they may open now are kept (§10.6); without one, all of them (the Ask
-// log, for system admins).
-func (e *Engine) ItemsFor(ctx context.Context, a *Asker, ids []int64) ([]Item, error) {
-	if a != nil && len(ids) > 0 {
-		ok, err := e.q.VisibleTicketIDs(ctx, db.VisibleTicketIDsParams{Ids: ids, IsAdmin: a.IsAdmin, UserID: a.UserID})
+// ItemsFor reads the given tickets and notes as Items, in order. With an
+// asker, only those they may open now are kept (§10.6); without one, all of
+// them (the Ask log, for system admins).
+func (e *Engine) ItemsFor(ctx context.Context, a *Asker, refs []Ref) ([]Item, error) {
+	if a != nil && len(refs) > 0 {
+		tickets, err := e.q.VisibleTicketIDs(ctx, db.VisibleTicketIDsParams{Ids: orEmpty(idsOf(refs, false)), IsAdmin: a.IsAdmin, UserID: a.UserID})
 		if err != nil {
 			return nil, err
 		}
-		ids = slices.DeleteFunc(slices.Clone(ids), func(id int64) bool { return !slices.Contains(ok, id) })
+		notes, err := e.q.VisibleNoteIDs(ctx, db.VisibleNoteIDsParams{Ids: orEmpty(idsOf(refs, true)), IsAdmin: a.IsAdmin, UserID: a.UserID})
+		if err != nil {
+			return nil, err
+		}
+		refs = slices.DeleteFunc(slices.Clone(refs), func(r Ref) bool {
+			if r.Note {
+				return !slices.Contains(notes, r.ID)
+			}
+			return !slices.Contains(tickets, r.ID)
+		})
 	}
-	return e.items(ctx, ids, len(ids))
+	return e.items(ctx, refs, len(refs))
 }
 
-func itemOf(src indexer.Source) Item {
-	t := src.Ticket
-	it := Item{Key: t.Key, Title: t.Title, Client: t.ClientName, RequestedBy: indexer.Requester(t), Date: t.CreatedAt, Status: t.StatusName}
+func itemOf(ev Evidence) Item {
+	if n := ev.Note; n != nil {
+		d := n.Note.DecisionNote
+		return Item{Kind: "note", Key: d.Key, Title: d.Title, Client: n.Note.ClientName, RequestedBy: n.Note.AuthorName,
+			Date: d.DecidedOn, Status: "", Closed: true}
+	}
+	t := ev.Ticket.Ticket
+	it := Item{Kind: "ticket", Key: t.Key, Title: t.Title, Client: t.ClientName, RequestedBy: indexer.Requester(t), Date: t.CreatedAt, Status: t.StatusName}
 	if t.ClosedAt != nil {
 		it.Date, it.Closed = *t.ClosedAt, true
 	}

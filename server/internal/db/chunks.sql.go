@@ -82,8 +82,17 @@ func (q *Queries) DeleteChunksFrom(ctx context.Context, arg DeleteChunksFromPara
 	return err
 }
 
+const deleteNoteChunks = `-- name: DeleteNoteChunks :exec
+DELETE FROM chunks WHERE note_id = $1::bigint
+`
+
+func (q *Queries) DeleteNoteChunks(ctx context.Context, noteID int64) error {
+	_, err := q.db.Exec(ctx, deleteNoteChunks, noteID)
+	return err
+}
+
 const deleteTicketChunks = `-- name: DeleteTicketChunks :exec
-DELETE FROM chunks WHERE ticket_id = $1
+DELETE FROM chunks WHERE ticket_id = $1::bigint
 `
 
 func (q *Queries) DeleteTicketChunks(ctx context.Context, ticketID int64) error {
@@ -132,7 +141,7 @@ func (q *Queries) ListPendingChunks(ctx context.Context, arg ListPendingChunksPa
 
 const listTicketChunks = `-- name: ListTicketChunks :many
 SELECT id, source_type, source_id, seq, content, content_hash, embed_model, (embedding IS NOT NULL)::boolean AS embedded
-FROM chunks WHERE ticket_id = $1 ORDER BY source_type, source_id, seq
+FROM chunks WHERE ticket_id = $1::bigint ORDER BY source_type, source_id, seq
 `
 
 type ListTicketChunksRow struct {
@@ -199,13 +208,13 @@ func (q *Queries) SetChunkEmbedding(ctx context.Context, arg SetChunkEmbeddingPa
 }
 
 const upsertChunk = `-- name: UpsertChunk :exec
-INSERT INTO chunks (source_type, source_id, seq, ticket_id, project_id, client_id, node_ids, user_ids, contact_ids,
+INSERT INTO chunks (source_type, source_id, seq, ticket_id, note_id, project_id, client_id, node_ids, user_ids, contact_ids,
                     internal, occurred_at, content, content_hash)
-VALUES ($1, $2, $3, $4, $5,
-        $6, $7::bigint[], $8::bigint[], $9::bigint[],
-        $10, $11, $12, $13)
+VALUES ($1, $2, $3, $4::bigint, $5::bigint, $6,
+        $7, $8::bigint[], $9::bigint[], $10::bigint[],
+        $11, $12, $13, $14)
 ON CONFLICT (source_type, source_id, seq) DO UPDATE SET
-  ticket_id = excluded.ticket_id, project_id = excluded.project_id, client_id = excluded.client_id,
+  ticket_id = excluded.ticket_id, note_id = excluded.note_id, project_id = excluded.project_id, client_id = excluded.client_id,
   node_ids = excluded.node_ids, user_ids = excluded.user_ids, contact_ids = excluded.contact_ids,
   internal = excluded.internal, occurred_at = excluded.occurred_at,
   embedding   = CASE WHEN chunks.content_hash = excluded.content_hash THEN chunks.embedding END,
@@ -217,7 +226,8 @@ type UpsertChunkParams struct {
 	SourceType  string
 	SourceID    int64
 	Seq         int32
-	TicketID    int64
+	TicketID    *int64
+	NoteID      *int64
 	ProjectID   int64
 	ClientID    *int64
 	NodeIds     []int64
@@ -237,6 +247,7 @@ func (q *Queries) UpsertChunk(ctx context.Context, arg UpsertChunkParams) error 
 		arg.SourceID,
 		arg.Seq,
 		arg.TicketID,
+		arg.NoteID,
 		arg.ProjectID,
 		arg.ClientID,
 		arg.NodeIds,

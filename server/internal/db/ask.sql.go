@@ -117,7 +117,10 @@ func (q *Queries) InsertAskQuery(ctx context.Context, arg InsertAskQueryParams) 
 }
 
 const listThreadQueries = `-- name: ListThreadQueries :many
-SELECT id, question, lang, status, answer, evidence, model, created_at FROM ask_queries WHERE thread_id = $1 ORDER BY created_at, id
+SELECT q.id, q.question, q.lang, q.status, q.scope, q.answer, q.evidence, q.model, q.created_at, f.rating, f.reasons, f.comment
+FROM ask_queries q
+LEFT JOIN ask_feedback f ON f.query_id = q.id
+WHERE q.thread_id = $1 ORDER BY q.created_at, q.id
 `
 
 type ListThreadQueriesRow struct {
@@ -125,10 +128,14 @@ type ListThreadQueriesRow struct {
 	Question  string
 	Lang      string
 	Status    string
+	Scope     []byte
 	Answer    []byte
 	Evidence  []byte
 	Model     *string
 	CreatedAt time.Time
+	Rating    *int16
+	Reasons   []string
+	Comment   *string
 }
 
 func (q *Queries) ListThreadQueries(ctx context.Context, threadID *int64) ([]ListThreadQueriesRow, error) {
@@ -145,10 +152,14 @@ func (q *Queries) ListThreadQueries(ctx context.Context, threadID *int64) ([]Lis
 			&i.Question,
 			&i.Lang,
 			&i.Status,
+			&i.Scope,
 			&i.Answer,
 			&i.Evidence,
 			&i.Model,
 			&i.CreatedAt,
+			&i.Rating,
+			&i.Reasons,
+			&i.Comment,
 		); err != nil {
 			return nil, err
 		}
@@ -188,4 +199,36 @@ func (q *Queries) ListThreads(ctx context.Context, userID int64) ([]AskThread, e
 		return nil, err
 	}
 	return items, nil
+}
+
+const saveAskFeedback = `-- name: SaveAskFeedback :execrows
+INSERT INTO ask_feedback (query_id, user_id, rating, reasons, comment)
+SELECT q.id, q.user_id, $1, $2::text[], $3
+FROM ask_queries q
+WHERE q.id = $4 AND q.user_id = $5
+ON CONFLICT (query_id) DO UPDATE SET rating = excluded.rating, reasons = excluded.reasons, comment = excluded.comment, created_at = now()
+`
+
+type SaveAskFeedbackParams struct {
+	Rating  int16
+	Reasons []string
+	Comment *string
+	QueryID int64
+	UserID  int64
+}
+
+// The asker's rating of one answer (§10.7); a later one replaces it. Zero
+// rows when the question is not theirs.
+func (q *Queries) SaveAskFeedback(ctx context.Context, arg SaveAskFeedbackParams) (int64, error) {
+	result, err := q.db.Exec(ctx, saveAskFeedback,
+		arg.Rating,
+		arg.Reasons,
+		arg.Comment,
+		arg.QueryID,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

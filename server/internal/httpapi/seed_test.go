@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/kenzo03/muasal/server/internal/db"
 	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/muasal/server/internal/indexer"
 )
 
 // The seeders write straight through the queries, so a test depends only on
@@ -160,4 +162,30 @@ func (e *env) seedClose(tk db.Ticket, status int64, by db.User, whatChanged stri
 	if err != nil {
 		e.t.Fatal(err)
 	}
+}
+
+// seedNote records a decision note on node, dated 2025-11-04, and indexes it.
+func (e *env) seedNote(p db.Project, by db.User, title string, client *db.Client, node db.Node) db.DecisionNote {
+	e.t.Helper()
+	ctx := context.Background()
+	n, err := e.q.NextNoteNumber(ctx, p.ID)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	params := db.CreateNoteParams{ProjectID: p.ID, Number: n, Key: fmt.Sprintf("%s-DN%d", p.Key, n), Title: title,
+		DecidedOn: time.Date(2025, 11, 4, 0, 0, 0, 0, time.UTC), Body: "Decision: " + title + ".", CreatedBy: by.ID}
+	if client != nil {
+		params.ClientID = &client.ID
+	}
+	note, err := e.q.CreateNote(ctx, params)
+	if err == nil {
+		err = e.q.SetNoteNodes(ctx, db.SetNoteNodesParams{NoteID: note.ID, NodeIds: []int64{node.ID}})
+	}
+	if err == nil {
+		err = indexer.New(e.d.Pool, e.api.AI()).RebuildNote(ctx, note.ID)
+	}
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	return note
 }

@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 	"net/http"
 	"strconv"
 
@@ -77,6 +78,27 @@ func (s *Server) GetNodeTimeline(w http.ResponseWriter, r *http.Request, id int6
 	}
 	for _, t := range rows {
 		out.Items = append(out.Items, toTimelineEntry(t))
+	}
+	// Decision notes sit on the timeline by decision date (§9.4, AC-DC-8). The
+	// first page carries them all; the page places them among closed tickets.
+	out.Notes = []TimelineNote{}
+	if offset == 0 && params.Type == nil {
+		notes, err := s.q.ListNodeNotes(ctx, db.ListNodeNotesParams{
+			ProjectID: pc.project.ID, NodeIds: ids, AllClients: pc.scope.AllClients, ClientIds: orEmpty(pc.scope.ClientIDs),
+			ClientID: params.ClientId, CoreOnly: deref(params.Core), FromDate: filter.FromDate, ToDate: filter.ToDate,
+		})
+		if err != nil {
+			s.fail(w, r, err)
+			return
+		}
+		for _, n := range notes {
+			tn := TimelineNote{Key: n.Key, Title: n.Title, DecidedOn: openapi_types.Date{Time: n.DecidedOn},
+				Attendees: n.Attendees, Body: n.Body, Author: n.AuthorName}
+			if n.ClientID != nil {
+				tn.Client = &Ref{Id: *n.ClientID, Name: deref(n.ClientName)}
+			}
+			out.Notes = append(out.Notes, tn)
+		}
 	}
 	writeJSON(w, http.StatusOK, out)
 }
@@ -154,6 +176,7 @@ func toTimelineEntry(t db.ListNodeTimelineRow) TimelineEntry {
 		if t.ConfirmedBy != nil {
 			out.Decision.ConfirmedBy = &Ref{Id: *t.ConfirmedBy, Name: deref(t.ConfirmerName)}
 		}
+		out.Decision.SupersededBy = t.SupersededByKey
 	}
 	return out
 }

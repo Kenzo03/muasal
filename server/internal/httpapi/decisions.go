@@ -75,6 +75,7 @@ func toAPIDecision(row db.GetDecisionRow) DecisionRecord {
 	if d.ConfirmedBy != nil {
 		out.ConfirmedBy = &Ref{Id: *d.ConfirmedBy, Name: deref(row.ConfirmerName)}
 	}
+	out.SupersededBy = row.SupersededByKey
 	return out
 }
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { itemHref } from "@/lib/ask";
 import { notFound, redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import PageBar from "@/components/PageBar";
@@ -21,6 +22,7 @@ export default async function AskLogEntryPage({ params }: { params: Promise<{ id
     [t("user"), q.user.name],
     [t("when"), utc(q.created_at, locale)],
     [t("status"), t(`statuses.${q.status}`)],
+    [t("feedback"), q.feedback ? `${q.feedback.rating === "up" ? "👍" : "👎"} ${(q.feedback.reasons ?? []).map((r) => t(`reasons.${r}`)).join(", ")}${q.feedback.comment ? ` · “${q.feedback.comment}”` : ""}` : "—"],
     [t("llmCalled"), q.llm_called ? t("yes") : t("no")],
     [t("model"), q.model ?? "—"],
     [t("language"), q.language],
@@ -81,7 +83,7 @@ export default async function AskLogEntryPage({ params }: { params: Promise<{ id
                   {q.evidence.map((e) => (
                     <tr key={e.key} className={table.row}>
                       <td className={cx(table.td, "font-mono text-xs font-semibold")}>
-                        <Link href={`/t/${e.key}`}>{e.key}</Link>
+                        <Link href={itemHref(e.key)}>{e.key}</Link>
                       </td>
                       <td className={table.td}>{e.title}</td>
                       <td className={table.td}>{e.client ?? "—"}</td>

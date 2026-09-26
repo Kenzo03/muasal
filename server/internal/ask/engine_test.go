@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -207,5 +208,73 @@ func TestInvalidAnswersAndTheQueue(t *testing.T) {
 	res := <-done
 	if res.Status != ask.StatusAnswered || !strings.Contains(strings.Join(rec.events, ","), "evidence,queued:1,claim") {
 		t.Fatalf("queued: %+v %v", res, rec.events)
+	}
+}
+
+// AC-DC-8: a decision note on Overtime Approval is evidence Ask can cite, as
+// HRIS-DN1; a note for Client B never reaches a member scoped to Client A.
+func TestAskCitesDecisionNotes(t *testing.T) {
+	w := newWorld(t)
+	note := w.note("Overtime approval skips the supervisor", &w.a, w.ot, "2025-11-04",
+		"Decision: HR approves overtime for Client A directly.\nWhy: supervisors are often on leave.")
+	w.note("Overtime approval needs two supervisors", &w.b, w.ot, "2025-11-05", "Decision: two supervisors approve Client B overtime.")
+	w.fake.Answer = citeFirst("HR approves overtime directly because supervisors are often on leave.")
+	var rec recorder
+	res := w.ask(w.member, "Why does overtime approval skip the supervisor?", ask.Scope{}, rec.sink())
+	if res.Status != ask.StatusAnswered || len(res.Claims) != 1 || res.Claims[0].Cites[0] != note.Key {
+		t.Fatalf("answer: %+v", res)
+	}
+	for _, it := range rec.evidence {
+		if it.Key == "HRIS-DN2" {
+			t.Fatalf("Client B's note reached the member: %+v", rec.evidence)
+		}
+	}
+	if it := rec.evidence[0]; it.Kind != "note" || it.Title != note.Title || it.RequestedBy != "Hana" || it.Date.Format(time.DateOnly) != "2025-11-04" {
+		t.Fatalf("evidence item: %+v", it)
+	}
+}
+
+// AC-AK-9 and §11.9: "And for Client B?" after a Client A answer swaps the
+// client chip, keeps the menu, cites only Client B or core tickets, and sends
+// the earlier turn as CONVERSATION, all without an extra model call.
+func TestFollowUpsSwapTheClient(t *testing.T) {
+	w := newWorld(t)
+	forA := w.ticket("Overtime approval skips the supervisor", &w.a, w.ot, "Client A supervisors are on leave.", "2025-06-10", "Skip the supervisor for Client A.")
+	forB := w.ticket("Overtime approval needs two supervisors", &w.b, w.ot, "Client B wants two approvers.", "2025-07-01", "Two supervisors approve Client B overtime.")
+	var user string
+	w.fake.Answer = func(_, u string, schema json.RawMessage) string {
+		user = u
+		return citeFirst("See the evidence.")("", u, schema)
+	}
+	engine := ask.NewEngine(w.d.Pool, w.rt)
+	first, err := engine.Ask(context.Background(), ask.Request{Asker: w.asker(w.admin), Question: "Why does overtime approval skip the supervisor for Client A?"}, ask.Sink{})
+	w.check(err)
+	if first.Status != ask.StatusAnswered || first.Claims[0].Cites[0] != forA.Key {
+		t.Fatalf("first: %+v", first)
+	}
+	chat, _ := w.fake.Calls()
+	var detected ask.Detected
+	var evidence []ask.Item
+	second, err := engine.Ask(context.Background(), ask.Request{Asker: w.asker(w.admin), Question: "And for Client B?", ThreadID: &first.ThreadID}, ask.Sink{
+		Scope:    func(_ ask.Scope, d ask.Detected) { detected = d },
+		Evidence: func(items []ask.Item) { evidence = items },
+	})
+	w.check(err)
+	if !slices.Equal(detected.ClientIDs, []int64{w.b.ID}) || !slices.Equal(detected.NodeIDs, []int64{w.ot.ID}) {
+		t.Fatalf("follow-up chips: %+v", detected)
+	}
+	for _, it := range evidence {
+		if it.Key == forA.Key {
+			t.Fatalf("Client A's ticket is evidence for Client B: %+v", evidence)
+		}
+	}
+	if second.Status != ask.StatusAnswered || second.Claims[0].Cites[0] != forB.Key {
+		t.Fatalf("second: %+v", second)
+	}
+	if after, _ := w.fake.Calls(); after != chat+1 {
+		t.Fatalf("chat calls: %d then %d", chat, after)
+	}
+	if !strings.Contains(user, "CONVERSATION") || !strings.Contains(user, "Q: Why does overtime approval skip the supervisor for Client A?\nA: See the evidence. ["+forA.Key+"]") {
+		t.Fatalf("prompt:\n%s", user)
 	}
 }

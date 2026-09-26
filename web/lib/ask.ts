@@ -9,6 +9,10 @@ export type AskLabel = components["schemas"]["AskLabel"];
 export type AskIgnore = components["schemas"]["AskIgnore"];
 export type AskRequest = components["schemas"]["AskRequest"];
 export type AskStatus = components["schemas"]["AskResult"]["status"];
+export type AskFeedback = components["schemas"]["AskFeedback"];
+
+/** Where a cited key opens: a decision note such as HRIS-DN7, or a ticket. */
+export const itemHref = (key: string) => (/-DN\d+$/i.test(key) ? `/notes/${key}` : `/t/${key}`);
 
 // What the `result` event carries (FSD §11.6).
 export type AskDone = {
@@ -79,6 +83,6 @@ export async function askStream(body: AskRequest, onEvent: (e: AskEvent) => void
 
 /** The answer as markdown with links, for "Copy as markdown" (§10.3). */
 export function answerMarkdown(question: string, claims: AskClaim[], origin: string): string {
-  const cite = (k: string) => `[${k}](${origin}/t/${k})`;
+  const cite = (k: string) => `[${k}](${origin}${itemHref(k)})`;
   return [`**${question}**`, "", ...claims.map((c) => `- ${c.text} ${c.cites.map(cite).join(" ")}`)].join("\n");
 }

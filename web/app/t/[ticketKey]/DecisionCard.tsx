@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import Icon from "@/components/Icon";
@@ -58,6 +59,12 @@ export default function DecisionCard({ ticketKey, decision, canEdit }: { ticketK
           </button>
         )}
       </div>
+      {decision.superseded_by && (
+        <p className="flex items-center gap-2 border-b border-warn-line bg-warn-soft px-4 py-2 text-[13px] text-warn">
+          <Icon name="warning" />
+          {t.rich("supersededBy", { key: decision.superseded_by, link: (chunks) => <Link href={`/t/${decision.superseded_by}`} className="font-mono font-semibold">{chunks}</Link> })}
+        </p>
+      )}
       {editing ? (
         <form onSubmit={save} aria-label={t("editTitle")} className="flex flex-col gap-3 p-4">
           <label className={field.label}>

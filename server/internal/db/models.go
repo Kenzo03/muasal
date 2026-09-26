@@ -11,6 +11,15 @@ import (
 	pgvector "github.com/pgvector/pgvector-go"
 )
 
+type AskFeedback struct {
+	QueryID   int64
+	UserID    int64
+	Rating    int16
+	Reasons   []string
+	Comment   *string
+	CreatedAt time.Time
+}
+
 type AskQuery struct {
 	ID           int64
 	ThreadID     *int64
@@ -68,7 +77,7 @@ type Chunk struct {
 	SourceType  string
 	SourceID    int64
 	Seq         int32
-	TicketID    int64
+	TicketID    *int64
 	ProjectID   int64
 	ClientID    *int64
 	NodeIds     []int64
@@ -82,6 +91,7 @@ type Chunk struct {
 	Embedding   *pgvector.HalfVector
 	EmbedModel  *string
 	IndexedAt   time.Time
+	NoteID      *int64
 }
 
 type Client struct {
@@ -112,6 +122,32 @@ type Contact struct {
 	Phone    *string
 }
 
+type DecisionNote struct {
+	ID         int64
+	ProjectID  int64
+	Number     int64
+	Key        string
+	Title      string
+	DecidedOn  time.Time
+	ClientID   *int64
+	Attendees  string
+	Body       string
+	CreatedBy  int64
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	ArchivedAt *time.Time
+}
+
+type DecisionNoteNode struct {
+	NoteID int64
+	NodeID int64
+}
+
+type DecisionNoteTicket struct {
+	NoteID   int64
+	TicketID int64
+}
+
 type DecisionRecord struct {
 	TicketID     int64
 	WhatChanged  string
@@ -121,6 +157,7 @@ type DecisionRecord struct {
 	State        string
 	ConfirmedBy  *int64
 	ConfirmedAt  *time.Time
+	SupersededBy *int64
 }
 
 type Membership struct {
@@ -164,6 +201,7 @@ type Project struct {
 	Description string
 	CreatedAt   time.Time
 	TicketSeq   int64
+	NoteSeq     int64
 }
 
 type ProjectClient struct {
@@ -226,6 +264,15 @@ type Ticket struct {
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
 	ClosedAt           *time.Time
+}
+
+type TicketLink struct {
+	ID        int64
+	FromID    int64
+	ToID      int64
+	Type      string
+	CreatedBy int64
+	CreatedAt time.Time
 }
 
 type TicketNode struct {

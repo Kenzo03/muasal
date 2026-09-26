@@ -38,6 +38,10 @@ export function describeChange(t: Translate, it: ActivityItem, meId?: number): s
       return t("decisionDrafted", { actor });
     case "decision_edit":
       return t("decisionEdited", { actor });
+    case "link":
+    case "unlink":
+      // The wording reads from this ticket's side: "Reverses HRIS-88" or "Reversed by HRIS-240" (§8.8).
+      return t(it.action === "link" ? "linked" : "unlinked", { actor, link: t(`links.${shown(c.type)}.${c.outgoing ? "out" : "in"}`), key: shown(c.key) });
     default:
       return `${actor}: ${it.action}`;
   }

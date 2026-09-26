@@ -51,7 +51,8 @@
     "none": "Tidak ada yang cocok dengan “{q}”.",
     "short": "Ketik minimal 2 karakter.",
     "aliases": "Alias: {aliases}",
-    "core": "Inti"
+    "core": "Inti",
+    "notes": "Notulen keputusan"
   },
   "home": {
     "title": "Beranda",
@@ -143,7 +144,8 @@
     "modules": "Modul",
     "settings": "Pengaturan",
     "board": "Papan",
-    "tickets": "Tiket"
+    "tickets": "Tiket",
+    "notes": "Notulen"
   },
   "settings": {
     "adminsOnly": "Hanya admin proyek yang dapat mengubah pengaturan.",
@@ -339,7 +341,10 @@
     "filterError": "Saringan ini tidak dapat diterapkan.",
     "noBehaviors": "Belum ada keputusan yang berlaku. Menutup tiket pada menu ini akan menambahkannya.",
     "because": "Mengapa: {why}",
-    "ask": "Tanya"
+    "ask": "Tanya",
+    "note": "Notulen keputusan",
+    "attendees": "Bersama {names}",
+    "supersededBy": "Digantikan oleh {key}"
   },
   "errors": {
     "generic": "Terjadi kesalahan. Coba lagi.",
@@ -560,7 +565,31 @@
     "why": "Mengapa",
     "alternatives": "Alternatif yang ditolak",
     "save": "Simpan",
-    "cancel": "Batal"
+    "cancel": "Batal",
+    "supersededBy": "Digantikan oleh <link>{key}</link>: ini bukan lagi cara kerjanya sekarang."
+  },
+  "links": {
+    "title": "Tautan",
+    "add": "Tambah tautan",
+    "none": "Belum ada tautan.",
+    "type": "Tiket ini",
+    "key": "Kunci tiket",
+    "save": "Tautkan",
+    "cancel": "Batal",
+    "remove": "Hapus tautan ke {key}",
+    "hint": "Tiket yang membatalkan tiket lain menggantikan keputusannya.",
+    "reverses": {
+      "out": "Membatalkan",
+      "in": "Dibatalkan oleh"
+    },
+    "extends": {
+      "out": "Memperluas",
+      "in": "Diperluas oleh"
+    },
+    "related_to": {
+      "out": "Terkait dengan",
+      "in": "Terkait dengan"
+    }
   },
   "activity": {
     "title": "Aktivitas",
@@ -613,7 +642,23 @@
       "state": "Keadaan",
       "confirmed_by": "Dikonfirmasi oleh"
     },
-    "markdownHint": "Mendukung Markdown: **tebal**, daftar, `kode`, tautan. Tempel gambar untuk melampirkannya."
+    "markdownHint": "Mendukung Markdown: **tebal**, daftar, `kode`, tautan. Tempel gambar untuk melampirkannya.",
+    "linked": "{actor} menautkan: {link} {key}",
+    "unlinked": "{actor} menghapus tautan: {link} {key}",
+    "links": {
+      "reverses": {
+        "out": "Membatalkan",
+        "in": "Dibatalkan oleh"
+      },
+      "extends": {
+        "out": "Memperluas",
+        "in": "Diperluas oleh"
+      },
+      "related_to": {
+        "out": "Terkait dengan",
+        "in": "Terkait dengan"
+      }
+    }
   },
   "attachments": {
     "title": "Lampiran",
@@ -699,7 +744,26 @@
     "panelTitle": "Tanya",
     "openPage": "Buka halaman Tanya",
     "close": "Tutup",
-    "askAboutTicket": "Tanya tentang tiket ini"
+    "askAboutTicket": "Tanya tentang tiket ini",
+    "noteBy": "Notulen keputusan oleh {name} · {date}",
+    "noteKind": "Notulen keputusan",
+    "feedback": {
+      "question": "Apakah jawaban ini membantu?",
+      "up": "Ya",
+      "down": "Tidak",
+      "thanks": "Terima kasih, sudah dicatat.",
+      "failed": "Penilaian tidak dapat disimpan.",
+      "why": "Apa yang salah?",
+      "reasons": {
+        "wrong": "Salah",
+        "missing_tickets": "Tiket kurang",
+        "wrong_citation": "Kutipan salah",
+        "too_vague": "Terlalu umum"
+      },
+      "comment": "Ada lagi? (opsional)",
+      "send": "Kirim",
+      "cancel": "Batal"
+    }
   },
   "askLog": {
     "title": "Log Tanya",
@@ -740,7 +804,15 @@
     "date": "Tanggal",
     "score": "Skor",
     "scope": "Cakupan",
-    "dropped": "Dibuang oleh validasi"
+    "dropped": "Dibuang oleh validasi",
+    "thumbsDown": "Jempol ke bawah",
+    "feedback": "Masukan",
+    "reasons": {
+      "wrong": "Salah",
+      "missing_tickets": "Tiket kurang",
+      "wrong_citation": "Kutipan salah",
+      "too_vague": "Terlalu umum"
+    }
   },
   "audit": {
     "title": "Log audit",
@@ -804,5 +876,34 @@
     "restore2": "Jalankan",
     "restore3": "Skrip menghentikan aplikasi, memulihkan basis data dan lampiran, menyalakannya lagi, lalu mengindeks ulang.",
     "offsite": "Menyalin folder cadangan ke luar server (NAS atau pita) adalah tanggung jawab Anda."
+  },
+  "notes": {
+    "heading": "Notulen keputusan",
+    "intro": "Keputusan yang dibuat di luar tiket, misalnya di rapat, telepon, dan email. Ask mengutipnya seperti tiket.",
+    "new": "Notulen baru",
+    "newTitle": "Notulen keputusan baru",
+    "editTitle": "Ubah notulen keputusan",
+    "edit": "Ubah",
+    "none": "Belum ada notulen keputusan.",
+    "key": "Kunci",
+    "title": "Judul",
+    "client": "Klien",
+    "allClients": "Semua klien",
+    "decidedOn": "Tanggal keputusan",
+    "decidedOnDate": "Diputuskan {date}",
+    "attendees": "Peserta",
+    "attendeesHint": "Siapa yang hadir",
+    "menus": "Menu",
+    "tickets": "Tiket terkait",
+    "ticketsHint": "Kunci tiket, dipisah koma.",
+    "body": "Isi",
+    "archived": "Diarsipkan",
+    "archivedLabel": "(diarsipkan)",
+    "showArchived": "Tampilkan yang diarsipkan",
+    "hideArchived": "Sembunyikan yang diarsipkan",
+    "save": "Simpan",
+    "cancel": "Batal",
+    "path": "Lokasi",
+    "byline": "Oleh {name} · diperbarui {at}"
   }
 }

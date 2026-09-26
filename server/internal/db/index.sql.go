@@ -12,7 +12,7 @@ import (
 
 const deleteStaleChunks = `-- name: DeleteStaleChunks :exec
 DELETE FROM chunks c
-WHERE c.ticket_id = $1
+WHERE c.ticket_id = $1::bigint
   AND c.source_type || ':' || c.source_id || ':' || c.seq <> ALL ($2::text[])
 `
 
@@ -207,7 +207,7 @@ func (q *Queries) ListCommentSources(ctx context.Context, ticketID int64) ([]Lis
 
 const listPendingTicketChunks = `-- name: ListPendingTicketChunks :many
 SELECT id, content, content_hash FROM chunks
-WHERE ticket_id = $1 AND (embedding IS NULL OR embed_model IS DISTINCT FROM $2::text)
+WHERE ticket_id = $1::bigint AND (embedding IS NULL OR embed_model IS DISTINCT FROM $2::text)
 ORDER BY id
 `
 

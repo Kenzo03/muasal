@@ -516,6 +516,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tickets/{key}/links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Members link this ticket to another they can see, in any project (FSD §8.8, R-TK-6). A reverses link supersedes the other ticket's decision (R-TK-5). A self-link answers 422; an existing link of the same type answers 409 link_exists. */
+        post: operations["createLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/links/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Members of the linking ticket's project. Removing a reverses link makes the other decision current again unless another reverses link still points at it (R-TK-7). */
+        delete: operations["deleteLink"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tickets/{key}/activity": {
         parameters: {
             query?: never;
@@ -612,6 +650,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{key}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description The project's decision notes the reader may see, newest decision first (FSD §9.4). */
+        get: operations["listNotes"];
+        put?: never;
+        /** @description Members record a decision made outside tickets, such as in a meeting or a call (FSD §9.4, DC-3). */
+        post: operations["createNote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notes/{noteKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                noteKey: string;
+            };
+            cookie?: never;
+        };
+        get: operations["getNote"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description The author and project admins. Replaces every field; archived archives or restores. Every edit is audited. */
+        patch: operations["updateNote"];
+        trace?: never;
+    };
     "/search": {
         parameters: {
             query?: never;
@@ -705,7 +782,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description System admins (FSD §10.8, §15.4). Every question, newest first. Quick filters - not enough information, slower than 30 seconds - plus status and asker; page with before, the last id of the previous page. */
+        /** @description System admins (FSD §10.8, §15.4). Every question, newest first. Quick filters - thumbs-down, not enough information, slower than 30 seconds - plus status and asker; page with before, the last id of the previous page. */
         get: operations["listAskLog"];
         put?: never;
         post?: never;
@@ -830,6 +907,25 @@ export interface paths {
         put?: never;
         /** @description Everyone signed in (FSD §10, §11). Answers from the tickets the asker may open, with a citation on every claim, or says it lacks information. With Accept text/event-stream the answer streams as events - queued, scope, evidence, claim, result, error (§11.6) - and a comment line every 15 seconds keeps proxies open; otherwise the final AskResult comes as JSON. With AI off it returns keyword results under the same scope. 10 questions a minute per user. */
         post: operations["ask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ask/queries/{id}/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description The asker rates an answer (FSD §10.7, AK-8): thumbs up, or down with reasons and free text. A later rating replaces the earlier one. Another user's question answers 404. */
+        post: operations["sendAskFeedback"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1136,7 +1232,20 @@ export interface components {
         };
         TimelinePage: {
             items: components["schemas"]["TimelineEntry"][];
+            /** @description Decision notes on the node, newest decision first (FSD §9.4). Only the first page carries them, all of them; later pages, and a ticket type filter, leave the list empty. */
+            notes: components["schemas"]["TimelineNote"][];
             next_cursor: string | null;
+        };
+        TimelineNote: {
+            /** @example HRIS-DN7 */
+            key: string;
+            title: string;
+            /** Format: date */
+            decided_on: string;
+            client?: components["schemas"]["Ref"];
+            attendees: string;
+            body: string;
+            author: string;
         };
         Behavior: {
             key: string;
@@ -1265,6 +1374,8 @@ export interface components {
              */
             closed_at?: string | null;
             decision?: components["schemas"]["DecisionRecord"];
+            /** @description Links to tickets the reader can see, oldest first (FSD §8.8). */
+            links: components["schemas"]["TicketLink"][];
         };
         TicketCreate: {
             type: components["schemas"]["TicketType"];
@@ -1347,6 +1458,30 @@ export interface components {
             confirmed_by?: components["schemas"]["Ref"];
             /** Format: date-time */
             confirmed_at?: string;
+            /** @description The key of the ticket that reverses this decision (R-TK-5). */
+            superseded_by?: string;
+        };
+        /** @enum {string} */
+        LinkType: "reverses" | "extends" | "related_to";
+        LinkCreate: {
+            type: components["schemas"]["LinkType"];
+            /** @description The other ticket */
+            key: string;
+        };
+        TicketLink: {
+            /** Format: int64 */
+            id: number;
+            type: components["schemas"]["LinkType"];
+            /** @description True when this ticket is the one that reverses or extends; false reads "Reversed by". */
+            outgoing: boolean;
+            ticket: components["schemas"]["LinkedTicket"];
+        };
+        LinkedTicket: {
+            key: string;
+            title: string;
+            status: components["schemas"]["Status"];
+            /** Format: date-time */
+            closed_at?: string | null;
         };
         TicketSummary: {
             /** Format: int64 */
@@ -1419,9 +1554,77 @@ export interface components {
             /** @description The names from the top of the tree down to this node. */
             path: string[];
         };
+        NoteInput: {
+            title: string;
+            /** Format: date */
+            decided_on: string;
+            /**
+             * Format: int64
+             * @description Omitted for all clients.
+             */
+            client_id?: number;
+            attendees?: string;
+            /** @description One or more menus or modules of the project. */
+            node_ids: number[];
+            /** @description Tickets the decision relates to, in any project the author can see. */
+            ticket_keys?: string[];
+            /** @description Markdown; the form starts with Decision */
+            body: string;
+        };
+        NoteUpdate: components["schemas"]["NoteInput"] & {
+            /** @description Archive (true) or restore (false). */
+            archived?: boolean;
+        };
+        Note: {
+            /** Format: int64 */
+            id: number;
+            /** @example HRIS-DN7 */
+            key: string;
+            project_key: string;
+            title: string;
+            /** Format: date */
+            decided_on: string;
+            client?: components["schemas"]["Ref"];
+            attendees: string;
+            body: string;
+            nodes: components["schemas"]["NodeRef"][];
+            /** @description Linked tickets the reader can see. */
+            tickets: components["schemas"]["NoteTicket"][];
+            author: components["schemas"]["Ref"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            archived: boolean;
+            /** @description The reader is the author or a project admin. */
+            can_edit: boolean;
+        };
+        NoteTicket: {
+            key: string;
+            title: string;
+        };
+        NoteSummary: {
+            key: string;
+            title: string;
+            /** Format: date */
+            decided_on: string;
+            client?: components["schemas"]["Ref"];
+            archived: boolean;
+        };
+        NoteList: {
+            items: components["schemas"]["NoteSummary"][];
+        };
         SearchResults: {
             tickets: components["schemas"]["SearchTicket"][];
+            notes: components["schemas"]["SearchNote"][];
             nodes: components["schemas"]["SearchNode"][];
+        };
+        SearchNote: {
+            key: string;
+            title: string;
+            project_key: string;
+            /** Format: date */
+            decided_on: string;
         };
         /** @enum {string} */
         MyTicketsView: "all" | "overdue" | "week" | "incomplete";
@@ -1637,10 +1840,16 @@ export interface components {
             id?: number;
         };
         AskItem: {
+            /**
+             * @description A ticket
+             * @enum {string}
+             */
+            kind: "ticket" | "note";
             key: string;
             title: string;
             /** @description Null for core work. */
             client: string | null;
+            /** @description A note's author. */
             requested_by: string;
             /**
              * Format: date-time
@@ -1677,6 +1886,13 @@ export interface components {
             /** @description With AI off */
             results: components["schemas"]["AskItem"][];
         };
+        AskFeedback: {
+            /** @enum {string} */
+            rating: "up" | "down";
+            /** @description With down. */
+            reasons?: ("wrong" | "missing_tickets" | "wrong_citation" | "too_vague")[];
+            comment?: string;
+        };
         AskThread: {
             /** Format: int64 */
             id: number;
@@ -1698,6 +1914,7 @@ export interface components {
             created_at: string;
             /** @description The evidence the asker may still open. */
             evidence?: components["schemas"]["AskItem"][];
+            feedback?: components["schemas"]["AskFeedback"];
         };
         AskThreadDetail: components["schemas"]["AskThread"] & {
             queries: components["schemas"]["AskThreadQuery"][];
@@ -1715,8 +1932,9 @@ export interface components {
             latency_ms?: number;
             model?: string;
             evidence_count: number;
-            /** @description Distinct tickets cited by the answer. */
+            /** @description Distinct tickets and notes cited by the answer. */
             citations: number;
+            feedback?: components["schemas"]["AskFeedback"];
         };
         AskLogPage: {
             items: components["schemas"]["AskLogEntry"][];
@@ -2894,6 +3112,54 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    createLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkCreate"];
+            };
+        };
+        responses: {
+            /** @description The link as this ticket shows it. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketLink"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     getTicketActivity: {
         parameters: {
             query?: never;
@@ -3066,6 +3332,109 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    listNotes: {
+        parameters: {
+            query?: {
+                /** @description Include archived notes. */
+                archived?: boolean;
+            };
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description At most 500 notes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoteInput"];
+            };
+        };
+        responses: {
+            /** @description The note. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Note"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                noteKey: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The note. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Note"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                noteKey: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoteUpdate"];
+            };
+        };
+        responses: {
+            /** @description The note as saved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Note"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     search: {
         parameters: {
             query: {
@@ -3212,6 +3581,8 @@ export interface operations {
                 status?: "answered" | "not_enough_info" | "ai_off" | "error";
                 /** @description Only answers slower than 30 seconds. */
                 slow?: boolean;
+                /** @description Only answers rated thumbs-down. */
+                down?: boolean;
                 user_id?: number;
                 before?: number;
                 limit?: number;
@@ -3396,6 +3767,31 @@ export interface operations {
                     "application/json": components["schemas"]["AskResult"];
                     "text/event-stream": string;
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    sendAskFeedback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AskFeedback"];
+            };
+        };
+        responses: {
+            /** @description Saved. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

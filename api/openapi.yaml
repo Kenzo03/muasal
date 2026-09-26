@@ -672,6 +672,40 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/DecisionRecord" }
         default: { $ref: "#/components/responses/Problem" }
+  /tickets/{key}/links:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: createLink
+      tags: [tickets]
+      description: >-
+        Members link this ticket to another they can see, in any project (FSD §8.8, R-TK-6). A reverses link
+        supersedes the other ticket's decision (R-TK-5). A self-link answers 422; an existing link of the same type
+        answers 409 link_exists.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LinkCreate" }
+      responses:
+        "201":
+          description: The link as this ticket shows it.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TicketLink" }
+        default: { $ref: "#/components/responses/Problem" }
+  /links/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    delete:
+      operationId: deleteLink
+      tags: [tickets]
+      description: >-
+        Members of the linking ticket's project. Removing a reverses link makes the other decision current again
+        unless another reverses link still points at it (R-TK-7).
+      responses:
+        "204": { description: Deleted. }
+        default: { $ref: "#/components/responses/Problem" }
   /tickets/{key}/activity:
     parameters:
       - { name: key, in: path, required: true, schema: { type: string } }
@@ -774,6 +808,67 @@ paths:
       responses:
         "204": { description: Removed from the ticket. }
         default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/notes:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listNotes
+      tags: [notes]
+      description: The project's decision notes the reader may see, newest decision first (FSD §9.4).
+      parameters:
+        - { name: archived, in: query, schema: { type: boolean }, description: Include archived notes. }
+      responses:
+        "200":
+          description: At most 500 notes.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NoteList" }
+        default: { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createNote
+      tags: [notes]
+      description: Members record a decision made outside tickets, such as in a meeting or a call (FSD §9.4, DC-3).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NoteInput" }
+      responses:
+        "201":
+          description: The note.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Note" }
+        default: { $ref: "#/components/responses/Problem" }
+  /notes/{noteKey}:
+    parameters:
+      - { name: noteKey, in: path, required: true, schema: { type: string, example: HRIS-DN7 } }
+    get:
+      operationId: getNote
+      tags: [notes]
+      responses:
+        "200":
+          description: The note.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Note" }
+        default: { $ref: "#/components/responses/Problem" }
+    patch:
+      operationId: updateNote
+      tags: [notes]
+      description: The author and project admins. Replaces every field; archived archives or restores. Every edit is audited.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NoteUpdate" }
+      responses:
+        "200":
+          description: The note as saved.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Note" }
+        default: { $ref: "#/components/responses/Problem" }
   /search:
     get:
       operationId: search
@@ -875,11 +970,12 @@ paths:
       operationId: listAskLog
       tags: [admin]
       description: >-
-        System admins (FSD §10.8, §15.4). Every question, newest first. Quick filters - not enough information,
-        slower than 30 seconds - plus status and asker; page with before, the last id of the previous page.
+        System admins (FSD §10.8, §15.4). Every question, newest first. Quick filters - thumbs-down, not enough
+        information, slower than 30 seconds - plus status and asker; page with before, the last id of the previous page.
       parameters:
         - { name: status, in: query, schema: { type: string, enum: [answered, not_enough_info, ai_off, error] } }
         - { name: slow, in: query, schema: { type: boolean }, description: Only answers slower than 30 seconds. }
+        - { name: down, in: query, schema: { type: boolean }, description: Only answers rated thumbs-down. }
         - { name: user_id, in: query, schema: { type: integer, format: int64 } }
         - { name: before, in: query, schema: { type: integer, format: int64 } }
         - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
@@ -999,6 +1095,23 @@ paths:
               schema: { $ref: "#/components/schemas/AskResult" }
             text/event-stream:
               schema: { type: string }
+        default: { $ref: "#/components/responses/Problem" }
+  /ask/queries/{id}/feedback:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    post:
+      operationId: sendAskFeedback
+      tags: [ask]
+      description: >-
+        The asker rates an answer (FSD §10.7, AK-8): thumbs up, or down with reasons and free text. A later rating
+        replaces the earlier one. Another user's question answers 404.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AskFeedback" }
+      responses:
+        "204": { description: Saved. }
         default: { $ref: "#/components/responses/Problem" }
   /ask/threads:
     get:
@@ -1375,12 +1488,29 @@ components:
         decision: { $ref: "#/components/schemas/DecisionRecord" }
     TimelinePage:
       type: object
-      required: [items, next_cursor]
+      required: [items, notes, next_cursor]
       properties:
         items:
           type: array
           items: { $ref: "#/components/schemas/TimelineEntry" }
+        notes:
+          type: array
+          description: >-
+            Decision notes on the node, newest decision first (FSD §9.4). Only the first page carries them, all of
+            them; later pages, and a ticket type filter, leave the list empty.
+          items: { $ref: "#/components/schemas/TimelineNote" }
         next_cursor: { type: string, nullable: true }
+    TimelineNote:
+      type: object
+      required: [key, title, decided_on, attendees, body, author]
+      properties:
+        key: { type: string, example: HRIS-DN7 }
+        title: { type: string }
+        decided_on: { type: string, format: date }
+        client: { $ref: "#/components/schemas/Ref" }
+        attendees: { type: string }
+        body: { type: string }
+        author: { type: string }
     Behavior:
       type: object
       required: [key, title, what_changed, why, alternatives]
@@ -1490,7 +1620,7 @@ components:
         created_at: { type: string, format: date-time }
     Ticket:
       type: object
-      required: [id, key, project_key, title, type, description, reason, status, requester, reporter, priority, due_date, nodes, attachments, version, created_at, updated_at]
+      required: [id, key, project_key, title, type, description, reason, status, requester, reporter, priority, due_date, nodes, attachments, links, version, created_at, updated_at]
       properties:
         id: { type: integer, format: int64 }
         key: { type: string, example: HRIS-231 }
@@ -1517,6 +1647,10 @@ components:
         updated_at: { type: string, format: date-time }
         closed_at: { type: string, format: date-time, nullable: true, description: Set on close, cleared on reopen. }
         decision: { $ref: "#/components/schemas/DecisionRecord" }
+        links:
+          type: array
+          description: Links to tickets the reader can see, oldest first (FSD §8.8).
+          items: { $ref: "#/components/schemas/TicketLink" }
     TicketCreate:
       type: object
       required: [type, title, node_ids]
@@ -1588,6 +1722,32 @@ components:
         state: { $ref: "#/components/schemas/DecisionState" }
         confirmed_by: { $ref: "#/components/schemas/Ref" }
         confirmed_at: { type: string, format: date-time }
+        superseded_by: { type: string, description: The key of the ticket that reverses this decision (R-TK-5). }
+    LinkType:
+      type: string
+      enum: [reverses, extends, related_to]
+    LinkCreate:
+      type: object
+      required: [type, key]
+      properties:
+        type: { $ref: "#/components/schemas/LinkType" }
+        key: { type: string, description: The other ticket, e.g. HRIS-88. This ticket reverses, extends or relates to it. }
+    TicketLink:
+      type: object
+      required: [id, type, outgoing, ticket]
+      properties:
+        id: { type: integer, format: int64 }
+        type: { $ref: "#/components/schemas/LinkType" }
+        outgoing: { type: boolean, description: True when this ticket is the one that reverses or extends; false reads "Reversed by". }
+        ticket: { $ref: "#/components/schemas/LinkedTicket" }
+    LinkedTicket:
+      type: object
+      required: [key, title, status]
+      properties:
+        key: { type: string }
+        title: { type: string }
+        status: { $ref: "#/components/schemas/Status" }
+        closed_at: { type: string, format: date-time, nullable: true }
     TicketSummary:
       type: object
       required: [id, key, title, type, priority, due_date, status_id, requester_name, node_names, missing_reason, updated_at]
@@ -1672,16 +1832,96 @@ components:
           type: array
           description: The names from the top of the tree down to this node.
           items: { type: string }
+    NoteInput:
+      type: object
+      required: [title, decided_on, node_ids, body]
+      properties:
+        title: { type: string, maxLength: 200 }
+        decided_on: { type: string, format: date }
+        client_id: { type: integer, format: int64, description: Omitted for all clients. }
+        attendees: { type: string, maxLength: 500 }
+        node_ids:
+          type: array
+          description: One or more menus or modules of the project.
+          items: { type: integer, format: int64 }
+        ticket_keys:
+          type: array
+          description: Tickets the decision relates to, in any project the author can see.
+          items: { type: string }
+        body: { type: string, maxLength: 50000, description: Markdown; the form starts with Decision, Why and Alternatives rejected. }
+    NoteUpdate:
+      allOf:
+        - $ref: "#/components/schemas/NoteInput"
+        - type: object
+          properties:
+            archived: { type: boolean, description: Archive (true) or restore (false). }
+    Note:
+      type: object
+      required: [id, key, project_key, title, decided_on, attendees, body, nodes, tickets, author, created_at, updated_at, archived, can_edit]
+      properties:
+        id: { type: integer, format: int64 }
+        key: { type: string, example: HRIS-DN7 }
+        project_key: { type: string }
+        title: { type: string }
+        decided_on: { type: string, format: date }
+        client: { $ref: "#/components/schemas/Ref" }
+        attendees: { type: string }
+        body: { type: string }
+        nodes:
+          type: array
+          items: { $ref: "#/components/schemas/NodeRef" }
+        tickets:
+          type: array
+          description: Linked tickets the reader can see.
+          items: { $ref: "#/components/schemas/NoteTicket" }
+        author: { $ref: "#/components/schemas/Ref" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        archived: { type: boolean }
+        can_edit: { type: boolean, description: The reader is the author or a project admin. }
+    NoteTicket:
+      type: object
+      required: [key, title]
+      properties:
+        key: { type: string }
+        title: { type: string }
+    NoteSummary:
+      type: object
+      required: [key, title, decided_on, archived]
+      properties:
+        key: { type: string }
+        title: { type: string }
+        decided_on: { type: string, format: date }
+        client: { $ref: "#/components/schemas/Ref" }
+        archived: { type: boolean }
+    NoteList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/NoteSummary" }
     SearchResults:
       type: object
-      required: [tickets, nodes]
+      required: [tickets, nodes, notes]
       properties:
         tickets:
           type: array
           items: { $ref: "#/components/schemas/SearchTicket" }
+        notes:
+          type: array
+          items: { $ref: "#/components/schemas/SearchNote" }
         nodes:
           type: array
           items: { $ref: "#/components/schemas/SearchNode" }
+    SearchNote:
+      type: object
+      required: [key, title, project_key, decided_on]
+      properties:
+        key: { type: string }
+        title: { type: string }
+        project_key: { type: string }
+        decided_on: { type: string, format: date }
     MyTicketsView:
       type: string
       enum: [all, overdue, week, incomplete]
@@ -1909,13 +2149,14 @@ components:
         id: { type: integer, format: int64 }
     AskItem:
       type: object
-      required: [key, title, client, requested_by, date, status, closed]
+      required: [kind, key, title, client, requested_by, date, status, closed]
       properties:
+        kind: { type: string, enum: [ticket, note], description: A ticket, or a decision note such as HRIS-DN7 (FSD §9.4). }
         key: { type: string }
         title: { type: string }
         client: { type: string, nullable: true, description: Null for core work. }
-        requested_by: { type: string }
-        date: { type: string, format: date-time, description: The close date, or the creation date while open. }
+        requested_by: { type: string, description: A note's author. }
+        date: { type: string, format: date-time, description: The close date, or the creation date while open; a note's decision date. }
         status: { type: string }
         closed: { type: boolean }
     AskClaim:
@@ -1940,6 +2181,16 @@ components:
         claims: { type: array, items: { $ref: "#/components/schemas/AskClaim" } }
         closest: { type: array, items: { $ref: "#/components/schemas/AskItem" }, description: With not enough information, up to five nearest tickets. }
         results: { type: array, items: { $ref: "#/components/schemas/AskItem" }, description: With AI off, the keyword results. }
+    AskFeedback:
+      type: object
+      required: [rating]
+      properties:
+        rating: { type: string, enum: [up, down] }
+        reasons:
+          type: array
+          description: With down.
+          items: { type: string, enum: [wrong, missing_tickets, wrong_citation, too_vague] }
+        comment: { type: string, maxLength: 1000 }
     AskThread:
       type: object
       required: [id, title, created_at]
@@ -1963,6 +2214,7 @@ components:
         model: { type: string }
         created_at: { type: string, format: date-time }
         evidence: { type: array, items: { $ref: "#/components/schemas/AskItem" }, description: The evidence the asker may still open. }
+        feedback: { $ref: "#/components/schemas/AskFeedback" }
     AskThreadDetail:
       allOf:
         - $ref: "#/components/schemas/AskThread"
@@ -1983,7 +2235,8 @@ components:
         latency_ms: { type: integer }
         model: { type: string }
         evidence_count: { type: integer }
-        citations: { type: integer, description: Distinct tickets cited by the answer. }
+        citations: { type: integer, description: Distinct tickets and notes cited by the answer. }
+        feedback: { $ref: "#/components/schemas/AskFeedback" }
     AskLogPage:
       type: object
       required: [items]

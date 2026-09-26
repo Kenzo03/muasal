@@ -12,13 +12,22 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/kenzo03/muasal/server/internal/ask"
 	"github.com/kenzo03/muasal/server/internal/db"
 )
 
-// loggedEvidence is one row of ask_queries.evidence.
+// loggedEvidence is one row of ask_queries.evidence: a ticket or a note.
 type loggedEvidence struct {
 	TicketID int64   `json:"ticket_id"`
+	NoteID   int64   `json:"note_id"`
 	Score    float64 `json:"score"`
+}
+
+func (l loggedEvidence) ref() ask.Ref {
+	if l.NoteID != 0 {
+		return ask.Ref{ID: l.NoteID, Note: true}
+	}
+	return ask.Ref{ID: l.TicketID}
 }
 
 // ListAskLog lists every question for system admins, newest first (FSD §15.4).
@@ -27,7 +36,7 @@ func (s *Server) ListAskLog(w http.ResponseWriter, r *http.Request, params ListA
 		return
 	}
 	lim := min(cmp.Or(deref(params.Limit), 50), 100)
-	p := db.ListAskLogParams{Slow: deref(params.Slow), UserID: params.UserId, Before: params.Before, Lim: int32(lim) + 1}
+	p := db.ListAskLogParams{Slow: deref(params.Slow), Down: deref(params.Down), UserID: params.UserId, Before: params.Before, Lim: int32(lim) + 1}
 	if params.Status != nil {
 		p.Status = ptr(string(*params.Status))
 	}
@@ -45,7 +54,7 @@ func (s *Server) ListAskLog(w http.ResponseWriter, r *http.Request, params ListA
 		out.Items = append(out.Items, AskLogEntry{
 			Id: row.ID, CreatedAt: row.CreatedAt, User: Ref{Id: row.UserID, Name: row.UserName}, Question: row.Question,
 			Status: AskLogEntryStatus(row.Status), LlmCalled: row.LlmCalled, LatencyMs: intPtr(row.LatencyMs), Model: row.Model,
-			EvidenceCount: int(row.EvidenceCount), Citations: int(row.Citations),
+			EvidenceCount: int(row.EvidenceCount), Citations: int(row.Citations), Feedback: feedbackOf(row.Rating, row.Reasons, row.Comment),
 		})
 	}
 	writeJSON(w, http.StatusOK, out)
@@ -83,20 +92,19 @@ func (s *Server) GetAskLogEntry(w http.ResponseWriter, r *http.Request, id int64
 		}
 		dropped = &d
 	}
-	ids := make([]int64, len(logged))
-	for i, l := range logged {
-		ids[i] = l.TicketID
-	}
-	items, err := s.engine.ItemsFor(ctx, nil, ids)
-	if err != nil {
-		s.fail(w, r, err)
-		return
-	}
-	evidence := make([]AskLogEvidence, len(items))
-	for i, it := range items {
-		evidence[i] = AskLogEvidence{Key: it.Key, Title: it.Title, Client: it.Client, RequestedBy: it.RequestedBy, Date: it.Date, Status: it.Status, Closed: it.Closed}
-		if logged[i].Score > 0 {
-			evidence[i].Score = ptr(float32(logged[i].Score))
+	evidence := []AskLogEvidence{}
+	for _, l := range logged {
+		items, err := s.engine.ItemsFor(ctx, nil, []ask.Ref{l.ref()})
+		if err != nil {
+			s.fail(w, r, err)
+			return
+		}
+		for _, it := range items { // none when the note was archived since
+			e := AskLogEvidence{Kind: AskLogEvidenceKind(it.Kind), Key: it.Key, Title: it.Title, Client: it.Client, RequestedBy: it.RequestedBy, Date: it.Date, Status: it.Status, Closed: it.Closed}
+			if l.Score > 0 {
+				e.Score = ptr(float32(l.Score))
+			}
+			evidence = append(evidence, e)
 		}
 	}
 	writeJSON(w, http.StatusOK, AskLogDetail{
@@ -104,6 +112,7 @@ func (s *Server) GetAskLogEntry(w http.ResponseWriter, r *http.Request, id int64
 		Status: AskLogDetailStatus(q.Status), LlmCalled: q.LlmCalled, LatencyMs: intPtr(q.LatencyMs), Model: q.Model,
 		EvidenceCount: int(q.EvidenceCount), Citations: int(q.Citations), ThreadId: q.ThreadID, Language: q.Lang,
 		FirstClaimMs: intPtr(q.FirstClaimMs), Scope: scope, Evidence: evidence, Claims: claims, Dropped: dropped,
+		Feedback: feedbackOf(q.Rating, q.Reasons, q.Comment),
 	})
 }
 
