@@ -31,6 +31,7 @@ services:
       MIGRATE_DATABASE_URL: postgres://owner:${DB_OWNER_PASSWORD}@db:5432/muasal?sslmode=disable
       PUBLIC_URL: ${PUBLIC_URL}
       APP_SECRET_KEY: ${APP_SECRET_KEY:-} # seals AI API keys (BYOK); `openssl rand -base64 32`
+      ASK_LOG_RETENTION_DAYS: ${ASK_LOG_RETENTION_DAYS:-365} # 0 keeps the Ask log for good
     volumes: [attachments:/data/attachments]
     healthcheck:
       test: ["CMD", "/app", "healthcheck"]

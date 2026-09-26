@@ -90,7 +90,7 @@ func serve(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	api := httpapi.New(cfg, pool, log)
 	// The index workers share the API's AI runtime, so embedding pauses while
 	// an answer is generated (FSD §11.7).
-	workers, err := indexer.NewClient(pool, api.AI(), log, indexer.Options{OwnerURL: cfg.MigrateDatabaseURL})
+	workers, err := indexer.NewClient(pool, api.AI(), log, indexer.Options{OwnerURL: cfg.MigrateDatabaseURL, AskLogDays: cfg.AskLogRetentionDays})
 	if err != nil {
 		return err
 	}

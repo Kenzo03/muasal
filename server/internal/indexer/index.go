@@ -236,6 +236,7 @@ type Options struct {
 	PollInterval time.Duration // default 1 s
 	Workers      int           // default 4
 	OwnerURL     string        // MIGRATE_DATABASE_URL, for ChangeDimension
+	AskLogDays   int           // Ask log retention in days; 0 keeps it (FSD §15.4)
 }
 
 // NewClient returns the River client that `app serve` starts: the index queue's
@@ -246,13 +247,18 @@ func NewClient(pool *pgxpool.Pool, rt *ai.Runtime, log *slog.Logger, opts Option
 	river.AddWorker(workers, &indexWorker{ix: ix})
 	river.AddWorker(workers, &embedWorker{ix: ix})
 	river.AddWorker(workers, &dimensionWorker{ownerURL: opts.OwnerURL})
+	river.AddWorker(workers, &purgeWorker{pool: pool, days: opts.AskLogDays})
 	return river.NewClient(riverpgxv5.New(pool), &river.Config{
 		Logger:            log,
 		FetchPollInterval: cmp.Or(opts.PollInterval, time.Second),
 		Queues:            map[string]river.QueueConfig{QueueIndex: {MaxWorkers: cmp.Or(opts.Workers, 4)}},
 		Workers:           workers,
 		MaxAttempts:       10,
-		PeriodicJobs: []*river.PeriodicJob{river.NewPeriodicJob(river.PeriodicInterval(time.Minute),
-			func() (river.JobArgs, *river.InsertOpts) { return EmbedPending{}, nil }, &river.PeriodicJobOpts{RunOnStart: true})},
+		PeriodicJobs: []*river.PeriodicJob{
+			river.NewPeriodicJob(river.PeriodicInterval(time.Minute),
+				func() (river.JobArgs, *river.InsertOpts) { return EmbedPending{}, nil }, &river.PeriodicJobOpts{RunOnStart: true}),
+			river.NewPeriodicJob(river.PeriodicInterval(24*time.Hour),
+				func() (river.JobArgs, *river.InsertOpts) { return PurgeAsk{}, nil }, &river.PeriodicJobOpts{RunOnStart: true}),
+		},
 	})
 }
