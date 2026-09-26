@@ -12,3 +12,4 @@ node_modules/
 /deploy/certs/*.pem
 /dist/
 .DS_Store
+/deploy/loadtest/tokens.txt
