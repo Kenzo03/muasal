@@ -359,6 +359,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{key}/nodes/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Project admins import a module-tree CSV (FSD §7.5): the path shape or the adjacency shape, comma or semicolon, up to 5,000 rows. Rows match nodes by code, else by path; nothing is deleted. With dry_run it only plans. Any row error stops the whole import (AC-MR-7). The import runs in one transaction. */
+        post: operations["importNodes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{key}/nodes/recent": {
         parameters: {
             query?: never;
@@ -1698,6 +1717,31 @@ export interface components {
             /** @description The secret, e.g. msl_…; shown once. */
             token: string;
         };
+        NodeImportResult: {
+            applied: boolean;
+            created: components["schemas"]["NodeImportRow"][];
+            changed: components["schemas"]["NodeImportRow"][];
+            unchanged: number;
+            /** @description Live nodes the file leaves out, for manual archiving. */
+            missing: string[];
+            problems: components["schemas"]["NodeImportProblem"][];
+        };
+        NodeImportRow: {
+            line: number;
+            /** @example HR › Attendance › Overtime Approval */
+            path: string;
+            type: components["schemas"]["NodeType"];
+            /** @description What changes */
+            fields: string[];
+        };
+        NodeImportProblem: {
+            /** @description 0 for the file as a whole. */
+            line: number;
+            /** @enum {string} */
+            code: "unreadable" | "empty" | "too_many_rows" | "unknown_shape" | "bad_client_scope" | "missing_id" | "duplicate_id" | "missing_parent" | "cycle" | "duplicate_name" | "duplicate_code" | "empty_name" | "bad_type" | "long_name" | "unknown_client" | "no_clients";
+            path?: string;
+            message: string;
+        };
         SearchResults: {
             tickets: components["schemas"]["SearchTicket"][];
             notes: components["schemas"]["SearchNote"][];
@@ -2851,6 +2895,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Node"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    importNodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    dry_run?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description The plan, and whether it was applied. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeImportResult"];
                 };
             };
             default: components["responses"]["Problem"];

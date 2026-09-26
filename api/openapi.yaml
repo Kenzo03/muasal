@@ -457,6 +457,33 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Node" }
         default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/nodes/import:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: importNodes
+      tags: [nodes]
+      description: >-
+        Project admins import a module-tree CSV (FSD §7.5): the path shape or the adjacency shape, comma or semicolon,
+        up to 5,000 rows. Rows match nodes by code, else by path; nothing is deleted. With dry_run it only plans. Any
+        row error stops the whole import (AC-MR-7). The import runs in one transaction.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                dry_run: { type: boolean }
+      responses:
+        "200":
+          description: The plan, and whether it was applied.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NodeImportResult" }
+        default: { $ref: "#/components/responses/Problem" }
   /projects/{key}/nodes/recent:
     parameters:
       - { name: key, in: path, required: true, schema: { type: string } }
@@ -2014,6 +2041,41 @@ components:
           required: [token]
           properties:
             token: { type: string, description: "The secret, e.g. msl_…; shown once." }
+    NodeImportResult:
+      type: object
+      required: [applied, created, changed, unchanged, missing, problems]
+      properties:
+        applied: { type: boolean }
+        created:
+          type: array
+          items: { $ref: "#/components/schemas/NodeImportRow" }
+        changed:
+          type: array
+          items: { $ref: "#/components/schemas/NodeImportRow" }
+        unchanged: { type: integer }
+        missing:
+          type: array
+          description: Live nodes the file leaves out, for manual archiving.
+          items: { type: string }
+        problems:
+          type: array
+          items: { $ref: "#/components/schemas/NodeImportProblem" }
+    NodeImportRow:
+      type: object
+      required: [line, path, type, fields]
+      properties:
+        line: { type: integer }
+        path: { type: string, example: "HR › Attendance › Overtime Approval" }
+        type: { $ref: "#/components/schemas/NodeType" }
+        fields: { type: array, items: { type: string }, description: What changes, for a changed row. }
+    NodeImportProblem:
+      type: object
+      required: [line, code, message]
+      properties:
+        line: { type: integer, description: 0 for the file as a whole. }
+        code: { type: string, enum: [unreadable, empty, too_many_rows, unknown_shape, bad_client_scope, missing_id, duplicate_id, missing_parent, cycle, duplicate_name, duplicate_code, empty_name, bad_type, long_name, unknown_client, no_clients] }
+        path: { type: string }
+        message: { type: string }
     SearchResults:
       type: object
       required: [tickets, nodes, notes]

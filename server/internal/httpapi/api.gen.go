@@ -435,6 +435,66 @@ func (e MyTicketsView) Valid() bool {
 	}
 }
 
+// Defines values for NodeImportProblemCode.
+const (
+	NodeImportProblemCodeBadClientScope NodeImportProblemCode = "bad_client_scope"
+	NodeImportProblemCodeBadType        NodeImportProblemCode = "bad_type"
+	NodeImportProblemCodeCycle          NodeImportProblemCode = "cycle"
+	NodeImportProblemCodeDuplicateCode  NodeImportProblemCode = "duplicate_code"
+	NodeImportProblemCodeDuplicateId    NodeImportProblemCode = "duplicate_id"
+	NodeImportProblemCodeDuplicateName  NodeImportProblemCode = "duplicate_name"
+	NodeImportProblemCodeEmpty          NodeImportProblemCode = "empty"
+	NodeImportProblemCodeEmptyName      NodeImportProblemCode = "empty_name"
+	NodeImportProblemCodeLongName       NodeImportProblemCode = "long_name"
+	NodeImportProblemCodeMissingId      NodeImportProblemCode = "missing_id"
+	NodeImportProblemCodeMissingParent  NodeImportProblemCode = "missing_parent"
+	NodeImportProblemCodeNoClients      NodeImportProblemCode = "no_clients"
+	NodeImportProblemCodeTooManyRows    NodeImportProblemCode = "too_many_rows"
+	NodeImportProblemCodeUnknownClient  NodeImportProblemCode = "unknown_client"
+	NodeImportProblemCodeUnknownShape   NodeImportProblemCode = "unknown_shape"
+	NodeImportProblemCodeUnreadable     NodeImportProblemCode = "unreadable"
+)
+
+// Valid indicates whether the value is a known member of the NodeImportProblemCode enum.
+func (e NodeImportProblemCode) Valid() bool {
+	switch e {
+	case NodeImportProblemCodeBadClientScope:
+		return true
+	case NodeImportProblemCodeBadType:
+		return true
+	case NodeImportProblemCodeCycle:
+		return true
+	case NodeImportProblemCodeDuplicateCode:
+		return true
+	case NodeImportProblemCodeDuplicateId:
+		return true
+	case NodeImportProblemCodeDuplicateName:
+		return true
+	case NodeImportProblemCodeEmpty:
+		return true
+	case NodeImportProblemCodeEmptyName:
+		return true
+	case NodeImportProblemCodeLongName:
+		return true
+	case NodeImportProblemCodeMissingId:
+		return true
+	case NodeImportProblemCodeMissingParent:
+		return true
+	case NodeImportProblemCodeNoClients:
+		return true
+	case NodeImportProblemCodeTooManyRows:
+		return true
+	case NodeImportProblemCodeUnknownClient:
+		return true
+	case NodeImportProblemCodeUnknownShape:
+		return true
+	case NodeImportProblemCodeUnreadable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for NodeType.
 const (
 	NodeTypeMenu   NodeType = "menu"
@@ -1489,6 +1549,42 @@ type NodeDetail struct {
 	ProjectKey string `json:"project_key"`
 }
 
+// NodeImportProblem defines model for NodeImportProblem.
+type NodeImportProblem struct {
+	Code NodeImportProblemCode `json:"code"`
+
+	// Line 0 for the file as a whole.
+	Line    int     `json:"line"`
+	Message string  `json:"message"`
+	Path    *string `json:"path,omitempty"`
+}
+
+// NodeImportProblemCode defines model for NodeImportProblem.Code.
+type NodeImportProblemCode string
+
+// NodeImportResult defines model for NodeImportResult.
+type NodeImportResult struct {
+	Applied bool            `json:"applied"`
+	Changed []NodeImportRow `json:"changed"`
+	Created []NodeImportRow `json:"created"`
+
+	// Missing Live nodes the file leaves out, for manual archiving.
+	Missing   []string            `json:"missing"`
+	Problems  []NodeImportProblem `json:"problems"`
+	Unchanged int                 `json:"unchanged"`
+}
+
+// NodeImportRow defines model for NodeImportRow.
+type NodeImportRow struct {
+	// Fields What changes
+	Fields []string `json:"fields"`
+	Line   int      `json:"line"`
+
+	// Path Example: HR › Attendance › Overtime Approval
+	Path string   `json:"path"`
+	Type NodeType `json:"type"`
+}
+
 // NodeList defines model for NodeList.
 type NodeList struct {
 	Items []Node `json:"items"`
@@ -2133,6 +2229,12 @@ type ListNodesParams struct {
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty"`
 }
 
+// ImportNodesMultipartBody defines parameters for ImportNodes.
+type ImportNodesMultipartBody struct {
+	DryRun *bool              `json:"dry_run,omitempty"`
+	File   openapi_types.File `json:"file"`
+}
+
 // ListNotesParams defines parameters for ListNotes.
 type ListNotesParams struct {
 	// Archived Include archived notes.
@@ -2279,6 +2381,9 @@ type SetProjectMembersJSONRequestBody = MembersUpdate
 
 // CreateNodeJSONRequestBody defines body for CreateNode for application/json ContentType.
 type CreateNodeJSONRequestBody = NodeCreate
+
+// ImportNodesMultipartRequestBody defines body for ImportNodes for multipart/form-data ContentType.
+type ImportNodesMultipartRequestBody ImportNodesMultipartBody
 
 // CreateNoteJSONRequestBody defines body for CreateNote for application/json ContentType.
 type CreateNoteJSONRequestBody = NoteInput
@@ -2492,6 +2597,9 @@ type ServerInterface interface {
 
 	// (POST /projects/{key}/nodes)
 	CreateNode(w http.ResponseWriter, r *http.Request, key string)
+
+	// (POST /projects/{key}/nodes/import)
+	ImportNodes(w http.ResponseWriter, r *http.Request, key string)
 
 	// (GET /projects/{key}/nodes/recent)
 	ListRecentNodes(w http.ResponseWriter, r *http.Request, key string)
@@ -4258,6 +4366,32 @@ func (siw *ServerInterfaceWrapper) CreateNode(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// ImportNodes operation middleware
+func (siw *ServerInterfaceWrapper) ImportNodes(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ImportNodes(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListRecentNodes operation middleware
 func (siw *ServerInterfaceWrapper) ListRecentNodes(w http.ResponseWriter, r *http.Request) {
 
@@ -5134,6 +5268,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/contacts/{id}", wrapper.UpdateContact)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/nodes", wrapper.ListNodes)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/nodes", wrapper.CreateNode)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/nodes/import", wrapper.ImportNodes)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/nodes/recent", wrapper.ListRecentNodes)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/nodes/{id}", wrapper.DeleteNode)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/nodes/{id}", wrapper.GetNode)

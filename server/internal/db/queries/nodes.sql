@@ -160,3 +160,6 @@ DELETE FROM decision_note_nodes WHERE node_id = sqlc.arg('from_id')::bigint;
 
 -- name: ListChildIDs :many
 SELECT id FROM nodes WHERE parent_id = $1 AND archived_at IS NULL ORDER BY position, id;
+
+-- name: MarkNodeSource :exec
+UPDATE nodes SET source = sqlc.arg('source') WHERE id = sqlc.arg('id');

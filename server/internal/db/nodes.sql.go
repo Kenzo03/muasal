@@ -424,6 +424,20 @@ func (q *Queries) ListSiblingIDs(ctx context.Context, arg ListSiblingIDsParams) 
 	return items, nil
 }
 
+const markNodeSource = `-- name: MarkNodeSource :exec
+UPDATE nodes SET source = $1 WHERE id = $2
+`
+
+type MarkNodeSourceParams struct {
+	Source string
+	ID     int64
+}
+
+func (q *Queries) MarkNodeSource(ctx context.Context, arg MarkNodeSourceParams) error {
+	_, err := q.db.Exec(ctx, markNodeSource, arg.Source, arg.ID)
+	return err
+}
+
 const moveNodeLinks = `-- name: MoveNodeLinks :exec
 WITH t AS (
   INSERT INTO ticket_nodes (ticket_id, node_id)
