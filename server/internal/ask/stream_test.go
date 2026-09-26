@@ -104,7 +104,7 @@ func TestSchemaListsTheEvidenceKeys(t *testing.T) {
 	if got := s.Properties.Claims.Items.Properties.Cites.Items.Enum; !slices.Equal(got, []string{"HRIS-231", "HRIS-240"}) {
 		t.Fatalf("enum: %v", got)
 	}
-	if !strings.Contains(ask.System("id"), "Answer in Bahasa Indonesia") || !strings.Contains(ask.User("Why?", "[HRIS-231] …"), "EVIDENCE:\n<<<\n[HRIS-231] …\n>>>") {
+	if !strings.Contains(ask.System("id"), "Answer in Bahasa Indonesia") || !strings.Contains(ask.User("Why?", "[HRIS-231] …", ""), "EVIDENCE:\n<<<\n[HRIS-231] …\n>>>") {
 		t.Fatal("prompt")
 	}
 }

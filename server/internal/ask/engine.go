@@ -111,7 +111,22 @@ func (e *Engine) Ask(ctx context.Context, r Request, sink Sink) (Result, error) 
 		return Result{}, err
 	}
 	detected := Detect(cat, r.Question, start.In(tz)).Without(r.Ignore)
+	turns, err := e.history(ctx, r.ThreadID)
+	if err != nil {
+		return Result{}, err
+	}
+	if len(turns) > 0 {
+		// A follow-up keeps the chips it does not replace (§11.9).
+		detected = CarryOver(turns[len(turns)-1].detected, detected).Without(r.Ignore)
+	}
 	scope := Merge(r.Explicit, detected)
+	fu := plan(turns, r.Question, scope)
+	keys := slices.Clone(detected.Keys)
+	for _, k := range fu.cited {
+		if !slices.Contains(keys, k) {
+			keys = append(keys, k)
+		}
+	}
 	if sink.Scope != nil {
 		sink.Scope(r.Explicit, detected)
 	}
@@ -124,7 +139,7 @@ func (e *Engine) Ask(ctx context.Context, r Request, sink Sink) (Result, error) 
 
 	// Off: keyword search under the same scope, no model call (§13.4, AC-IX-5).
 	if s.Mode == ai.ModeOff {
-		found, err := Retrieve(ctx, e.pool, r.Asker, scope, r.Question, nil, detected.Keys, tuning)
+		found, err := Retrieve(ctx, e.pool, r.Asker, scope, fu.retrieval, nil, keys, tuning)
 		if err != nil {
 			return Result{}, err
 		}
@@ -145,12 +160,12 @@ func (e *Engine) Ask(ctx context.Context, r Request, sink Sink) (Result, error) 
 	if err != nil {
 		return fail("ai_unavailable")
 	}
-	vecs, err := embed.Embed(ctx, []string{r.Question})
+	vecs, err := embed.Embed(ctx, []string{fu.retrieval})
 	if err != nil {
 		return fail("ai_unavailable")
 	}
 	tuning.EmbedModel = s.Embed.Model
-	found, err := Retrieve(ctx, e.pool, r.Asker, scope, r.Question, vecs[0], detected.Keys, tuning)
+	found, err := Retrieve(ctx, e.pool, r.Asker, scope, fu.retrieval, vecs[0], keys, tuning)
 	if err != nil {
 		return Result{}, err
 	}
@@ -171,10 +186,11 @@ func (e *Engine) Ask(ctx context.Context, r Request, sink Sink) (Result, error) 
 		}
 		sources = append(sources, ev)
 	}
-	text, keys := Pack(sources, s.ContextTokens)
-	evidence := make([]Item, 0, len(keys))
+	// The conversation counts inside the context budget (§11.9).
+	text, packed := Pack(sources, s.ContextTokens-int(float64(len([]rune(fu.conversation)))/3.5))
+	evidence := make([]Item, 0, len(packed))
 	for _, ev := range sources {
-		if slices.Contains(keys, ev.Key()) {
+		if slices.Contains(packed, ev.Key()) {
 			evidence = append(evidence, itemOf(ev))
 		}
 	}
@@ -195,12 +211,12 @@ func (e *Engine) Ask(ctx context.Context, r Request, sink Sink) (Result, error) 
 	logRow.llmCalled = true
 	genCtx, cancel := context.WithTimeout(ctx, time.Duration(s.TimeoutSeconds)*time.Second)
 	body, err := chat.ChatStream(genCtx, llm.ChatRequest{
-		System: System(res.Language), User: User(r.Question, text), Schema: Schema(keys),
+		System: System(res.Language), User: User(r.Question, text, fu.conversation), Schema: Schema(packed),
 		Temperature: s.Temperature, MaxTokens: 600, Seed: e.Seed,
 	})
 	if err == nil {
 		err = Claims(body, func(c Claim) {
-			valid, dropped := Validate(c, keys)
+			valid, dropped := Validate(c, packed)
 			if dropped != nil {
 				logRow.dropped = append(logRow.dropped, *dropped)
 			}

@@ -117,7 +117,7 @@ func (q *Queries) InsertAskQuery(ctx context.Context, arg InsertAskQueryParams) 
 }
 
 const listThreadQueries = `-- name: ListThreadQueries :many
-SELECT q.id, q.question, q.lang, q.status, q.answer, q.evidence, q.model, q.created_at, f.rating, f.reasons, f.comment
+SELECT q.id, q.question, q.lang, q.status, q.scope, q.answer, q.evidence, q.model, q.created_at, f.rating, f.reasons, f.comment
 FROM ask_queries q
 LEFT JOIN ask_feedback f ON f.query_id = q.id
 WHERE q.thread_id = $1 ORDER BY q.created_at, q.id
@@ -128,6 +128,7 @@ type ListThreadQueriesRow struct {
 	Question  string
 	Lang      string
 	Status    string
+	Scope     []byte
 	Answer    []byte
 	Evidence  []byte
 	Model     *string
@@ -151,6 +152,7 @@ func (q *Queries) ListThreadQueries(ctx context.Context, threadID *int64) ([]Lis
 			&i.Question,
 			&i.Lang,
 			&i.Status,
+			&i.Scope,
 			&i.Answer,
 			&i.Evidence,
 			&i.Model,

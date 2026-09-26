@@ -49,3 +49,13 @@
 {"id": "u08", "question": "What is the dress code for pharmacists at Cahaya?", "expected": []}
 {"id": "u09", "question": "Kapan jadwal pelatihan K3 berikutnya?", "expected": []}
 {"id": "u10", "question": "Siapa yang menyetujui klaim biaya perjalanan dinas?", "expected": []}
+{"id": "f01", "follows": "q01", "question": "Dan untuk Bumi Logistik?", "expected": ["DEMO-2"]}
+{"id": "f02", "follows": "q07", "question": "What about Bumi drivers?", "expected": ["DEMO-9"]}
+{"id": "f03", "follows": "q08", "question": "Bagaimana dengan Cahaya Farma?", "expected": ["DEMO-11"]}
+{"id": "f04", "follows": "q17", "question": "Kalau untuk Cahaya Farma?", "expected": ["DEMO-20", "DEMO-22"]}
+{"id": "f05", "follows": "q25", "question": "And what do Bumi Logistik payslips show?", "expected": ["DEMO-30", "DEMO-14"]}
+{"id": "f06", "follows": "q26", "question": "Bagaimana dengan Arunika?", "expected": ["DEMO-29"]}
+{"id": "f07", "follows": "q33", "question": "And for Cahaya?", "expected": ["DEMO-39"]}
+{"id": "f08", "follows": "q36", "question": "Bagaimana dengan Cahaya Farma?", "expected": ["DEMO-42"]}
+{"id": "f09", "follows": "q12", "question": "Is it shown on the payslip too?", "expected": ["DEMO-14"]}
+{"id": "f10", "follows": "q06", "question": "Dan untuk Bumi?", "expected": ["DEMO-7", "DEMO-2"]}
