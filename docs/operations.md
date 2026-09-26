@@ -18,6 +18,31 @@ Hardware tiers (FSD §18.1):
 
 Embeddings use `bge-m3` on every tier. AI is optional: with AI off, Ask answers with keyword results and nothing needs a model.
 
+## Get a release
+
+Each release on the [GitHub releases page](https://github.com/Kenzo03/muasal/releases) has:
+
+| File | Use it for |
+|---|---|
+| `muasal-<version>.tar` | The offline bundle: every image the stack runs (linux/amd64) and the deploy files. |
+| `muasal-deploy-<version>.tar.gz` | The deploy files alone, for `./install.sh --online` on amd64 or arm64. |
+| `SHA256SUMS`, `SHA256SUMS.sigstore.json` | Checksums of both, signed by the release workflow. |
+
+The app and web images are also on GHCR as `ghcr.io/kenzo03/muasal-app` and `ghcr.io/kenzo03/muasal-web`, for linux/amd64 and linux/arm64, with an SBOM and build provenance.
+
+**Verify what you downloaded** with [cosign](https://docs.sigstore.dev/cosign/system_config/installation/):
+
+```sh
+cosign verify-blob SHA256SUMS --bundle SHA256SUMS.sigstore.json \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  --certificate-identity-regexp '^https://github.com/[Kk]enzo03/muasal/\.github/workflows/release\.yml@refs/tags/v'
+sha256sum -c SHA256SUMS --ignore-missing
+```
+
+The first command proves that the checksums come from this repository's release workflow; the second, that your files match them. With cosign installed, `install.sh --online` also verifies both images' signatures before it starts anything.
+
+**ARM servers** (arm64) install online: unpack `muasal-deploy-<version>.tar.gz` and run `./install.sh --online`. The offline bundle is amd64 only.
+
 ## Install
 
 ```sh
@@ -39,7 +64,7 @@ To install without questions:
   --ai local --tier recommended --admin-email it@example.co.id --admin-name "IT Admin"
 ```
 
-`--online` pulls images and models from the internet instead of the bundle. After the install, the server makes no outbound calls in local or off mode.
+`--online` pulls the signed images from GHCR and the models from Ollama instead of the bundle; run it from the release's deploy files. After the install, the server makes no outbound calls in local or off mode.
 
 **First use:** open the setup link, set a password, then create a project, build the module tree and add members.
 

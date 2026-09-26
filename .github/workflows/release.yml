@@ -1,0 +1,86 @@
+name: release
+# A tag such as v1.2.0 publishes the release (FSD §22, Launch): app and web
+# images for linux/amd64 and linux/arm64 on GHCR with SBOM and provenance,
+# signed with Sigstore keyless signing; the offline bundle (amd64) and the
+# deploy files for online installs, with checksums and signatures.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # the GitHub release
+  packages: write # GHCR
+  id-token: write # Sigstore keyless signing
+
+jobs:
+  images:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component: [app, web]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Names
+        id: names
+        run: |
+          echo "version=${GITHUB_REF_NAME#v}" >>"$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/muasal-${{ matrix.component }}" >>"$GITHUB_OUTPUT"
+          echo "context=${{ matrix.component == 'app' && 'server' || 'web' }}" >>"$GITHUB_OUTPUT"
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v7
+        id: build
+        with:
+          context: ${{ steps.names.outputs.context }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: mode=max
+          sbom: true
+          tags: |
+            ${{ steps.names.outputs.image }}:${{ steps.names.outputs.version }}
+            ${{ steps.names.outputs.image }}:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.names.outputs.version }}
+            org.opencontainers.image.licenses=Apache-2.0
+      - uses: sigstore/cosign-installer@v3
+      - name: Sign the image
+        run: cosign sign --yes "${{ steps.names.outputs.image }}@${{ steps.build.outputs.digest }}"
+
+  release:
+    runs-on: ubuntu-latest
+    needs: images
+    steps:
+      - uses: actions/checkout@v7
+      - uses: sigstore/cosign-installer@v3
+      - name: Offline bundle and deploy files
+        run: |
+          version=${GITHUB_REF_NAME#v}
+          prefix=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/muasal
+          for c in app web; do
+            docker pull --platform linux/amd64 "$prefix-$c:$version"
+            docker tag "$prefix-$c:$version" "muasal-$c:$version"
+          done
+          deploy/make-bundle.sh "$version"
+          mkdir -p "dist/muasal-deploy-$version"
+          grep -v '^    build: ' deploy/compose.yaml >"dist/muasal-deploy-$version/compose.yaml"
+          cp deploy/compose.host-ai.yaml deploy/Caddyfile deploy/.env.example deploy/install.sh deploy/upgrade.sh \
+            deploy/backup.sh deploy/restore.sh "dist/muasal-deploy-$version/"
+          cp docs/operations.md "dist/muasal-deploy-$version/README.md"
+          echo "$version" >"dist/muasal-deploy-$version/VERSION"
+          tar -C dist -czf "dist/muasal-deploy-$version.tar.gz" "muasal-deploy-$version"
+          cd dist
+          sha256sum "muasal-$version.tar" "muasal-deploy-$version.tar.gz" >SHA256SUMS
+          cosign sign-blob --yes --bundle SHA256SUMS.sigstore.json SHA256SUMS
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=${GITHUB_REF_NAME#v}
+          gh release create "$GITHUB_REF_NAME" --title "Muasal $version" --generate-notes \
+            "dist/muasal-$version.tar" "dist/muasal-deploy-$version.tar.gz" dist/SHA256SUMS dist/SHA256SUMS.sigstore.json

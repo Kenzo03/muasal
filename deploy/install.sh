@@ -8,7 +8,8 @@
 #   ./install.sh                      asks for the host, AI mode, tier and admin
 #   ./install.sh --yes --url https://muasal.example.co.id --ai local --tier recommended \
 #                --admin-email it@example.co.id --admin-name "IT Admin"
-#   ./install.sh --online ...         pulls images and models instead of the bundle
+#   ./install.sh --online ...         pulls the signed release images and models instead
+#                                     of the bundle; run it from the release's deploy files
 set -eu
 cd "$(dirname "$0")"
 
@@ -55,9 +56,24 @@ ask email "First admin's email" "admin@example.com"
 ask name "First admin's name" "Admin"
 
 version=$(cat VERSION 2>/dev/null || echo dev)
+prefix=muasal
 if $online; then
+  [ "$version" != dev ] || fail "--online needs a release's deploy files (muasal-deploy-<version>.tar.gz), which carry VERSION"
+  prefix=${MUASAL_IMAGES:-ghcr.io/kenzo03/muasal}
   echo "Pulling images for $version…"
-  VERSION=$version docker compose --env-file .env.example pull --ignore-buildable
+  IMAGE_PREFIX=$prefix VERSION=$version docker compose --env-file .env.example pull --ignore-buildable
+  # Release images are signed by the release workflow with Sigstore keyless
+  # signing; with cosign installed, a tampered image stops the install.
+  if command -v cosign >/dev/null; then
+    for c in app web; do
+      cosign verify "$prefix-$c:$version" --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+        --certificate-identity-regexp '^https://github.com/[Kk]enzo03/muasal/\.github/workflows/release\.yml@refs/tags/v' >/dev/null ||
+        fail "the signature of $prefix-$c:$version does not verify"
+    done
+    echo "Image signatures verified."
+  else
+    echo "cosign is not installed, so image signatures were not verified (see docs/install.md)."
+  fi
 else
   [ -f images.tar ] || fail "images.tar is missing; run from the unpacked bundle, or use --online"
   echo "Loading images…"
@@ -72,6 +88,7 @@ if [ ! -f .env ]; then
   cat >.env <<EOF
 # Written by install.sh on $(date -u +%Y-%m-%dT%H:%MZ). Keep it private: it holds the database passwords.
 VERSION=$version
+IMAGE_PREFIX=$prefix
 PUBLIC_URL=$url
 HTTP_PORT=$port
 DB_OWNER_PASSWORD=$(secret 48 32)
