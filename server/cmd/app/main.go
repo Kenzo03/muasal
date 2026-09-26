@@ -24,6 +24,7 @@ import (
 	"github.com/kenzo03/muasal/server/internal/config"
 	"github.com/kenzo03/muasal/server/internal/db"
 	"github.com/kenzo03/muasal/server/internal/eval"
+	"github.com/kenzo03/muasal/server/internal/gitlink"
 	"github.com/kenzo03/muasal/server/internal/httpapi"
 	"github.com/kenzo03/muasal/server/internal/indexer"
 	"github.com/kenzo03/muasal/server/internal/migrate"
@@ -97,7 +98,10 @@ func serve(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	// an answer is generated (FSD §11.7).
 	workers, err := indexer.NewClient(pool, api.AI(), log, indexer.Options{
 		OwnerURL: cfg.MigrateDatabaseURL, AskLogDays: cfg.AskLogRetentionDays,
-		Register: func(ws *river.Workers) { river.AddWorker(ws, &ticketimport.Worker{Pool: pool}) },
+		Register: func(ws *river.Workers) {
+			river.AddWorker(ws, &ticketimport.Worker{Pool: pool})
+			river.AddWorker(ws, &gitlink.Worker{Pool: pool})
+		},
 	})
 	if err != nil {
 		return err

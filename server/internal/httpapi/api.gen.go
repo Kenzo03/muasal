@@ -630,6 +630,27 @@ func (e ReindexRequestScope) Valid() bool {
 	}
 }
 
+// Defines values for RepoProvider.
+const (
+	RepoProviderGitea  RepoProvider = "gitea"
+	RepoProviderGithub RepoProvider = "github"
+	RepoProviderGitlab RepoProvider = "gitlab"
+)
+
+// Valid indicates whether the value is a known member of the RepoProvider enum.
+func (e RepoProvider) Valid() bool {
+	switch e {
+	case RepoProviderGitea:
+		return true
+	case RepoProviderGithub:
+		return true
+	case RepoProviderGitlab:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for StatusCategory.
 const (
 	StatusCategoryCancelled  StatusCategory = "cancelled"
@@ -1344,6 +1365,28 @@ type ClientUpdate struct {
 	Name     *string   `json:"name,omitempty"`
 }
 
+// CodeCommit defines model for CodeCommit.
+type CodeCommit struct {
+	Author      *string    `json:"author,omitempty"`
+	CommittedAt *time.Time `json:"committed_at,omitempty"`
+
+	// Message The first line.
+	Message string  `json:"message"`
+	Repo    string  `json:"repo"`
+	Sha     string  `json:"sha"`
+	Url     *string `json:"url,omitempty"`
+}
+
+// CodeMergeRequest defines model for CodeMergeRequest.
+type CodeMergeRequest struct {
+	MergedAt *time.Time `json:"merged_at,omitempty"`
+	Number   int        `json:"number"`
+	Repo     string     `json:"repo"`
+	State    string     `json:"state"`
+	Title    string     `json:"title"`
+	Url      *string    `json:"url,omitempty"`
+}
+
 // CommentInput defines model for CommentInput.
 type CommentInput struct {
 	Body string `json:"body"`
@@ -2003,6 +2046,43 @@ type ReindexResult struct {
 	Queued int `json:"queued"`
 }
 
+// Repo defines model for Repo.
+type Repo struct {
+	CreatedAt time.Time    `json:"created_at"`
+	Id        int64        `json:"id"`
+	Name      string       `json:"name"`
+	Provider  RepoProvider `json:"provider"`
+
+	// Secret Only when just created or replaced.
+	Secret *string `json:"secret,omitempty"`
+	WebUrl string  `json:"web_url"`
+
+	// WebhookUrl Example: https://muasal.example.com/webhooks/git/3
+	WebhookUrl string `json:"webhook_url"`
+}
+
+// RepoInput defines model for RepoInput.
+type RepoInput struct {
+	Name     string       `json:"name"`
+	Provider RepoProvider `json:"provider"`
+	WebUrl   string       `json:"web_url"`
+}
+
+// RepoList defines model for RepoList.
+type RepoList struct {
+	Items []Repo `json:"items"`
+}
+
+// RepoProvider defines model for RepoProvider.
+type RepoProvider string
+
+// RepoUpdate defines model for RepoUpdate.
+type RepoUpdate struct {
+	Name      string `json:"name"`
+	NewSecret *bool  `json:"new_secret,omitempty"`
+	WebUrl    string `json:"web_url"`
+}
+
 // SearchNode defines model for SearchNode.
 type SearchNode struct {
 	Aliases []string `json:"aliases"`
@@ -2128,6 +2208,7 @@ type Ticket struct {
 
 	// ClosedAt Set on close
 	ClosedAt    *time.Time          `json:"closed_at,omitempty"`
+	Code        *TicketCode         `json:"code,omitempty"`
 	CreatedAt   time.Time           `json:"created_at"`
 	Decision    *DecisionRecord     `json:"decision,omitempty"`
 	Description string              `json:"description"`
@@ -2150,6 +2231,12 @@ type Ticket struct {
 	Type       TicketType      `json:"type"`
 	UpdatedAt  time.Time       `json:"updated_at"`
 	Version    int32           `json:"version"`
+}
+
+// TicketCode defines model for TicketCode.
+type TicketCode struct {
+	Commits       []CodeCommit       `json:"commits"`
+	MergeRequests []CodeMergeRequest `json:"merge_requests"`
 }
 
 // TicketCreate defines model for TicketCreate.
@@ -2604,11 +2691,17 @@ type ImportNodesMultipartRequestBody ImportNodesMultipartBody
 // CreateNoteJSONRequestBody defines body for CreateNote for application/json ContentType.
 type CreateNoteJSONRequestBody = NoteInput
 
+// CreateRepoJSONRequestBody defines body for CreateRepo for application/json ContentType.
+type CreateRepoJSONRequestBody = RepoInput
+
 // SetStatusesJSONRequestBody defines body for SetStatuses for application/json ContentType.
 type SetStatusesJSONRequestBody = StatusesUpdate
 
 // CreateTicketJSONRequestBody defines body for CreateTicket for application/json ContentType.
 type CreateTicketJSONRequestBody = TicketCreate
+
+// UpdateRepoJSONRequestBody defines body for UpdateRepo for application/json ContentType.
+type UpdateRepoJSONRequestBody = RepoUpdate
 
 // UpdateTicketJSONRequestBody defines body for UpdateTicket for application/json ContentType.
 type UpdateTicketJSONRequestBody = TicketUpdate
@@ -2850,6 +2943,12 @@ type ServerInterface interface {
 	// (POST /projects/{key}/notes)
 	CreateNote(w http.ResponseWriter, r *http.Request, key string)
 
+	// (GET /projects/{key}/repos)
+	ListRepos(w http.ResponseWriter, r *http.Request, key string)
+
+	// (POST /projects/{key}/repos)
+	CreateRepo(w http.ResponseWriter, r *http.Request, key string)
+
 	// (GET /projects/{key}/statuses)
 	GetStatuses(w http.ResponseWriter, r *http.Request, key string)
 
@@ -2861,6 +2960,12 @@ type ServerInterface interface {
 
 	// (POST /projects/{key}/tickets)
 	CreateTicket(w http.ResponseWriter, r *http.Request, key string, params CreateTicketParams)
+
+	// (DELETE /repos/{id})
+	DeleteRepo(w http.ResponseWriter, r *http.Request, id int64)
+
+	// (PATCH /repos/{id})
+	UpdateRepo(w http.ResponseWriter, r *http.Request, id int64)
 
 	// (GET /search)
 	Search(w http.ResponseWriter, r *http.Request, params SearchParams)
@@ -4877,6 +4982,58 @@ func (siw *ServerInterfaceWrapper) CreateNote(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// ListRepos operation middleware
+func (siw *ServerInterfaceWrapper) ListRepos(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListRepos(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateRepo operation middleware
+func (siw *ServerInterfaceWrapper) CreateRepo(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateRepo(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetStatuses operation middleware
 func (siw *ServerInterfaceWrapper) GetStatuses(w http.ResponseWriter, r *http.Request) {
 
@@ -5207,6 +5364,58 @@ func (siw *ServerInterfaceWrapper) CreateTicket(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateTicket(w, r, key, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteRepo operation middleware
+func (siw *ServerInterfaceWrapper) DeleteRepo(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteRepo(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateRepo operation middleware
+func (siw *ServerInterfaceWrapper) UpdateRepo(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateRepo(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -5724,6 +5933,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/imports/{id}", wrapper.GetImport)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/imports/{id}/plan", wrapper.PlanImport)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/imports/{id}/run", wrapper.RunImport)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/repos", wrapper.ListRepos)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/repos", wrapper.CreateRepo)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/repos/{id}", wrapper.DeleteRepo)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/repos/{id}", wrapper.UpdateRepo)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/search", wrapper.Search)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/settings/ai", wrapper.GetAISettings)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/admin/settings/ai", wrapper.UpdateAISettings)

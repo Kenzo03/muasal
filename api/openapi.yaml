@@ -1122,6 +1122,64 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ImportRun" }
         default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/repos:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listRepos
+      tags: [projects]
+      description: Project admins. The project's Git repositories with their webhook URLs (FSD §14.1).
+      responses:
+        "200":
+          description: The repositories.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RepoList" }
+        default: { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createRepo
+      tags: [projects]
+      description: >-
+        Project admins add a repository. The answer carries the webhook URL and a generated secret, shown this once,
+        to paste into the Git server. Needs APP_SECRET_KEY (409 secret_key_missing).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RepoInput" }
+      responses:
+        "201":
+          description: The repository with its secret.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Repo" }
+        default: { $ref: "#/components/responses/Problem" }
+  /repos/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    patch:
+      operationId: updateRepo
+      tags: [projects]
+      description: Project admins rename a repository or, with new_secret, replace its secret (shown once in the answer).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RepoUpdate" }
+      responses:
+        "200":
+          description: The repository.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Repo" }
+        default: { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: deleteRepo
+      tags: [projects]
+      description: Project admins remove a repository with its commits and merge requests.
+      responses:
+        "204": { description: Removed. }
+        default: { $ref: "#/components/responses/Problem" }
   /search:
     get:
       operationId: search
@@ -1906,6 +1964,7 @@ components:
           type: array
           description: Links to tickets the reader can see, oldest first (FSD §8.8).
           items: { $ref: "#/components/schemas/TicketLink" }
+        code: { $ref: "#/components/schemas/TicketCode" }
     TicketCreate:
       type: object
       required: [type, title, node_ids]
@@ -2312,6 +2371,65 @@ components:
       required: [items]
       properties:
         items: { type: array, items: { $ref: "#/components/schemas/Mentionable" } }
+    RepoProvider:
+      type: string
+      enum: [github, gitlab, gitea]
+    RepoInput:
+      type: object
+      required: [provider, name, web_url]
+      properties:
+        provider: { $ref: "#/components/schemas/RepoProvider" }
+        name: { type: string, maxLength: 200 }
+        web_url: { type: string, maxLength: 500 }
+    RepoUpdate:
+      type: object
+      required: [name, web_url]
+      properties:
+        name: { type: string, maxLength: 200 }
+        web_url: { type: string, maxLength: 500 }
+        new_secret: { type: boolean }
+    Repo:
+      type: object
+      required: [id, provider, name, web_url, webhook_url, created_at]
+      properties:
+        id: { type: integer, format: int64 }
+        provider: { $ref: "#/components/schemas/RepoProvider" }
+        name: { type: string }
+        web_url: { type: string }
+        webhook_url: { type: string, example: "https://muasal.example.com/webhooks/git/3" }
+        secret: { type: string, description: Only when just created or replaced. }
+        created_at: { type: string, format: date-time }
+    RepoList:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Repo" } }
+    TicketCode:
+      type: object
+      required: [merge_requests, commits]
+      properties:
+        merge_requests: { type: array, items: { $ref: "#/components/schemas/CodeMergeRequest" } }
+        commits: { type: array, items: { $ref: "#/components/schemas/CodeCommit" } }
+    CodeMergeRequest:
+      type: object
+      required: [repo, number, title, state]
+      properties:
+        repo: { type: string }
+        number: { type: integer }
+        title: { type: string }
+        state: { type: string }
+        merged_at: { type: string, format: date-time, nullable: true }
+        url: { type: string, nullable: true }
+    CodeCommit:
+      type: object
+      required: [repo, sha, message]
+      properties:
+        repo: { type: string }
+        sha: { type: string }
+        message: { type: string, description: The first line. }
+        author: { type: string, nullable: true }
+        committed_at: { type: string, format: date-time, nullable: true }
+        url: { type: string, nullable: true }
     SearchResults:
       type: object
       required: [tickets, nodes, notes]

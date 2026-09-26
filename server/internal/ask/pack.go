@@ -111,6 +111,9 @@ func block(it indexer.Source, details bool) string {
 		if s := strings.TrimSpace(t.Description); s != "" {
 			b.WriteString("Description: " + cut(s, 500) + "\n")
 		}
+		if code := indexer.CodeText(it); code != "" {
+			b.WriteString(cut(code, 600) + "\n")
+		}
 		comments := it.Comments[max(0, len(it.Comments)-5):]
 		for _, c := range comments {
 			fmt.Fprintf(&b, "Comment %s %s: %s\n", day(c.CreatedAt), c.Author, cut(strings.Join(strings.Fields(c.Body), " "), 300))

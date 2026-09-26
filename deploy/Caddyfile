@@ -10,6 +10,13 @@
 			flush_interval -1
 		}
 	}
+	# Git servers deliver webhooks straight to the app (FSD §14.1).
+	handle /webhooks/* {
+		request_body {
+			max_size 6MB
+		}
+		reverse_proxy app:8080
+	}
 	handle {
 		encode zstd gzip
 		reverse_proxy web:3000

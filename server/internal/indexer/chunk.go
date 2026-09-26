@@ -29,6 +29,9 @@ type Source struct {
 	Menus    []db.ListTicketNodePathsRow
 	Comments []db.ListCommentSourcesRow
 	Decision *db.GetDecisionRow
+	Commits  []db.ListTicketCommitsRow       // linked by Git webhooks (§14.1)
+	MRs      []db.ListTicketMergeRequestsRow //
+	Coders   []int64                         // users whose email matches a commit author: the Person filter finds them
 }
 
 var typeLabels = map[string]string{"bug": "Bug", "change_request": "Change request", "feature": "Feature"}
@@ -41,12 +44,16 @@ func Build(src Source) []db.UpsertChunkParams {
 	t := src.Ticket
 	var out []db.UpsertChunkParams
 	add := func(sourceType string, sourceID int64, at time.Time, internal bool, body string) {
+		users := userIDs(t)
+		if sourceType == "code" {
+			users = slices.Compact(slices.Sorted(slices.Values(append(users, src.Coders...))))
+		}
 		for i, part := range split(body) {
 			content := contextLine(src) + "\n" + part
 			sum := sha256.Sum256([]byte(content))
 			out = append(out, db.UpsertChunkParams{
 				SourceType: sourceType, SourceID: sourceID, Seq: int32(i), TicketID: &t.ID, ProjectID: t.ProjectID,
-				ClientID: t.ClientID, NodeIds: menuIDs(src), UserIds: userIDs(t), ContactIds: contactIDs(t),
+				ClientID: t.ClientID, NodeIds: menuIDs(src), UserIds: users, ContactIds: contactIDs(t),
 				Internal: internal, OccurredAt: at, Content: content, ContentHash: sum[:],
 			})
 		}
@@ -106,7 +113,29 @@ func Build(src Source) []db.UpsertChunkParams {
 		}
 		add("decision", t.ID, *r.ConfirmedAt, false, b.String())
 	}
+	if code := CodeText(src); code != "" {
+		add("code", t.ID, at, false, code)
+	}
 	return out
+}
+
+// CodeText is a ticket's merge requests and commits as a chunk and as
+// evidence reads them (§13.1): repository, number or short SHA, author, date
+// and title or message.
+func CodeText(src Source) string {
+	var b strings.Builder
+	for _, m := range src.MRs {
+		fmt.Fprintf(&b, "Merge request %s !%d (%s): %s\n", m.RepoName, m.Number, m.State, m.Title)
+	}
+	for _, c := range src.Commits {
+		sha := c.Sha[:min(7, len(c.Sha))]
+		when := ""
+		if c.CommittedAt != nil {
+			when = " on " + day(*c.CommittedAt)
+		}
+		fmt.Fprintf(&b, "Commit %s %s by %s%s: %s\n", c.RepoName, sha, deref(c.AuthorName), when, strings.TrimSpace(c.Message))
+	}
+	return strings.TrimSpace(b.String())
 }
 
 // Key names a chunk as DeleteStaleChunks expects it.

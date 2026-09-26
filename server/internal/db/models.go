@@ -127,6 +127,17 @@ type Comment struct {
 	ExternalHash []byte
 }
 
+type Commit struct {
+	ID          int64
+	RepoID      int64
+	Sha         string
+	Message     string
+	AuthorName  *string
+	AuthorEmail *string
+	CommittedAt *time.Time
+	Url         *string
+}
+
 type Contact struct {
 	ID       int64
 	ClientID *int64
@@ -174,6 +185,16 @@ type DecisionRecord struct {
 	SupersededBy *int64
 }
 
+type GitRepo struct {
+	ID        int64
+	ProjectID int64
+	Provider  string
+	Name      string
+	WebUrl    string
+	SecretEnc []byte
+	CreatedAt time.Time
+}
+
 type IdempotencyKey struct {
 	UserID    int64
 	Key       string
@@ -207,6 +228,16 @@ type MembershipClient struct {
 	UserID    int64
 	ProjectID int64
 	ClientID  int64
+}
+
+type MergeRequest struct {
+	ID       int64
+	RepoID   int64
+	Number   int32
+	Title    string
+	State    string
+	MergedAt *time.Time
+	Url      *string
 }
 
 type Node struct {
@@ -316,6 +347,11 @@ type Ticket struct {
 	ExternalMeta       []byte
 }
 
+type TicketCommit struct {
+	TicketID int64
+	CommitID int64
+}
+
 type TicketLink struct {
 	ID        int64
 	FromID    int64
@@ -323,6 +359,11 @@ type TicketLink struct {
 	Type      string
 	CreatedBy int64
 	CreatedAt time.Time
+}
+
+type TicketMergeRequest struct {
+	TicketID int64
+	MrID     int64
 }
 
 type TicketNode struct {
@@ -345,4 +386,12 @@ type User struct {
 	LastLoginAt  *time.Time
 	CreatedAt    time.Time
 	NotifyPrefs  []byte
+}
+
+type WebhookDelivery struct {
+	ID         int64
+	RepoID     int64
+	Event      string
+	Payload    []byte
+	ReceivedAt time.Time
 }

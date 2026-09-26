@@ -571,11 +571,15 @@ func ticketFromRow(ctx context.Context, q *db.Queries, row db.GetTicketByKeyRow,
 	if err != nil {
 		return Ticket{}, err
 	}
+	code, err := codeOf(ctx, q, t.ID)
+	if err != nil {
+		return Ticket{}, err
+	}
 	out := Ticket{
 		Id: t.ID, Key: t.Key, ProjectKey: row.ProjectKey, Title: t.Title, Type: TicketType(t.Type),
 		Description: t.Description, Reason: t.Reason, Priority: Priority(t.Priority), Version: t.Version,
 		Status: toAPIStatus(row.Status), Reporter: Ref{Id: t.ReporterID, Name: row.ReporterName},
-		CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt, ClosedAt: t.ClosedAt, Decision: decision, Links: links,
+		CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt, ClosedAt: t.ClosedAt, Decision: decision, Links: links, Code: code,
 		Nodes: make([]NodeRef, len(nodes)), Attachments: make([]Attachment, len(files)),
 	}
 	if t.ClientID != nil {
