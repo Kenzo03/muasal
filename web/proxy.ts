@@ -20,6 +20,7 @@ export function proxy(request: NextRequest) {
     "img-src 'self' data: blob:",
     "font-src 'self'",
     "connect-src 'self'",
+    "worker-src 'self' blob:", // pdf.js reads uploaded PDFs in a worker (FSD §7.7)
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

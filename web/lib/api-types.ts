@@ -642,6 +642,140 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{key}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description The project's documents the caller may see (R-MR-15), newest first. */
+        get: operations["listDocuments"];
+        put?: never;
+        /** @description Project admins upload a PDF, DOCX or Markdown file up to 20 MB (FSD §7.7) with the Markdown the browser converted it to; headings become sections. supersedes names an older document of the project that this one replaces (R-MR-14). */
+        post: operations["uploadDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description A document with its Markdown, sections and tree drafts, for anyone who may see it. */
+        get: operations["getDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{key}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description The original file, as a download. */
+        get: operations["downloadDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{key}/tree-drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Project admins draft a module tree from the document (§7.7). With AI Local or BYOK the model proposes it in a background job; with AI off the proposal comes from the headings and is ready at once (R-MR-11). */
+        post: operations["startTreeDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tree-drafts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        /** @description Project admins read a draft and its progress. */
+        get: operations["getTreeDraft"];
+        /** @description Saves the reviewed proposal of a ready draft; the tree does not change. */
+        put: operations["saveTreeDraft"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tree-drafts/{id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Creates the ticked nodes the tree lacks in one transaction, with source ai_draft and their descriptions, and links every proposed node's sections to it (§7.7). A ticked node needs its parent ticked or existing, and names must be unique among siblings (422). */
+        post: operations["applyTreeDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tree-drafts/{id}/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["discardTreeDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tickets/{key}/decision-draft": {
         parameters: {
             query?: never;
@@ -1783,6 +1917,83 @@ export interface components {
             /** @description The fields started from "Draft with AI" (§9.3). */
             ai_drafted?: boolean;
         };
+        DocumentListItem: {
+            /** @example HRIS-DOC1 */
+            key: string;
+            title: string;
+            client?: components["schemas"]["Ref"];
+            filename: string;
+            uploaded_by: string;
+            /** Format: date-time */
+            created_at: string;
+            superseded_by?: string;
+        };
+        DocumentList: {
+            items: components["schemas"]["DocumentListItem"][];
+        };
+        DocumentSection: {
+            /** @example 7.4 */
+            number: string;
+            title: string;
+            level: number;
+            /** @description The Markdown under the heading. */
+            body: string;
+            /** @description The nodes this section produced. */
+            nodes: components["schemas"]["Ref"][];
+        };
+        Document: {
+            key: string;
+            project_key: string;
+            title: string;
+            client?: components["schemas"]["Ref"];
+            filename: string;
+            markdown: string;
+            sections: components["schemas"]["DocumentSection"][];
+            drafts: {
+                /** Format: int64 */
+                id: number;
+                status: components["schemas"]["TreeDraftStatus"];
+                /** Format: date-time */
+                created_at: string;
+            }[];
+            uploaded_by: string;
+            /** Format: date-time */
+            created_at: string;
+            superseded_by?: string;
+        };
+        /** @enum {string} */
+        TreeDraftStatus: "running" | "ready" | "applied" | "discarded" | "failed";
+        TreeDraftNode: {
+            tmp_id: string;
+            /** @description Another node's tmp_id */
+            parent: string;
+            type: components["schemas"]["NodeType"];
+            name: string;
+            aliases: string[];
+            description: string;
+            /** @description Source section numbers. */
+            sections: string[];
+            keep: boolean;
+            /** @description The tree already has this path; applying leaves it unchanged. */
+            exists: boolean;
+            /** @description A sibling's tmp_id whose name is nearly the same. */
+            duplicate?: string;
+        };
+        TreeDraft: {
+            /** Format: int64 */
+            id: number;
+            document_key: string;
+            document_title: string;
+            status: components["schemas"]["TreeDraftStatus"];
+            /** @description False when the proposal came from the headings (AI off). */
+            used_ai: boolean;
+            done_parts: number;
+            total_parts: number;
+            error?: string;
+            proposal: components["schemas"]["TreeDraftNode"][];
+            /** Format: date-time */
+            created_at: string;
+        };
         DecisionDraft: {
             what_changed: string;
             /** @description Empty when the thread never says why (AC-DC-7). */
@@ -2475,7 +2686,7 @@ export interface components {
              * @description A ticket
              * @enum {string}
              */
-            kind: "ticket" | "note";
+            kind: "ticket" | "note" | "document";
             key: string;
             title: string;
             /** @description Null for core work. */
@@ -3936,6 +4147,234 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Ticket"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listDocuments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The documents. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    uploadDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    markdown: string;
+                    title: string;
+                    /** Format: int64 */
+                    client_id?: number;
+                    /** @description An older document's key */
+                    supersedes?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The stored document. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Document"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The document. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Document"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    downloadDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    startTreeDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The draft, running or ready. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TreeDraft"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getTreeDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The draft. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TreeDraft"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    saveTreeDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    proposal: components["schemas"]["TreeDraftNode"][];
+                };
+            };
+        };
+        responses: {
+            /** @description The draft as saved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TreeDraft"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    applyTreeDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What changed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        created: number;
+                        /** @description Section links written. */
+                        linked: number;
+                    };
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    discardTreeDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Discarded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

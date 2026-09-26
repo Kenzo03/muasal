@@ -71,6 +71,7 @@ export default function TopBar({ me, projects }: { me: User; projects: Project[]
         [`/p/${project.key}/tickets`, tp("tickets")],
         [`/p/${project.key}/modules`, tp("modules")],
         [`/p/${project.key}/notes`, tp("notes")],
+        [`/p/${project.key}/documents`, tp("documents")],
         [`/p/${project.key}/summaries`, tp("summaries")],
         ...(project.role === "admin" ? [[`/p/${project.key}/settings`, tp("settings")] as [string, string]] : []),
       ]

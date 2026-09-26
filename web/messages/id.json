@@ -148,7 +148,8 @@
     "board": "Papan",
     "tickets": "Tiket",
     "notes": "Notulen",
-    "summaries": "Ringkasan"
+    "summaries": "Ringkasan",
+    "documents": "Dokumen"
   },
   "settings": {
     "adminsOnly": "Hanya admin proyek yang dapat mengubah pengaturan.",
@@ -779,7 +780,9 @@
       "comment": "Ada lagi? (opsional)",
       "send": "Kirim",
       "cancel": "Batal"
-    }
+    },
+    "docUploaded": "Bagian dokumen, diunggah {date}",
+    "docKind": "Dokumen"
   },
   "askLog": {
     "title": "Log Tanya",
@@ -1171,5 +1174,69 @@
     "markdown": "Markdown",
     "previewLabel": "Pratinjau",
     "meta": "{audience} · {items} item · {model}. Menyunting tidak mengubah tiket."
+  },
+  "documents": {
+    "heading": "Dokumen",
+    "intro": "Spesifikasi dan manual proyek ini. Tanya mengutipnya per bagian, dan admin menyusun draf pohon modul darinya.",
+    "none": "Belum ada dokumen.",
+    "key": "Kunci",
+    "title": "Judul",
+    "client": "Klien",
+    "allClients": "Semua klien",
+    "uploaded": "Diunggah",
+    "supersededBy": "Digantikan oleh {key}",
+    "upload": "Unggah",
+    "file": "Berkas (PDF, DOCX, atau Markdown, maks. 20 MB)",
+    "supersedes": "Menggantikan",
+    "supersedesNone": "Tidak ada",
+    "tooLarge": "Berkas lebih besar dari 20 MB.",
+    "converting": "Membaca berkas…",
+    "uploading": "Mengunggah…",
+    "unreadable": "Muasal tidak dapat membaca teks dari berkas ini.",
+    "uploadHint": "Berkas dibaca di peramban Anda; judul-judulnya menjadi bagian. PDF hasil pindai tanpa teks tidak dapat dibaca.",
+    "download": "Unduh {name}",
+    "uploadedBy": "Diunggah oleh {name}, {date}",
+    "outline": "Daftar isi",
+    "drafts": "Draf pohon",
+    "draftTree": "Susun draf pohon modul",
+    "status": {
+      "running": "berjalan",
+      "ready": "siap ditinjau",
+      "applied": "diterapkan",
+      "discarded": "dibuang",
+      "failed": "gagal"
+    },
+    "reviewHint": "Menerapkan membuat node yang dicentang dan belum ada di pohon, serta menautkan setiap node ke bagiannya agar Tanya dapat mengutipnya."
+  },
+  "treeDraft": {
+    "heading": "Draf pohon",
+    "running": "Membaca dokumen: bagian {done} dari {total}.",
+    "runningHint": "Anda boleh meninggalkan halaman ini; lonceng memberi tahu saat draf siap.",
+    "failed": "Draf gagal ({code}). Periksa Admin → AI lalu coba lagi dari dokumen.",
+    "introAI": "AI membaca dokumen dan mengusulkan modul serta menu ini. Ganti nama, ubah jenis, hapus centang, atau tambah node, lalu terapkan.",
+    "introHeadings": "AI dimatikan, jadi judul-judul mengusulkan pohon: judul tingkat 2 menjadi modul dan tingkat 3 menjadi menu.",
+    "keep": "Pertahankan {name}",
+    "name": "Nama",
+    "type": "Jenis",
+    "module": "Modul",
+    "menu": "Menu",
+    "exists": "Sudah ada di pohon",
+    "duplicate": "Mungkin duplikat {name}",
+    "aliases": "Alias",
+    "proposal": "Usulan pohon",
+    "empty": "Dokumen tidak mengusulkan node.",
+    "addUnder": "Tambah node di bawah",
+    "top": "Puncak pohon",
+    "add": "Tambah node",
+    "newName": "Node baru",
+    "willCreate": "{count, plural, =0 {Tidak ada yang dibuat} other {# node akan dibuat}}",
+    "discard": "Buang",
+    "discardConfirm": "Buang draf ini? Pohon tidak berubah.",
+    "save": "Simpan",
+    "apply": "Terapkan ke pohon",
+    "applied": "Diterapkan: {created} node dibuat, {linked} tautan bagian.",
+    "openTree": "Buka pohon modul",
+    "discarded": "Draf ini dibuang.",
+    "alreadyApplied": "Draf ini sudah diterapkan."
   }
 }

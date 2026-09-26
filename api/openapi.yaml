@@ -2294,11 +2294,12 @@ components:
         items: { type: array, items: { $ref: "#/components/schemas/DocumentListItem" } }
     DocumentSection:
       type: object
-      required: [number, title, level, nodes]
+      required: [number, title, level, body, nodes]
       properties:
         number: { type: string, example: "7.4" }
         title: { type: string }
         level: { type: integer }
+        body: { type: string, description: The Markdown under the heading. }
         nodes: { type: array, items: { $ref: "#/components/schemas/Ref" }, description: The nodes this section produced. }
     Document:
       type: object

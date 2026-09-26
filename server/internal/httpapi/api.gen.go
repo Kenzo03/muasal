@@ -1613,7 +1613,9 @@ type DocumentListItem struct {
 
 // DocumentSection defines model for DocumentSection.
 type DocumentSection struct {
-	Level int `json:"level"`
+	// Body The Markdown under the heading.
+	Body  string `json:"body"`
+	Level int    `json:"level"`
 
 	// Nodes The nodes this section produced.
 	Nodes []Ref `json:"nodes"`

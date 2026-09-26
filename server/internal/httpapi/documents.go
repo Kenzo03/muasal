@@ -262,7 +262,7 @@ func (s *Server) writeDocument(w http.ResponseWriter, r *http.Request, pc projec
 	}
 	out.Sections = make([]DocumentSection, len(sections))
 	for i, sec := range sections {
-		out.Sections[i] = DocumentSection{Number: sec.Number, Title: sec.Title, Level: int(sec.Level), Nodes: []Ref{}}
+		out.Sections[i] = DocumentSection{Number: sec.Number, Title: sec.Title, Level: int(sec.Level), Body: sec.Body, Nodes: []Ref{}}
 		for _, l := range links {
 			if name, ok := names[l.NodeID]; ok && l.SectionID == sec.ID {
 				out.Sections[i].Nodes = append(out.Sections[i].Nodes, Ref{Id: l.NodeID, Name: name})

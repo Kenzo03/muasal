@@ -5,10 +5,11 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const allowed = new Set(["MIT", "ISC", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "0BSD", "BlueOak-1.0.0", "CC0-1.0", "CC-BY-4.0", "Python-2.0", "MPL-2.0", "Unlicense"]);
+const allowed = new Set(["MIT", "ISC", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "0BSD", "BlueOak-1.0.0", "CC0-1.0", "CC-BY-4.0", "Python-2.0", "MPL-2.0", "Unlicense", "Zlib"]);
 // Named exceptions, listed in NOTICE: sharp's @img packages ship libvips
-// unmodified under LGPL-3.0-or-later.
-const exceptions = [/^@img\/sharp-/];
+// unmodified under LGPL-3.0-or-later. duck (mammoth's) says only "BSD"; its
+// LICENSE file is the 2-clause BSD licence.
+const exceptions = [/^@img\/sharp-/, /^duck@/];
 const ok = (expr) => {
   const e = expr.replace(/[()]/g, " ").trim();
   if (/\sOR\s/.test(e)) return e.split(/\s+OR\s+/).some(ok);
