@@ -8,6 +8,8 @@ services:
       PUBLIC_URL: ${PUBLIC_URL}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy.d:/etc/caddy/caddy.d:ro
+      - ./certs:/certs:ro
       - caddy_data:/data
     depends_on: [web, app]
     networks: [edge, app]

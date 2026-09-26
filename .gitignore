@@ -8,4 +8,7 @@ node_modules/
 /web/playwright-report/
 # Local environment
 /deploy/.env
+/deploy/caddy.d/*.caddy
+/deploy/certs/*.pem
+/dist/
 .DS_Store
