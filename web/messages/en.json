@@ -560,7 +560,31 @@
     "why": "Why",
     "alternatives": "Alternatives rejected",
     "save": "Save",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "supersededBy": "Superseded by <link>{key}</link>: this is no longer how it works."
+  },
+  "links": {
+    "title": "Links",
+    "add": "Add link",
+    "none": "No links yet.",
+    "type": "This ticket",
+    "key": "Ticket key",
+    "save": "Link",
+    "cancel": "Cancel",
+    "remove": "Remove the link to {key}",
+    "hint": "A ticket that reverses another supersedes its decision.",
+    "reverses": {
+      "out": "Reverses",
+      "in": "Reversed by"
+    },
+    "extends": {
+      "out": "Extends",
+      "in": "Extended by"
+    },
+    "related_to": {
+      "out": "Related to",
+      "in": "Related to"
+    }
   },
   "activity": {
     "title": "Activity",

@@ -560,7 +560,31 @@
     "why": "Mengapa",
     "alternatives": "Alternatif yang ditolak",
     "save": "Simpan",
-    "cancel": "Batal"
+    "cancel": "Batal",
+    "supersededBy": "Digantikan oleh <link>{key}</link>: ini bukan lagi cara kerjanya sekarang."
+  },
+  "links": {
+    "title": "Tautan",
+    "add": "Tambah tautan",
+    "none": "Belum ada tautan.",
+    "type": "Tiket ini",
+    "key": "Kunci tiket",
+    "save": "Tautkan",
+    "cancel": "Batal",
+    "remove": "Hapus tautan ke {key}",
+    "hint": "Tiket yang membatalkan tiket lain menggantikan keputusannya.",
+    "reverses": {
+      "out": "Membatalkan",
+      "in": "Dibatalkan oleh"
+    },
+    "extends": {
+      "out": "Memperluas",
+      "in": "Diperluas oleh"
+    },
+    "related_to": {
+      "out": "Terkait dengan",
+      "in": "Terkait dengan"
+    }
   },
   "activity": {
     "title": "Aktivitas",

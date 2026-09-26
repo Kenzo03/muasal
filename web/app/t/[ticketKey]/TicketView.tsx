@@ -16,6 +16,7 @@ import { nodePaths } from "@/lib/nodes";
 import { useProblemText, type Client, type Node, type Ref, type Status, type Ticket } from "@/lib/problem";
 import { button, cx, field, panel, sectionTitle } from "@/lib/ui";
 import DecisionCard from "./DecisionCard";
+import Links from "./Links";
 
 type Props = {
   ticket: Ticket;
@@ -175,6 +176,7 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
                 </div>
               </section>
               {ticket.decision && <DecisionCard ticketKey={ticket.key} decision={ticket.decision} canEdit={canEditDecision} />}
+              <Links ticketKey={ticket.key} links={ticket.links} canEdit={canEdit} />
               {activity}
             </div>
             <aside className="flex flex-col gap-4">
