@@ -5,7 +5,9 @@
     "dev": "next dev",
     "build": "next build",
     "gen:api": "openapi-typescript ../api/openapi.yaml -o lib/api-types.ts",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "test": "node --test lib/*.test.ts",
+    "check:i18n": "node scripts/check-i18n.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",

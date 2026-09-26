@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import AskView from "@/components/ask/AskView";
 import { ClientChip } from "@/components/Chips";
 import Icon from "@/components/Icon";
 import type { TicketType } from "@/lib/problem";
@@ -12,7 +13,7 @@ import Behaviors from "./Behaviors";
 import NodeDetails from "./NodeDetails";
 import Timeline from "./Timeline";
 
-const tabs = ["timeline", "behaviors", "details"] as const;
+const tabs = ["timeline", "behaviors", "ask", "details"] as const;
 type Tab = (typeof tabs)[number];
 
 // The node page (FSD §7.4): a menu's or module's history, the behaviors each
@@ -68,6 +69,17 @@ export default async function NodePage({
         limit={limit}
         clients={clients}
         values={values}
+      />
+    );
+  } else if (tab === "ask") {
+    // Preset to this node and its sub-nodes (FSD §10.1).
+    const label = [...detail.path.map((p) => p.name), node.name].join(" › ");
+    content = (
+      <AskView
+        chips={[
+          { kind: "project", id: project.id, label: project.key },
+          { kind: "node", id: node.id, label },
+        ]}
       />
     );
   } else if (tab === "behaviors") {
