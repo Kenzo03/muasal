@@ -81,7 +81,11 @@ func block(it indexer.Source, details bool) string {
 	if t.ClosedAt != nil {
 		when = "closed " + day(*t.ClosedAt) + " as " + t.StatusName
 	}
-	fmt.Fprintf(&b, "[%s] %s · %s · %s · requested by %s\n", t.Key, typeNames[t.Type], client, when, indexer.Requester(t))
+	key := "[" + t.Key + "]"
+	if t.ExternalRef != nil {
+		key += " (old key " + *t.ExternalRef + ")" // R-IN-2
+	}
+	fmt.Fprintf(&b, "%s %s · %s · %s · requested by %s\n", key, typeNames[t.Type], client, when, indexer.Requester(t))
 	b.WriteString("Title: " + t.Title + "\n")
 	if len(it.Menus) > 0 {
 		paths := make([]string, len(it.Menus))

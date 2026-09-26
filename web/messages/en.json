@@ -39,7 +39,8 @@
     "audit": "Audit",
     "backups": "Backups",
     "system": "System status",
-    "tokens": "API tokens"
+    "tokens": "API tokens",
+    "imports": "Imports"
   },
   "search": {
     "heading": "Search",
@@ -976,5 +977,77 @@
     "choose": "Choose an item",
     "merge": "Merge",
     "confirm": "Merge {name} into {into}? This archives {name}."
+  },
+  "imports": {
+    "title": "Imports",
+    "adminsOnly": "Only system admins import tickets.",
+    "intro": "Bring old tickets in once from a CSV file or Jira's \"Export Excel CSV (all fields)\", up to 200 MB. Importing the same file again updates tickets instead of duplicating them.",
+    "new": "New import",
+    "project": "Project",
+    "preset": "Format",
+    "presets": {
+      "jira": "Jira export",
+      "csv": "Other CSV"
+    },
+    "file": "File",
+    "upload": "Upload and dry-run",
+    "uploading": "Reading…",
+    "failed": "The file could not be uploaded.",
+    "cols": {
+      "file": "File",
+      "project": "Project",
+      "status": "Status",
+      "rows": "Rows",
+      "by": "By",
+      "when": "When"
+    },
+    "statuses": {
+      "uploaded": "Uploaded",
+      "dry_run": "Dry run",
+      "running": "Running",
+      "done": "Done",
+      "failed": "Failed"
+    },
+    "detailTitle": "Import {file}",
+    "dryRun": "Dry run",
+    "stats": {
+      "status": "Status",
+      "create": "To create",
+      "update": "To update",
+      "reject": "Rejected",
+      "coverage": "Mapped to a menu"
+    },
+    "progress": "Progress",
+    "running": "{done} of {rows} rows written…",
+    "finished": "Done: {tickets} tickets written, {comments} new comments.",
+    "errors": "First errors",
+    "row": "Row {line}:",
+    "mapping": "Column mapping",
+    "none": "—",
+    "values": "Value maps",
+    "valuesHint": "One per line, e.g. types: story = feature, statuses: in progress = In progress, nodes: payroll = 12.",
+    "badValues": "Each value map line reads kind: from = to.",
+    "replan": "Dry-run again",
+    "run": "{count, plural, one {Import # ticket} other {Import # tickets}}",
+    "coverageHint": "Components and labels become menus when they match a menu's name, alias or code. Tickets without a reason or menu show in the ticket list's Missing filter for linking later.",
+    "needsLinking": "Open the tickets that still need menus",
+    "fields": {
+      "key": "Key",
+      "title": "Title",
+      "description": "Description",
+      "reason": "Reason",
+      "type": "Type",
+      "status": "Status",
+      "priority": "Priority",
+      "client": "Client",
+      "created": "Created",
+      "resolved": "Resolved",
+      "reporter": "Requested by",
+      "assignee": "Assignee",
+      "components": "Components",
+      "labels": "Labels",
+      "comments": "Comments",
+      "attachments": "Attachments"
+    }
   }
 }

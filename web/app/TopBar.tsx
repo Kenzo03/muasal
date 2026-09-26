@@ -79,6 +79,7 @@ export default function TopBar({ me, projects }: { me: User; projects: Project[]
           ["/admin/ai", t("ai")],
           ["/admin/ask-log", t("askLog")],
           ["/admin/audit", t("audit")],
+          ["/admin/imports", t("imports")],
           ["/admin/backups", t("backups")],
           ["/admin/system", t("system")],
         ]

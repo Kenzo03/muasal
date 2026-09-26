@@ -978,6 +978,94 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Note" }
         default: { $ref: "#/components/responses/Problem" }
+  /imports:
+    get:
+      operationId: listImports
+      tags: [admin]
+      description: System admins. Ticket imports, newest first (FSD §14.2).
+      responses:
+        "200":
+          description: The last 100 imports.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ImportRunList" }
+        default: { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createImport
+      tags: [admin]
+      description: >-
+        System admins upload a UTF-8 CSV (comma or semicolon) or Jira's "Export Excel CSV (all fields)", up to 200 MB,
+        into a new import for one project, and get its dry run: counts to create, update and reject, the first 20
+        errors and module coverage (§14.2). preset jira maps Jira's columns; mapping, a JSON ImportMapping, overrides it.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, project_key]
+              properties:
+                file: { type: string, format: binary }
+                project_key: { type: string }
+                preset: { type: string, enum: [csv, jira] }
+                mapping: { type: string, description: An ImportMapping as JSON. }
+      responses:
+        "201":
+          description: The import with its dry run.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ImportRun" }
+        default: { $ref: "#/components/responses/Problem" }
+  /imports/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    get:
+      operationId: getImport
+      tags: [admin]
+      description: System admins. The import, its dry run and, while it runs, its progress.
+      responses:
+        "200":
+          description: The import.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ImportRun" }
+        default: { $ref: "#/components/responses/Problem" }
+  /imports/{id}/plan:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    post:
+      operationId: planImport
+      tags: [admin]
+      description: System admins change the mapping and dry-run again, until the import runs.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ImportMapping" }
+      responses:
+        "200":
+          description: The import with its new dry run.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ImportRun" }
+        default: { $ref: "#/components/responses/Problem" }
+  /imports/{id}/run:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    post:
+      operationId: runImport
+      tags: [admin]
+      description: >-
+        System admins start a dry-run import as a background job in batches of 500, resumable after a failure. Rows
+        the dry run rejected are skipped. Tickets match on their old key, so running a file again updates instead of
+        duplicating (R-IN-1, AC-IN-3).
+      responses:
+        "202":
+          description: The import, now running.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ImportRun" }
+        default: { $ref: "#/components/responses/Problem" }
   /search:
     get:
       operationId: search
@@ -2074,6 +2162,58 @@ components:
         code: { type: string, enum: [unreadable, empty, too_many_rows, unknown_shape, bad_client_scope, missing_id, duplicate_id, missing_parent, cycle, duplicate_name, duplicate_code, empty_name, bad_type, long_name, unknown_client, no_clients] }
         path: { type: string }
         message: { type: string }
+    ImportMapping:
+      type: object
+      required: [columns]
+      properties:
+        columns:
+          type: object
+          description: Field → column header. Fields are key, title, description, reason, type, status, priority, client, created, resolved, reporter, assignee, components, labels, comments, attachments.
+          additionalProperties: { type: string }
+        types: { type: object, description: Source value (lower case) → bug, change_request or feature., additionalProperties: { type: string } }
+        statuses: { type: object, description: Source value (lower case) → a project status name., additionalProperties: { type: string } }
+        priorities: { type: object, description: Source value (lower case) → low, medium, high or urgent., additionalProperties: { type: string } }
+        nodes: { type: object, description: Component or label (lower case) → node id; others match by name, alias or code., additionalProperties: { type: integer, format: int64 } }
+    ImportStats:
+      type: object
+      required: [rows, create, update, reject, linked, coverage, done, tickets, comments]
+      properties:
+        rows: { type: integer }
+        create: { type: integer }
+        update: { type: integer }
+        reject: { type: integer }
+        linked: { type: integer }
+        coverage: { type: integer, description: Percent of valid rows mapped to a menu. }
+        done: { type: integer, description: Rows written so far. }
+        tickets: { type: integer }
+        comments: { type: integer }
+    ImportProblem:
+      type: object
+      required: [line, message]
+      properties:
+        line: { type: integer }
+        key: { type: string }
+        message: { type: string }
+    ImportRun:
+      type: object
+      required: [id, project_key, file_name, status, headers, mapping, stats, errors, created_by, created_at]
+      properties:
+        id: { type: integer, format: int64 }
+        project_key: { type: string }
+        file_name: { type: string }
+        status: { type: string, enum: [uploaded, dry_run, running, done, failed] }
+        headers: { type: array, items: { type: string } }
+        mapping: { $ref: "#/components/schemas/ImportMapping" }
+        stats: { $ref: "#/components/schemas/ImportStats" }
+        errors: { type: array, items: { $ref: "#/components/schemas/ImportProblem" } }
+        created_by: { type: string }
+        created_at: { type: string, format: date-time }
+        finished_at: { type: string, format: date-time, nullable: true }
+    ImportRunList:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/ImportRun" } }
     SearchResults:
       type: object
       required: [tickets, nodes, notes]

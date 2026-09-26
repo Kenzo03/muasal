@@ -1,0 +1,60 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
+import PageBar from "@/components/PageBar";
+import { utc } from "@/lib/format";
+import { getMe, getProjects, serverApi } from "@/lib/server-api";
+import { cx, table } from "@/lib/ui";
+import NewImport from "./NewImport";
+
+// Admin → Imports (FSD §14.2): one-time ticket imports from CSV or Jira.
+export default async function ImportsPage() {
+  const me = await getMe();
+  if (!me) redirect("/login");
+  const t = await getTranslations("imports");
+  const locale = await getLocale();
+  const { data } = me.is_admin ? await (await serverApi()).GET("/imports") : { data: undefined };
+  const projects = me.is_admin ? await getProjects() : [];
+  return (
+    <>
+      <PageBar>
+        <h1 className="text-base font-semibold">{t("title")}</h1>
+      </PageBar>
+      <main className="flex max-w-5xl flex-col gap-4 p-4 md:p-5">
+        {!data ? (
+          <p className="text-muted">{t("adminsOnly")}</p>
+        ) : (
+          <>
+            <p className="text-[13px] text-muted">{t("intro")}</p>
+            <NewImport projects={projects.map((p) => ({ key: p.key, name: p.name }))} />
+            {data.items.length > 0 && (
+              <div className={table.wrap}>
+                <table className={table.table}>
+                  <thead className={table.head}>
+                    <tr>
+                      {(["file", "project", "status", "rows", "by", "when"] as const).map((c) => (
+                        <th key={c} className={table.th}>{t(`cols.${c}`)}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.items.map((r) => (
+                      <tr key={r.id} className={table.row}>
+                        <td className={table.td}><Link href={`/admin/imports/${r.id}`}>{r.file_name}</Link></td>
+                        <td className={cx(table.td, "font-mono")}>{r.project_key}</td>
+                        <td className={table.td}>{t(`statuses.${r.status}`)}</td>
+                        <td className={table.td}>{r.stats.rows}</td>
+                        <td className={table.td}>{r.created_by}</td>
+                        <td className={cx(table.td, "whitespace-nowrap")}>{utc(r.created_at, locale)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
+      </main>
+    </>
+  );
+}

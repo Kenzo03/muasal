@@ -233,10 +233,11 @@ func (w *embedWorker) Timeout(*river.Job[EmbedPending]) time.Duration { return 3
 
 // Options tune the worker client; tests poll faster.
 type Options struct {
-	PollInterval time.Duration // default 1 s
-	Workers      int           // default 4
-	OwnerURL     string        // MIGRATE_DATABASE_URL, for ChangeDimension
-	AskLogDays   int           // Ask log retention in days; 0 keeps it (FSD §15.4)
+	PollInterval time.Duration        // default 1 s
+	Workers      int                  // default 4
+	OwnerURL     string               // MIGRATE_DATABASE_URL, for ChangeDimension
+	AskLogDays   int                  // Ask log retention in days; 0 keeps it (FSD §15.4)
+	Register     func(*river.Workers) // adds other packages' workers, such as ticket imports
 }
 
 // NewClient returns the River client that `app serve` starts: the index queue's
@@ -249,6 +250,9 @@ func NewClient(pool *pgxpool.Pool, rt *ai.Runtime, log *slog.Logger, opts Option
 	river.AddWorker(workers, &noteWorker{ix: ix})
 	river.AddWorker(workers, &dimensionWorker{ownerURL: opts.OwnerURL})
 	river.AddWorker(workers, &purgeWorker{pool: pool, days: opts.AskLogDays})
+	if opts.Register != nil {
+		opts.Register(workers)
+	}
 	return river.NewClient(riverpgxv5.New(pool), &river.Config{
 		Logger:            log,
 		FetchPollInterval: cmp.Or(opts.PollInterval, time.Second),
