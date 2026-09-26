@@ -207,6 +207,7 @@ export default function TopBar({ me, projects }: { me: User; projects: Project[]
               <div className="text-xs text-muted">{me.email}</div>
             </div>
             <Link href="/settings/profile" className="block px-3 py-2 text-sm text-ink no-underline hover:bg-paper hover:text-ink">{t("profile")}</Link>
+            <Link href="/settings/tokens" className="block px-3 py-2 text-sm text-ink no-underline hover:bg-paper hover:text-ink">{t("tokens")}</Link>
             <SignOutButton label={t("signOut")} />
           </Menu>
         </div>

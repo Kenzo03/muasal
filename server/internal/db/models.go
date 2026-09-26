@@ -11,6 +11,18 @@ import (
 	pgvector "github.com/pgvector/pgvector-go"
 )
 
+type ApiToken struct {
+	ID         int64
+	UserID     int64
+	Name       string
+	TokenHash  []byte
+	ReadOnly   bool
+	ExpiresAt  *time.Time
+	LastUsedAt *time.Time
+	RevokedAt  *time.Time
+	CreatedAt  time.Time
+}
+
 type AskFeedback struct {
 	QueryID   int64
 	UserID    int64
@@ -158,6 +170,13 @@ type DecisionRecord struct {
 	ConfirmedBy  *int64
 	ConfirmedAt  *time.Time
 	SupersededBy *int64
+}
+
+type IdempotencyKey struct {
+	UserID    int64
+	Key       string
+	TicketID  int64
+	CreatedAt time.Time
 }
 
 type Membership struct {

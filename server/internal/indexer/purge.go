@@ -31,7 +31,8 @@ func PurgeAskLog(ctx context.Context, pool *pgxpool.Pool, days int, now time.Tim
 	return n, err
 }
 
-// PurgeAsk is the daily retention job.
+// PurgeAsk is the daily retention job; it also drops idempotency keys past
+// their 24 hours (§17.1).
 type PurgeAsk struct{}
 
 func (PurgeAsk) Kind() string { return "purge_ask_log" }
@@ -47,6 +48,9 @@ type purgeWorker struct {
 }
 
 func (w *purgeWorker) Work(ctx context.Context, _ *river.Job[PurgeAsk]) error {
+	if _, err := db.New(w.pool).PurgeIdempotencyKeys(ctx); err != nil {
+		return err
+	}
 	_, err := PurgeAskLog(ctx, w.pool, w.days, time.Now())
 	return err
 }

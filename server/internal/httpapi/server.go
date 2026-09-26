@@ -35,6 +35,7 @@ type Server struct {
 	ai      *ai.Runtime
 	engine  *ask.Engine
 	askRate *auth.Limiter
+	tokRate *auth.Limiter
 }
 
 // New wires a Server; it opens no connections of its own.
@@ -54,6 +55,8 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) *Server {
 		jobs:    jobs,
 		ai:      &ai.Runtime{Store: ai.NewStore(q), Gate: ai.NewGate(), SecretKey: cfg.SecretKey, HTTP: &http.Client{}},
 		askRate: auth.NewLimiter(10, time.Minute), // FSD §17.1: Ask 10 a minute per user
+		// FSD §14.3: 60 a minute per token, bursting to 120: a two-minute window of 120.
+		tokRate: auth.NewLimiter(120, 2*time.Minute),
 	}
 	s.engine = ask.NewEngine(pool, s.ai)
 	return s
@@ -136,8 +139,13 @@ func (m auditMeta) inProject(id int64) auditMeta {
 
 var systemMeta = auditMeta{via: "system"}
 
+// webMeta records a request's origin: "api" for a token, "web" for a session.
 func webMeta(r *http.Request) auditMeta {
-	return auditMeta{via: "web", requestID: ptr(requestIDFrom(r.Context())), ip: ipAddr(r)}
+	via := "web"
+	if currentToken(r) != nil {
+		via = "api"
+	}
+	return auditMeta{via: via, requestID: ptr(requestIDFrom(r.Context())), ip: ipAddr(r)}
 }
 
 // audit appends one event. changes must never contain secrets.

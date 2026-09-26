@@ -435,6 +435,66 @@ func (e MyTicketsView) Valid() bool {
 	}
 }
 
+// Defines values for NodeImportProblemCode.
+const (
+	NodeImportProblemCodeBadClientScope NodeImportProblemCode = "bad_client_scope"
+	NodeImportProblemCodeBadType        NodeImportProblemCode = "bad_type"
+	NodeImportProblemCodeCycle          NodeImportProblemCode = "cycle"
+	NodeImportProblemCodeDuplicateCode  NodeImportProblemCode = "duplicate_code"
+	NodeImportProblemCodeDuplicateId    NodeImportProblemCode = "duplicate_id"
+	NodeImportProblemCodeDuplicateName  NodeImportProblemCode = "duplicate_name"
+	NodeImportProblemCodeEmpty          NodeImportProblemCode = "empty"
+	NodeImportProblemCodeEmptyName      NodeImportProblemCode = "empty_name"
+	NodeImportProblemCodeLongName       NodeImportProblemCode = "long_name"
+	NodeImportProblemCodeMissingId      NodeImportProblemCode = "missing_id"
+	NodeImportProblemCodeMissingParent  NodeImportProblemCode = "missing_parent"
+	NodeImportProblemCodeNoClients      NodeImportProblemCode = "no_clients"
+	NodeImportProblemCodeTooManyRows    NodeImportProblemCode = "too_many_rows"
+	NodeImportProblemCodeUnknownClient  NodeImportProblemCode = "unknown_client"
+	NodeImportProblemCodeUnknownShape   NodeImportProblemCode = "unknown_shape"
+	NodeImportProblemCodeUnreadable     NodeImportProblemCode = "unreadable"
+)
+
+// Valid indicates whether the value is a known member of the NodeImportProblemCode enum.
+func (e NodeImportProblemCode) Valid() bool {
+	switch e {
+	case NodeImportProblemCodeBadClientScope:
+		return true
+	case NodeImportProblemCodeBadType:
+		return true
+	case NodeImportProblemCodeCycle:
+		return true
+	case NodeImportProblemCodeDuplicateCode:
+		return true
+	case NodeImportProblemCodeDuplicateId:
+		return true
+	case NodeImportProblemCodeDuplicateName:
+		return true
+	case NodeImportProblemCodeEmpty:
+		return true
+	case NodeImportProblemCodeEmptyName:
+		return true
+	case NodeImportProblemCodeLongName:
+		return true
+	case NodeImportProblemCodeMissingId:
+		return true
+	case NodeImportProblemCodeMissingParent:
+		return true
+	case NodeImportProblemCodeNoClients:
+		return true
+	case NodeImportProblemCodeTooManyRows:
+		return true
+	case NodeImportProblemCodeUnknownClient:
+		return true
+	case NodeImportProblemCodeUnknownShape:
+		return true
+	case NodeImportProblemCodeUnreadable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for NodeType.
 const (
 	NodeTypeMenu   NodeType = "menu"
@@ -672,6 +732,24 @@ func (e ListTicketsParamsSort) Valid() bool {
 	}
 }
 
+// Defines values for ListTicketsParamsFormat.
+const (
+	ListTicketsParamsFormatCsv  ListTicketsParamsFormat = "csv"
+	ListTicketsParamsFormatJson ListTicketsParamsFormat = "json"
+)
+
+// Valid indicates whether the value is a known member of the ListTicketsParamsFormat enum.
+func (e ListTicketsParamsFormat) Valid() bool {
+	switch e {
+	case ListTicketsParamsFormatCsv:
+		return true
+	case ListTicketsParamsFormatJson:
+		return true
+	default:
+		return false
+	}
+}
+
 // AIEndpoint defines model for AIEndpoint.
 type AIEndpoint struct {
 	ApiKeySet bool `json:"api_key_set"`
@@ -761,6 +839,42 @@ type AITuning struct {
 	MinSimilarity  float64 `json:"min_similarity"`
 	Temperature    float64 `json:"temperature"`
 	TimeoutSeconds int     `json:"timeout_seconds"`
+}
+
+// APIToken defines model for APIToken.
+type APIToken struct {
+	CreatedAt  time.Time  `json:"created_at"`
+	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
+	Id         int64      `json:"id"`
+	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
+	Name       string     `json:"name"`
+	ReadOnly   bool       `json:"read_only"`
+}
+
+// APITokenCreate defines model for APITokenCreate.
+type APITokenCreate struct {
+	// ExpiresOn The last day the token works; omitted for no expiry.
+	ExpiresOn *openapi_types.Date `json:"expires_on,omitempty"`
+	Name      string              `json:"name"`
+	ReadOnly  bool                `json:"read_only"`
+}
+
+// APITokenCreated defines model for APITokenCreated.
+type APITokenCreated struct {
+	CreatedAt  time.Time  `json:"created_at"`
+	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
+	Id         int64      `json:"id"`
+	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
+	Name       string     `json:"name"`
+	ReadOnly   bool       `json:"read_only"`
+
+	// Token The secret, e.g. msl_…; shown once.
+	Token string `json:"token"`
+}
+
+// APITokenList defines model for APITokenList.
+type APITokenList struct {
+	Items []APIToken `json:"items"`
 }
 
 // ActivityItem defines model for ActivityItem.
@@ -1435,6 +1549,42 @@ type NodeDetail struct {
 	ProjectKey string `json:"project_key"`
 }
 
+// NodeImportProblem defines model for NodeImportProblem.
+type NodeImportProblem struct {
+	Code NodeImportProblemCode `json:"code"`
+
+	// Line 0 for the file as a whole.
+	Line    int     `json:"line"`
+	Message string  `json:"message"`
+	Path    *string `json:"path,omitempty"`
+}
+
+// NodeImportProblemCode defines model for NodeImportProblem.Code.
+type NodeImportProblemCode string
+
+// NodeImportResult defines model for NodeImportResult.
+type NodeImportResult struct {
+	Applied bool            `json:"applied"`
+	Changed []NodeImportRow `json:"changed"`
+	Created []NodeImportRow `json:"created"`
+
+	// Missing Live nodes the file leaves out, for manual archiving.
+	Missing   []string            `json:"missing"`
+	Problems  []NodeImportProblem `json:"problems"`
+	Unchanged int                 `json:"unchanged"`
+}
+
+// NodeImportRow defines model for NodeImportRow.
+type NodeImportRow struct {
+	// Fields What changes
+	Fields []string `json:"fields"`
+	Line   int      `json:"line"`
+
+	// Path Example: HR › Attendance › Overtime Approval
+	Path string   `json:"path"`
+	Type NodeType `json:"type"`
+}
+
 // NodeList defines model for NodeList.
 type NodeList struct {
 	Items []Node `json:"items"`
@@ -2050,6 +2200,11 @@ type GetNodeBehaviorsParams struct {
 	SubNodes *bool `form:"sub_nodes,omitempty" json:"sub_nodes,omitempty"`
 }
 
+// MergeNodeJSONBody defines parameters for MergeNode.
+type MergeNodeJSONBody struct {
+	IntoId int64 `json:"into_id"`
+}
+
 // GetNodeTimelineParams defines parameters for GetNodeTimeline.
 type GetNodeTimelineParams struct {
 	SubNodes *bool  `form:"sub_nodes,omitempty" json:"sub_nodes,omitempty"`
@@ -2072,6 +2227,12 @@ type GetNodeTimelineParams struct {
 type ListNodesParams struct {
 	// Archived Project admins only; also list archived nodes.
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty"`
+}
+
+// ImportNodesMultipartBody defines parameters for ImportNodes.
+type ImportNodesMultipartBody struct {
+	DryRun *bool              `json:"dry_run,omitempty"`
+	File   openapi_types.File `json:"file"`
 }
 
 // ListNotesParams defines parameters for ListNotes.
@@ -2109,6 +2270,9 @@ type ListTicketsParams struct {
 	Sort    *ListTicketsParamsSort    `form:"sort,omitempty" json:"sort,omitempty"`
 	Limit   *int32                    `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor  *string                   `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Format csv downloads every ticket of the filter, up to 10,000, as UTF-8 CSV instead of a page (FSD §8.5).
+	Format *ListTicketsParamsFormat `form:"format,omitempty" json:"format,omitempty"`
 }
 
 // ListTicketsParamsMissing defines parameters for ListTickets.
@@ -2116,6 +2280,15 @@ type ListTicketsParamsMissing string
 
 // ListTicketsParamsSort defines parameters for ListTickets.
 type ListTicketsParamsSort string
+
+// ListTicketsParamsFormat defines parameters for ListTickets.
+type ListTicketsParamsFormat string
+
+// CreateTicketParams defines parameters for CreateTicket.
+type CreateTicketParams struct {
+	// IdempotencyKey A retry with the same key within 24 hours returns the ticket the first request created (200, with Idempotent-Replayed true) instead of a second ticket (FSD §17.1).
+	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
+}
 
 // SearchParams defines parameters for Search.
 type SearchParams struct {
@@ -2182,8 +2355,14 @@ type UpdateContactJSONRequestBody = ContactInput
 // UpdateMeJSONRequestBody defines body for UpdateMe for application/json ContentType.
 type UpdateMeJSONRequestBody = MeUpdate
 
+// CreateTokenJSONRequestBody defines body for CreateToken for application/json ContentType.
+type CreateTokenJSONRequestBody = APITokenCreate
+
 // UpdateNodeJSONRequestBody defines body for UpdateNode for application/json ContentType.
 type UpdateNodeJSONRequestBody = NodeUpdate
+
+// MergeNodeJSONRequestBody defines body for MergeNode for application/json ContentType.
+type MergeNodeJSONRequestBody MergeNodeJSONBody
 
 // UpdateNoteJSONRequestBody defines body for UpdateNote for application/json ContentType.
 type UpdateNoteJSONRequestBody = NoteUpdate
@@ -2202,6 +2381,9 @@ type SetProjectMembersJSONRequestBody = MembersUpdate
 
 // CreateNodeJSONRequestBody defines body for CreateNode for application/json ContentType.
 type CreateNodeJSONRequestBody = NodeCreate
+
+// ImportNodesMultipartRequestBody defines body for ImportNodes for multipart/form-data ContentType.
+type ImportNodesMultipartRequestBody ImportNodesMultipartBody
 
 // CreateNoteJSONRequestBody defines body for CreateNote for application/json ContentType.
 type CreateNoteJSONRequestBody = NoteInput
@@ -2347,6 +2529,15 @@ type ServerInterface interface {
 	// (GET /me/tickets)
 	ListMyTickets(w http.ResponseWriter, r *http.Request, params ListMyTicketsParams)
 
+	// (GET /me/tokens)
+	ListTokens(w http.ResponseWriter, r *http.Request)
+
+	// (POST /me/tokens)
+	CreateToken(w http.ResponseWriter, r *http.Request)
+
+	// (DELETE /me/tokens/{id})
+	RevokeToken(w http.ResponseWriter, r *http.Request, id int64)
+
 	// (GET /me/updates)
 	ListMyUpdates(w http.ResponseWriter, r *http.Request)
 
@@ -2361,6 +2552,9 @@ type ServerInterface interface {
 
 	// (GET /nodes/{id}/behaviors)
 	GetNodeBehaviors(w http.ResponseWriter, r *http.Request, id int64, params GetNodeBehaviorsParams)
+
+	// (POST /nodes/{id}/merge)
+	MergeNode(w http.ResponseWriter, r *http.Request, id int64)
 
 	// (GET /nodes/{id}/timeline)
 	GetNodeTimeline(w http.ResponseWriter, r *http.Request, id int64, params GetNodeTimelineParams)
@@ -2404,6 +2598,9 @@ type ServerInterface interface {
 	// (POST /projects/{key}/nodes)
 	CreateNode(w http.ResponseWriter, r *http.Request, key string)
 
+	// (POST /projects/{key}/nodes/import)
+	ImportNodes(w http.ResponseWriter, r *http.Request, key string)
+
 	// (GET /projects/{key}/nodes/recent)
 	ListRecentNodes(w http.ResponseWriter, r *http.Request, key string)
 
@@ -2423,7 +2620,7 @@ type ServerInterface interface {
 	ListTickets(w http.ResponseWriter, r *http.Request, key string, params ListTicketsParams)
 
 	// (POST /projects/{key}/tickets)
-	CreateTicket(w http.ResponseWriter, r *http.Request, key string)
+	CreateTicket(w http.ResponseWriter, r *http.Request, key string, params CreateTicketParams)
 
 	// (GET /search)
 	Search(w http.ResponseWriter, r *http.Request, params SearchParams)
@@ -3492,6 +3689,60 @@ func (siw *ServerInterfaceWrapper) ListMyTickets(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// ListTokens operation middleware
+func (siw *ServerInterfaceWrapper) ListTokens(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListTokens(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateToken operation middleware
+func (siw *ServerInterfaceWrapper) CreateToken(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateToken(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RevokeToken operation middleware
+func (siw *ServerInterfaceWrapper) RevokeToken(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RevokeToken(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListMyUpdates operation middleware
 func (siw *ServerInterfaceWrapper) ListMyUpdates(w http.ResponseWriter, r *http.Request) {
 
@@ -3617,6 +3868,32 @@ func (siw *ServerInterfaceWrapper) GetNodeBehaviors(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetNodeBehaviors(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// MergeNode operation middleware
+func (siw *ServerInterfaceWrapper) MergeNode(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MergeNode(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4089,6 +4366,32 @@ func (siw *ServerInterfaceWrapper) CreateNode(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// ImportNodes operation middleware
+func (siw *ServerInterfaceWrapper) ImportNodes(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ImportNodes(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListRecentNodes operation middleware
 func (siw *ServerInterfaceWrapper) ListRecentNodes(w http.ResponseWriter, r *http.Request) {
 
@@ -4448,6 +4751,19 @@ func (siw *ServerInterfaceWrapper) ListTickets(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	// ------------- Optional query parameter "format" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "format", r.URL.Query(), &params.Format, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "format"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "format", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListTickets(w, r, key, params)
 	}))
@@ -4474,8 +4790,32 @@ func (siw *ServerInterfaceWrapper) CreateTicket(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateTicketParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateTicket(w, r, key)
+		siw.Handler.CreateTicket(w, r, key, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4905,6 +5245,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/me", wrapper.UpdateMe)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/tickets", wrapper.ListMyTickets)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/updates", wrapper.ListMyUpdates)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/tokens", wrapper.ListTokens)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/me/tokens", wrapper.CreateToken)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/me/tokens/{id}", wrapper.RevokeToken)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/users", wrapper.ListUsers)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/admin/users", wrapper.CreateUser)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/admin/users/{id}", wrapper.UpdateUser)
@@ -4925,10 +5268,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/contacts/{id}", wrapper.UpdateContact)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/nodes", wrapper.ListNodes)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/nodes", wrapper.CreateNode)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/nodes/import", wrapper.ImportNodes)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/nodes/recent", wrapper.ListRecentNodes)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/nodes/{id}", wrapper.DeleteNode)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/nodes/{id}", wrapper.GetNode)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/nodes/{id}", wrapper.UpdateNode)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/nodes/{id}/merge", wrapper.MergeNode)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/nodes/{id}/timeline", wrapper.GetNodeTimeline)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/nodes/{id}/behaviors", wrapper.GetNodeBehaviors)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/statuses", wrapper.GetStatuses)

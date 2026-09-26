@@ -58,4 +58,7 @@ export default async function globalSetup() {
   const pilot = createAdmin("Pilot Admin");
   process.env.E2E_PILOT_ADMIN_EMAIL = pilot.email;
   process.env.E2E_PILOT_ADMIN_LINK = pilot.link;
+  const tools = createAdmin("Tools Admin");
+  process.env.E2E_TOOLS_ADMIN_EMAIL = tools.email;
+  process.env.E2E_TOOLS_ADMIN_LINK = tools.link;
 }

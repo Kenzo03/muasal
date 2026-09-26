@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,7 +20,12 @@ const (
 	requestIDKey ctxKey = iota
 	userKey
 	sessionHashKey
+	tokenKey
 )
+
+// tokenPrefix marks Muasal's personal access tokens, so secret scanners spot a
+// leaked one (FSD §14.3).
+const tokenPrefix = "msl_"
 
 const (
 	sessionCookie   = "sid"
@@ -69,9 +75,31 @@ func requestIDFrom(ctx context.Context) string {
 }
 
 // authenticate attaches the signed-in user when the sid cookie names a live
-// session. Handlers decide whether a user is required.
+// session, or when an Authorization: Bearer msl_… header names a live token
+// (FSD §14.3, R-AC-9). Handlers decide whether a user is required. A bearer
+// header is taken alone: a bad token gets 401 whatever cookie comes with it.
 func (s *Server) authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if bearer, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer "); ok {
+			tok, u := s.tokenUser(r.Context(), strings.TrimSpace(bearer))
+			if u == nil {
+				writeProblem(w, http.StatusUnauthorized, "invalid_token", "The API token is unknown, revoked or expired")
+				return
+			}
+			if !s.tokRate.Allow(strconv.FormatInt(tok.ID, 10)) {
+				w.Header().Set("Retry-After", "60")
+				writeProblem(w, http.StatusTooManyRequests, "rate_limited", "A token takes 60 requests a minute; wait a moment")
+				return
+			}
+			// A read-only token reads, and may ask: a question changes nothing but the Ask log (AC-IN-4).
+			if tok.ReadOnly && !safeMethod(r.Method) && !(r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/ask")) {
+				writeProblem(w, http.StatusForbidden, "token_read_only", "This API token is read-only")
+				return
+			}
+			ctx := context.WithValue(r.Context(), userKey, u)
+			next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, tokenKey, tok)))
+			return
+		}
 		if c, err := r.Cookie(sessionCookie); err == nil {
 			hash := auth.HashToken(c.Value)
 			if u := s.sessionUser(r.Context(), hash); u != nil {
@@ -101,6 +129,36 @@ func (s *Server) sessionUser(ctx context.Context, hash []byte) *db.User {
 	return &row.User
 }
 
+// tokenUser returns a live token and its user, or nils when the token is
+// unknown, revoked, expired or owned by a disabled user.
+func (s *Server) tokenUser(ctx context.Context, token string) (*db.ApiToken, *db.User) {
+	if !strings.HasPrefix(token, tokenPrefix) {
+		return nil, nil
+	}
+	row, err := s.q.GetAPITokenUser(ctx, auth.HashToken(token))
+	if err != nil {
+		return nil, nil
+	}
+	t, now := row.ApiToken, s.now()
+	if t.RevokedAt != nil || (t.ExpiresAt != nil && now.After(*t.ExpiresAt)) || row.User.DisabledAt != nil {
+		return nil, nil
+	}
+	if t.LastUsedAt == nil || now.Sub(*t.LastUsedAt) > time.Minute { // ponytail: one write per token per minute
+		_ = s.q.TouchAPIToken(ctx, t.ID)
+	}
+	return &t, &row.User
+}
+
+// currentToken is the API token the request came with, or nil for a session.
+func currentToken(r *http.Request) *db.ApiToken {
+	t, _ := r.Context().Value(tokenKey).(*db.ApiToken)
+	return t
+}
+
+func safeMethod(m string) bool {
+	return m == http.MethodGet || m == http.MethodHead || m == http.MethodOptions
+}
+
 func currentUser(r *http.Request) *db.User {
 	u, _ := r.Context().Value(userKey).(*db.User)
 	return u
@@ -113,10 +171,12 @@ func currentSessionHash(r *http.Request) []byte {
 
 // requireOrigin blocks cross-site writes (FSD §17.1): unsafe methods must come
 // from PUBLIC_URL. Next.js server-side calls only read, so they never hit this.
+// Token requests carry no cookie a browser would send by itself, so they need
+// no Origin; authenticate checks the token.
 func (s *Server) requireOrigin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet, http.MethodHead, http.MethodOptions:
+		switch {
+		case safeMethod(r.Method), strings.HasPrefix(r.Header.Get("Authorization"), "Bearer "):
 		default:
 			if r.Header.Get("Origin") != s.cfg.PublicURL {
 				writeProblem(w, http.StatusForbidden, "bad_origin", "The request origin is not allowed")

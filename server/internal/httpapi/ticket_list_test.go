@@ -2,9 +2,12 @@ package httpapi_test
 
 import (
 	"context"
+	"encoding/csv"
 	"fmt"
+	"io"
 	"net/http"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/kenzo03/muasal/server/internal/db"
@@ -134,6 +137,39 @@ func TestTicketListCanLeaveOutOldCloses(t *testing.T) {
 		e.call(w.pm, http.MethodGet, "/projects/HRIS/tickets"+query, nil, &page)
 		if got := ticketKeys(page); !slices.Equal(got, want) {
 			t.Errorf("%s: %v, want %v", query, got, want)
+		}
+	}
+}
+
+// §8.5: the list's filter downloads as CSV, only with rows the member may
+// see, and a title that looks like a formula stays text.
+func TestTicketListExportsCSV(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	e.seedTicket(w.p, w.pmUser, "=HYPERLINK(\"http://evil\")", &w.a, w.ot)
+	e.seedTicket(w.p, w.pmUser, "Overtime export", nil, w.ot)
+	e.seedTicket(w.p, w.pmUser, "Client B only", &w.b)
+	req, _ := http.NewRequest(http.MethodGet, e.url+"/api/v1/projects/HRIS/tickets?format=csv&sort=key", nil)
+	res, err := w.pm.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	body, _ := io.ReadAll(res.Body)
+	if res.StatusCode != http.StatusOK || !strings.HasPrefix(res.Header.Get("Content-Type"), "text/csv") ||
+		!strings.Contains(res.Header.Get("Content-Disposition"), "HRIS-tickets-") {
+		t.Fatalf("export: %d %v", res.StatusCode, res.Header)
+	}
+	rows, err := csv.NewReader(strings.NewReader(strings.TrimPrefix(string(body), "\ufeff"))).ReadAll()
+	if err != nil || len(rows) != 3 || rows[0][0] != "key" {
+		t.Fatalf("rows: %v %q", err, body)
+	}
+	for _, r := range rows[1:] {
+		if strings.Contains(r[1], "Client B") {
+			t.Fatalf("a Client B ticket leaked: %v", r)
+		}
+		if strings.HasPrefix(r[1], "=") {
+			t.Fatalf("a formula cell: %v", r)
 		}
 	}
 }

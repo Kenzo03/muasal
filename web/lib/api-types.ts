@@ -102,6 +102,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The caller's live API tokens, newest first (FSD §14.3). Never the secrets. */
+        get: operations["listTokens"];
+        put?: never;
+        /** @description Creates a personal access token. The secret is in this response only; it is stored as a SHA-256 hash. Needs a signed-in session: a token cannot make tokens (403 session_required). */
+        post: operations["createToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/tokens/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Revokes one of the caller's tokens at once; requests with it then get 401. Needs a signed-in session. */
+        delete: operations["revokeToken"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/users": {
         parameters: {
             query?: never;
@@ -322,6 +359,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{key}/nodes/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Project admins import a module-tree CSV (FSD §7.5): the path shape or the adjacency shape, comma or semicolon, up to 5,000 rows. Rows match nodes by code, else by path; nothing is deleted. With dry_run it only plans. Any row error stops the whole import (AC-MR-7). The import runs in one transaction. */
+        post: operations["importNodes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{key}/nodes/recent": {
         parameters: {
             query?: never;
@@ -360,6 +416,25 @@ export interface paths {
         head?: never;
         /** @description Project admins only. Edits fields, and moves the node when `move` is present. */
         patch: operations["updateNode"];
+        trace?: never;
+    };
+    "/nodes/{id}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Project admins merge a duplicate into another node of the project (R-MR-6): its tickets, notes and live sub-nodes move to the target, its name and aliases become the target's aliases, and it is archived. The target cannot be the node, a node under it, or archived (422). */
+        post: operations["mergeNode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/nodes/{id}/timeline": {
@@ -1614,6 +1689,59 @@ export interface components {
         NoteList: {
             items: components["schemas"]["NoteSummary"][];
         };
+        APIToken: {
+            /** Format: int64 */
+            id: number;
+            name: string;
+            read_only: boolean;
+            /** Format: date-time */
+            expires_at?: string | null;
+            /** Format: date-time */
+            last_used_at?: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        APITokenList: {
+            items: components["schemas"]["APIToken"][];
+        };
+        APITokenCreate: {
+            name: string;
+            read_only: boolean;
+            /**
+             * Format: date
+             * @description The last day the token works; omitted for no expiry.
+             */
+            expires_on?: string;
+        };
+        APITokenCreated: components["schemas"]["APIToken"] & {
+            /** @description The secret, e.g. msl_…; shown once. */
+            token: string;
+        };
+        NodeImportResult: {
+            applied: boolean;
+            created: components["schemas"]["NodeImportRow"][];
+            changed: components["schemas"]["NodeImportRow"][];
+            unchanged: number;
+            /** @description Live nodes the file leaves out, for manual archiving. */
+            missing: string[];
+            problems: components["schemas"]["NodeImportProblem"][];
+        };
+        NodeImportRow: {
+            line: number;
+            /** @example HR › Attendance › Overtime Approval */
+            path: string;
+            type: components["schemas"]["NodeType"];
+            /** @description What changes */
+            fields: string[];
+        };
+        NodeImportProblem: {
+            /** @description 0 for the file as a whole. */
+            line: number;
+            /** @enum {string} */
+            code: "unreadable" | "empty" | "too_many_rows" | "unknown_shape" | "bad_client_scope" | "missing_id" | "duplicate_id" | "missing_parent" | "cycle" | "duplicate_name" | "duplicate_code" | "empty_name" | "bad_type" | "long_name" | "unknown_client" | "no_clients";
+            path?: string;
+            message: string;
+        };
         SearchResults: {
             tickets: components["schemas"]["SearchTicket"][];
             notes: components["schemas"]["SearchNote"][];
@@ -2209,6 +2337,73 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    listTokens: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The tokens. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APITokenList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["APITokenCreate"];
+            };
+        };
+        responses: {
+            /** @description The token, with its secret. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APITokenCreated"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    revokeToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     listUsers: {
         parameters: {
             query?: never;
@@ -2705,6 +2900,37 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    importNodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    dry_run?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description The plan, and whether it was applied. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeImportResult"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     listRecentNodes: {
         parameters: {
             query?: never;
@@ -2788,6 +3014,36 @@ export interface operations {
         };
         responses: {
             /** @description The updated node. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Node"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    mergeNode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: int64 */
+                    into_id: number;
+                };
+            };
+        };
+        responses: {
+            /** @description The target as it is now. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2956,6 +3212,8 @@ export interface operations {
                 sort?: "updated" | "created" | "key" | "priority" | "due";
                 limit?: number;
                 cursor?: string;
+                /** @description csv downloads every ticket of the filter, up to 10,000, as UTF-8 CSV instead of a page (FSD §8.5). */
+                format?: "json" | "csv";
             };
             header?: never;
             path: {
@@ -2965,7 +3223,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description One page of tickets. */
+            /** @description One page of tickets; with format=csv, the whole filter as text/csv instead. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2980,7 +3238,10 @@ export interface operations {
     createTicket: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description A retry with the same key within 24 hours returns the ticket the first request created (200, with Idempotent-Replayed true) instead of a second ticket (FSD §17.1). */
+                "Idempotency-Key"?: string;
+            };
             path: {
                 key: string;
             };

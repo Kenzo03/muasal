@@ -38,7 +38,8 @@
     "askLog": "Ask log",
     "audit": "Audit",
     "backups": "Backups",
-    "system": "System status"
+    "system": "System status",
+    "tokens": "API tokens"
   },
   "search": {
     "heading": "Search",
@@ -305,7 +306,8 @@
       "none": "{name} is not over a menu or module.",
       "end": "Dropped {name} at {target}.",
       "cancel": "Move cancelled."
-    }
+    },
+    "importCsv": "Import CSV"
   },
   "nodePage": {
     "path": "Path",
@@ -455,7 +457,8 @@
     "updated": "Updated",
     "due": "Due",
     "none": "No tickets match these filters.",
-    "next": "Next page"
+    "next": "Next page",
+    "exportCsv": "Export CSV"
   },
   "ticketForm": {
     "newTitle": "New ticket",
@@ -905,5 +908,73 @@
     "cancel": "Cancel",
     "path": "Location",
     "byline": "By {name} · updated {at}"
+  },
+  "tokens": {
+    "title": "API tokens",
+    "intro": "Personal access tokens let scripts use the API as you, with your projects and clients. Send one as Authorization: Bearer msl_…",
+    "new": "New token",
+    "name": "Name",
+    "namePlaceholder": "e.g. Jira sync",
+    "access": "Access",
+    "readOnly": "Read only",
+    "readWrite": "Read and write",
+    "expiresOn": "Last day (optional)",
+    "create": "Create token",
+    "once": "Copy this token now. It will not be shown again.",
+    "secret": "Token",
+    "copy": "Copy",
+    "copied": "Copied",
+    "none": "No tokens yet.",
+    "created": "Created",
+    "lastUsed": "Last used",
+    "expires": "Expires",
+    "never": "Never",
+    "noExpiry": "No expiry",
+    "revoke": "Revoke",
+    "revokeConfirm": "Revoke {name}? Scripts using it stop working at once.",
+    "usage": "A token takes 60 requests a minute. A read-only token can read and ask, but not change anything."
+  },
+  "treeImport": {
+    "title": "Import the module tree",
+    "intro": "Upload a CSV with one node per row, by path or by id and parent_id. Rows match existing items by code, else by path; nothing is deleted.",
+    "file": "CSV file",
+    "preview": "Preview",
+    "plan": "Import preview",
+    "summary": "{created} new, {changed} changed, {unchanged} unchanged.",
+    "applied": "Imported: {created} new, {changed} changed.",
+    "problems": "{count, plural, one {# row error} other {# row errors}}: fix the file and preview again",
+    "row": "Row {line}:",
+    "new": "New",
+    "changed": "Changed",
+    "missing": "{count, plural, one {# item is} other {# items are}} not in the file (archive them by hand if they are gone)",
+    "apply": "Import",
+    "back": "Back to the module tree",
+    "failed": "The file could not be read.",
+    "codes": {
+      "duplicate_name": "Duplicate name under {path}",
+      "missing_parent": "Missing parent {path}",
+      "unknown_client": "Unknown client {path}",
+      "cycle": "The parent ids loop back to this row",
+      "duplicate_code": "The code appears on another row",
+      "bad_type": "type is module or menu",
+      "bad_client_scope": "client_scope is shared or client_specific",
+      "no_clients": "A client-specific item names at least one client",
+      "empty_name": "A path has an empty name",
+      "long_name": "Names take at most 100 characters",
+      "unknown_shape": "Use the columns path,type,code,client_scope,clients,aliases or id,parent_id,name,type,code",
+      "empty": "The file has no rows under its header",
+      "too_many_rows": "Import at most 5,000 rows at a time",
+      "unreadable": "The file is not readable CSV",
+      "missing_id": "Every row needs an id",
+      "duplicate_id": "The id appears twice"
+    }
+  },
+  "merge": {
+    "title": "Merge into another item",
+    "hint": "For duplicates: its tickets, notes and sub-items move to the other item, its name becomes an alias there, and it is archived.",
+    "into": "Merge into",
+    "choose": "Choose an item",
+    "merge": "Merge",
+    "confirm": "Merge {name} into {into}? This archives {name}."
   }
 }
