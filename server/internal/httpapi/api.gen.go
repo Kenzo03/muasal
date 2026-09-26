@@ -763,6 +763,42 @@ type AITuning struct {
 	TimeoutSeconds int     `json:"timeout_seconds"`
 }
 
+// APIToken defines model for APIToken.
+type APIToken struct {
+	CreatedAt  time.Time  `json:"created_at"`
+	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
+	Id         int64      `json:"id"`
+	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
+	Name       string     `json:"name"`
+	ReadOnly   bool       `json:"read_only"`
+}
+
+// APITokenCreate defines model for APITokenCreate.
+type APITokenCreate struct {
+	// ExpiresOn The last day the token works; omitted for no expiry.
+	ExpiresOn *openapi_types.Date `json:"expires_on,omitempty"`
+	Name      string              `json:"name"`
+	ReadOnly  bool                `json:"read_only"`
+}
+
+// APITokenCreated defines model for APITokenCreated.
+type APITokenCreated struct {
+	CreatedAt  time.Time  `json:"created_at"`
+	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
+	Id         int64      `json:"id"`
+	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
+	Name       string     `json:"name"`
+	ReadOnly   bool       `json:"read_only"`
+
+	// Token The secret, e.g. msl_…; shown once.
+	Token string `json:"token"`
+}
+
+// APITokenList defines model for APITokenList.
+type APITokenList struct {
+	Items []APIToken `json:"items"`
+}
+
 // ActivityItem defines model for ActivityItem.
 type ActivityItem struct {
 	// Action Example: transition
@@ -2182,6 +2218,9 @@ type UpdateContactJSONRequestBody = ContactInput
 // UpdateMeJSONRequestBody defines body for UpdateMe for application/json ContentType.
 type UpdateMeJSONRequestBody = MeUpdate
 
+// CreateTokenJSONRequestBody defines body for CreateToken for application/json ContentType.
+type CreateTokenJSONRequestBody = APITokenCreate
+
 // UpdateNodeJSONRequestBody defines body for UpdateNode for application/json ContentType.
 type UpdateNodeJSONRequestBody = NodeUpdate
 
@@ -2346,6 +2385,15 @@ type ServerInterface interface {
 
 	// (GET /me/tickets)
 	ListMyTickets(w http.ResponseWriter, r *http.Request, params ListMyTicketsParams)
+
+	// (GET /me/tokens)
+	ListTokens(w http.ResponseWriter, r *http.Request)
+
+	// (POST /me/tokens)
+	CreateToken(w http.ResponseWriter, r *http.Request)
+
+	// (DELETE /me/tokens/{id})
+	RevokeToken(w http.ResponseWriter, r *http.Request, id int64)
 
 	// (GET /me/updates)
 	ListMyUpdates(w http.ResponseWriter, r *http.Request)
@@ -3483,6 +3531,60 @@ func (siw *ServerInterfaceWrapper) ListMyTickets(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListMyTickets(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListTokens operation middleware
+func (siw *ServerInterfaceWrapper) ListTokens(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListTokens(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateToken operation middleware
+func (siw *ServerInterfaceWrapper) CreateToken(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateToken(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RevokeToken operation middleware
+func (siw *ServerInterfaceWrapper) RevokeToken(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RevokeToken(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4905,6 +5007,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/me", wrapper.UpdateMe)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/tickets", wrapper.ListMyTickets)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/updates", wrapper.ListMyUpdates)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/tokens", wrapper.ListTokens)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/me/tokens", wrapper.CreateToken)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/me/tokens/{id}", wrapper.RevokeToken)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/users", wrapper.ListUsers)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/admin/users", wrapper.CreateUser)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/admin/users/{id}", wrapper.UpdateUser)

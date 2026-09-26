@@ -2,6 +2,11 @@ openapi: 3.0.3
 info:
   title: Muasal API
   version: 0.1.0
+  description: >-
+    The API the web app uses, open to scripts through personal access tokens (FSD §14.3). Send
+    `Authorization: Bearer msl_…`; a token acts with its owner's visibility and role, a read-only token only reads
+    (and may ask), and each token takes 60 requests a minute, bursting to 120. Browser sessions use the sid cookie
+    and must send the app's Origin on writes.
   license:
     name: Apache-2.0
     url: https://www.apache.org/licenses/LICENSE-2.0
@@ -100,6 +105,46 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/RecentTicketList" }
+        default: { $ref: "#/components/responses/Problem" }
+  /me/tokens:
+    get:
+      operationId: listTokens
+      tags: [me]
+      description: The caller's live API tokens, newest first (FSD §14.3). Never the secrets.
+      responses:
+        "200":
+          description: The tokens.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/APITokenList" }
+        default: { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createToken
+      tags: [me]
+      description: >-
+        Creates a personal access token. The secret is in this response only; it is stored as a SHA-256 hash. Needs a
+        signed-in session: a token cannot make tokens (403 session_required).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/APITokenCreate" }
+      responses:
+        "201":
+          description: The token, with its secret.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/APITokenCreated" }
+        default: { $ref: "#/components/responses/Problem" }
+  /me/tokens/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    delete:
+      operationId: revokeToken
+      tags: [me]
+      description: Revokes one of the caller's tokens at once; requests with it then get 401. Needs a signed-in session.
+      responses:
+        "204": { description: Revoked. }
         default: { $ref: "#/components/responses/Problem" }
   /admin/users:
     get:
@@ -1901,6 +1946,35 @@ components:
         items:
           type: array
           items: { $ref: "#/components/schemas/NoteSummary" }
+    APIToken:
+      type: object
+      required: [id, name, read_only, created_at]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        read_only: { type: boolean }
+        expires_at: { type: string, format: date-time, nullable: true }
+        last_used_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+    APITokenList:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/APIToken" } }
+    APITokenCreate:
+      type: object
+      required: [name, read_only]
+      properties:
+        name: { type: string, maxLength: 100 }
+        read_only: { type: boolean }
+        expires_on: { type: string, format: date, description: The last day the token works; omitted for no expiry. }
+    APITokenCreated:
+      allOf:
+        - $ref: "#/components/schemas/APIToken"
+        - type: object
+          required: [token]
+          properties:
+            token: { type: string, description: "The secret, e.g. msl_…; shown once." }
     SearchResults:
       type: object
       required: [tickets, nodes, notes]
