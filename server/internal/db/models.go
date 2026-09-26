@@ -183,6 +183,7 @@ type DecisionRecord struct {
 	ConfirmedBy  *int64
 	ConfirmedAt  *time.Time
 	SupersededBy *int64
+	AiDrafted    bool
 }
 
 type GitRepo struct {
@@ -319,6 +320,19 @@ type Status struct {
 	Position  int32
 	Color     string
 	IsDefault bool
+}
+
+type Summary struct {
+	ID        int64
+	ProjectID int64
+	CreatedBy int64
+	Title     string
+	Params    []byte
+	Items     []byte
+	Markdown  string
+	Model     string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type Ticket struct {

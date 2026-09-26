@@ -14,7 +14,10 @@ import (
 )
 
 // decisionText is a decision record's words, trimmed.
-type decisionText struct{ WhatChanged, Why, Alternatives string }
+type decisionText struct {
+	WhatChanged, Why, Alternatives string
+	AIDrafted                      bool
+}
 
 // checkDecision validates a decision record's words (FSD §9.1): what changed
 // 10–1,000 characters, why 10–2,000, alternatives up to 2,000. prefix names the
@@ -22,7 +25,7 @@ type decisionText struct{ WhatChanged, Why, Alternatives string }
 func checkDecision(prefix string, in *DecisionInput) (decisionText, []FieldError) {
 	var d decisionText
 	if in != nil {
-		d = decisionText{WhatChanged: strings.TrimSpace(in.WhatChanged), Why: strings.TrimSpace(in.Why), Alternatives: strings.TrimSpace(deref(in.Alternatives))}
+		d = decisionText{WhatChanged: strings.TrimSpace(in.WhatChanged), Why: strings.TrimSpace(in.Why), Alternatives: strings.TrimSpace(deref(in.Alternatives)), AIDrafted: deref(in.AiDrafted)}
 	}
 	f := textRange(prefix+"what_changed", d.WhatChanged, 10, 1000, "Say what changed in 10 to 1,000 characters")
 	f = append(f, textRange(prefix+"why", d.Why, 10, 2000, "Say why in 10 to 2,000 characters")...)
@@ -71,6 +74,9 @@ func toAPIDecision(row db.GetDecisionRow) DecisionRecord {
 	out := DecisionRecord{
 		WhatChanged: d.WhatChanged, Why: d.Why, Alternatives: d.Alternatives,
 		Outcome: DecisionOutcome(d.Outcome), State: DecisionState(d.State), ConfirmedAt: d.ConfirmedAt,
+	}
+	if d.AiDrafted {
+		out.AiDrafted = ptr(true)
 	}
 	if d.ConfirmedBy != nil {
 		out.ConfirmedBy = &Ref{Id: *d.ConfirmedBy, Name: deref(row.ConfirmerName)}

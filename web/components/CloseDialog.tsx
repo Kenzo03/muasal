@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { StatusDot } from "./Chips";
 import Icon from "./Icon";
 import NodePicker from "./NodePicker";
@@ -48,6 +48,15 @@ export default function CloseDialog({ ticket, status, nodes, onDone, onCancel }:
   const [alternatives, setAlternatives] = useState(prior?.alternatives ?? "");
   const [problem, setProblem] = useState<Problem>();
   const [busy, setBusy] = useState(false);
+  // "Draft with AI" (§9.3) replaces only prefills the user has not typed over.
+  const locale = useLocale();
+  const [typed, setTyped] = useState<Set<string>>(() => new Set());
+  const [drafting, setDrafting] = useState(false);
+  const [drafted, setDrafted] = useState<{ model: string; noWhy: boolean }>();
+  const typing = (name: string, set: (v: string) => void) => (v: string) => {
+    setTyped((s) => new Set(s).add(name));
+    set(v);
+  };
   useEffect(() => {
     if (!ref.current?.open) ref.current?.showModal();
   }, []);
@@ -68,6 +77,24 @@ export default function CloseDialog({ ticket, status, nodes, onDone, onCancel }:
       return next;
     });
 
+  async function draftWithAI() {
+    setDrafting(true);
+    const { data, error } = await api.POST("/tickets/{key}/decision-draft", {
+      params: { path: { key: ticket.key } },
+      body: { language: locale === "en" ? "en" : "id" },
+    });
+    setDrafting(false);
+    if (error) return setProblem(error);
+    setProblem(undefined);
+    const fill = (name: string, value: string, current: string, set: (v: string) => void) => {
+      if (!typed.has(name) || current.trim() === "") set(value);
+    };
+    fill("what", data.what_changed, whatChanged, setWhatChanged);
+    fill("why", data.why, why, setWhy);
+    fill("alternatives", data.alternatives, alternatives, setAlternatives);
+    setDrafted({ model: data.model, noWhy: data.why.trim() === "" });
+  }
+
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
@@ -77,7 +104,7 @@ export default function CloseDialog({ ticket, status, nodes, onDone, onCancel }:
         status_id: status.id,
         reason: needsReason ? reason : undefined,
         node_ids: needsMenus ? [...menus] : undefined,
-        decision: { what_changed: whatChanged, why, alternatives },
+        decision: { what_changed: whatChanged, why, alternatives, ai_drafted: drafted !== undefined },
       },
     });
     setBusy(false);
@@ -129,7 +156,7 @@ export default function CloseDialog({ ticket, status, nodes, onDone, onCancel }:
             id="close-what"
             label={done ? t("whatChanged") : t("whatDecided")}
             value={whatChanged}
-            onChange={setWhatChanged}
+            onChange={typing("what", setWhatChanged)}
             max={1000}
             rows={2}
             hint={prior ? t("fromRecord") : done ? t("fromTitle") : undefined}
@@ -139,29 +166,34 @@ export default function CloseDialog({ ticket, status, nodes, onDone, onCancel }:
             id="close-why"
             label={t("why")}
             value={why}
-            onChange={setWhy}
+            onChange={typing("why", setWhy)}
             max={2000}
             rows={3}
             weak
-            hint={prior ? t("fromRecord") : ticket.reason ? t("fromReason") : undefined}
+            highlight={drafted?.noWhy === true && why.trim() === ""}
+            hint={drafted?.noWhy && why.trim() === "" ? t("noWhy") : prior ? t("fromRecord") : ticket.reason ? t("fromReason") : undefined}
             error={serverError("decision.why")}
           />
           <Area
             id="close-alternatives"
             label={t("alternatives")}
             value={alternatives}
-            onChange={setAlternatives}
+            onChange={typing("alternatives", setAlternatives)}
             max={2000}
             rows={2}
             optional
             error={serverError("decision.alternatives")}
           />
+          {drafted && <p role="status" className="text-xs text-muted">{t("drafted", { model: drafted.model })}</p>}
           {problem && !problem.errors?.length && <p role="alert" className={field.error}>{problemText(problem)}</p>}
         </div>
         <div className="flex items-center gap-2 rounded-b-md border-t border-line bg-paper px-[22px] py-3">
           <span className="text-xs text-muted">{t("outcome")}</span>
           <span className={cx(chip, done ? "bg-ok-soft text-ok" : "bg-well text-[#4A423C]")}>{done ? t("implemented") : t("rejected")}</span>
-          <button type="button" onClick={onCancel} className={cx(button.secondary, "ml-auto")}>{t("cancel")}</button>
+          <button type="button" onClick={draftWithAI} disabled={drafting} className={cx(button.secondary, "ml-auto")}>
+            {drafting ? t("drafting") : t("draftWithAI")}
+          </button>
+          <button type="button" onClick={onCancel} className={button.secondary}>{t("cancel")}</button>
           <button disabled={!ready || busy} className={button.primary}>{t("submit")}</button>
         </div>
       </form>
@@ -171,7 +203,7 @@ export default function CloseDialog({ ticket, status, nodes, onDone, onCancel }:
 
 // One text field of the dialog: its label and counter, then a line saying what
 // is wrong, the weak-reason hint (R-DC-8) or where the prefill came from.
-function Area({ id, label, value, onChange, max, rows, hint, weak, optional, error }: {
+function Area({ id, label, value, onChange, max, rows, hint, weak, optional, error, highlight }: {
   id: string;
   label: string;
   value: string;
@@ -182,12 +214,13 @@ function Area({ id, label, value, onChange, max, rows, hint, weak, optional, err
   weak?: boolean;
   optional?: boolean;
   error?: string;
+  highlight?: boolean; // AI found no reason in the thread (AC-DC-7)
 }) {
   const t = useTranslations("close");
   const tf = useTranslations("ticketForm");
   const missing = !optional && value.trim() === "";
   const soft = weak === true && isWeak(value);
-  const note = error ?? (missing ? t("required") : soft ? tf("weakReason") : hint);
+  const note = error ?? (highlight ? hint : missing ? t("required") : soft ? tf("weakReason") : hint);
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline gap-2">
@@ -201,10 +234,10 @@ function Area({ id, label, value, onChange, max, rows, hint, weak, optional, err
         rows={rows}
         maxLength={max}
         aria-describedby={note ? `${id}-note` : undefined}
-        className={field.textarea}
+        className={cx(field.textarea, highlight && "border-warn-line bg-warn-soft")}
       />
       {note && (
-        <p id={`${id}-note`} className={cx("text-xs", error || missing ? "text-danger" : soft ? "text-warn" : "text-muted")}>{note}</p>
+        <p id={`${id}-note`} className={cx("text-xs", error || (missing && !highlight) ? "text-danger" : soft || highlight ? "text-warn" : "text-muted")}>{note}</p>
       )}
     </div>
   );

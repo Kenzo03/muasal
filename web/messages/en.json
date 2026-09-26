@@ -147,7 +147,8 @@
     "settings": "Settings",
     "board": "Board",
     "tickets": "Tickets",
-    "notes": "Notes"
+    "notes": "Notes",
+    "summaries": "Summaries"
   },
   "settings": {
     "adminsOnly": "Only project admins can change settings.",
@@ -392,7 +393,12 @@
     "secret_key_missing": "Set APP_SECRET_KEY on the server before saving secrets (API keys, webhook secrets)",
     "reindex_required": "A new embedding model re-embeds every chunk; confirm to continue",
     "rate_limited": "Too many questions; wait a moment",
-    "backup_unavailable": "The backup service is not set up on this server."
+    "backup_unavailable": "The backup service is not set up on this server.",
+    "ai_off": "AI is turned off. An admin can turn it on in Admin → AI.",
+    "ai_unavailable": "The AI server is unavailable.",
+    "ai_busy": "The AI server is busy; try again in a moment.",
+    "ai_timeout": "The AI server did not respond in time.",
+    "ai_invalid": "The AI server gave an answer Muasal could not use; try again."
   },
   "ticketTypes": {
     "bug": "Bug",
@@ -554,7 +560,11 @@
     "reasonLength": "Use 10 to 2,000 characters",
     "whatChangedLength": "Use 10 to 1,000 characters",
     "whyLength": "Use 10 to 2,000 characters",
-    "alternativesLength": "Use at most 2,000 characters"
+    "alternativesLength": "Use at most 2,000 characters",
+    "draftWithAI": "Draft with AI",
+    "drafting": "Drafting…",
+    "drafted": "Drafted by {model} from the thread. Check each field; nothing is saved until Close ticket.",
+    "noWhy": "The thread never says why. Ask the requester and write the reason here."
   },
   "decision": {
     "title": "Decision record",
@@ -1117,5 +1127,49 @@
       "merged": "Merged",
       "closed": "Closed"
     }
+  },
+  "summaries": {
+    "heading": "Change summaries",
+    "new": "New summary",
+    "newTitle": "New change summary",
+    "intro": "A summary of what changed on a module for a client, built from closed tickets and decision notes. Edit it, then print it or copy it as markdown.",
+    "none": "No summaries yet.",
+    "title": "Title",
+    "creator": "Created by",
+    "created": "Created",
+    "scope": "Scope",
+    "node": "Module or menu (with sub-menus)",
+    "client": "Client",
+    "allClients": "All clients",
+    "from": "Closed from",
+    "to": "Closed to",
+    "language": "Language",
+    "audience": "Audience",
+    "clientFacing": "Client-facing",
+    "internal": "Internal",
+    "includeCancelled": "Include cancelled tickets",
+    "preview": "Preview items",
+    "loading": "Loading…",
+    "clientNote": "Client-facing: uses decision records and Client-safe comments only, hides assignees and prints ticket keys without links.",
+    "internalNote": "Internal: also uses reasons, descriptions and Internal comments. Keep it inside the team.",
+    "items": "{ticked} of {count} items ticked",
+    "noItems": "Nothing was closed in this scope and period.",
+    "noMenu": "Other",
+    "cancelled": "cancelled",
+    "aiOff": "AI is turned off, so summaries cannot be generated.",
+    "sendsLocal": "The ticked items go to {model} on your server.",
+    "sendsCloud": "The ticked items will be sent to {model}.",
+    "generate": "Generate summary",
+    "generating": "Generating… this can take a minute",
+    "summary": "Change summary",
+    "save": "Save",
+    "saved": "Saved.",
+    "copy": "Copy as markdown",
+    "copied": "Copied.",
+    "print": "Print view",
+    "printNow": "Print or save as PDF",
+    "markdown": "Markdown",
+    "previewLabel": "Preview",
+    "meta": "{audience} · {items} items · {model}. Editing never changes tickets."
   }
 }

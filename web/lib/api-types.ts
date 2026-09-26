@@ -642,6 +642,79 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tickets/{key}/decision-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Members draft the decision record with the chat model (FSD §9.3) from the ticket's title, type, client, menus, reason, description, latest 30 comments and linked commit messages. Nothing is saved. When the thread never says why, why is empty. AI off answers 409 ai_off; model failures answer 503 ai_unavailable, ai_busy, ai_timeout or ai_invalid. */
+        post: operations["draftDecision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/summaries/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Lists every visible closed ticket and decision note in the scope, by menu, oldest first (FSD §12.1), and names the model that would receive the ticked items. No model call. */
+        post: operations["previewSummary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/summaries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The caller's summaries, and every summary of the projects they administer (§12.1). */
+        get: operations["listSummaries"];
+        put?: never;
+        /** @description Generates a change summary from the ticked items (§12.1): one model call per menu group of up to 40 items, and one for the overview when there are several groups. Every bullet cites its items; bullets citing nothing in their group are dropped. Client-facing summaries use decision records and Client-safe comments only. */
+        post: operations["createSummary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/summaries/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get: operations["getSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Edits the title and markdown; tickets never change. */
+        patch: operations["updateSummary"];
+        trace?: never;
+    };
     "/tickets/{key}/decision": {
         parameters: {
             query?: never;
@@ -1707,6 +1780,97 @@ export interface components {
             what_changed: string;
             why: string;
             alternatives?: string;
+            /** @description The fields started from "Draft with AI" (§9.3). */
+            ai_drafted?: boolean;
+        };
+        DecisionDraft: {
+            what_changed: string;
+            /** @description Empty when the thread never says why (AC-DC-7). */
+            why: string;
+            alternatives: string;
+            /** @example Local · qwen3.5:9b */
+            model: string;
+        };
+        /** @enum {string} */
+        SummaryLanguage: "id" | "en";
+        /** @enum {string} */
+        SummaryAudience: "internal" | "client";
+        SummaryScope: {
+            project_key: string;
+            /**
+             * Format: int64
+             * @description The node
+             */
+            node_id: number;
+            /**
+             * Format: int64
+             * @description One client; omitted for all.
+             */
+            client_id?: number;
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            include_cancelled?: boolean;
+            language: components["schemas"]["SummaryLanguage"];
+            audience: components["schemas"]["SummaryAudience"];
+        };
+        /** @enum {string} */
+        SummaryItemKind: "ticket" | "note";
+        SummaryItem: {
+            key: string;
+            kind: components["schemas"]["SummaryItemKind"];
+            title: string;
+            /**
+             * Format: date
+             * @description The close date
+             */
+            date: string;
+            menu: string;
+            client?: string;
+            requested_by?: string;
+            cancelled?: boolean;
+        };
+        SummaryPreview: {
+            items: components["schemas"]["SummaryItem"][];
+            /** @description The model badge */
+            model: string;
+            /** @description The ticked items go to a cloud provider (BYOK). */
+            cloud: boolean;
+        };
+        SummaryCreate: components["schemas"]["SummaryScope"] & {
+            keys: string[];
+        };
+        SummaryUpdate: {
+            title: string;
+            markdown: string;
+        };
+        Summary: {
+            /** Format: int64 */
+            id: number;
+            project_key: string;
+            title: string;
+            markdown: string;
+            scope: components["schemas"]["SummaryScope"];
+            items: components["schemas"]["SummaryItem"][];
+            model: string;
+            created_by: components["schemas"]["Ref"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        SummaryListItem: {
+            /** Format: int64 */
+            id: number;
+            project_key: string;
+            title: string;
+            creator: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        SummaryList: {
+            items: components["schemas"]["SummaryListItem"][];
         };
         /** @enum {string} */
         DecisionOutcome: "implemented" | "rejected";
@@ -1723,6 +1887,7 @@ export interface components {
             confirmed_at?: string;
             /** @description The key of the ticket that reverses this decision (R-TK-5). */
             superseded_by?: string;
+            ai_drafted?: boolean;
         };
         /** @enum {string} */
         LinkType: "reverses" | "extends" | "related_to";
@@ -3770,6 +3935,159 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Ticket"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    draftDecision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    language?: components["schemas"]["SummaryLanguage"];
+                };
+            };
+        };
+        responses: {
+            /** @description The draft. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DecisionDraft"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    previewSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SummaryScope"];
+            };
+        };
+        responses: {
+            /** @description The items in scope. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SummaryPreview"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listSummaries: {
+        parameters: {
+            query?: {
+                /** @description A project key. */
+                project?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The latest 100. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SummaryList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SummaryCreate"];
+            };
+        };
+        responses: {
+            /** @description The saved summary. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Summary"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The summary. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Summary"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SummaryUpdate"];
+            };
+        };
+        responses: {
+            /** @description The summary as saved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Summary"];
                 };
             };
             default: components["responses"]["Problem"];

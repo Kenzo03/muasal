@@ -147,7 +147,8 @@
     "settings": "Pengaturan",
     "board": "Papan",
     "tickets": "Tiket",
-    "notes": "Notulen"
+    "notes": "Notulen",
+    "summaries": "Ringkasan"
   },
   "settings": {
     "adminsOnly": "Hanya admin proyek yang dapat mengubah pengaturan.",
@@ -392,7 +393,12 @@
     "secret_key_missing": "Atur APP_SECRET_KEY di server sebelum menyimpan rahasia (kunci API, rahasia webhook)",
     "reindex_required": "Model embedding baru akan meng-embed ulang semua potongan; konfirmasi untuk melanjutkan",
     "rate_limited": "Terlalu banyak pertanyaan; tunggu sebentar",
-    "backup_unavailable": "Layanan cadangan belum disiapkan di server ini."
+    "backup_unavailable": "Layanan cadangan belum disiapkan di server ini.",
+    "ai_off": "AI dimatikan. Admin dapat menyalakannya di Admin → AI.",
+    "ai_unavailable": "Server AI tidak tersedia.",
+    "ai_busy": "Server AI sedang sibuk; coba lagi sebentar lagi.",
+    "ai_timeout": "Server AI tidak menjawab tepat waktu.",
+    "ai_invalid": "Server AI memberi jawaban yang tidak dapat dipakai Muasal; coba lagi."
   },
   "ticketTypes": {
     "bug": "Bug",
@@ -554,7 +560,11 @@
     "reasonLength": "Tulis 10 sampai 2.000 karakter",
     "whatChangedLength": "Tulis 10 sampai 1.000 karakter",
     "whyLength": "Tulis 10 sampai 2.000 karakter",
-    "alternativesLength": "Tulis paling banyak 2.000 karakter"
+    "alternativesLength": "Tulis paling banyak 2.000 karakter",
+    "draftWithAI": "Draf dengan AI",
+    "drafting": "Menyusun draf…",
+    "drafted": "Draf dari {model} berdasarkan percakapan tiket. Periksa setiap kolom; tidak ada yang tersimpan sebelum Tutup tiket.",
+    "noWhy": "Percakapan tiket tidak menyebut alasannya. Tanyakan kepada peminta lalu tulis alasannya di sini."
   },
   "decision": {
     "title": "Catatan keputusan",
@@ -1117,5 +1127,49 @@
       "merged": "Digabung",
       "closed": "Ditutup"
     }
+  },
+  "summaries": {
+    "heading": "Ringkasan perubahan",
+    "new": "Ringkasan baru",
+    "newTitle": "Ringkasan perubahan baru",
+    "intro": "Ringkasan perubahan pada modul untuk klien, disusun dari tiket yang ditutup dan notulen keputusan. Sunting, lalu cetak atau salin sebagai markdown.",
+    "none": "Belum ada ringkasan.",
+    "title": "Judul",
+    "creator": "Dibuat oleh",
+    "created": "Dibuat",
+    "scope": "Cakupan",
+    "node": "Modul atau menu (dengan sub-menu)",
+    "client": "Klien",
+    "allClients": "Semua klien",
+    "from": "Ditutup dari",
+    "to": "Ditutup sampai",
+    "language": "Bahasa",
+    "audience": "Pembaca",
+    "clientFacing": "Untuk klien",
+    "internal": "Internal",
+    "includeCancelled": "Sertakan tiket yang dibatalkan",
+    "preview": "Tampilkan item",
+    "loading": "Memuat…",
+    "clientNote": "Untuk klien: hanya memakai catatan keputusan dan komentar Aman untuk klien, menyembunyikan penanggung jawab, dan mencetak kunci tiket tanpa tautan.",
+    "internalNote": "Internal: juga memakai alasan, deskripsi, dan komentar Internal. Simpan di dalam tim.",
+    "items": "{ticked} dari {count} item dicentang",
+    "noItems": "Tidak ada yang ditutup dalam cakupan dan periode ini.",
+    "noMenu": "Lainnya",
+    "cancelled": "dibatalkan",
+    "aiOff": "AI dimatikan, jadi ringkasan tidak dapat dibuat.",
+    "sendsLocal": "Item yang dicentang dikirim ke {model} di server Anda.",
+    "sendsCloud": "Item yang dicentang akan dikirim ke {model}.",
+    "generate": "Buat ringkasan",
+    "generating": "Membuat… bisa memakan waktu semenit",
+    "summary": "Ringkasan perubahan",
+    "save": "Simpan",
+    "saved": "Tersimpan.",
+    "copy": "Salin sebagai markdown",
+    "copied": "Tersalin.",
+    "print": "Tampilan cetak",
+    "printNow": "Cetak atau simpan sebagai PDF",
+    "markdown": "Markdown",
+    "previewLabel": "Pratinjau",
+    "meta": "{audience} · {items} item · {model}. Menyunting tidak mengubah tiket."
   }
 }
