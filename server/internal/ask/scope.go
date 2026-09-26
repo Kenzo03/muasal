@@ -54,6 +54,14 @@ type Detected struct {
 	From       *time.Time `json:"from,omitempty"`
 	To         *time.Time `json:"to,omitempty"`
 	Keys       []string   `json:"keys,omitempty"`
+	Labels     []Label    `json:"labels,omitempty"` // names for the chips above, in that order
+}
+
+// Label names one detected chip: a client, a node (by its path) or a person.
+type Label struct {
+	Kind  string `json:"kind"` // client, node, user or contact
+	ID    int64  `json:"id"`
+	Label string `json:"label"`
 }
 
 var (
@@ -74,12 +82,70 @@ func Detect(cat Catalog, question string, now time.Time) Detected {
 	d.NodeIDs = deepest(cat.Nodes, toks)
 	d.UserIDs, d.ContactIDs = people(cat.People, toks)
 	d.From, d.To = dates(toks, now)
+	d.Labels = labels(cat, d)
 	for _, m := range keyRe.FindAllStringSubmatch(question, -1) {
 		if k := strings.ToUpper(m[1]); !slices.Contains(d.Keys, k) {
 			d.Keys = append(d.Keys, k)
 		}
 	}
 	return d
+}
+
+// Without leaves out the chips the asker removed, and their labels.
+func (d Detected) Without(ignore []Label) Detected {
+	drop := func(kind string, ids []int64) []int64 {
+		return slices.DeleteFunc(slices.Clone(ids), func(id int64) bool {
+			return slices.ContainsFunc(ignore, func(l Label) bool { return l.Kind == kind && l.ID == id })
+		})
+	}
+	d.ClientIDs, d.NodeIDs = drop("client", d.ClientIDs), drop("node", d.NodeIDs)
+	d.UserIDs, d.ContactIDs = drop("user", d.UserIDs), drop("contact", d.ContactIDs)
+	if slices.ContainsFunc(ignore, func(l Label) bool { return l.Kind == "date" }) {
+		d.From, d.To = nil, nil
+	}
+	d.Labels = slices.DeleteFunc(slices.Clone(d.Labels), func(l Label) bool {
+		return slices.ContainsFunc(ignore, func(i Label) bool { return i.Kind == l.Kind && i.ID == l.ID })
+	})
+	for _, f := range []*[]int64{&d.ClientIDs, &d.NodeIDs, &d.UserIDs, &d.ContactIDs} {
+		if len(*f) == 0 {
+			*f = nil
+		}
+	}
+	if len(d.Labels) == 0 {
+		d.Labels = nil
+	}
+	return d
+}
+
+// labels names the detected clients, nodes and people from the catalog, which
+// holds only what the asker may see.
+func labels(cat Catalog, d Detected) []Label {
+	var out []Label
+	for _, c := range cat.Clients {
+		if slices.Contains(d.ClientIDs, c.ID) {
+			out = append(out, Label{Kind: "client", ID: c.ID, Label: c.Name})
+		}
+	}
+	byID := map[int64]db.ListScopeNodesRow{}
+	for _, n := range cat.Nodes {
+		byID[n.ID] = n
+	}
+	for _, id := range d.NodeIDs {
+		var path []string
+		for n, ok := byID[id]; ok; n, ok = byID[deref(n.ParentID)] {
+			path = append([]string{n.Name}, path...)
+			if n.ParentID == nil {
+				break
+			}
+		}
+		out = append(out, Label{Kind: "node", ID: id, Label: strings.Join(path, " › ")})
+	}
+	for _, p := range cat.People {
+		if (p.Kind == "user" && slices.Contains(d.UserIDs, p.ID)) || (p.Kind == "contact" && slices.Contains(d.ContactIDs, p.ID)) {
+			out = append(out, Label{Kind: p.Kind, ID: p.ID, Label: p.Name})
+		}
+	}
+	return out
 }
 
 // matches reports whether any term appears in the tokens as whole words, case

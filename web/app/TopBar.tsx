@@ -5,6 +5,7 @@ import Form from "next/form";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import AskPanel from "@/components/ask/AskPanel";
 import { Avatar } from "@/components/Chips";
 import Icon from "@/components/Icon";
 import Menu from "@/components/Menu";
@@ -75,6 +76,8 @@ export default function TopBar({ me, projects }: { me: User; projects: Project[]
           ["/admin/users", t("users")],
           ["/admin/clients", t("clients")],
           ["/admin/ai", t("ai")],
+          ["/admin/ask-log", t("askLog")],
+          ["/admin/audit", t("audit")],
         ]
       : [];
   const isActive = (href: string) => path.startsWith(href) || (href.endsWith("/tickets") && path.startsWith("/t/"));
@@ -140,6 +143,7 @@ export default function TopBar({ me, projects }: { me: User; projects: Project[]
               />
             </label>
           </Form>
+          <AskPanel project={project} />
           {project ? (
             project.role !== "viewer" && (
               <Link href={`/p/${project.key}/tickets/new`} aria-label={t("newTicket")} aria-keyshortcuts={shortcut ? "c" : undefined} title={t("newTicketShortcut")} className={button.primary}>

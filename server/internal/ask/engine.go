@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"slices"
 	"strings"
 	"time"
 
@@ -46,6 +47,7 @@ type Request struct {
 	Explicit Scope
 	Language string // "", "id" or "en"; "" detects it (§10.5)
 	ThreadID *int64
+	Ignore   []Label // detected chips the asker removed (§10.2); kind "date" drops the range
 }
 
 // Sink receives the answer as it forms; the HTTP handler turns each call into
@@ -105,7 +107,7 @@ func (e *Engine) Ask(ctx context.Context, r Request, sink Sink) (Result, error) 
 	if err != nil {
 		return Result{}, err
 	}
-	detected := Detect(cat, r.Question, start.In(tz))
+	detected := Detect(cat, r.Question, start.In(tz)).Without(r.Ignore)
 	scope := Merge(r.Explicit, detected)
 	if sink.Scope != nil {
 		sink.Scope(r.Explicit, detected)
@@ -296,6 +298,20 @@ func (e *Engine) items(ctx context.Context, ids []int64, n int) ([]Item, error) 
 		out = append(out, itemOf(src))
 	}
 	return out, nil
+}
+
+// ItemsFor reads the given tickets as Items, in order. With an asker, only
+// those they may open now are kept (§10.6); without one, all of them (the Ask
+// log, for system admins).
+func (e *Engine) ItemsFor(ctx context.Context, a *Asker, ids []int64) ([]Item, error) {
+	if a != nil && len(ids) > 0 {
+		ok, err := e.q.VisibleTicketIDs(ctx, db.VisibleTicketIDsParams{Ids: ids, IsAdmin: a.IsAdmin, UserID: a.UserID})
+		if err != nil {
+			return nil, err
+		}
+		ids = slices.DeleteFunc(slices.Clone(ids), func(id int64) bool { return !slices.Contains(ok, id) })
+	}
+	return e.items(ctx, ids, len(ids))
 }
 
 func itemOf(src indexer.Source) Item {

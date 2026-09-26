@@ -870,6 +870,78 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ReindexResult" }
         default: { $ref: "#/components/responses/Problem" }
+  /admin/ask-log:
+    get:
+      operationId: listAskLog
+      tags: [admin]
+      description: >-
+        System admins (FSD §10.8, §15.4). Every question, newest first. Quick filters - not enough information,
+        slower than 30 seconds - plus status and asker; page with before, the last id of the previous page.
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [answered, not_enough_info, ai_off, error] } }
+        - { name: slow, in: query, schema: { type: boolean }, description: Only answers slower than 30 seconds. }
+        - { name: user_id, in: query, schema: { type: integer, format: int64 } }
+        - { name: before, in: query, schema: { type: integer, format: int64 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+      responses:
+        "200":
+          description: One page.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AskLogPage" }
+        default: { $ref: "#/components/responses/Problem" }
+  /admin/ask-log/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    get:
+      operationId: getAskLogEntry
+      tags: [admin]
+      description: System admins. One question with its exact scope, evidence and scores, answer and dropped claims (§15.4).
+      responses:
+        "200":
+          description: The entry.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AskLogDetail" }
+        default: { $ref: "#/components/responses/Problem" }
+  /admin/audit:
+    get:
+      operationId: listAudit
+      tags: [admin]
+      description: System admins. The audit log, newest first, filtered by actor, entity, action and date (§15.4); read-only.
+      parameters:
+        - { name: actor_id, in: query, schema: { type: integer, format: int64 } }
+        - { name: entity, in: query, schema: { type: string } }
+        - { name: action, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+        - { name: before, in: query, schema: { type: integer, format: int64 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
+      responses:
+        "200":
+          description: One page.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuditPage" }
+        default: { $ref: "#/components/responses/Problem" }
+  /admin/audit/export:
+    get:
+      operationId: exportAudit
+      tags: [admin]
+      description: System admins. The filtered audit log as CSV, newest first, at most 100,000 rows.
+      parameters:
+        - { name: actor_id, in: query, schema: { type: integer, format: int64 } }
+        - { name: entity, in: query, schema: { type: string } }
+        - { name: action, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: CSV with a header row.
+          content:
+            text/csv:
+              schema: { type: string }
+        default: { $ref: "#/components/responses/Problem" }
   /ask:
     post:
       operationId: ask
@@ -1769,6 +1841,14 @@ components:
         - type: object
           properties:
             keys: { type: array, items: { type: string }, description: Ticket keys named in the question. }
+            labels: { type: array, items: { $ref: "#/components/schemas/AskLabel" }, description: Names for the detected clients, nodes and people. }
+    AskLabel:
+      type: object
+      required: [kind, id, label]
+      properties:
+        kind: { type: string, enum: [client, node, user, contact] }
+        id: { type: integer, format: int64 }
+        label: { type: string, description: A node's label is its path, e.g. "HR › Overtime Approval". }
     AskScopeEvent:
       type: object
       required: [explicit, detected]
@@ -1783,6 +1863,16 @@ components:
         thread_id: { type: integer, format: int64, description: Adds the question to one of the asker's threads. }
         language: { type: string, enum: [auto, id, en], default: auto }
         scope: { $ref: "#/components/schemas/AskScope" }
+        ignore:
+          type: array
+          description: Detected chips the asker removed; detection leaves them out (§10.2). A date entry drops the detected range.
+          items: { $ref: "#/components/schemas/AskIgnore" }
+    AskIgnore:
+      type: object
+      required: [kind]
+      properties:
+        kind: { type: string, enum: [client, node, user, contact, date] }
+        id: { type: integer, format: int64 }
     AskItem:
       type: object
       required: [key, title, client, requested_by, date, status, closed]
@@ -1838,6 +1928,7 @@ components:
         claims: { type: array, items: { $ref: "#/components/schemas/AskClaim" } }
         model: { type: string }
         created_at: { type: string, format: date-time }
+        evidence: { type: array, items: { $ref: "#/components/schemas/AskItem" }, description: The evidence the asker may still open. }
     AskThreadDetail:
       allOf:
         - $ref: "#/components/schemas/AskThread"
@@ -1845,6 +1936,64 @@ components:
           required: [queries]
           properties:
             queries: { type: array, items: { $ref: "#/components/schemas/AskThreadQuery" } }
+    AskLogEntry:
+      type: object
+      required: [id, created_at, user, question, status, llm_called, evidence_count, citations]
+      properties:
+        id: { type: integer, format: int64 }
+        created_at: { type: string, format: date-time }
+        user: { $ref: "#/components/schemas/Ref" }
+        question: { type: string }
+        status: { type: string, enum: [answered, not_enough_info, ai_off, error] }
+        llm_called: { type: boolean }
+        latency_ms: { type: integer }
+        model: { type: string }
+        evidence_count: { type: integer }
+        citations: { type: integer, description: Distinct tickets cited by the answer. }
+    AskLogPage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/AskLogEntry" } }
+        next_before: { type: integer, format: int64, description: Pass as before for the next page; absent on the last. }
+    AskLogEvidence:
+      allOf:
+        - $ref: "#/components/schemas/AskItem"
+        - type: object
+          properties:
+            score: { type: number, description: Fused retrieval score; absent on the small-set path. }
+    AskLogDetail:
+      allOf:
+        - $ref: "#/components/schemas/AskLogEntry"
+        - type: object
+          required: [language, scope, evidence, claims]
+          properties:
+            thread_id: { type: integer, format: int64 }
+            language: { type: string }
+            first_claim_ms: { type: integer }
+            scope: { type: object, additionalProperties: true, description: The explicit and detected chips as logged. }
+            evidence: { type: array, items: { $ref: "#/components/schemas/AskLogEvidence" } }
+            claims: { type: array, items: { $ref: "#/components/schemas/AskClaim" } }
+            dropped: { type: object, additionalProperties: true, description: Claims and citations removed by validation, and any model error. }
+    AuditEvent:
+      type: object
+      required: [id, occurred_at, via, entity, entity_id, action, changes]
+      properties:
+        id: { type: integer, format: int64 }
+        occurred_at: { type: string, format: date-time }
+        actor: { $ref: "#/components/schemas/Ref" }
+        via: { type: string }
+        entity: { type: string }
+        entity_id: { type: integer, format: int64 }
+        project: { type: string, description: The project key, when the event belongs to one. }
+        action: { type: string }
+        changes: { type: object, additionalProperties: true }
+    AuditPage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/AuditEvent" } }
+        next_before: { type: integer, format: int64 }
     RecentNodes:
       type: object
       required: [node_ids]

@@ -60,3 +60,22 @@ func TestSecretKeyIsOptionalButMustBe32Bytes(t *testing.T) {
 		}
 	}
 }
+
+// §15.4: the Ask log keeps questions 365 days unless ASK_LOG_RETENTION_DAYS
+// says otherwise; 0 keeps them for good.
+func TestAskLogRetention(t *testing.T) {
+	base := map[string]string{"DATABASE_URL": "postgres://x", "PUBLIC_URL": "http://localhost"}
+	if c, err := Load(env(base)); err != nil || c.AskLogRetentionDays != 365 {
+		t.Fatalf("default: %d %v", c.AskLogRetentionDays, err)
+	}
+	base["ASK_LOG_RETENTION_DAYS"] = "0"
+	if c, err := Load(env(base)); err != nil || c.AskLogRetentionDays != 0 {
+		t.Fatalf("keep for good: %d %v", c.AskLogRetentionDays, err)
+	}
+	for _, bad := range []string{"-1", "a year"} {
+		base["ASK_LOG_RETENTION_DAYS"] = bad
+		if _, err := Load(env(base)); err == nil {
+			t.Errorf("ASK_LOG_RETENTION_DAYS %q: want an error", bad)
+		}
+	}
+}

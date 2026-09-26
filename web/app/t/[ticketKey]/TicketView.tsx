@@ -34,6 +34,7 @@ const closing = (s: Status) => s.category === "done" || s.category === "cancelle
 export default function TicketView({ ticket, statuses, clients, nodes, assignees, canEdit, canEditDecision, activity, attachments }: Props) {
   const t = useTranslations("ticket");
   const tp = useTranslations("project");
+  const ta = useTranslations("ask");
   const tTypes = useTranslations("ticketTypes");
   const tPri = useTranslations("priorities");
   const locale = useLocale();
@@ -69,8 +70,11 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
           <Icon name="chevronRight" className="size-3.5" />
           <span className="font-mono font-semibold text-ink">{ticket.key}</span>
         </nav>
+        <Link href={askAbout(ticket)} className={cx(button.secondary, "ml-auto")}>
+          {ta("askAboutTicket")}
+        </Link>
         {canEdit && !editing && (
-          <button type="button" onClick={() => setEditing(true)} className={cx(button.secondary, "ml-auto")}>
+          <button type="button" onClick={() => setEditing(true)} className={button.secondary}>
             <Icon name="edit" />
             {t("edit")}
           </button>
@@ -213,4 +217,13 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
       </main>
     </>
   );
+}
+
+// "Ask about this ticket" (FSD §10.1): the Ask page preset to the ticket's
+// project, menus and client.
+function askAbout(ticket: Ticket) {
+  const q = new URLSearchParams({ project: ticket.project_key });
+  for (const n of ticket.nodes) q.append("node", String(n.id));
+  if (ticket.client) q.set("client", String(ticket.client.id));
+  return `/ask?${q}`;
 }

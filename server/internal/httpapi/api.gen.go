@@ -54,6 +54,105 @@ func (e ActivityItemKind) Valid() bool {
 	}
 }
 
+// Defines values for AskIgnoreKind.
+const (
+	AskIgnoreKindClient  AskIgnoreKind = "client"
+	AskIgnoreKindContact AskIgnoreKind = "contact"
+	AskIgnoreKindDate    AskIgnoreKind = "date"
+	AskIgnoreKindNode    AskIgnoreKind = "node"
+	AskIgnoreKindUser    AskIgnoreKind = "user"
+)
+
+// Valid indicates whether the value is a known member of the AskIgnoreKind enum.
+func (e AskIgnoreKind) Valid() bool {
+	switch e {
+	case AskIgnoreKindClient:
+		return true
+	case AskIgnoreKindContact:
+		return true
+	case AskIgnoreKindDate:
+		return true
+	case AskIgnoreKindNode:
+		return true
+	case AskIgnoreKindUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AskLabelKind.
+const (
+	AskLabelKindClient  AskLabelKind = "client"
+	AskLabelKindContact AskLabelKind = "contact"
+	AskLabelKindNode    AskLabelKind = "node"
+	AskLabelKindUser    AskLabelKind = "user"
+)
+
+// Valid indicates whether the value is a known member of the AskLabelKind enum.
+func (e AskLabelKind) Valid() bool {
+	switch e {
+	case AskLabelKindClient:
+		return true
+	case AskLabelKindContact:
+		return true
+	case AskLabelKindNode:
+		return true
+	case AskLabelKindUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AskLogDetailStatus.
+const (
+	AskLogDetailStatusAiOff         AskLogDetailStatus = "ai_off"
+	AskLogDetailStatusAnswered      AskLogDetailStatus = "answered"
+	AskLogDetailStatusError         AskLogDetailStatus = "error"
+	AskLogDetailStatusNotEnoughInfo AskLogDetailStatus = "not_enough_info"
+)
+
+// Valid indicates whether the value is a known member of the AskLogDetailStatus enum.
+func (e AskLogDetailStatus) Valid() bool {
+	switch e {
+	case AskLogDetailStatusAiOff:
+		return true
+	case AskLogDetailStatusAnswered:
+		return true
+	case AskLogDetailStatusError:
+		return true
+	case AskLogDetailStatusNotEnoughInfo:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AskLogEntryStatus.
+const (
+	AskLogEntryStatusAiOff         AskLogEntryStatus = "ai_off"
+	AskLogEntryStatusAnswered      AskLogEntryStatus = "answered"
+	AskLogEntryStatusError         AskLogEntryStatus = "error"
+	AskLogEntryStatusNotEnoughInfo AskLogEntryStatus = "not_enough_info"
+)
+
+// Valid indicates whether the value is a known member of the AskLogEntryStatus enum.
+func (e AskLogEntryStatus) Valid() bool {
+	switch e {
+	case AskLogEntryStatusAiOff:
+		return true
+	case AskLogEntryStatusAnswered:
+		return true
+	case AskLogEntryStatusError:
+		return true
+	case AskLogEntryStatusNotEnoughInfo:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AskRequestLanguage.
 const (
 	AskRequestLanguageAuto AskRequestLanguage = "auto"
@@ -363,6 +462,30 @@ func (e TicketType) Valid() bool {
 	}
 }
 
+// Defines values for ListAskLogParamsStatus.
+const (
+	ListAskLogParamsStatusAiOff         ListAskLogParamsStatus = "ai_off"
+	ListAskLogParamsStatusAnswered      ListAskLogParamsStatus = "answered"
+	ListAskLogParamsStatusError         ListAskLogParamsStatus = "error"
+	ListAskLogParamsStatusNotEnoughInfo ListAskLogParamsStatus = "not_enough_info"
+)
+
+// Valid indicates whether the value is a known member of the ListAskLogParamsStatus enum.
+func (e ListAskLogParamsStatus) Valid() bool {
+	switch e {
+	case ListAskLogParamsStatusAiOff:
+		return true
+	case ListAskLogParamsStatusAnswered:
+		return true
+	case ListAskLogParamsStatusError:
+		return true
+	case ListAskLogParamsStatusNotEnoughInfo:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListTicketsParamsMissing.
 const (
 	ListTicketsParamsMissingMenus  ListTicketsParamsMissing = "menus"
@@ -540,12 +663,24 @@ type AskDetected struct {
 	// Keys Ticket keys named in the question.
 	Keys *[]string `json:"keys,omitempty"`
 
+	// Labels Names for the detected clients
+	Labels *[]AskLabel `json:"labels,omitempty"`
+
 	// NodeIds Sub-nodes are included.
 	NodeIds    *[]int64            `json:"node_ids,omitempty"`
 	ProjectIds *[]int64            `json:"project_ids,omitempty"`
 	To         *openapi_types.Date `json:"to,omitempty"`
 	UserIds    *[]int64            `json:"user_ids,omitempty"`
 }
+
+// AskIgnore defines model for AskIgnore.
+type AskIgnore struct {
+	Id   *int64        `json:"id,omitempty"`
+	Kind AskIgnoreKind `json:"kind"`
+}
+
+// AskIgnoreKind defines model for AskIgnore.Kind.
+type AskIgnoreKind string
 
 // AskItem defines model for AskItem.
 type AskItem struct {
@@ -561,8 +696,94 @@ type AskItem struct {
 	Title       string    `json:"title"`
 }
 
+// AskLabel defines model for AskLabel.
+type AskLabel struct {
+	Id   int64        `json:"id"`
+	Kind AskLabelKind `json:"kind"`
+
+	// Label A node's label is its path
+	Label string `json:"label"`
+}
+
+// AskLabelKind defines model for AskLabel.Kind.
+type AskLabelKind string
+
+// AskLogDetail defines model for AskLogDetail.
+type AskLogDetail struct {
+	// Citations Distinct tickets cited by the answer.
+	Citations int        `json:"citations"`
+	Claims    []AskClaim `json:"claims"`
+	CreatedAt time.Time  `json:"created_at"`
+
+	// Dropped Claims and citations removed by validation
+	Dropped       *map[string]interface{} `json:"dropped,omitempty"`
+	Evidence      []AskLogEvidence        `json:"evidence"`
+	EvidenceCount int                     `json:"evidence_count"`
+	FirstClaimMs  *int                    `json:"first_claim_ms,omitempty"`
+	Id            int64                   `json:"id"`
+	Language      string                  `json:"language"`
+	LatencyMs     *int                    `json:"latency_ms,omitempty"`
+	LlmCalled     bool                    `json:"llm_called"`
+	Model         *string                 `json:"model,omitempty"`
+	Question      string                  `json:"question"`
+
+	// Scope The explicit and detected chips as logged.
+	Scope    map[string]interface{} `json:"scope"`
+	Status   AskLogDetailStatus     `json:"status"`
+	ThreadId *int64                 `json:"thread_id,omitempty"`
+	User     Ref                    `json:"user"`
+}
+
+// AskLogDetailStatus defines model for AskLogDetail.Status.
+type AskLogDetailStatus string
+
+// AskLogEntry defines model for AskLogEntry.
+type AskLogEntry struct {
+	// Citations Distinct tickets cited by the answer.
+	Citations     int               `json:"citations"`
+	CreatedAt     time.Time         `json:"created_at"`
+	EvidenceCount int               `json:"evidence_count"`
+	Id            int64             `json:"id"`
+	LatencyMs     *int              `json:"latency_ms,omitempty"`
+	LlmCalled     bool              `json:"llm_called"`
+	Model         *string           `json:"model,omitempty"`
+	Question      string            `json:"question"`
+	Status        AskLogEntryStatus `json:"status"`
+	User          Ref               `json:"user"`
+}
+
+// AskLogEntryStatus defines model for AskLogEntry.Status.
+type AskLogEntryStatus string
+
+// AskLogEvidence defines model for AskLogEvidence.
+type AskLogEvidence struct {
+	// Client Null for core work.
+	Client *string `json:"client"`
+	Closed bool    `json:"closed"`
+
+	// Date The close date
+	Date        time.Time `json:"date"`
+	Key         string    `json:"key"`
+	RequestedBy string    `json:"requested_by"`
+
+	// Score Fused retrieval score; absent on the small-set path.
+	Score  *float32 `json:"score,omitempty"`
+	Status string   `json:"status"`
+	Title  string   `json:"title"`
+}
+
+// AskLogPage defines model for AskLogPage.
+type AskLogPage struct {
+	Items []AskLogEntry `json:"items"`
+
+	// NextBefore Pass as before for the next page; absent on the last.
+	NextBefore *int64 `json:"next_before,omitempty"`
+}
+
 // AskRequest defines model for AskRequest.
 type AskRequest struct {
+	// Ignore Detected chips the asker removed; detection leaves them out (§10.2). A date entry drops the detected range.
+	Ignore   *[]AskIgnore        `json:"ignore,omitempty"`
 	Language *AskRequestLanguage `json:"language,omitempty"`
 	Question string              `json:"question"`
 
@@ -655,10 +876,13 @@ type AskThreadList struct {
 type AskThreadQuery struct {
 	Claims    []AskClaim `json:"claims"`
 	CreatedAt time.Time  `json:"created_at"`
-	Id        int64      `json:"id"`
-	Model     *string    `json:"model,omitempty"`
-	Question  string     `json:"question"`
-	Status    string     `json:"status"`
+
+	// Evidence The evidence the asker may still open.
+	Evidence *[]AskItem `json:"evidence,omitempty"`
+	Id       int64      `json:"id"`
+	Model    *string    `json:"model,omitempty"`
+	Question string     `json:"question"`
+	Status   string     `json:"status"`
 }
 
 // Attachment defines model for Attachment.
@@ -669,6 +893,27 @@ type Attachment struct {
 	Id          int64     `json:"id"`
 	SizeBytes   int64     `json:"size_bytes"`
 	Uploader    Ref       `json:"uploader"`
+}
+
+// AuditEvent defines model for AuditEvent.
+type AuditEvent struct {
+	Action     string                 `json:"action"`
+	Actor      *Ref                   `json:"actor,omitempty"`
+	Changes    map[string]interface{} `json:"changes"`
+	Entity     string                 `json:"entity"`
+	EntityId   int64                  `json:"entity_id"`
+	Id         int64                  `json:"id"`
+	OccurredAt time.Time              `json:"occurred_at"`
+
+	// Project The project key
+	Project *string `json:"project,omitempty"`
+	Via     string  `json:"via"`
+}
+
+// AuditPage defines model for AuditPage.
+type AuditPage struct {
+	Items      []AuditEvent `json:"items"`
+	NextBefore *int64       `json:"next_before,omitempty"`
 }
 
 // Behavior defines model for Behavior.
@@ -1375,6 +1620,40 @@ type UserUpdate struct {
 	Timezone *string `json:"timezone,omitempty"`
 }
 
+// ListAskLogParams defines parameters for ListAskLog.
+type ListAskLogParams struct {
+	Status *ListAskLogParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// Slow Only answers slower than 30 seconds.
+	Slow   *bool  `form:"slow,omitempty" json:"slow,omitempty"`
+	UserId *int64 `form:"user_id,omitempty" json:"user_id,omitempty"`
+	Before *int64 `form:"before,omitempty" json:"before,omitempty"`
+	Limit  *int   `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListAskLogParamsStatus defines parameters for ListAskLog.
+type ListAskLogParamsStatus string
+
+// ListAuditParams defines parameters for ListAudit.
+type ListAuditParams struct {
+	ActorId *int64              `form:"actor_id,omitempty" json:"actor_id,omitempty"`
+	Entity  *string             `form:"entity,omitempty" json:"entity,omitempty"`
+	Action  *string             `form:"action,omitempty" json:"action,omitempty"`
+	From    *openapi_types.Date `form:"from,omitempty" json:"from,omitempty"`
+	To      *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
+	Before  *int64              `form:"before,omitempty" json:"before,omitempty"`
+	Limit   *int                `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ExportAuditParams defines parameters for ExportAudit.
+type ExportAuditParams struct {
+	ActorId *int64              `form:"actor_id,omitempty" json:"actor_id,omitempty"`
+	Entity  *string             `form:"entity,omitempty" json:"entity,omitempty"`
+	Action  *string             `form:"action,omitempty" json:"action,omitempty"`
+	From    *openapi_types.Date `form:"from,omitempty" json:"from,omitempty"`
+	To      *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
+}
+
 // ListContactsParams defines parameters for ListContacts.
 type ListContactsParams struct {
 	Q        *string `form:"q,omitempty" json:"q,omitempty"`
@@ -1569,6 +1848,18 @@ type ServerInterface interface {
 
 	// (POST /admin/ai/test)
 	TestAI(w http.ResponseWriter, r *http.Request)
+
+	// (GET /admin/ask-log)
+	ListAskLog(w http.ResponseWriter, r *http.Request, params ListAskLogParams)
+
+	// (GET /admin/ask-log/{id})
+	GetAskLogEntry(w http.ResponseWriter, r *http.Request, id int64)
+
+	// (GET /admin/audit)
+	ListAudit(w http.ResponseWriter, r *http.Request, params ListAuditParams)
+
+	// (GET /admin/audit/export)
+	ExportAudit(w http.ResponseWriter, r *http.Request, params ExportAuditParams)
 
 	// (GET /admin/settings/ai)
 	GetAISettings(w http.ResponseWriter, r *http.Request)
@@ -1781,6 +2072,313 @@ func (siw *ServerInterfaceWrapper) TestAI(w http.ResponseWriter, r *http.Request
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.TestAI(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListAskLog operation middleware
+func (siw *ServerInterfaceWrapper) ListAskLog(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAskLogParams
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "slow" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "slow", r.URL.Query(), &params.Slow, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "slow"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slow", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "user_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "user_id", r.URL.Query(), &params.UserId, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "user_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "user_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "before" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "before", r.URL.Query(), &params.Before, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "before"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "before", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAskLog(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAskLogEntry operation middleware
+func (siw *ServerInterfaceWrapper) GetAskLogEntry(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAskLogEntry(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListAudit operation middleware
+func (siw *ServerInterfaceWrapper) ListAudit(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAuditParams
+
+	// ------------- Optional query parameter "actor_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "actor_id", r.URL.Query(), &params.ActorId, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "actor_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "actor_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "entity" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "entity", r.URL.Query(), &params.Entity, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "action" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "action", r.URL.Query(), &params.Action, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "action"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "action", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "before" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "before", r.URL.Query(), &params.Before, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "before"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "before", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAudit(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExportAudit operation middleware
+func (siw *ServerInterfaceWrapper) ExportAudit(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ExportAuditParams
+
+	// ------------- Optional query parameter "actor_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "actor_id", r.URL.Query(), &params.ActorId, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "actor_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "actor_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "entity" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "entity", r.URL.Query(), &params.Entity, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "action" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "action", r.URL.Query(), &params.Action, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "action"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "action", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExportAudit(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3679,6 +4277,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/admin/ai/test", wrapper.TestAI)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/ai/status", wrapper.GetAIStatus)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/admin/ai/reindex", wrapper.ReindexAI)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/ask-log", wrapper.ListAskLog)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/ask-log/{id}", wrapper.GetAskLogEntry)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/audit", wrapper.ListAudit)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/audit/export", wrapper.ExportAudit)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/ask", wrapper.Ask)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/ask/threads", wrapper.ListAskThreads)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/ask/threads/{id}", wrapper.HideAskThread)

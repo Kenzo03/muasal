@@ -110,3 +110,17 @@ func TestLanguage(t *testing.T) {
 		}
 	}
 }
+
+// §10.2: a detected chip shows a name, so Detect labels what it found. A node
+// shows its path, as in the menu picker.
+func TestDetectLabelsItsChips(t *testing.T) {
+	d := ask.Detect(catalog(), "Kenapa approval lembur diminta oleh Budi untuk Client A?", now)
+	want := []ask.Label{
+		{Kind: "client", ID: 4, Label: "Client A"},
+		{Kind: "node", ID: 3, Label: "HR › Attendance › Overtime Approval"},
+		{Kind: "contact", ID: 7, Label: "Budi Santoso"},
+	}
+	if !slices.Equal(d.Labels, want) {
+		t.Fatalf("labels: %+v, want %+v", d.Labels, want)
+	}
+}

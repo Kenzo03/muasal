@@ -18,4 +18,4 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 RETURNING id;
 
 -- name: ListThreadQueries :many
-SELECT id, question, lang, status, answer, model, created_at FROM ask_queries WHERE thread_id = $1 ORDER BY created_at, id;
+SELECT id, question, lang, status, answer, evidence, model, created_at FROM ask_queries WHERE thread_id = $1 ORDER BY created_at, id;

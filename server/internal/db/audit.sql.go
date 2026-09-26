@@ -43,6 +43,85 @@ func (q *Queries) InsertAuditEvent(ctx context.Context, arg InsertAuditEventPara
 	return err
 }
 
+const listAudit = `-- name: ListAudit :many
+SELECT e.id, e.occurred_at, e.actor_id, u.name AS actor_name, e.via, e.entity, e.entity_id, p.key AS project_key, e.action, e.changes
+FROM audit_events e
+LEFT JOIN users u ON u.id = e.actor_id
+LEFT JOIN projects p ON p.id = e.project_id
+WHERE ($1::bigint IS NULL OR e.actor_id = $1::bigint)
+  AND ($2::text IS NULL OR e.entity = $2::text)
+  AND ($3::text IS NULL OR e.action = $3::text)
+  AND ($4::timestamptz IS NULL OR e.occurred_at >= $4::timestamptz)
+  AND ($5::timestamptz IS NULL OR e.occurred_at < $5::timestamptz)
+  AND ($6::bigint IS NULL OR e.id < $6::bigint)
+ORDER BY e.id DESC
+LIMIT $7
+`
+
+type ListAuditParams struct {
+	ActorID *int64
+	Entity  *string
+	Action  *string
+	Since   *time.Time
+	Until   *time.Time
+	Before  *int64
+	Lim     int32
+}
+
+type ListAuditRow struct {
+	ID         int64
+	OccurredAt time.Time
+	ActorID    *int64
+	ActorName  *string
+	Via        string
+	Entity     string
+	EntityID   int64
+	ProjectKey *string
+	Action     string
+	Changes    []byte
+}
+
+// The audit log for system admins, newest first, filtered (FSD §15.4). Dates
+// are whole days in the admin's timezone, passed as bounds.
+func (q *Queries) ListAudit(ctx context.Context, arg ListAuditParams) ([]ListAuditRow, error) {
+	rows, err := q.db.Query(ctx, listAudit,
+		arg.ActorID,
+		arg.Entity,
+		arg.Action,
+		arg.Since,
+		arg.Until,
+		arg.Before,
+		arg.Lim,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAuditRow
+	for rows.Next() {
+		var i ListAuditRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OccurredAt,
+			&i.ActorID,
+			&i.ActorName,
+			&i.Via,
+			&i.Entity,
+			&i.EntityID,
+			&i.ProjectKey,
+			&i.Action,
+			&i.Changes,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAuditEvents = `-- name: ListAuditEvents :many
 SELECT id, occurred_at, actor_id, via, entity, entity_id, project_id, action, changes, request_id, ip FROM audit_events WHERE entity = $1 AND entity_id = $2 ORDER BY id
 `

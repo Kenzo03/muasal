@@ -56,6 +56,11 @@ func (s *Server) Ask(w http.ResponseWriter, r *http.Request) {
 		Asker:    ask.Asker{UserID: u.ID, IsAdmin: u.IsAdmin, Locale: u.Locale, TZ: tz},
 		Question: question, Explicit: scopeFrom(in.Scope), ThreadID: in.ThreadId,
 	}
+	if in.Ignore != nil {
+		for _, ig := range *in.Ignore {
+			req.Ignore = append(req.Ignore, ask.Label{Kind: string(ig.Kind), ID: deref(ig.Id)})
+		}
+	}
 	if in.Language != nil && *in.Language != AskRequestLanguageAuto {
 		req.Language = string(*in.Language)
 	}
@@ -223,7 +228,22 @@ func (s *Server) GetAskThread(w http.ResponseWriter, r *http.Request, id int64) 
 				return
 			}
 		}
-		out.Queries[i] = AskThreadQuery{Id: q.ID, Question: q.Question, Status: q.Status, Claims: claims, Model: q.Model, CreatedAt: q.CreatedAt}
+		var logged []loggedEvidence
+		if err := json.Unmarshal(q.Evidence, &logged); err != nil {
+			s.fail(w, r, err)
+			return
+		}
+		ids := make([]int64, len(logged))
+		for j, l := range logged {
+			ids[j] = l.TicketID
+		}
+		items, err := s.engine.ItemsFor(ctx, &ask.Asker{UserID: u.ID, IsAdmin: u.IsAdmin}, ids)
+		if err != nil {
+			s.fail(w, r, err)
+			return
+		}
+		evidence := toAPIItems(items)
+		out.Queries[i] = AskThreadQuery{Id: q.ID, Question: q.Question, Status: q.Status, Claims: claims, Model: q.Model, CreatedAt: q.CreatedAt, Evidence: &evidence}
 	}
 	writeJSON(w, http.StatusOK, out)
 }
@@ -294,6 +314,13 @@ func toAPIDetected(d ask.Detected) AskDetected {
 	out := AskDetected{NodeIds: sc.NodeIds, ClientIds: sc.ClientIds, UserIds: sc.UserIds, ContactIds: sc.ContactIds, From: sc.From, To: sc.To}
 	if len(d.Keys) > 0 {
 		out.Keys = &d.Keys
+	}
+	if len(d.Labels) > 0 {
+		labels := make([]AskLabel, len(d.Labels))
+		for i, l := range d.Labels {
+			labels[i] = AskLabel{Kind: AskLabelKind(l.Kind), Id: l.ID, Label: l.Label}
+		}
+		out.Labels = &labels
 	}
 	return out
 }
