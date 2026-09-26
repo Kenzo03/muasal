@@ -91,7 +91,11 @@ LIMIT 50;
 -- name: KeywordSearch :many
 -- The 50 chunks whose words best match the question. The 'simple'
 -- configuration skips stemming, which suits mixed Indonesian-English text,
--- IDs and names (§11.3). Words are OR-ed, so one matching word counts.
+-- IDs and names (§11.3). Ranking reads every candidate row, so it ranks at
+-- most `candidates` of them: a word found in thousands of chunks says little
+-- on its own, and the caller tries all the words together first.
+SELECT c.id, c.ticket_id, c.rank
+FROM (
 SELECT ch.id, ch.ticket_id, ts_rank_cd(ch.tsv, query)::float8 AS rank
 FROM chunks ch
 JOIN tickets t ON t.id = ch.ticket_id,
@@ -110,7 +114,9 @@ WHERE ch.tsv @@ query
        OR ch.user_ids && sqlc.arg('user_ids')::bigint[] OR ch.contact_ids && sqlc.arg('contact_ids')::bigint[])
   AND (sqlc.narg('from_ts')::timestamptz IS NULL OR coalesce(t.closed_at, t.created_at) >= sqlc.narg('from_ts')::timestamptz)
   AND (sqlc.narg('to_ts')::timestamptz IS NULL OR coalesce(t.closed_at, t.created_at) < sqlc.narg('to_ts')::timestamptz)
-ORDER BY rank DESC, ch.id
+LIMIT sqlc.arg('candidates')
+) c
+ORDER BY c.rank DESC, c.id
 LIMIT 50;
 
 -- name: VisibleTicketIDsByKey :many

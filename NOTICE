@@ -4,3 +4,13 @@ Copyright 2026 The Muasal Authors
 This product includes server/internal/auth/common-passwords.txt, derived from
 SecLists (https://github.com/danielmiessler/SecLists), which is licensed under
 the MIT License. See server/internal/auth/common-passwords.LICENSE.
+
+Third-party components under licences other than MIT, BSD, ISC or Apache-2.0,
+shipped unmodified (the CI licence scan checks every other dependency):
+
+- River (github.com/riverqueue/river), the job queue in the server, is
+  licensed under the Mozilla Public License 2.0; its source is at
+  https://github.com/riverqueue/river.
+- libvips, inside sharp's @img/sharp-* packages, which Next.js uses for image
+  processing in the web server, is licensed under the GNU Lesser General Public
+  License 3.0 or later; its source is at https://github.com/libvips/libvips.

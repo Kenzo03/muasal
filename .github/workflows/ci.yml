@@ -32,6 +32,10 @@ jobs:
       - name: Generated Go code is up to date
         run: git diff --exit-code
       - run: go vet ./...
+      - name: Licences of Go dependencies
+        run: go run ./cmd/licenses
+      - name: Known vulnerabilities in Go dependencies
+        run: GOTOOLCHAIN=local go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
       - name: go test
         # Failing tests become annotations on the check run, readable without the log.
         run: |
@@ -55,6 +59,8 @@ jobs:
       - name: Generated API types are up to date
         run: git diff --exit-code
       - run: npm run check:i18n
+      - run: npm run check:licenses
+      - run: npm audit --omit=dev --audit-level=high
       - run: npm test
       - run: npm run build
 

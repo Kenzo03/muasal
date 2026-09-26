@@ -19,6 +19,7 @@ func TestSecurityHeaders(t *testing.T) {
 			"X-Content-Type-Options":  "nosniff",
 			"Referrer-Policy":         "same-origin",
 			"Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+			"Cache-Control":           "no-store", // ASVS 8.2.1: nothing signed-in stays in browser caches
 		} {
 			if got := resp.Header.Get(k); got != want {
 				t.Errorf("%s %s: %q, want %q", path, k, got, want)

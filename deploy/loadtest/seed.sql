@@ -28,10 +28,20 @@ FROM generate_series(1, 3000) AS g(i);
 CREATE UNIQUE INDEX ON words (i);
 
 -- phrase(seed, n): n words, the k-th at a skewed place in the vocabulary.
+-- Each word is one lookup on the unique index, not a join over the vocabulary.
 CREATE FUNCTION pg_temp.phrase(seed bigint, n int) RETURNS text LANGUAGE sql STABLE AS $$
-  SELECT string_agg(w, ' ' ORDER BY k) FROM generate_series(1, n) k
-  JOIN words ON words.i = 1 + floor(2999 * power(((seed * 7919 + k * 104729) % 1000003) / 1000003.0, 2.5))::int
+  SELECT string_agg((SELECT w FROM words
+                     WHERE words.i = 1 + floor(2999 * power(((seed * 7919 + k * 104729) % 1000003) / 1000003.0, 2.5))::int),
+                    ' ' ORDER BY k)
+  FROM generate_series(1, n) k
 $$;
+
+-- 5,000 ready phrases for comments and chunks, picked by number: the same
+-- word spread, without a vocabulary lookup per word per row.
+CREATE TEMP TABLE p25 AS SELECT i, pg_temp.phrase(i * 13, 25) AS txt FROM generate_series(1, 5000) i;
+CREATE TEMP TABLE p60 AS SELECT i, pg_temp.phrase(i * 17, 60) AS txt FROM generate_series(1, 5000) i;
+CREATE UNIQUE INDEX ON p25 (i);
+CREATE UNIQUE INDEX ON p60 (i);
 
 INSERT INTO clients (name, code) SELECT 'Load Client ' || i, 'LC' || i FROM generate_series(1, 5) i;
 INSERT INTO project_clients SELECT :pid, id FROM clients WHERE name LIKE 'Load Client %';
@@ -77,15 +87,15 @@ UNION
 SELECT t.id, ids.menus[1 + (t.number * 31) % 300] FROM tickets t, ids WHERE t.project_id = :pid AND t.number % 3 = 0;
 
 INSERT INTO comments (ticket_id, author_id, internal, body, created_at)
-SELECT t.id, ids.users[1 + (t.number + k) % 50], k = 1, pg_temp.phrase(t.number * 3 + k, 25), t.created_at + k * interval '1 hour'
-FROM tickets t, ids, generate_series(1, 2) k WHERE t.project_id = :pid;
+SELECT t.id, ids.users[1 + (t.number + k) % 50], k = 1, p.txt, t.created_at + k * interval '1 hour'
+FROM tickets t, ids, generate_series(1, 2) k, p25 p WHERE t.project_id = :pid AND p.i = 1 + (t.number * 3 + k) % 5000;
 
 INSERT INTO chunks (source_type, source_id, seq, ticket_id, project_id, client_id, node_ids, user_ids, contact_ids,
                     occurred_at, content, content_hash)
 SELECT 'ticket', t.id, k, t.id, t.project_id, t.client_id, ARRAY[ids.menus[1 + t.number % 300]],
        ARRAY[t.reporter_id], ARRAY[t.requester_contact_id], coalesce(t.closed_at, t.created_at),
-       '[' || t.key || '] ' || pg_temp.phrase(t.number * 10 + k, 60), sha256(convert_to(t.key || ':' || k, 'UTF8'))
-FROM tickets t, ids, generate_series(0, 9) k WHERE t.project_id = :pid;
+       '[' || t.key || '] ' || p.txt, sha256(convert_to(t.key || ':' || k, 'UTF8'))
+FROM tickets t, ids, generate_series(0, 9) k, p60 p WHERE t.project_id = :pid AND p.i = 1 + (t.number * 10 + k) % 5000;
 
 CREATE TEMP TABLE tokens AS
 SELECT u.id, md5(random()::text) || md5(random()::text) AS token FROM users u WHERE u.email LIKE 'load%@example.com';
