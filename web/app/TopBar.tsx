@@ -71,6 +71,7 @@ export default function TopBar({ me, projects }: { me: User; projects: Project[]
         [`/p/${project.key}/tickets`, tp("tickets")],
         [`/p/${project.key}/modules`, tp("modules")],
         [`/p/${project.key}/notes`, tp("notes")],
+        [`/p/${project.key}/summaries`, tp("summaries")],
         ...(project.role === "admin" ? [[`/p/${project.key}/settings`, tp("settings")] as [string, string]] : []),
       ]
     : me.is_admin
@@ -88,7 +89,7 @@ export default function TopBar({ me, projects }: { me: User; projects: Project[]
   const isActive = (href: string) => path.startsWith(href) || (href.endsWith("/tickets") && path.startsWith("/t/"));
 
   return (
-    <header className="bg-bar text-white">
+    <header className="bg-bar text-white print:hidden">
       <div className="flex min-h-13 flex-wrap items-center gap-x-4 px-4 md:px-5">
         <Link href="/" className="flex h-13 items-center gap-2 text-white no-underline hover:text-white">
           <Icon name="logo" className="size-5 text-bar-accent" />

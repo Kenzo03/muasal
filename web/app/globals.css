@@ -58,3 +58,59 @@
     display: none;
   }
 }
+
+/* A change summary's print view (FSD §12.1): A4, page numbers, no app chrome. */
+@page {
+  size: A4;
+  margin: 16mm 16mm 18mm;
+  @bottom-right {
+    content: counter(page) " / " counter(pages);
+    font-size: 9pt;
+    color: #6b625b;
+  }
+}
+@media print {
+  body {
+    background: white;
+  }
+}
+.summary-print {
+  font-size: 11pt;
+  line-height: 1.5;
+}
+.summary-print h1 {
+  font-size: 18pt;
+  font-weight: 600;
+  margin: 0 0 8pt;
+}
+.summary-print h2 {
+  font-size: 13pt;
+  font-weight: 600;
+  margin: 14pt 0 4pt;
+  break-after: avoid;
+}
+.summary-print p {
+  margin: 4pt 0;
+}
+.summary-print ul {
+  list-style: disc;
+  padding-left: 16pt;
+}
+.summary-print li {
+  margin: 2pt 0;
+  break-inside: avoid;
+}
+.summary-print table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 9.5pt;
+}
+.summary-print th,
+.summary-print td {
+  border: 1px solid #d8d0c8;
+  padding: 3pt 5pt;
+  text-align: left;
+}
+.summary-print tr {
+  break-inside: avoid;
+}
