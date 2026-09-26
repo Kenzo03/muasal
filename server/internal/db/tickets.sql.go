@@ -38,7 +38,7 @@ const createTicket = `-- name: CreateTicket :one
 INSERT INTO tickets (project_id, number, key, type, title, description, reason, status_id, client_id,
                      requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-RETURNING id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at
+RETURNING id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at, source, external_ref, external_meta
 `
 
 type CreateTicketParams struct {
@@ -99,12 +99,15 @@ func (q *Queries) CreateTicket(ctx context.Context, arg CreateTicketParams) (Tic
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ClosedAt,
+		&i.Source,
+		&i.ExternalRef,
+		&i.ExternalMeta,
 	)
 	return i, err
 }
 
 const getTicketByKey = `-- name: GetTicketByKey :one
-SELECT t.id, t.project_id, t.number, t.key, t.type, t.title, t.description, t.reason, t.status_id, t.client_id, t.requester_contact_id, t.requester_user_id, t.reporter_id, t.assignee_id, t.priority, t.due_date, t.version, t.created_at, t.updated_at, t.closed_at, s.id, s.project_id, s.name, s.category, s.position, s.color, s.is_default, p.key AS project_key, rp.name AS reporter_name, c.name AS client_name,
+SELECT t.id, t.project_id, t.number, t.key, t.type, t.title, t.description, t.reason, t.status_id, t.client_id, t.requester_contact_id, t.requester_user_id, t.reporter_id, t.assignee_id, t.priority, t.due_date, t.version, t.created_at, t.updated_at, t.closed_at, t.source, t.external_ref, t.external_meta, s.id, s.project_id, s.name, s.category, s.position, s.color, s.is_default, p.key AS project_key, rp.name AS reporter_name, c.name AS client_name,
        rc.name AS requester_contact_name, rc.title AS requester_contact_title,
        ru.name AS requester_user_name, a.name AS assignee_name
 FROM tickets t
@@ -154,6 +157,9 @@ func (q *Queries) GetTicketByKey(ctx context.Context, key string) (GetTicketByKe
 		&i.Ticket.CreatedAt,
 		&i.Ticket.UpdatedAt,
 		&i.Ticket.ClosedAt,
+		&i.Ticket.Source,
+		&i.Ticket.ExternalRef,
+		&i.Ticket.ExternalMeta,
 		&i.Status.ID,
 		&i.Status.ProjectID,
 		&i.Status.Name,
@@ -370,7 +376,7 @@ UPDATE tickets SET status_id = $1,
   version    = version + 1,
   updated_at = now()
 WHERE id = $3 AND ($4::int IS NULL OR version = $4::int)
-RETURNING id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at
+RETURNING id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at, source, external_ref, external_meta
 `
 
 type SetTicketStatusParams struct {
@@ -411,6 +417,9 @@ func (q *Queries) SetTicketStatus(ctx context.Context, arg SetTicketStatusParams
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ClosedAt,
+		&i.Source,
+		&i.ExternalRef,
+		&i.ExternalMeta,
 	)
 	return i, err
 }
@@ -420,7 +429,7 @@ UPDATE tickets SET type = $3, title = $4, description = $5, reason = $6, client_
   requester_contact_id = $8, requester_user_id = $9, assignee_id = $10, priority = $11, due_date = $12,
   version = version + 1, updated_at = now()
 WHERE id = $1 AND version = $2
-RETURNING id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at
+RETURNING id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at, source, external_ref, external_meta
 `
 
 type UpdateTicketParams struct {
@@ -476,6 +485,9 @@ func (q *Queries) UpdateTicket(ctx context.Context, arg UpdateTicketParams) (Tic
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ClosedAt,
+		&i.Source,
+		&i.ExternalRef,
+		&i.ExternalMeta,
 	)
 	return i, err
 }

@@ -764,6 +764,81 @@ export interface paths {
         patch: operations["updateNote"];
         trace?: never;
     };
+    "/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description System admins. Ticket imports, newest first (FSD §14.2). */
+        get: operations["listImports"];
+        put?: never;
+        /** @description System admins upload a UTF-8 CSV (comma or semicolon) or Jira's "Export Excel CSV (all fields)", up to 200 MB, into a new import for one project, and get its dry run: counts to create, update and reject, the first 20 errors and module coverage (§14.2). preset jira maps Jira's columns; mapping, a JSON ImportMapping, overrides it. */
+        post: operations["createImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        /** @description System admins. The import, its dry run and, while it runs, its progress. */
+        get: operations["getImport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/{id}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description System admins change the mapping and dry-run again, until the import runs. */
+        post: operations["planImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/{id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description System admins start a dry-run import as a background job in batches of 500, resumable after a failure. Rows the dry run rejected are skipped. Tickets match on their old key, so running a file again updates instead of duplicating (R-IN-1, AC-IN-3). */
+        post: operations["runImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/search": {
         parameters: {
             query?: never;
@@ -1741,6 +1816,66 @@ export interface components {
             code: "unreadable" | "empty" | "too_many_rows" | "unknown_shape" | "bad_client_scope" | "missing_id" | "duplicate_id" | "missing_parent" | "cycle" | "duplicate_name" | "duplicate_code" | "empty_name" | "bad_type" | "long_name" | "unknown_client" | "no_clients";
             path?: string;
             message: string;
+        };
+        ImportMapping: {
+            /** @description Field → column header. Fields are key, title, description, reason, type, status, priority, client, created, resolved, reporter, assignee, components, labels, comments, attachments. */
+            columns: {
+                [key: string]: string;
+            };
+            /** @description Source value (lower case) → bug */
+            types?: {
+                [key: string]: string;
+            };
+            /** @description Source value (lower case) → a project status name. */
+            statuses?: {
+                [key: string]: string;
+            };
+            /** @description Source value (lower case) → low */
+            priorities?: {
+                [key: string]: string;
+            };
+            /** @description Component or label (lower case) → node id; others match by name */
+            nodes?: {
+                [key: string]: number;
+            };
+        };
+        ImportStats: {
+            rows: number;
+            create: number;
+            update: number;
+            reject: number;
+            linked: number;
+            /** @description Percent of valid rows mapped to a menu. */
+            coverage: number;
+            /** @description Rows written so far. */
+            done: number;
+            tickets: number;
+            comments: number;
+        };
+        ImportProblem: {
+            line: number;
+            key?: string;
+            message: string;
+        };
+        ImportRun: {
+            /** Format: int64 */
+            id: number;
+            project_key: string;
+            file_name: string;
+            /** @enum {string} */
+            status: "uploaded" | "dry_run" | "running" | "done" | "failed";
+            headers: string[];
+            mapping: components["schemas"]["ImportMapping"];
+            stats: components["schemas"]["ImportStats"];
+            errors: components["schemas"]["ImportProblem"][];
+            created_by: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            finished_at?: string | null;
+        };
+        ImportRunList: {
+            items: components["schemas"]["ImportRun"][];
         };
         SearchResults: {
             tickets: components["schemas"]["SearchTicket"][];
@@ -3691,6 +3826,133 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Note"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listImports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The last 100 imports. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRunList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    project_key: string;
+                    /** @enum {string} */
+                    preset?: "csv" | "jira";
+                    /** @description An ImportMapping as JSON. */
+                    mapping?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The import with its dry run. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRun"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The import. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRun"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    planImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportMapping"];
+            };
+        };
+        responses: {
+            /** @description The import with its new dry run. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRun"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    runImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The import, now running. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRun"];
                 };
             };
             default: components["responses"]["Problem"];

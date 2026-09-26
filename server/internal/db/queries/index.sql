@@ -1,6 +1,6 @@
 -- name: GetTicketSource :one
 -- Everything a ticket's chunks say about it (FSD §13.1).
-SELECT t.id, t.key, t.type, t.title, t.description, t.reason, t.project_id, t.client_id,
+SELECT t.id, t.key, t.external_ref, t.type, t.title, t.description, t.reason, t.project_id, t.client_id,
        t.requester_contact_id, t.requester_user_id, t.reporter_id, t.assignee_id, t.created_at, t.closed_at,
        s.name AS status_name, c.name AS client_name,
        rc.name AS contact_name, rc.title AS contact_title, rcc.name AS contact_client_name,
@@ -28,9 +28,9 @@ WITH RECURSIVE up AS (
 SELECT id, path::text[] AS path FROM up WHERE parent_id IS NULL ORDER BY id;
 
 -- name: ListCommentSources :many
-SELECT c.id, u.name AS author, c.internal, c.body, c.created_at
+SELECT c.id, coalesce(u.name, c.author_label, '')::text AS author, c.internal, c.body, c.created_at
 FROM comments c
-JOIN users u ON u.id = c.author_id
+LEFT JOIN users u ON u.id = c.author_id
 WHERE c.ticket_id = $1 AND c.deleted_at IS NULL
 ORDER BY c.created_at, c.id;
 

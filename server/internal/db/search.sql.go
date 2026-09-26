@@ -106,10 +106,11 @@ WHERE ($1::boolean OR EXISTS (
                 SELECT 1 FROM membership_clients mc
                 WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = t.client_id))))
   AND (t.key = upper($3::text)
+       OR upper(t.external_ref) = upper($3::text)
        OR t.title ILIKE '%' || $3::text || '%'
        OR to_tsvector('simple', t.key || ' ' || t.title || ' ' || t.reason || ' ' || t.description)
           @@ websearch_to_tsquery('simple', $3::text))
-ORDER BY t.key = upper($3::text) DESC, t.title ILIKE '%' || $3::text || '%' DESC, t.updated_at DESC
+ORDER BY t.key = upper($3::text) OR upper(t.external_ref) = upper($3::text) DESC, t.title ILIKE '%' || $3::text || '%' DESC, t.updated_at DESC
 LIMIT 50
 `
 
@@ -128,7 +129,8 @@ type SearchTicketsRow struct {
 	Status     Status
 }
 
-// Tickets the user may see in any project (R-AC-2, R-AC-3): a key, words
+// Tickets the user may see in any project (R-AC-2, R-AC-3): a key or an
+// imported ticket's old key (R-IN-2), words
 // anywhere in the ticket, or part of the title (FSD §6.1). An exact key comes
 // first, then title matches, then the latest updates.
 // ponytail: at most 50 results; pages come when people ask for them.

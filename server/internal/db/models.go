@@ -115,14 +115,16 @@ type Client struct {
 }
 
 type Comment struct {
-	ID        int64
-	TicketID  int64
-	AuthorID  int64
-	Internal  bool
-	Body      string
-	CreatedAt time.Time
-	EditedAt  *time.Time
-	DeletedAt *time.Time
+	ID           int64
+	TicketID     int64
+	AuthorID     *int64
+	Internal     bool
+	Body         string
+	CreatedAt    time.Time
+	EditedAt     *time.Time
+	DeletedAt    *time.Time
+	AuthorLabel  *string
+	ExternalHash []byte
 }
 
 type Contact struct {
@@ -177,6 +179,21 @@ type IdempotencyKey struct {
 	Key       string
 	TicketID  int64
 	CreatedAt time.Time
+}
+
+type ImportRun struct {
+	ID         int64
+	Kind       string
+	ProjectID  int64
+	FileName   string
+	FilePath   string
+	Mapping    []byte
+	Status     string
+	Stats      []byte
+	Errors     []byte
+	CreatedBy  int64
+	CreatedAt  time.Time
+	FinishedAt *time.Time
 }
 
 type Membership struct {
@@ -283,6 +300,9 @@ type Ticket struct {
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
 	ClosedAt           *time.Time
+	Source             string
+	ExternalRef        *string
+	ExternalMeta       []byte
 }
 
 type TicketLink struct {

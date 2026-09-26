@@ -54,6 +54,9 @@ func Build(src Source) []db.UpsertChunkParams {
 
 	var b strings.Builder
 	fmt.Fprintf(&b, "%s: %s\n", typeLabels[t.Type], t.Title)
+	if t.ExternalRef != nil {
+		b.WriteString("Imported, old key " + *t.ExternalRef + "\n") // so the old key finds it too (R-IN-2)
+	}
 	b.WriteString("Status: " + t.StatusName)
 	if t.ClosedAt != nil {
 		b.WriteString(", closed " + day(*t.ClosedAt))

@@ -10,7 +10,7 @@ import (
 )
 
 const createComment = `-- name: CreateComment :one
-INSERT INTO comments (ticket_id, author_id, internal, body) VALUES ($1, $2, $3, $4) RETURNING id, ticket_id, author_id, internal, body, created_at, edited_at, deleted_at
+INSERT INTO comments (ticket_id, author_id, internal, body) VALUES ($1, $2::bigint, $3, $4) RETURNING id, ticket_id, author_id, internal, body, created_at, edited_at, deleted_at, author_label, external_hash
 `
 
 type CreateCommentParams struct {
@@ -37,6 +37,8 @@ func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (C
 		&i.CreatedAt,
 		&i.EditedAt,
 		&i.DeletedAt,
+		&i.AuthorLabel,
+		&i.ExternalHash,
 	)
 	return i, err
 }
@@ -51,7 +53,7 @@ func (q *Queries) DeleteComment(ctx context.Context, id int64) error {
 }
 
 const getComment = `-- name: GetComment :one
-SELECT c.id, c.ticket_id, c.author_id, c.internal, c.body, c.created_at, c.edited_at, c.deleted_at, t.key AS ticket_key
+SELECT c.id, c.ticket_id, c.author_id, c.internal, c.body, c.created_at, c.edited_at, c.deleted_at, c.author_label, c.external_hash, t.key AS ticket_key
 FROM comments c JOIN tickets t ON t.id = c.ticket_id
 WHERE c.id = $1
 `
@@ -73,14 +75,16 @@ func (q *Queries) GetComment(ctx context.Context, id int64) (GetCommentRow, erro
 		&i.Comment.CreatedAt,
 		&i.Comment.EditedAt,
 		&i.Comment.DeletedAt,
+		&i.Comment.AuthorLabel,
+		&i.Comment.ExternalHash,
 		&i.TicketKey,
 	)
 	return i, err
 }
 
 const listComments = `-- name: ListComments :many
-SELECT c.id, c.ticket_id, c.author_id, c.internal, c.body, c.created_at, c.edited_at, c.deleted_at, u.name AS author_name
-FROM comments c JOIN users u ON u.id = c.author_id
+SELECT c.id, c.ticket_id, c.author_id, c.internal, c.body, c.created_at, c.edited_at, c.deleted_at, c.author_label, c.external_hash, coalesce(u.name, c.author_label, '')::text AS author_name
+FROM comments c LEFT JOIN users u ON u.id = c.author_id
 WHERE c.ticket_id = $1
 ORDER BY c.created_at, c.id
 `
@@ -108,6 +112,8 @@ func (q *Queries) ListComments(ctx context.Context, ticketID int64) ([]ListComme
 			&i.Comment.CreatedAt,
 			&i.Comment.EditedAt,
 			&i.Comment.DeletedAt,
+			&i.Comment.AuthorLabel,
+			&i.Comment.ExternalHash,
 			&i.AuthorName,
 		); err != nil {
 			return nil, err
@@ -121,7 +127,7 @@ func (q *Queries) ListComments(ctx context.Context, ticketID int64) ([]ListComme
 }
 
 const updateCommentBody = `-- name: UpdateCommentBody :one
-UPDATE comments SET body = $2, edited_at = now() WHERE id = $1 AND deleted_at IS NULL RETURNING id, ticket_id, author_id, internal, body, created_at, edited_at, deleted_at
+UPDATE comments SET body = $2, edited_at = now() WHERE id = $1 AND deleted_at IS NULL RETURNING id, ticket_id, author_id, internal, body, created_at, edited_at, deleted_at, author_label, external_hash
 `
 
 type UpdateCommentBodyParams struct {
@@ -141,6 +147,8 @@ func (q *Queries) UpdateCommentBody(ctx context.Context, arg UpdateCommentBodyPa
 		&i.CreatedAt,
 		&i.EditedAt,
 		&i.DeletedAt,
+		&i.AuthorLabel,
+		&i.ExternalHash,
 	)
 	return i, err
 }

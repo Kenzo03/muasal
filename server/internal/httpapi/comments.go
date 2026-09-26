@@ -170,7 +170,7 @@ func (s *Server) ownComment(w http.ResponseWriter, r *http.Request, id int64) (p
 	if !ok {
 		return projectCtx{}, db.Comment{}, false
 	}
-	if row.Comment.AuthorID != pc.user.ID {
+	if row.Comment.AuthorID == nil || *row.Comment.AuthorID != pc.user.ID {
 		writeProblem(w, http.StatusForbidden, "forbidden", "Only the author can change a comment")
 		return projectCtx{}, db.Comment{}, false
 	}
@@ -191,7 +191,7 @@ func commentBody(w http.ResponseWriter, body string) (string, bool) {
 // showDeleted (system admins, or the author's own response).
 func commentItem(c db.Comment, author string, showDeleted bool) ActivityItem {
 	item := ActivityItem{
-		Kind: ActivityItemKindComment, At: c.CreatedAt, Actor: &Ref{Id: c.AuthorID, Name: author},
+		Kind: ActivityItemKindComment, At: c.CreatedAt, Actor: &Ref{Id: deref(c.AuthorID), Name: author}, // 0 for an imported author (R-IN-4)
 		CommentId: &c.ID, Internal: &c.Internal, Deleted: ptr(c.DeletedAt != nil), Edited: ptr(c.EditedAt != nil),
 	}
 	if c.DeletedAt == nil || showDeleted {

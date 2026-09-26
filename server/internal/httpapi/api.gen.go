@@ -372,6 +372,33 @@ func (e DiskUseVolume) Valid() bool {
 	}
 }
 
+// Defines values for ImportRunStatus.
+const (
+	ImportRunStatusDone     ImportRunStatus = "done"
+	ImportRunStatusDryRun   ImportRunStatus = "dry_run"
+	ImportRunStatusFailed   ImportRunStatus = "failed"
+	ImportRunStatusRunning  ImportRunStatus = "running"
+	ImportRunStatusUploaded ImportRunStatus = "uploaded"
+)
+
+// Valid indicates whether the value is a known member of the ImportRunStatus enum.
+func (e ImportRunStatus) Valid() bool {
+	switch e {
+	case ImportRunStatusDone:
+		return true
+	case ImportRunStatusDryRun:
+		return true
+	case ImportRunStatusFailed:
+		return true
+	case ImportRunStatusRunning:
+		return true
+	case ImportRunStatusUploaded:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LinkType.
 const (
 	LinkTypeExtends   LinkType = "extends"
@@ -681,6 +708,24 @@ func (e ListAskLogParamsStatus) Valid() bool {
 	case ListAskLogParamsStatusError:
 		return true
 	case ListAskLogParamsStatusNotEnoughInfo:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateImportMultipartBodyPreset.
+const (
+	CreateImportMultipartBodyPresetCsv  CreateImportMultipartBodyPreset = "csv"
+	CreateImportMultipartBodyPresetJira CreateImportMultipartBodyPreset = "jira"
+)
+
+// Valid indicates whether the value is a known member of the CreateImportMultipartBodyPreset enum.
+func (e CreateImportMultipartBodyPreset) Valid() bool {
+	switch e {
+	case CreateImportMultipartBodyPresetCsv:
+		return true
+	case CreateImportMultipartBodyPresetJira:
 		return true
 	default:
 		return false
@@ -1371,6 +1416,71 @@ type FieldError struct {
 	Code    string `json:"code"`
 	Field   string `json:"field"`
 	Message string `json:"message"`
+}
+
+// ImportMapping defines model for ImportMapping.
+type ImportMapping struct {
+	// Columns Field → column header. Fields are key, title, description, reason, type, status, priority, client, created, resolved, reporter, assignee, components, labels, comments, attachments.
+	Columns map[string]string `json:"columns"`
+
+	// Nodes Component or label (lower case) → node id; others match by name
+	Nodes *map[string]int64 `json:"nodes,omitempty"`
+
+	// Priorities Source value (lower case) → low
+	Priorities *map[string]string `json:"priorities,omitempty"`
+
+	// Statuses Source value (lower case) → a project status name.
+	Statuses *map[string]string `json:"statuses,omitempty"`
+
+	// Types Source value (lower case) → bug
+	Types *map[string]string `json:"types,omitempty"`
+}
+
+// ImportProblem defines model for ImportProblem.
+type ImportProblem struct {
+	Key     *string `json:"key,omitempty"`
+	Line    int     `json:"line"`
+	Message string  `json:"message"`
+}
+
+// ImportRun defines model for ImportRun.
+type ImportRun struct {
+	CreatedAt  time.Time       `json:"created_at"`
+	CreatedBy  string          `json:"created_by"`
+	Errors     []ImportProblem `json:"errors"`
+	FileName   string          `json:"file_name"`
+	FinishedAt *time.Time      `json:"finished_at,omitempty"`
+	Headers    []string        `json:"headers"`
+	Id         int64           `json:"id"`
+	Mapping    ImportMapping   `json:"mapping"`
+	ProjectKey string          `json:"project_key"`
+	Stats      ImportStats     `json:"stats"`
+	Status     ImportRunStatus `json:"status"`
+}
+
+// ImportRunStatus defines model for ImportRun.Status.
+type ImportRunStatus string
+
+// ImportRunList defines model for ImportRunList.
+type ImportRunList struct {
+	Items []ImportRun `json:"items"`
+}
+
+// ImportStats defines model for ImportStats.
+type ImportStats struct {
+	Comments int `json:"comments"`
+
+	// Coverage Percent of valid rows mapped to a menu.
+	Coverage int `json:"coverage"`
+	Create   int `json:"create"`
+
+	// Done Rows written so far.
+	Done    int `json:"done"`
+	Linked  int `json:"linked"`
+	Reject  int `json:"reject"`
+	Rows    int `json:"rows"`
+	Tickets int `json:"tickets"`
+	Update  int `json:"update"`
 }
 
 // IndexStatus defines model for IndexStatus.
@@ -2188,6 +2298,19 @@ type ListContactsParams struct {
 	Internal *bool `form:"internal,omitempty" json:"internal,omitempty"`
 }
 
+// CreateImportMultipartBody defines parameters for CreateImport.
+type CreateImportMultipartBody struct {
+	File openapi_types.File `json:"file"`
+
+	// Mapping An ImportMapping as JSON.
+	Mapping    *string                          `json:"mapping,omitempty"`
+	Preset     *CreateImportMultipartBodyPreset `json:"preset,omitempty"`
+	ProjectKey string                           `json:"project_key"`
+}
+
+// CreateImportMultipartBodyPreset defines parameters for CreateImport.
+type CreateImportMultipartBodyPreset string
+
 // ListMyTicketsParams defines parameters for ListMyTickets.
 type ListMyTicketsParams struct {
 	View   *MyTicketsView `form:"view,omitempty" json:"view,omitempty"`
@@ -2351,6 +2474,12 @@ type CreateContactJSONRequestBody = ContactInput
 
 // UpdateContactJSONRequestBody defines body for UpdateContact for application/json ContentType.
 type UpdateContactJSONRequestBody = ContactInput
+
+// CreateImportMultipartRequestBody defines body for CreateImport for multipart/form-data ContentType.
+type CreateImportMultipartRequestBody CreateImportMultipartBody
+
+// PlanImportJSONRequestBody defines body for PlanImport for application/json ContentType.
+type PlanImportJSONRequestBody = ImportMapping
 
 // UpdateMeJSONRequestBody defines body for UpdateMe for application/json ContentType.
 type UpdateMeJSONRequestBody = MeUpdate
@@ -2516,6 +2645,21 @@ type ServerInterface interface {
 
 	// (PATCH /contacts/{id})
 	UpdateContact(w http.ResponseWriter, r *http.Request, id int64)
+
+	// (GET /imports)
+	ListImports(w http.ResponseWriter, r *http.Request)
+
+	// (POST /imports)
+	CreateImport(w http.ResponseWriter, r *http.Request)
+
+	// (GET /imports/{id})
+	GetImport(w http.ResponseWriter, r *http.Request, id int64)
+
+	// (POST /imports/{id}/plan)
+	PlanImport(w http.ResponseWriter, r *http.Request, id int64)
+
+	// (POST /imports/{id}/run)
+	RunImport(w http.ResponseWriter, r *http.Request, id int64)
 
 	// (DELETE /links/{id})
 	DeleteLink(w http.ResponseWriter, r *http.Request, id int64)
@@ -3567,6 +3711,112 @@ func (siw *ServerInterfaceWrapper) UpdateContact(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateContact(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListImports operation middleware
+func (siw *ServerInterfaceWrapper) ListImports(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListImports(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateImport operation middleware
+func (siw *ServerInterfaceWrapper) CreateImport(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateImport(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetImport operation middleware
+func (siw *ServerInterfaceWrapper) GetImport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetImport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PlanImport operation middleware
+func (siw *ServerInterfaceWrapper) PlanImport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PlanImport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RunImport operation middleware
+func (siw *ServerInterfaceWrapper) RunImport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RunImport(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -5298,6 +5548,11 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/notes", wrapper.CreateNote)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/notes/{noteKey}", wrapper.GetNote)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/notes/{noteKey}", wrapper.UpdateNote)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/imports", wrapper.ListImports)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/imports", wrapper.CreateImport)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/imports/{id}", wrapper.GetImport)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/imports/{id}/plan", wrapper.PlanImport)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/imports/{id}/run", wrapper.RunImport)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/search", wrapper.Search)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/settings/ai", wrapper.GetAISettings)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/admin/settings/ai", wrapper.UpdateAISettings)
