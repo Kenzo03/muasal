@@ -83,7 +83,7 @@ func (s *Server) CreateTicket(w http.ResponseWriter, r *http.Request, key string
 		if err := q.AddTicketNodes(ctx, db.AddTicketNodesParams{TicketID: created.ID, NodeIds: nodeIDs}); err != nil {
 			return err
 		}
-		if out, err = readTicket(ctx, q, created.Key); err != nil {
+		if out, err = readTicket(ctx, q, created.Key, pc.user); err != nil {
 			return err
 		}
 		if err := s.index(ctx, tx, created.ID); err != nil {
@@ -104,11 +104,11 @@ func (s *Server) CreateTicket(w http.ResponseWriter, r *http.Request, key string
 }
 
 func (s *Server) GetTicket(w http.ResponseWriter, r *http.Request, key string) {
-	_, row, ok := s.ticketFor(w, r, key, access.Viewer)
+	pc, row, ok := s.ticketFor(w, r, key, access.Viewer)
 	if !ok {
 		return
 	}
-	out, err := ticketFromRow(r.Context(), s.q, row)
+	out, err := ticketFromRow(r.Context(), s.q, row, pc.user)
 	if err != nil {
 		s.fail(w, r, err)
 		return
@@ -155,7 +155,7 @@ func (s *Server) UpdateTicket(w http.ResponseWriter, r *http.Request, key string
 	}
 	var out Ticket
 	err = s.inJobTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
-		before, err := ticketFromRow(ctx, q, row)
+		before, err := ticketFromRow(ctx, q, row, pc.user)
 		if err != nil {
 			return err
 		}
@@ -176,7 +176,7 @@ func (s *Server) UpdateTicket(w http.ResponseWriter, r *http.Request, key string
 		if err := q.AddTicketNodes(ctx, db.AddTicketNodesParams{TicketID: updated.ID, NodeIds: nodeIDs}); err != nil {
 			return err
 		}
-		if out, err = readTicket(ctx, q, updated.Key); err != nil {
+		if out, err = readTicket(ctx, q, updated.Key, pc.user); err != nil {
 			return err
 		}
 		if err := s.index(ctx, tx, updated.ID); err != nil {
@@ -267,7 +267,7 @@ func (s *Server) TransitionTicket(w http.ResponseWriter, r *http.Request, key st
 	}
 	var out Ticket
 	err = s.inJobTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
-		before, err := ticketFromRow(ctx, q, row)
+		before, err := ticketFromRow(ctx, q, row, pc.user)
 		if err != nil || !moving {
 			out = before
 			return err
@@ -305,6 +305,9 @@ func (s *Server) TransitionTicket(w http.ResponseWriter, r *http.Request, key st
 			}); err != nil {
 				return err
 			}
+			if err := q.RefreshSuperseded(ctx, row.Ticket.ID); err != nil { // a record written after its reverses link (R-TK-5)
+				return err
+			}
 			action = "decision_confirm"
 		case closedCategory(row.Status.Category):
 			if err := q.DraftDecision(ctx, row.Ticket.ID); err != nil {
@@ -312,7 +315,7 @@ func (s *Server) TransitionTicket(w http.ResponseWriter, r *http.Request, key st
 			}
 			action = "decision_draft"
 		}
-		if out, err = readTicket(ctx, q, row.Ticket.Key); err != nil {
+		if out, err = readTicket(ctx, q, row.Ticket.Key, pc.user); err != nil {
 			return err
 		}
 		if err := s.index(ctx, tx, row.Ticket.ID); err != nil {
@@ -497,15 +500,15 @@ func (s *Server) startStatus(ctx context.Context, projectID int64, id *int64) (i
 }
 
 // readTicket reads a ticket the way the API shows it.
-func readTicket(ctx context.Context, q *db.Queries, key string) (Ticket, error) {
+func readTicket(ctx context.Context, q *db.Queries, key string, u *db.User) (Ticket, error) {
 	row, err := q.GetTicketByKey(ctx, key)
 	if err != nil {
 		return Ticket{}, err
 	}
-	return ticketFromRow(ctx, q, row)
+	return ticketFromRow(ctx, q, row, u)
 }
 
-func ticketFromRow(ctx context.Context, q *db.Queries, row db.GetTicketByKeyRow) (Ticket, error) {
+func ticketFromRow(ctx context.Context, q *db.Queries, row db.GetTicketByKeyRow, u *db.User) (Ticket, error) {
 	t := row.Ticket
 	nodes, err := q.ListTicketNodes(ctx, t.ID)
 	if err != nil {
@@ -519,11 +522,15 @@ func ticketFromRow(ctx context.Context, q *db.Queries, row db.GetTicketByKeyRow)
 	if err != nil {
 		return Ticket{}, err
 	}
+	links, err := linksOf(ctx, q, t.ID, u)
+	if err != nil {
+		return Ticket{}, err
+	}
 	out := Ticket{
 		Id: t.ID, Key: t.Key, ProjectKey: row.ProjectKey, Title: t.Title, Type: TicketType(t.Type),
 		Description: t.Description, Reason: t.Reason, Priority: Priority(t.Priority), Version: t.Version,
 		Status: toAPIStatus(row.Status), Reporter: Ref{Id: t.ReporterID, Name: row.ReporterName},
-		CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt, ClosedAt: t.ClosedAt, Decision: decision,
+		CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt, ClosedAt: t.ClosedAt, Decision: decision, Links: links,
 		Nodes: make([]NodeRef, len(nodes)), Attachments: make([]Attachment, len(files)),
 	}
 	if t.ClientID != nil {

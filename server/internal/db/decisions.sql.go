@@ -16,7 +16,7 @@ VALUES ($1::bigint, $2::text, $3::text, $4::text,
 ON CONFLICT (ticket_id) DO UPDATE SET
   what_changed = excluded.what_changed, why = excluded.why, alternatives = excluded.alternatives,
   outcome = excluded.outcome, state = 'confirmed', confirmed_by = excluded.confirmed_by, confirmed_at = excluded.confirmed_at
-RETURNING ticket_id, what_changed, why, alternatives, outcome, state, confirmed_by, confirmed_at
+RETURNING ticket_id, what_changed, why, alternatives, outcome, state, confirmed_by, confirmed_at, superseded_by
 `
 
 type ConfirmDecisionParams struct {
@@ -49,6 +49,7 @@ func (q *Queries) ConfirmDecision(ctx context.Context, arg ConfirmDecisionParams
 		&i.State,
 		&i.ConfirmedBy,
 		&i.ConfirmedAt,
+		&i.SupersededBy,
 	)
 	return i, err
 }
@@ -64,15 +65,17 @@ func (q *Queries) DraftDecision(ctx context.Context, ticketID int64) error {
 }
 
 const getDecision = `-- name: GetDecision :one
-SELECT d.ticket_id, d.what_changed, d.why, d.alternatives, d.outcome, d.state, d.confirmed_by, d.confirmed_at, u.name AS confirmer_name
+SELECT d.ticket_id, d.what_changed, d.why, d.alternatives, d.outcome, d.state, d.confirmed_by, d.confirmed_at, d.superseded_by, u.name AS confirmer_name, sk.key AS superseded_by_key
 FROM decision_records d
 LEFT JOIN users u ON u.id = d.confirmed_by
+LEFT JOIN tickets sk ON sk.id = d.superseded_by
 WHERE d.ticket_id = $1
 `
 
 type GetDecisionRow struct {
-	DecisionRecord DecisionRecord
-	ConfirmerName  *string
+	DecisionRecord  DecisionRecord
+	ConfirmerName   *string
+	SupersededByKey *string
 }
 
 func (q *Queries) GetDecision(ctx context.Context, ticketID int64) (GetDecisionRow, error) {
@@ -87,9 +90,25 @@ func (q *Queries) GetDecision(ctx context.Context, ticketID int64) (GetDecisionR
 		&i.DecisionRecord.State,
 		&i.DecisionRecord.ConfirmedBy,
 		&i.DecisionRecord.ConfirmedAt,
+		&i.DecisionRecord.SupersededBy,
 		&i.ConfirmerName,
+		&i.SupersededByKey,
 	)
 	return i, err
+}
+
+const refreshSuperseded = `-- name: RefreshSuperseded :exec
+UPDATE decision_records d SET superseded_by = (
+  SELECT l.from_id FROM ticket_links l WHERE l.to_id = d.ticket_id AND l.type = 'reverses'
+  ORDER BY l.created_at DESC, l.id DESC LIMIT 1)
+WHERE d.ticket_id = $1
+`
+
+// A ticket's decision is superseded by the newest ticket that reverses it, and
+// current again when no reverses link is left (R-TK-5, R-TK-7).
+func (q *Queries) RefreshSuperseded(ctx context.Context, ticketID int64) error {
+	_, err := q.db.Exec(ctx, refreshSuperseded, ticketID)
+	return err
 }
 
 const updateDecision = `-- name: UpdateDecision :exec

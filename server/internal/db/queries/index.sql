@@ -43,12 +43,12 @@ SELECT pg_advisory_xact_lock(hashtextextended('index_ticket:' || sqlc.arg('ticke
 -- comment, a drafted decision, the tail of a shorter text.
 -- keep holds "type:id:seq" of every chunk the rebuild wrote.
 DELETE FROM chunks c
-WHERE c.ticket_id = sqlc.arg('ticket_id')
+WHERE c.ticket_id = sqlc.arg('ticket_id')::bigint
   AND c.source_type || ':' || c.source_id || ':' || c.seq <> ALL (sqlc.arg('keep')::text[]);
 
 -- name: ListPendingTicketChunks :many
 SELECT id, content, content_hash FROM chunks
-WHERE ticket_id = $1 AND (embedding IS NULL OR embed_model IS DISTINCT FROM sqlc.arg('model')::text)
+WHERE ticket_id = sqlc.arg('ticket_id')::bigint AND (embedding IS NULL OR embed_model IS DISTINCT FROM sqlc.arg('model')::text)
 ORDER BY id;
 
 -- name: ListTicketIDsUnderNode :many

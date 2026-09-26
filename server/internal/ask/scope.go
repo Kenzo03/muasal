@@ -66,7 +66,7 @@ type Label struct {
 
 var (
 	tokenRe = regexp.MustCompile(`\d{4}-\d{2}-\d{2}|[\p{L}\p{N}]+`)
-	keyRe   = regexp.MustCompile(`(?i)\b([a-z][a-z0-9]{1,9}-\d+)\b`)
+	keyRe   = regexp.MustCompile(`(?i)\b([a-z][a-z0-9]{1,9}-(?:dn)?\d+)\b`)
 )
 
 // Detect finds the clients, nodes, people, dates and ticket keys a question

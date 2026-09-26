@@ -27,7 +27,7 @@ func TestChunksKeepVectorsUntilTheirTextChanges(t *testing.T) {
 	}))
 	chunk := func(seq int32, content string) db.UpsertChunkParams {
 		return db.UpsertChunkParams{
-			SourceType: "ticket", SourceID: tk.ID, Seq: seq, TicketID: tk.ID, ProjectID: p.ID,
+			SourceType: "ticket", SourceID: tk.ID, Seq: seq, TicketID: &tk.ID, ProjectID: p.ID,
 			NodeIds: []int64{}, UserIds: []int64{u.ID}, ContactIds: []int64{}, OccurredAt: time.Now(),
 			Content: content, ContentHash: []byte(content),
 		}

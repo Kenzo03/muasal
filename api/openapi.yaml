@@ -672,6 +672,40 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/DecisionRecord" }
         default: { $ref: "#/components/responses/Problem" }
+  /tickets/{key}/links:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: createLink
+      tags: [tickets]
+      description: >-
+        Members link this ticket to another they can see, in any project (FSD §8.8, R-TK-6). A reverses link
+        supersedes the other ticket's decision (R-TK-5). A self-link answers 422; an existing link of the same type
+        answers 409 link_exists.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LinkCreate" }
+      responses:
+        "201":
+          description: The link as this ticket shows it.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TicketLink" }
+        default: { $ref: "#/components/responses/Problem" }
+  /links/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    delete:
+      operationId: deleteLink
+      tags: [tickets]
+      description: >-
+        Members of the linking ticket's project. Removing a reverses link makes the other decision current again
+        unless another reverses link still points at it (R-TK-7).
+      responses:
+        "204": { description: Deleted. }
+        default: { $ref: "#/components/responses/Problem" }
   /tickets/{key}/activity:
     parameters:
       - { name: key, in: path, required: true, schema: { type: string } }
@@ -1375,12 +1409,29 @@ components:
         decision: { $ref: "#/components/schemas/DecisionRecord" }
     TimelinePage:
       type: object
-      required: [items, next_cursor]
+      required: [items, notes, next_cursor]
       properties:
         items:
           type: array
           items: { $ref: "#/components/schemas/TimelineEntry" }
+        notes:
+          type: array
+          description: >-
+            Decision notes on the node, newest decision first (FSD §9.4). Only the first page carries them, all of
+            them; later pages, and a ticket type filter, leave the list empty.
+          items: { $ref: "#/components/schemas/TimelineNote" }
         next_cursor: { type: string, nullable: true }
+    TimelineNote:
+      type: object
+      required: [key, title, decided_on, attendees, body, author]
+      properties:
+        key: { type: string, example: HRIS-DN7 }
+        title: { type: string }
+        decided_on: { type: string, format: date }
+        client: { $ref: "#/components/schemas/Ref" }
+        attendees: { type: string }
+        body: { type: string }
+        author: { type: string }
     Behavior:
       type: object
       required: [key, title, what_changed, why, alternatives]
@@ -1490,7 +1541,7 @@ components:
         created_at: { type: string, format: date-time }
     Ticket:
       type: object
-      required: [id, key, project_key, title, type, description, reason, status, requester, reporter, priority, due_date, nodes, attachments, version, created_at, updated_at]
+      required: [id, key, project_key, title, type, description, reason, status, requester, reporter, priority, due_date, nodes, attachments, links, version, created_at, updated_at]
       properties:
         id: { type: integer, format: int64 }
         key: { type: string, example: HRIS-231 }
@@ -1517,6 +1568,10 @@ components:
         updated_at: { type: string, format: date-time }
         closed_at: { type: string, format: date-time, nullable: true, description: Set on close, cleared on reopen. }
         decision: { $ref: "#/components/schemas/DecisionRecord" }
+        links:
+          type: array
+          description: Links to tickets the reader can see, oldest first (FSD §8.8).
+          items: { $ref: "#/components/schemas/TicketLink" }
     TicketCreate:
       type: object
       required: [type, title, node_ids]
@@ -1588,6 +1643,32 @@ components:
         state: { $ref: "#/components/schemas/DecisionState" }
         confirmed_by: { $ref: "#/components/schemas/Ref" }
         confirmed_at: { type: string, format: date-time }
+        superseded_by: { type: string, description: The key of the ticket that reverses this decision (R-TK-5). }
+    LinkType:
+      type: string
+      enum: [reverses, extends, related_to]
+    LinkCreate:
+      type: object
+      required: [type, key]
+      properties:
+        type: { $ref: "#/components/schemas/LinkType" }
+        key: { type: string, description: The other ticket, e.g. HRIS-88. This ticket reverses, extends or relates to it. }
+    TicketLink:
+      type: object
+      required: [id, type, outgoing, ticket]
+      properties:
+        id: { type: integer, format: int64 }
+        type: { $ref: "#/components/schemas/LinkType" }
+        outgoing: { type: boolean, description: True when this ticket is the one that reverses or extends; false reads "Reversed by". }
+        ticket: { $ref: "#/components/schemas/LinkedTicket" }
+    LinkedTicket:
+      type: object
+      required: [key, title, status]
+      properties:
+        key: { type: string }
+        title: { type: string }
+        status: { $ref: "#/components/schemas/Status" }
+        closed_at: { type: string, format: date-time, nullable: true }
     TicketSummary:
       type: object
       required: [id, key, title, type, priority, due_date, status_id, requester_name, node_names, missing_reason, updated_at]
@@ -1909,13 +1990,14 @@ components:
         id: { type: integer, format: int64 }
     AskItem:
       type: object
-      required: [key, title, client, requested_by, date, status, closed]
+      required: [kind, key, title, client, requested_by, date, status, closed]
       properties:
+        kind: { type: string, enum: [ticket, note], description: A ticket, or a decision note such as HRIS-DN7 (FSD §9.4). }
         key: { type: string }
         title: { type: string }
         client: { type: string, nullable: true, description: Null for core work. }
-        requested_by: { type: string }
-        date: { type: string, format: date-time, description: The close date, or the creation date while open. }
+        requested_by: { type: string, description: A note's author. }
+        date: { type: string, format: date-time, description: The close date, or the creation date while open; a note's decision date. }
         status: { type: string }
         closed: { type: boolean }
     AskClaim:

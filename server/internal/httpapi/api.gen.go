@@ -81,6 +81,24 @@ func (e AskIgnoreKind) Valid() bool {
 	}
 }
 
+// Defines values for AskItemKind.
+const (
+	AskItemKindNote   AskItemKind = "note"
+	AskItemKindTicket AskItemKind = "ticket"
+)
+
+// Valid indicates whether the value is a known member of the AskItemKind enum.
+func (e AskItemKind) Valid() bool {
+	switch e {
+	case AskItemKindNote:
+		return true
+	case AskItemKindTicket:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AskLabelKind.
 const (
 	AskLabelKindClient  AskLabelKind = "client"
@@ -147,6 +165,24 @@ func (e AskLogEntryStatus) Valid() bool {
 	case AskLogEntryStatusError:
 		return true
 	case AskLogEntryStatusNotEnoughInfo:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AskLogEvidenceKind.
+const (
+	AskLogEvidenceKindNote   AskLogEvidenceKind = "note"
+	AskLogEvidenceKindTicket AskLogEvidenceKind = "ticket"
+)
+
+// Valid indicates whether the value is a known member of the AskLogEvidenceKind enum.
+func (e AskLogEvidenceKind) Valid() bool {
+	switch e {
+	case AskLogEvidenceKindNote:
+		return true
+	case AskLogEvidenceKindTicket:
 		return true
 	default:
 		return false
@@ -288,6 +324,27 @@ func (e DiskUseVolume) Valid() bool {
 	case DiskUseVolumeAttachments:
 		return true
 	case DiskUseVolumeBackups:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LinkType.
+const (
+	LinkTypeExtends   LinkType = "extends"
+	LinkTypeRelatedTo LinkType = "related_to"
+	LinkTypeReverses  LinkType = "reverses"
+)
+
+// Valid indicates whether the value is a known member of the LinkType enum.
+func (e LinkType) Valid() bool {
+	switch e {
+	case LinkTypeExtends:
+		return true
+	case LinkTypeRelatedTo:
+		return true
+	case LinkTypeReverses:
 		return true
 	default:
 		return false
@@ -731,12 +788,20 @@ type AskItem struct {
 	Closed bool    `json:"closed"`
 
 	// Date The close date
-	Date        time.Time `json:"date"`
-	Key         string    `json:"key"`
-	RequestedBy string    `json:"requested_by"`
-	Status      string    `json:"status"`
-	Title       string    `json:"title"`
+	Date time.Time `json:"date"`
+	Key  string    `json:"key"`
+
+	// Kind A ticket
+	Kind AskItemKind `json:"kind"`
+
+	// RequestedBy A note's author.
+	RequestedBy string `json:"requested_by"`
+	Status      string `json:"status"`
+	Title       string `json:"title"`
 }
+
+// AskItemKind A ticket
+type AskItemKind string
 
 // AskLabel defines model for AskLabel.
 type AskLabel struct {
@@ -804,15 +869,23 @@ type AskLogEvidence struct {
 	Closed bool    `json:"closed"`
 
 	// Date The close date
-	Date        time.Time `json:"date"`
-	Key         string    `json:"key"`
-	RequestedBy string    `json:"requested_by"`
+	Date time.Time `json:"date"`
+	Key  string    `json:"key"`
+
+	// Kind A ticket
+	Kind AskLogEvidenceKind `json:"kind"`
+
+	// RequestedBy A note's author.
+	RequestedBy string `json:"requested_by"`
 
 	// Score Fused retrieval score; absent on the small-set path.
 	Score  *float32 `json:"score,omitempty"`
 	Status string   `json:"status"`
 	Title  string   `json:"title"`
 }
+
+// AskLogEvidenceKind A ticket
+type AskLogEvidenceKind string
 
 // AskLogPage defines model for AskLogPage.
 type AskLogPage struct {
@@ -1087,8 +1160,11 @@ type DecisionRecord struct {
 	ConfirmedBy  *Ref            `json:"confirmed_by,omitempty"`
 	Outcome      DecisionOutcome `json:"outcome"`
 	State        DecisionState   `json:"state"`
-	WhatChanged  string          `json:"what_changed"`
-	Why          string          `json:"why"`
+
+	// SupersededBy The key of the ticket that reverses this decision (R-TK-5).
+	SupersededBy *string `json:"superseded_by,omitempty"`
+	WhatChanged  string  `json:"what_changed"`
+	Why          string  `json:"why"`
 }
 
 // DecisionState defines model for DecisionState.
@@ -1139,6 +1215,24 @@ type IndexStatus struct {
 	// QueuedJobs Index jobs waiting or retrying.
 	QueuedJobs  int64 `json:"queued_jobs"`
 	TotalChunks int64 `json:"total_chunks"`
+}
+
+// LinkCreate defines model for LinkCreate.
+type LinkCreate struct {
+	// Key The other ticket
+	Key  string   `json:"key"`
+	Type LinkType `json:"type"`
+}
+
+// LinkType defines model for LinkType.
+type LinkType string
+
+// LinkedTicket defines model for LinkedTicket.
+type LinkedTicket struct {
+	ClosedAt *time.Time `json:"closed_at,omitempty"`
+	Key      string     `json:"key"`
+	Status   Status     `json:"status"`
+	Title    string     `json:"title"`
 }
 
 // Locale defines model for Locale.
@@ -1551,7 +1645,10 @@ type Ticket struct {
 	Id          int64               `json:"id"`
 
 	// Key Example: HRIS-231
-	Key        string          `json:"key"`
+	Key string `json:"key"`
+
+	// Links Links to tickets the reader can see, oldest first (FSD §8.8).
+	Links      []TicketLink    `json:"links"`
 	Nodes      []NodeRef       `json:"nodes"`
 	Priority   Priority        `json:"priority"`
 	ProjectKey string          `json:"project_key"`
@@ -1585,6 +1682,16 @@ type TicketCreate struct {
 	StatusId *int64     `json:"status_id,omitempty"`
 	Title    string     `json:"title"`
 	Type     TicketType `json:"type"`
+}
+
+// TicketLink defines model for TicketLink.
+type TicketLink struct {
+	Id int64 `json:"id"`
+
+	// Outgoing True when this ticket is the one that reverses or extends; false reads "Reversed by".
+	Outgoing bool         `json:"outgoing"`
+	Ticket   LinkedTicket `json:"ticket"`
+	Type     LinkType     `json:"type"`
 }
 
 // TicketPage defines model for TicketPage.
@@ -1658,10 +1765,26 @@ type TimelineEntry struct {
 	Type      TicketType      `json:"type"`
 }
 
+// TimelineNote defines model for TimelineNote.
+type TimelineNote struct {
+	Attendees string             `json:"attendees"`
+	Author    string             `json:"author"`
+	Body      string             `json:"body"`
+	Client    *Ref               `json:"client,omitempty"`
+	DecidedOn openapi_types.Date `json:"decided_on"`
+
+	// Key Example: HRIS-DN7
+	Key   string `json:"key"`
+	Title string `json:"title"`
+}
+
 // TimelinePage defines model for TimelinePage.
 type TimelinePage struct {
 	Items      []TimelineEntry `json:"items"`
 	NextCursor *string         `json:"next_cursor"`
+
+	// Notes Decision notes on the node, newest decision first (FSD §9.4). Only the first page carries them, all of them; later pages, and a ticket type filter, leave the list empty.
+	Notes []TimelineNote `json:"notes"`
 }
 
 // TransitionRequest defines model for TransitionRequest.
@@ -1929,6 +2052,9 @@ type CreateCommentJSONRequestBody = CommentInput
 // UpdateDecisionJSONRequestBody defines body for UpdateDecision for application/json ContentType.
 type UpdateDecisionJSONRequestBody = DecisionInput
 
+// CreateLinkJSONRequestBody defines body for CreateLink for application/json ContentType.
+type CreateLinkJSONRequestBody = LinkCreate
+
 // TransitionTicketJSONRequestBody defines body for TransitionTicket for application/json ContentType.
 type TransitionTicketJSONRequestBody = TransitionRequest
 
@@ -2034,6 +2160,9 @@ type ServerInterface interface {
 	// (PATCH /contacts/{id})
 	UpdateContact(w http.ResponseWriter, r *http.Request, id int64)
 
+	// (DELETE /links/{id})
+	DeleteLink(w http.ResponseWriter, r *http.Request, id int64)
+
 	// (GET /me)
 	GetMe(w http.ResponseWriter, r *http.Request)
 
@@ -2129,6 +2258,9 @@ type ServerInterface interface {
 
 	// (PUT /tickets/{key}/decision)
 	UpdateDecision(w http.ResponseWriter, r *http.Request, key string)
+
+	// (POST /tickets/{key}/links)
+	CreateLink(w http.ResponseWriter, r *http.Request, key string)
 
 	// (POST /tickets/{key}/transition)
 	TransitionTicket(w http.ResponseWriter, r *http.Request, key string, params TransitionTicketParams)
@@ -3012,6 +3144,32 @@ func (siw *ServerInterfaceWrapper) UpdateContact(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateContact(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteLink operation middleware
+func (siw *ServerInterfaceWrapper) DeleteLink(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteLink(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4198,6 +4356,32 @@ func (siw *ServerInterfaceWrapper) UpdateDecision(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// CreateLink operation middleware
+func (siw *ServerInterfaceWrapper) CreateLink(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateLink(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // TransitionTicket operation middleware
 func (siw *ServerInterfaceWrapper) TransitionTicket(w http.ResponseWriter, r *http.Request) {
 
@@ -4410,6 +4594,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/tickets/{key}", wrapper.UpdateTicket)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/transition", wrapper.TransitionTicket)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/tickets/{key}/decision", wrapper.UpdateDecision)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/links", wrapper.CreateLink)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/links/{id}", wrapper.DeleteLink)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/tickets/{key}/activity", wrapper.GetTicketActivity)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/comments", wrapper.CreateComment)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/comments/{id}", wrapper.DeleteComment)

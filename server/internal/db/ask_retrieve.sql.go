@@ -12,6 +12,64 @@ import (
 	pgvector "github.com/pgvector/pgvector-go"
 )
 
+const countScopeNotes = `-- name: CountScopeNotes :one
+SELECT count(*)
+FROM (
+  SELECT n.id
+  FROM decision_notes n
+  WHERE n.archived_at IS NULL
+    AND EXISTS (
+    SELECT 1 FROM chunks ch
+    WHERE ch.note_id = n.id
+      AND ($1::boolean OR EXISTS (
+            SELECT 1 FROM memberships m
+            WHERE m.user_id = $2::bigint AND m.project_id = ch.project_id
+              AND (m.all_clients OR ch.client_id IS NULL OR EXISTS (
+                    SELECT 1 FROM membership_clients mc
+                    WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = ch.client_id))))
+      AND (cardinality($3::bigint[]) = 0 OR ch.project_id = ANY ($3::bigint[]))
+      AND (cardinality($4::bigint[]) = 0 OR ch.node_ids && $4::bigint[])
+      AND (cardinality($5::bigint[]) = 0 OR ch.client_id IS NULL OR ch.client_id = ANY ($5::bigint[]))
+      AND ((cardinality($6::bigint[]) = 0 AND cardinality($7::bigint[]) = 0)
+           OR ch.user_ids && $6::bigint[] OR ch.contact_ids && $7::bigint[]))
+    AND ($8::timestamptz IS NULL OR n.decided_on >= $8::timestamptz)
+    AND ($9::timestamptz IS NULL OR n.decided_on < $9::timestamptz)
+  LIMIT $10
+) scoped
+`
+
+type CountScopeNotesParams struct {
+	IsAdmin    bool
+	UserID     int64
+	ProjectIds []int64
+	NodeIds    []int64
+	ClientIds  []int64
+	UserIds    []int64
+	ContactIds []int64
+	FromTs     *time.Time
+	ToTs       *time.Time
+	Cap        int32
+}
+
+// How many decision notes are in scope, counting no further than cap (§11.3).
+func (q *Queries) CountScopeNotes(ctx context.Context, arg CountScopeNotesParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countScopeNotes,
+		arg.IsAdmin,
+		arg.UserID,
+		arg.ProjectIds,
+		arg.NodeIds,
+		arg.ClientIds,
+		arg.UserIds,
+		arg.ContactIds,
+		arg.FromTs,
+		arg.ToTs,
+		arg.Cap,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countScopeTickets = `-- name: CountScopeTickets :one
 SELECT count(*)
 FROM (
@@ -109,11 +167,11 @@ func (q *Queries) ExpandNodes(ctx context.Context, nodeIds []int64) ([]int64, er
 }
 
 const keywordSearch = `-- name: KeywordSearch :many
-SELECT c.id, c.ticket_id, c.rank
+SELECT c.id, c.ticket_id, c.note_id, c.rank
 FROM (
-SELECT ch.id, ch.ticket_id, ts_rank_cd(ch.tsv, query)::float8 AS rank
+SELECT ch.id, ch.ticket_id, ch.note_id, ts_rank_cd(ch.tsv, query)::float8 AS rank
 FROM chunks ch
-JOIN tickets t ON t.id = ch.ticket_id,
+LEFT JOIN tickets t ON t.id = ch.ticket_id,
      to_tsquery('simple', $1::text) AS query
 WHERE ch.tsv @@ query
   AND ($2::boolean OR EXISTS (
@@ -127,8 +185,8 @@ WHERE ch.tsv @@ query
   AND (cardinality($6::bigint[]) = 0 OR ch.client_id IS NULL OR ch.client_id = ANY ($6::bigint[]))
   AND ((cardinality($7::bigint[]) = 0 AND cardinality($8::bigint[]) = 0)
        OR ch.user_ids && $7::bigint[] OR ch.contact_ids && $8::bigint[])
-  AND ($9::timestamptz IS NULL OR coalesce(t.closed_at, t.created_at) >= $9::timestamptz)
-  AND ($10::timestamptz IS NULL OR coalesce(t.closed_at, t.created_at) < $10::timestamptz)
+  AND ($9::timestamptz IS NULL OR coalesce(t.closed_at, t.created_at, ch.occurred_at) >= $9::timestamptz)
+  AND ($10::timestamptz IS NULL OR coalesce(t.closed_at, t.created_at, ch.occurred_at) < $10::timestamptz)
 LIMIT $11
 ) c
 ORDER BY c.rank DESC, c.id
@@ -151,7 +209,8 @@ type KeywordSearchParams struct {
 
 type KeywordSearchRow struct {
 	ID       int64
-	TicketID int64
+	TicketID *int64
+	NoteID   *int64
 	Rank     float64
 }
 
@@ -181,10 +240,84 @@ func (q *Queries) KeywordSearch(ctx context.Context, arg KeywordSearchParams) ([
 	var items []KeywordSearchRow
 	for rows.Next() {
 		var i KeywordSearchRow
-		if err := rows.Scan(&i.ID, &i.TicketID, &i.Rank); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.TicketID,
+			&i.NoteID,
+			&i.Rank,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listScopeNoteIDs = `-- name: ListScopeNoteIDs :many
+SELECT n.id
+FROM decision_notes n
+WHERE n.archived_at IS NULL
+  AND EXISTS (
+  SELECT 1 FROM chunks ch
+  WHERE ch.note_id = n.id
+    AND ($1::boolean OR EXISTS (
+          SELECT 1 FROM memberships m
+          WHERE m.user_id = $2::bigint AND m.project_id = ch.project_id
+            AND (m.all_clients OR ch.client_id IS NULL OR EXISTS (
+                  SELECT 1 FROM membership_clients mc
+                  WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = ch.client_id))))
+    AND (cardinality($3::bigint[]) = 0 OR ch.project_id = ANY ($3::bigint[]))
+    AND (cardinality($4::bigint[]) = 0 OR ch.node_ids && $4::bigint[])
+    AND (cardinality($5::bigint[]) = 0 OR ch.client_id IS NULL OR ch.client_id = ANY ($5::bigint[]))
+    AND ((cardinality($6::bigint[]) = 0 AND cardinality($7::bigint[]) = 0)
+         OR ch.user_ids && $6::bigint[] OR ch.contact_ids && $7::bigint[]))
+  AND ($8::timestamptz IS NULL OR n.decided_on >= $8::timestamptz)
+  AND ($9::timestamptz IS NULL OR n.decided_on < $9::timestamptz)
+ORDER BY n.decided_on DESC, n.id DESC
+LIMIT $10
+`
+
+type ListScopeNoteIDsParams struct {
+	IsAdmin    bool
+	UserID     int64
+	ProjectIds []int64
+	NodeIds    []int64
+	ClientIds  []int64
+	UserIds    []int64
+	ContactIds []int64
+	FromTs     *time.Time
+	ToTs       *time.Time
+	Lim        int32
+}
+
+// Every decision note in scope, newest first by decision date: the small-set path.
+func (q *Queries) ListScopeNoteIDs(ctx context.Context, arg ListScopeNoteIDsParams) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listScopeNoteIDs,
+		arg.IsAdmin,
+		arg.UserID,
+		arg.ProjectIds,
+		arg.NodeIds,
+		arg.ClientIds,
+		arg.UserIds,
+		arg.ContactIds,
+		arg.FromTs,
+		arg.ToTs,
+		arg.Lim,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -261,9 +394,9 @@ func (q *Queries) ListScopeTicketIDs(ctx context.Context, arg ListScopeTicketIDs
 }
 
 const vectorSearch = `-- name: VectorSearch :many
-SELECT ch.id, ch.ticket_id, (1 - (ch.embedding <=> $1::halfvec))::float8 AS similarity
+SELECT ch.id, ch.ticket_id, ch.note_id, (1 - (ch.embedding <=> $1::halfvec))::float8 AS similarity
 FROM chunks ch
-JOIN tickets t ON t.id = ch.ticket_id
+LEFT JOIN tickets t ON t.id = ch.ticket_id
 WHERE ch.embed_model = $2::text
   AND ($3::boolean OR EXISTS (
         SELECT 1 FROM memberships m
@@ -276,8 +409,8 @@ WHERE ch.embed_model = $2::text
   AND (cardinality($7::bigint[]) = 0 OR ch.client_id IS NULL OR ch.client_id = ANY ($7::bigint[]))
   AND ((cardinality($8::bigint[]) = 0 AND cardinality($9::bigint[]) = 0)
        OR ch.user_ids && $8::bigint[] OR ch.contact_ids && $9::bigint[])
-  AND ($10::timestamptz IS NULL OR coalesce(t.closed_at, t.created_at) >= $10::timestamptz)
-  AND ($11::timestamptz IS NULL OR coalesce(t.closed_at, t.created_at) < $11::timestamptz)
+  AND ($10::timestamptz IS NULL OR coalesce(t.closed_at, t.created_at, ch.occurred_at) >= $10::timestamptz)
+  AND ($11::timestamptz IS NULL OR coalesce(t.closed_at, t.created_at, ch.occurred_at) < $11::timestamptz)
 ORDER BY ch.embedding <=> $1::halfvec
 LIMIT 50
 `
@@ -298,12 +431,14 @@ type VectorSearchParams struct {
 
 type VectorSearchRow struct {
 	ID         int64
-	TicketID   int64
+	TicketID   *int64
+	NoteID     *int64
 	Similarity float64
 }
 
 // The 50 chunks nearest the question, among chunks embedded by the current
-// model. The caller sets hnsw.iterative_scan and hnsw.ef_search for its
+// model. A chunk belongs to a ticket or to a decision note (§9.4); a note's
+// date is its decision date. The caller sets hnsw.iterative_scan and hnsw.ef_search for its
 // transaction, so filtered searches still find enough rows (§11.3).
 func (q *Queries) VectorSearch(ctx context.Context, arg VectorSearchParams) ([]VectorSearchRow, error) {
 	rows, err := q.db.Query(ctx, vectorSearch,
@@ -326,7 +461,95 @@ func (q *Queries) VectorSearch(ctx context.Context, arg VectorSearchParams) ([]V
 	var items []VectorSearchRow
 	for rows.Next() {
 		var i VectorSearchRow
-		if err := rows.Scan(&i.ID, &i.TicketID, &i.Similarity); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.TicketID,
+			&i.NoteID,
+			&i.Similarity,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const visibleNoteIDs = `-- name: VisibleNoteIDs :many
+SELECT n.id
+FROM decision_notes n
+WHERE n.id = ANY ($1::bigint[]) AND n.archived_at IS NULL
+  AND ($2::boolean OR EXISTS (
+        SELECT 1 FROM memberships m
+        WHERE m.user_id = $3::bigint AND m.project_id = n.project_id
+          AND (m.all_clients OR n.client_id IS NULL OR EXISTS (
+                SELECT 1 FROM membership_clients mc
+                WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = n.client_id))))
+`
+
+type VisibleNoteIDsParams struct {
+	Ids     []int64
+	IsAdmin bool
+	UserID  int64
+}
+
+// Of the given notes, those the asker may open now (§10.6).
+func (q *Queries) VisibleNoteIDs(ctx context.Context, arg VisibleNoteIDsParams) ([]int64, error) {
+	rows, err := q.db.Query(ctx, visibleNoteIDs, arg.Ids, arg.IsAdmin, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const visibleNoteIDsByKey = `-- name: VisibleNoteIDsByKey :many
+SELECT n.id, n.key
+FROM decision_notes n
+WHERE n.key = ANY ($1::text[]) AND n.archived_at IS NULL
+  AND ($2::boolean OR EXISTS (
+        SELECT 1 FROM memberships m
+        WHERE m.user_id = $3::bigint AND m.project_id = n.project_id
+          AND (m.all_clients OR n.client_id IS NULL OR EXISTS (
+                SELECT 1 FROM membership_clients mc
+                WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = n.client_id))))
+`
+
+type VisibleNoteIDsByKeyParams struct {
+	Keys    []string
+	IsAdmin bool
+	UserID  int64
+}
+
+type VisibleNoteIDsByKeyRow struct {
+	ID  int64
+	Key string
+}
+
+// Notes a question names by key that the asker may open (§11.2).
+func (q *Queries) VisibleNoteIDsByKey(ctx context.Context, arg VisibleNoteIDsByKeyParams) ([]VisibleNoteIDsByKeyRow, error) {
+	rows, err := q.db.Query(ctx, visibleNoteIDsByKey, arg.Keys, arg.IsAdmin, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []VisibleNoteIDsByKeyRow
+	for rows.Next() {
+		var i VisibleNoteIDsByKeyRow
+		if err := rows.Scan(&i.ID, &i.Key); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

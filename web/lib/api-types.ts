@@ -516,6 +516,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tickets/{key}/links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Members link this ticket to another they can see, in any project (FSD §8.8, R-TK-6). A reverses link supersedes the other ticket's decision (R-TK-5). A self-link answers 422; an existing link of the same type answers 409 link_exists. */
+        post: operations["createLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/links/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Members of the linking ticket's project. Removing a reverses link makes the other decision current again unless another reverses link still points at it (R-TK-7). */
+        delete: operations["deleteLink"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tickets/{key}/activity": {
         parameters: {
             query?: never;
@@ -1265,6 +1303,8 @@ export interface components {
              */
             closed_at?: string | null;
             decision?: components["schemas"]["DecisionRecord"];
+            /** @description Links to tickets the reader can see, oldest first (FSD §8.8). */
+            links: components["schemas"]["TicketLink"][];
         };
         TicketCreate: {
             type: components["schemas"]["TicketType"];
@@ -1347,6 +1387,30 @@ export interface components {
             confirmed_by?: components["schemas"]["Ref"];
             /** Format: date-time */
             confirmed_at?: string;
+            /** @description The key of the ticket that reverses this decision (R-TK-5). */
+            superseded_by?: string;
+        };
+        /** @enum {string} */
+        LinkType: "reverses" | "extends" | "related_to";
+        LinkCreate: {
+            type: components["schemas"]["LinkType"];
+            /** @description The other ticket */
+            key: string;
+        };
+        TicketLink: {
+            /** Format: int64 */
+            id: number;
+            type: components["schemas"]["LinkType"];
+            /** @description True when this ticket is the one that reverses or extends; false reads "Reversed by". */
+            outgoing: boolean;
+            ticket: components["schemas"]["LinkedTicket"];
+        };
+        LinkedTicket: {
+            key: string;
+            title: string;
+            status: components["schemas"]["Status"];
+            /** Format: date-time */
+            closed_at?: string | null;
         };
         TicketSummary: {
             /** Format: int64 */
@@ -2890,6 +2954,54 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["DecisionRecord"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkCreate"];
+            };
+        };
+        responses: {
+            /** @description The link as this ticket shows it. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketLink"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

@@ -53,12 +53,34 @@ type Tuning struct {
 	ExhaustiveMax int     // small sets skip ranking
 }
 
+// Ref names one piece of evidence: a ticket, or a decision note (FSD §9.4).
+type Ref struct {
+	ID   int64
+	Note bool
+}
+
 // Found is what retrieval chose.
 type Found struct {
-	TicketIDs  []int64           // evidence, in rank order (or date order on the small-set path)
-	Scores     map[int64]float64 // fused score per ranked ticket
-	Closest    []int64           // up to five nearest tickets, for "Not enough information"
-	Exhaustive bool              // the small-set path was taken
+	Refs       []Ref           // evidence, in rank order (or date order on the small-set path)
+	Scores     map[Ref]float64 // fused score per ranked item
+	Closest    []Ref           // up to five nearest items, for "Not enough information"
+	Exhaustive bool            // the small-set path was taken
+}
+
+// TicketIDs are the tickets among the evidence, in order.
+func (f Found) TicketIDs() []int64 { return idsOf(f.Refs, false) }
+
+// NoteIDs are the decision notes among the evidence, in order.
+func (f Found) NoteIDs() []int64 { return idsOf(f.Refs, true) }
+
+func idsOf(refs []Ref, notes bool) []int64 {
+	var out []int64
+	for _, r := range refs {
+		if r.Note == notes {
+			out = append(out, r.ID)
+		}
+	}
+	return out
 }
 
 const (
@@ -113,64 +135,89 @@ func Retrieve(ctx context.Context, pool *pgxpool.Pool, a Asker, s Scope, questio
 		}
 	}
 
-	// Reciprocal rank fusion over both lists; a ticket scores by its best chunk.
+	// Reciprocal rank fusion over both lists; an item scores by its best chunk.
 	chunkScore := map[int64]float64{}
-	chunkTicket := map[int64]int64{}
+	chunkItem := map[int64]Ref{}
+	owner := func(ticketID, noteID *int64) Ref {
+		if noteID != nil {
+			return Ref{ID: *noteID, Note: true}
+		}
+		return Ref{ID: *ticketID}
+	}
 	for i, r := range kw {
 		chunkScore[r.ID] += 1.0 / float64(rrfK+i+1)
-		chunkTicket[r.ID] = r.TicketID
+		chunkItem[r.ID] = owner(r.TicketID, r.NoteID)
 	}
 	best := 0.0
 	for i, r := range vr {
 		chunkScore[r.ID] += 1.0 / float64(rrfK+i+1)
-		chunkTicket[r.ID] = r.TicketID
+		chunkItem[r.ID] = owner(r.TicketID, r.NoteID)
 		best = max(best, r.Similarity)
 	}
-	found.Scores = map[int64]float64{}
+	found.Scores = map[Ref]float64{}
 	for id, sc := range chunkScore {
-		if tk := chunkTicket[id]; sc > found.Scores[tk] {
-			found.Scores[tk] = sc
+		if it := chunkItem[id]; sc > found.Scores[it] {
+			found.Scores[it] = sc
 		}
 	}
-	ranked := make([]int64, 0, len(found.Scores))
-	for tk := range found.Scores {
-		ranked = append(ranked, tk)
+	ranked := make([]Ref, 0, len(found.Scores))
+	for it := range found.Scores {
+		ranked = append(ranked, it)
 	}
-	slices.SortFunc(ranked, func(x, y int64) int {
+	slices.SortFunc(ranked, func(x, y Ref) int {
 		if d := found.Scores[y] - found.Scores[x]; d != 0 {
 			if d > 0 {
 				return 1
 			}
 			return -1
 		}
-		return int(y - x) // newer tickets first on a tie
+		if x.Note != y.Note { // tickets before notes on a tie
+			if x.Note {
+				return 1
+			}
+			return -1
+		}
+		return int(y.ID - x.ID) // newer first on a tie
 	})
 	found.Closest = ranked[:min(5, len(ranked))]
 
-	var named []int64
+	var named []Ref
 	if len(keys) > 0 {
 		rows, err := q.VisibleTicketIDsByKey(ctx, db.VisibleTicketIDsByKeyParams{Keys: keys, IsAdmin: a.IsAdmin, UserID: a.UserID})
 		if err != nil {
 			return found, err
 		}
 		for _, r := range rows {
-			named = append(named, r.ID)
+			named = append(named, Ref{ID: r.ID})
+		}
+		notes, err := q.VisibleNoteIDsByKey(ctx, db.VisibleNoteIDsByKeyParams{Keys: keys, IsAdmin: a.IsAdmin, UserID: a.UserID})
+		if err != nil {
+			return found, err
+		}
+		for _, r := range notes {
+			named = append(named, Ref{ID: r.ID, Note: true})
 		}
 	}
 
 	// The relevance floor: with no keyword hit and a best similarity below the
 	// floor, there is no evidence and the chat model is not called (§11.3).
 	if len(kw) == 0 && (len(vr) == 0 || best < t.MinSimilarity) {
-		found.TicketIDs = named
+		found.Refs = named
 		return found, nil
 	}
 
+	limit := int32(t.ExhaustiveMax) + 1
 	count, err := q.CountScopeTickets(ctx, db.CountScopeTicketsParams{IsAdmin: f.admin, UserID: f.user, ProjectIds: f.projects,
-		NodeIds: f.nodes, ClientIds: f.clients, UserIds: f.users, ContactIds: f.contacts, FromTs: f.from, ToTs: f.to,
-		Cap: int32(t.ExhaustiveMax) + 1})
+		NodeIds: f.nodes, ClientIds: f.clients, UserIds: f.users, ContactIds: f.contacts, FromTs: f.from, ToTs: f.to, Cap: limit})
 	if err != nil {
 		return found, err
 	}
+	notes, err := q.CountScopeNotes(ctx, db.CountScopeNotesParams{IsAdmin: f.admin, UserID: f.user, ProjectIds: f.projects,
+		NodeIds: f.nodes, ClientIds: f.clients, UserIds: f.users, ContactIds: f.contacts, FromTs: f.from, ToTs: f.to, Cap: limit})
+	if err != nil {
+		return found, err
+	}
+	count += notes
 	pick := ranked[:min(topTickets, len(ranked))]
 	if count > 0 && int(count) <= t.ExhaustiveMax {
 		// A small set takes every item (§11.3): the ranked ones first, so the
@@ -181,18 +228,29 @@ func Retrieve(ctx context.Context, pool *pgxpool.Pool, a Asker, s Scope, questio
 		if err != nil {
 			return found, err
 		}
-		pick = append([]int64(nil), ranked...)
+		allNotes, err := q.ListScopeNoteIDs(ctx, db.ListScopeNoteIDsParams{IsAdmin: f.admin, UserID: f.user, ProjectIds: f.projects,
+			NodeIds: f.nodes, ClientIds: f.clients, UserIds: f.users, ContactIds: f.contacts, FromTs: f.from, ToTs: f.to,
+			Lim: int32(t.ExhaustiveMax)})
+		if err != nil {
+			return found, err
+		}
+		pick = append([]Ref(nil), ranked...)
 		for _, id := range all {
-			if !slices.Contains(pick, id) {
-				pick = append(pick, id)
+			if r := (Ref{ID: id}); !slices.Contains(pick, r) {
+				pick = append(pick, r)
+			}
+		}
+		for _, id := range allNotes {
+			if r := (Ref{ID: id, Note: true}); !slices.Contains(pick, r) {
+				pick = append(pick, r)
 			}
 		}
 		found.Exhaustive = true
 	}
-	found.TicketIDs = named
-	for _, id := range pick {
-		if !slices.Contains(found.TicketIDs, id) {
-			found.TicketIDs = append(found.TicketIDs, id)
+	found.Refs = named
+	for _, r := range pick {
+		if !slices.Contains(found.Refs, r) {
+			found.Refs = append(found.Refs, r)
 		}
 	}
 	return found, nil

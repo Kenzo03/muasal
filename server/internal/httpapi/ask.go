@@ -233,11 +233,11 @@ func (s *Server) GetAskThread(w http.ResponseWriter, r *http.Request, id int64) 
 			s.fail(w, r, err)
 			return
 		}
-		ids := make([]int64, len(logged))
+		refs := make([]ask.Ref, len(logged))
 		for j, l := range logged {
-			ids[j] = l.TicketID
+			refs[j] = l.ref()
 		}
-		items, err := s.engine.ItemsFor(ctx, &ask.Asker{UserID: u.ID, IsAdmin: u.IsAdmin}, ids)
+		items, err := s.engine.ItemsFor(ctx, &ask.Asker{UserID: u.ID, IsAdmin: u.IsAdmin}, refs)
 		if err != nil {
 			s.fail(w, r, err)
 			return
@@ -328,7 +328,7 @@ func toAPIDetected(d ask.Detected) AskDetected {
 func toAPIItems(items []ask.Item) []AskItem {
 	out := make([]AskItem, len(items))
 	for i, it := range items {
-		out[i] = AskItem{Key: it.Key, Title: it.Title, Client: it.Client, RequestedBy: it.RequestedBy, Date: it.Date, Status: it.Status, Closed: it.Closed}
+		out[i] = AskItem{Kind: AskItemKind(it.Kind), Key: it.Key, Title: it.Title, Client: it.Client, RequestedBy: it.RequestedBy, Date: it.Date, Status: it.Status, Closed: it.Closed}
 	}
 	return out
 }
