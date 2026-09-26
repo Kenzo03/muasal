@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import PageBar from "@/components/PageBar";
 import { getMe } from "@/lib/server-api";
 import { panel } from "@/lib/ui";
+import NotifyPrefsForm from "./NotifyPrefsForm";
 import ProfileForm from "./ProfileForm";
 
 export default async function ProfilePage() {
@@ -18,6 +19,9 @@ export default async function ProfilePage() {
       <main className="p-4 md:p-5">
         <div className={`${panel} mx-auto max-w-lg p-5`}>
           <ProfileForm me={me} />
+        </div>
+        <div className={`${panel} mx-auto mt-4 max-w-lg p-5`}>
+          <NotifyPrefsForm me={me} />
         </div>
       </main>
     </>

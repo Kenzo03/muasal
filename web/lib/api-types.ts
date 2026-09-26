@@ -139,6 +139,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The caller's latest 50 notifications and the unread count (FSD §8.10). Tickets they can no longer see drop out. */
+        get: operations["listNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Marks one notification read, or all of them without an id. */
+        post: operations["markNotificationsRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Server-sent events for the caller's open tabs (§8.10): a `notification` event carries each new Notification as it is recorded; a comment line every 15 seconds keeps proxies open. */
+        get: operations["streamNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tickets/{key}/mentionable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description Project members who can see the ticket, for @mentions in comments (§8.7). A mention is @ and the handle. */
+        get: operations["listMentionable"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/users": {
         parameters: {
             query?: never;
@@ -1140,6 +1210,7 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             last_login_at: string | null;
+            notify_prefs?: components["schemas"]["NotifyPrefs"];
         };
         UserList: {
             items: components["schemas"]["User"][];
@@ -1158,6 +1229,7 @@ export interface components {
             timezone?: string;
             current_password?: string;
             new_password?: string;
+            notify_prefs?: components["schemas"]["NotifyPrefs"];
         };
         UserCreate: {
             email: string;
@@ -1877,6 +1949,45 @@ export interface components {
         ImportRunList: {
             items: components["schemas"]["ImportRun"][];
         };
+        /** @description Each event on or off, and browser notifications (§8.10). An absent event is on; browser is off until chosen. */
+        NotifyPrefs: {
+            assigned?: boolean;
+            comment?: boolean;
+            mention?: boolean;
+            status?: boolean;
+            job_done?: boolean;
+            browser?: boolean;
+        };
+        Notification: {
+            /** Format: int64 */
+            id: number;
+            /** @enum {string} */
+            type: "assigned" | "comment" | "mention" | "status" | "job_done";
+            ticket_key?: string;
+            ticket_title?: string;
+            actor?: components["schemas"]["Ref"];
+            /** @description status: the new status name; comment: an excerpt; job_done: kind, name and link. */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            created_at: string;
+            read: boolean;
+        };
+        NotificationList: {
+            items: components["schemas"]["Notification"][];
+            unread: number;
+        };
+        Mentionable: {
+            /** Format: int64 */
+            id: number;
+            name: string;
+            /** @example rina */
+            handle: string;
+        };
+        MentionableList: {
+            items: components["schemas"]["Mentionable"][];
+        };
         SearchResults: {
             tickets: components["schemas"]["SearchTicket"][];
             notes: components["schemas"]["SearchNote"][];
@@ -2535,6 +2646,97 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listNotifications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The notifications, newest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    markNotificationsRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: int64 */
+                    id?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Marked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    streamNotifications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The stream. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listMentionable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The members. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MentionableList"];
+                };
             };
             default: components["responses"]["Problem"];
         };

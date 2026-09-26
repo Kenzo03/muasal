@@ -78,6 +78,9 @@ func (s *Server) CreateComment(w http.ResponseWriter, r *http.Request, key strin
 		if err != nil {
 			return err
 		}
+		if err := notifyComment(ctx, q, row.Ticket, pc.user.ID, body); err != nil {
+			return err
+		}
 		return s.index(ctx, tx, row.Ticket.ID)
 	})
 	if err != nil {

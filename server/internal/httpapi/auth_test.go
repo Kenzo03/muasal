@@ -47,6 +47,7 @@ func newEnvWith(t *testing.T, change func(*config.Config)) *env {
 	}
 	api := httpapi.New(cfg, d.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	srv := httptest.NewServer(api.Handler())
+	t.Cleanup(api.Close) // after the server closes: cleanups run last-in, first-out
 	t.Cleanup(srv.Close)
 	return &env{t: t, url: srv.URL, q: db.New(d.Pool), d: d, api: api}
 }

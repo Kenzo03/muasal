@@ -48,7 +48,11 @@ type purgeWorker struct {
 }
 
 func (w *purgeWorker) Work(ctx context.Context, _ *river.Job[PurgeAsk]) error {
-	if _, err := db.New(w.pool).PurgeIdempotencyKeys(ctx); err != nil {
+	q := db.New(w.pool)
+	if _, err := q.PurgeIdempotencyKeys(ctx); err != nil {
+		return err
+	}
+	if _, err := q.PurgeNotifications(ctx); err != nil { // kept 90 days (§8.10)
 		return err
 	}
 	_, err := PurgeAskLog(ctx, w.pool, w.days, time.Now())

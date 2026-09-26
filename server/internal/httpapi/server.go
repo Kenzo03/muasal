@@ -36,6 +36,9 @@ type Server struct {
 	engine  *ask.Engine
 	askRate *auth.Limiter
 	tokRate *auth.Limiter
+	hub     hub
+	bg      context.Context    // lives until Close: the notification listener runs in it
+	stop    context.CancelFunc //
 }
 
 // New wires a Server; it opens no connections of its own.
@@ -59,8 +62,13 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) *Server {
 		tokRate: auth.NewLimiter(120, 2*time.Minute),
 	}
 	s.engine = ask.NewEngine(pool, s.ai)
+	s.bg, s.stop = context.WithCancel(context.Background())
 	return s
 }
+
+// Close stops the server's background work, so its connections return to
+// the pool before the pool closes.
+func (s *Server) Close() { s.stop() }
 
 // AI is the runtime the API shares with the index workers in the same process:
 // one settings cache and one generation gate (§11.7).

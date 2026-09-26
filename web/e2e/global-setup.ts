@@ -64,4 +64,7 @@ export default async function globalSetup() {
   const importer = createAdmin("Import Admin");
   process.env.E2E_IMPORT_ADMIN_EMAIL = importer.email;
   process.env.E2E_IMPORT_ADMIN_LINK = importer.link;
+  const bell = createAdmin("Bell Admin");
+  process.env.E2E_BELL_ADMIN_EMAIL = bell.email;
+  process.env.E2E_BELL_ADMIN_LINK = bell.link;
 }

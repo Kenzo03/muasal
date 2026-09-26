@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"time"
 
@@ -143,5 +144,13 @@ func Run(ctx context.Context, pool *pgxpool.Pool, runID int64, index func(contex
 		return err
 	}
 	stats, _ := json.Marshal(st)
-	return q.SetImportStatus(ctx, db.SetImportStatusParams{ID: runID, Status: "done", Stats: stats})
+	return pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error {
+		tq := q.WithTx(tx)
+		if err := tq.SetImportStatus(ctx, db.SetImportStatusParams{ID: runID, Status: "done", Stats: stats}); err != nil {
+			return err
+		}
+		// The admin who started it hears when it ends (FSD §8.10).
+		payload, _ := json.Marshal(map[string]any{"kind": "import", "name": r.FileName, "link": fmt.Sprintf("/admin/imports/%d", runID), "tickets": st.Tickets})
+		return tq.NotifyJobDone(ctx, db.NotifyJobDoneParams{UserID: r.CreatedBy, Payload: payload})
+	})
 }

@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Avatar } from "@/components/Chips";
 import Icon from "@/components/Icon";
 import Markdown from "@/components/Markdown";
+import MentionBox from "@/components/MentionBox";
 import { api } from "@/lib/api";
 import { describeChange, shown, type Change } from "@/lib/activity";
 import { utc } from "@/lib/format";
@@ -176,8 +177,8 @@ export default function Activity({ ticketKey, items, meId, canComment }: {
       </ol>
       {canComment && (
         <form onSubmit={send} className="flex flex-col gap-2 border-t border-line-soft pt-3.5">
-          <textarea name="body" required maxLength={20000} rows={3} aria-label={t("placeholder")} placeholder={t("placeholder")} onPaste={paste} className={field.textarea} />
-          <p className={field.hint}>{t("markdownHint")}</p>
+          <MentionBox ticketKey={ticketKey} name="body" required maxLength={20000} rows={3} aria-label={t("placeholder")} placeholder={t("placeholder")} onPaste={paste} />
+          <p className={field.hint}>{t("markdownHint")} {t("mentionHint")}</p>
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-2 text-[13px]">
               <input type="checkbox" name="internal" defaultChecked className="size-4 accent-accent" />

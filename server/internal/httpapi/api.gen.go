@@ -540,6 +540,33 @@ func (e NodeType) Valid() bool {
 	}
 }
 
+// Defines values for NotificationType.
+const (
+	NotificationTypeAssigned NotificationType = "assigned"
+	NotificationTypeComment  NotificationType = "comment"
+	NotificationTypeJobDone  NotificationType = "job_done"
+	NotificationTypeMention  NotificationType = "mention"
+	NotificationTypeStatus   NotificationType = "status"
+)
+
+// Valid indicates whether the value is a known member of the NotificationType enum.
+func (e NotificationType) Valid() bool {
+	switch e {
+	case NotificationTypeAssigned:
+		return true
+	case NotificationTypeComment:
+		return true
+	case NotificationTypeJobDone:
+		return true
+	case NotificationTypeMention:
+		return true
+	case NotificationTypeStatus:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Priority.
 const (
 	PriorityHigh   Priority = "high"
@@ -1534,7 +1561,10 @@ type MeUpdate struct {
 	Locale          *Locale `json:"locale,omitempty"`
 	Name            *string `json:"name,omitempty"`
 	NewPassword     *string `json:"new_password,omitempty"`
-	Timezone        *string `json:"timezone,omitempty"`
+
+	// NotifyPrefs Each event on or off, and browser notifications (§8.10). An absent event is on; browser is off until chosen.
+	NotifyPrefs *NotifyPrefs `json:"notify_prefs,omitempty"`
+	Timezone    *string      `json:"timezone,omitempty"`
 }
 
 // Member defines model for Member.
@@ -1566,6 +1596,19 @@ type MemberList struct {
 // MembersUpdate defines model for MembersUpdate.
 type MembersUpdate struct {
 	Members []MemberInput `json:"members"`
+}
+
+// Mentionable defines model for Mentionable.
+type Mentionable struct {
+	// Handle Example: rina
+	Handle string `json:"handle"`
+	Id     int64  `json:"id"`
+	Name   string `json:"name"`
+}
+
+// MentionableList defines model for MentionableList.
+type MentionableList struct {
+	Items []Mentionable `json:"items"`
 }
 
 // ModelChunks defines model for ModelChunks.
@@ -1821,6 +1864,39 @@ type NoteUpdate struct {
 	// TicketKeys Tickets the decision relates to, in any project the author can see.
 	TicketKeys *[]string `json:"ticket_keys,omitempty"`
 	Title      string    `json:"title"`
+}
+
+// Notification defines model for Notification.
+type Notification struct {
+	Actor     *Ref      `json:"actor,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+	Id        int64     `json:"id"`
+
+	// Payload status: the new status name; comment: an excerpt; job_done: kind, name and link.
+	Payload     map[string]interface{} `json:"payload"`
+	Read        bool                   `json:"read"`
+	TicketKey   *string                `json:"ticket_key,omitempty"`
+	TicketTitle *string                `json:"ticket_title,omitempty"`
+	Type        NotificationType       `json:"type"`
+}
+
+// NotificationType defines model for Notification.Type.
+type NotificationType string
+
+// NotificationList defines model for NotificationList.
+type NotificationList struct {
+	Items  []Notification `json:"items"`
+	Unread int            `json:"unread"`
+}
+
+// NotifyPrefs Each event on or off, and browser notifications (§8.10). An absent event is on; browser is off until chosen.
+type NotifyPrefs struct {
+	Assigned *bool `json:"assigned,omitempty"`
+	Browser  *bool `json:"browser,omitempty"`
+	Comment  *bool `json:"comment,omitempty"`
+	JobDone  *bool `json:"job_done,omitempty"`
+	Mention  *bool `json:"mention,omitempty"`
+	Status   *bool `json:"status,omitempty"`
 }
 
 // Priority defines model for Priority.
@@ -2225,6 +2301,9 @@ type User struct {
 	Locale      Locale     `json:"locale"`
 	Name        string     `json:"name"`
 
+	// NotifyPrefs Each event on or off, and browser notifications (§8.10). An absent event is on; browser is off until chosen.
+	NotifyPrefs *NotifyPrefs `json:"notify_prefs,omitempty"`
+
 	// Timezone Example: Asia/Jakarta
 	Timezone string `json:"timezone"`
 }
@@ -2344,6 +2423,11 @@ type GetNodeTimelineParams struct {
 	To     *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
 	Limit  *int32              `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor *string             `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// MarkNotificationsReadJSONBody defines parameters for MarkNotificationsRead.
+type MarkNotificationsReadJSONBody struct {
+	Id *int64 `json:"id,omitempty"`
 }
 
 // ListNodesParams defines parameters for ListNodes.
@@ -2495,6 +2579,9 @@ type MergeNodeJSONRequestBody MergeNodeJSONBody
 
 // UpdateNoteJSONRequestBody defines body for UpdateNote for application/json ContentType.
 type UpdateNoteJSONRequestBody = NoteUpdate
+
+// MarkNotificationsReadJSONRequestBody defines body for MarkNotificationsRead for application/json ContentType.
+type MarkNotificationsReadJSONRequestBody MarkNotificationsReadJSONBody
 
 // CreateProjectJSONRequestBody defines body for CreateProject for application/json ContentType.
 type CreateProjectJSONRequestBody = ProjectCreate
@@ -2709,6 +2796,15 @@ type ServerInterface interface {
 	// (PATCH /notes/{noteKey})
 	UpdateNote(w http.ResponseWriter, r *http.Request, noteKey string)
 
+	// (GET /notifications)
+	ListNotifications(w http.ResponseWriter, r *http.Request)
+
+	// (POST /notifications/read)
+	MarkNotificationsRead(w http.ResponseWriter, r *http.Request)
+
+	// (GET /notifications/stream)
+	StreamNotifications(w http.ResponseWriter, r *http.Request)
+
 	// (GET /projects)
 	ListProjects(w http.ResponseWriter, r *http.Request)
 
@@ -2789,6 +2885,9 @@ type ServerInterface interface {
 
 	// (POST /tickets/{key}/links)
 	CreateLink(w http.ResponseWriter, r *http.Request, key string)
+
+	// (GET /tickets/{key}/mentionable)
+	ListMentionable(w http.ResponseWriter, r *http.Request, key string)
 
 	// (POST /tickets/{key}/transition)
 	TransitionTicket(w http.ResponseWriter, r *http.Request, key string, params TransitionTicketParams)
@@ -4338,6 +4437,48 @@ func (siw *ServerInterfaceWrapper) UpdateNote(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// ListNotifications operation middleware
+func (siw *ServerInterfaceWrapper) ListNotifications(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListNotifications(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// MarkNotificationsRead operation middleware
+func (siw *ServerInterfaceWrapper) MarkNotificationsRead(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MarkNotificationsRead(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StreamNotifications operation middleware
+func (siw *ServerInterfaceWrapper) StreamNotifications(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StreamNotifications(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListProjects operation middleware
 func (siw *ServerInterfaceWrapper) ListProjects(w http.ResponseWriter, r *http.Request) {
 
@@ -5318,6 +5459,32 @@ func (siw *ServerInterfaceWrapper) CreateLink(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// ListMentionable operation middleware
+func (siw *ServerInterfaceWrapper) ListMentionable(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMentionable(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // TransitionTicket operation middleware
 func (siw *ServerInterfaceWrapper) TransitionTicket(w http.ResponseWriter, r *http.Request) {
 
@@ -5498,6 +5665,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/tokens", wrapper.ListTokens)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/me/tokens", wrapper.CreateToken)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/me/tokens/{id}", wrapper.RevokeToken)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/notifications", wrapper.ListNotifications)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/notifications/read", wrapper.MarkNotificationsRead)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/notifications/stream", wrapper.StreamNotifications)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/tickets/{key}/mentionable", wrapper.ListMentionable)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/users", wrapper.ListUsers)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/admin/users", wrapper.CreateUser)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/admin/users/{id}", wrapper.UpdateUser)

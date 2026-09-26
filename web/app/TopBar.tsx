@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import AskPanel from "@/components/ask/AskPanel";
 import { Avatar } from "@/components/Chips";
 import Icon from "@/components/Icon";
+import Bell from "@/components/Bell";
 import Menu from "@/components/Menu";
 import { api } from "@/lib/api";
 import type { Project, User } from "@/lib/problem";
@@ -202,6 +203,7 @@ export default function TopBar({ me, projects }: { me: User; projects: Project[]
               </button>
             ))}
           </div>
+          <Bell browser={me.notify_prefs?.browser === true} />
           <Menu align="right" label={t("account", { name: me.name })} summary={<Avatar name={me.name} className="size-8 bg-bar-line text-white" />}>
             <div className="border-b border-line-soft px-3 py-2">
               <div className="text-sm font-semibold">{me.name}</div>

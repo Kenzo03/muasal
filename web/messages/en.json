@@ -662,7 +662,9 @@
         "out": "Related to",
         "in": "Related to"
       }
-    }
+    },
+    "mentions": "Members to mention",
+    "mentionHint": "Type @ to mention a member."
   },
   "attachments": {
     "title": "Attachments",
@@ -1049,5 +1051,33 @@
       "comments": "Comments",
       "attachments": "Attachments"
     }
+  },
+  "bell": {
+    "label": "Notifications",
+    "labelUnread": "{count, plural, one {Notifications, # unread} other {Notifications, # unread}}",
+    "title": "Notifications",
+    "readAll": "Mark all read",
+    "none": "Nothing new.",
+    "someone": "Someone",
+    "assigned": "{who} assigned you {ticket}",
+    "comment": "{who} commented on {ticket}",
+    "mention": "{who} mentioned you on {ticket}",
+    "status": "{who} moved {ticket} to {status}",
+    "jobDone": "{name} finished"
+  },
+  "notifyPrefs": {
+    "title": "Notifications",
+    "events": {
+      "assigned": "A ticket is assigned to me",
+      "comment": "Someone comments on my tickets",
+      "mention": "Someone mentions me",
+      "status": "My tickets change status",
+      "job_done": "An import I started finishes"
+    },
+    "browser": "Browser notifications when the app is in a background tab",
+    "browserHint": "The app sends no email. Notifications need an open app tab.",
+    "save": "Save",
+    "saved": "Saved.",
+    "failed": "Could not save."
   }
 }

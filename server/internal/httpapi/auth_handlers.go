@@ -117,6 +117,6 @@ func toAPIUser(u db.User) User {
 		Id: u.ID, Email: u.Email, Name: u.Name, IsAdmin: u.IsAdmin,
 		Locale: Locale(u.Locale), Timezone: u.Timezone,
 		Disabled: u.DisabledAt != nil, HasPassword: u.PasswordHash != nil,
-		CreatedAt: u.CreatedAt, LastLoginAt: u.LastLoginAt,
+		CreatedAt: u.CreatedAt, LastLoginAt: u.LastLoginAt, NotifyPrefs: notifyPrefs(u),
 	}
 }

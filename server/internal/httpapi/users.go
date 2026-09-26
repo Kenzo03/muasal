@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -245,6 +246,12 @@ func (s *Server) UpdateMe(w http.ResponseWriter, r *http.Request) {
 			ID: u.ID, Name: trimmed(in.Name), Locale: localeString(in.Locale), Timezone: in.Timezone,
 		}); err != nil {
 			return err
+		}
+		if in.NotifyPrefs != nil {
+			prefs, _ := json.Marshal(in.NotifyPrefs)
+			if updated, err = q.SetNotifyPrefs(ctx, db.SetNotifyPrefsParams{ID: u.ID, Prefs: prefs}); err != nil {
+				return err
+			}
 		}
 		changes := map[string]any{"name": in.Name, "locale": in.Locale, "timezone": in.Timezone}
 		if newHash != nil {
