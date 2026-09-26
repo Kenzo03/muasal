@@ -17,6 +17,7 @@ type Config struct {
 	PublicURL           string // the origin users open, e.g. https://muasal.example.com
 	ListenAddr          string // default ":8080"
 	AttachmentsDir      string // ATTACHMENTS_DIR, default /data/attachments
+	BackupsDir          string // BACKUPS_DIR, default /backups: the backup service's volume (FSD §19.4)
 	AttachmentMaxBytes  int64  // 25 MB per file (FSD §8.7); the admin setting comes later
 	SecretKey           []byte // APP_SECRET_KEY: 32 bytes, base64; seals AI API keys (R-AI-3). Optional without BYOK.
 	AskLogRetentionDays int    // ASK_LOG_RETENTION_DAYS: 365 by default; 0 keeps the Ask log for good (FSD §15.4)
@@ -35,6 +36,9 @@ func Load(getenv func(string) string) (Config, error) {
 	}
 	if c.ListenAddr == "" {
 		c.ListenAddr = ":8080"
+	}
+	if c.BackupsDir = getenv("BACKUPS_DIR"); c.BackupsDir == "" {
+		c.BackupsDir = "/backups"
 	}
 	if c.AttachmentsDir == "" {
 		c.AttachmentsDir = "/data/attachments"

@@ -19,5 +19,13 @@ export function utc(iso: string, locale: string) {
 }
 
 export function fileSize(bytes: number) {
-  return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  const units = ["MB", "GB", "TB"];
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  let n = bytes / 1024 / 1024;
+  let u = 0;
+  while (n >= 1024 && u < units.length - 1) {
+    n /= 1024;
+    u++;
+  }
+  return `${n.toFixed(1)} ${units[u]}`;
 }

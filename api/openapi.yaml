@@ -942,6 +942,40 @@ paths:
             text/csv:
               schema: { type: string }
         default: { $ref: "#/components/responses/Problem" }
+  /admin/backups:
+    get:
+      operationId: listBackups
+      tags: [admin]
+      description: System admins (FSD §15.6). The database dumps in the backups volume, newest first, and whether a run is waiting.
+      responses:
+        "200":
+          description: The backups.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BackupList" }
+        default: { $ref: "#/components/responses/Problem" }
+  /admin/backups/run:
+    post:
+      operationId: runBackup
+      tags: [admin]
+      description: System admins. Asks the backup service for a backup now; it starts within 30 seconds (§19.4).
+      responses:
+        "202": { description: Requested. }
+        default: { $ref: "#/components/responses/Problem" }
+  /admin/system/status:
+    get:
+      operationId: getSystemStatus
+      tags: [admin]
+      description: >-
+        System admins (FSD §18.3). Database size, job queue depth, model server health and the disk use of the
+        attachments and backups volumes; warnings from 80% disk use.
+      responses:
+        "200":
+          description: The status.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SystemStatus" }
+        default: { $ref: "#/components/responses/Problem" }
   /ask:
     post:
       operationId: ask
@@ -1994,6 +2028,49 @@ components:
       properties:
         items: { type: array, items: { $ref: "#/components/schemas/AuditEvent" } }
         next_before: { type: integer, format: int64 }
+    Backup:
+      type: object
+      required: [file, size_bytes, created_at]
+      properties:
+        file: { type: string, example: db-20260926-0100.dump }
+        size_bytes: { type: integer, format: int64 }
+        created_at: { type: string, format: date-time }
+    BackupList:
+      type: object
+      required: [location, requested, items]
+      properties:
+        location: { type: string, description: Where the backups live on the server. }
+        requested: { type: boolean, description: A "Run backup now" is waiting for the backup service. }
+        items: { type: array, items: { $ref: "#/components/schemas/Backup" } }
+    SystemStatus:
+      type: object
+      required: [database_bytes, jobs, model, disks, warnings]
+      properties:
+        database_bytes: { type: integer, format: int64 }
+        jobs:
+          type: object
+          description: River jobs by state (available, scheduled, running, retryable, discarded).
+          additionalProperties: { type: integer, format: int64 }
+        model:
+          type: object
+          required: [mode]
+          properties:
+            mode: { $ref: "#/components/schemas/AIMode" }
+            reachable: { type: boolean, description: Absent when AI is off. }
+            error: { type: string }
+        disks: { type: array, items: { $ref: "#/components/schemas/DiskUse" } }
+        warnings:
+          type: array
+          items: { type: string, enum: [disk_attachments, disk_backups, model_unreachable, jobs_failed] }
+    DiskUse:
+      type: object
+      required: [volume, path, used_bytes, total_bytes]
+      properties:
+        volume: { type: string, enum: [attachments, backups] }
+        path: { type: string }
+        used_bytes: { type: integer, format: int64 }
+        total_bytes: { type: integer, format: int64 }
+        missing: { type: boolean, description: The folder does not exist on this server. }
     RecentNodes:
       type: object
       required: [node_ids]

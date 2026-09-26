@@ -1,0 +1,68 @@
+package httpapi_test
+
+import (
+	"io"
+	"net/http"
+	"strings"
+	"testing"
+
+	"github.com/kenzo03/muasal/server/internal/config"
+	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/muasal/server/internal/llm/llmtest"
+)
+
+// FSD §18.3: Admin → System status shows the database size, the job queue,
+// the model server's health and the disk use of both volumes.
+func TestSystemStatus(t *testing.T) {
+	backups := t.TempDir()
+	e := newEnvWith(t, func(c *config.Config) { c.BackupsDir = backups })
+	admin, _ := e.signedIn("admin@example.com", true)
+	member, _ := e.signedIn("member@example.com", false)
+	var st httpapi.SystemStatus
+	if code := e.call(admin, http.MethodGet, "/admin/system/status", nil, &st); code != http.StatusOK {
+		t.Fatalf("status: %d", code)
+	}
+	if st.DatabaseBytes <= 0 || st.Model.Mode != httpapi.AIModeOff || st.Model.Reachable != nil || len(st.Disks) != 2 ||
+		st.Disks[0].Volume != "attachments" || st.Disks[1].Volume != "backups" || st.Disks[1].TotalBytes <= 0 || len(st.Warnings) != 0 {
+		t.Fatalf("status: %+v", st)
+	}
+	if code := e.call(member, http.MethodGet, "/admin/system/status", nil, nil); code != http.StatusForbidden {
+		t.Fatalf("as a member: %d", code)
+	}
+
+	// With AI on and the model server down, the page warns.
+	fake := e.localAI(admin)
+	fake.Set(func(s *llmtest.Server) { s.Down = true })
+	if e.call(admin, http.MethodGet, "/admin/system/status", nil, &st); st.Model.Reachable == nil || *st.Model.Reachable || !contains(st.Warnings, "model_unreachable") {
+		t.Fatalf("model down: %+v %v", st.Model, st.Warnings)
+	}
+}
+
+// §18.3: /metrics serves the same figures in Prometheus text for customers
+// who scrape them. Caddy does not route it, so it stays internal.
+func TestMetrics(t *testing.T) {
+	e := newEnv(t)
+	resp, err := http.Get(e.url + "/metrics")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	for _, want := range []string{"# TYPE muasal_database_bytes gauge", "muasal_disk_total_bytes{volume=\"attachments\"}", "muasal_ask_queries{status=\"answered\"} 0"} {
+		if !strings.Contains(string(body), want) {
+			t.Errorf("missing %q in:\n%s", want, body)
+		}
+	}
+	if !strings.HasPrefix(resp.Header.Get("Content-Type"), "text/plain") {
+		t.Errorf("content type %q", resp.Header.Get("Content-Type"))
+	}
+}
+
+func contains[T comparable](xs []T, x T) bool {
+	for _, y := range xs {
+		if y == x {
+			return true
+		}
+	}
+	return false
+}

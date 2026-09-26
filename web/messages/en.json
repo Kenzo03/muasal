@@ -36,7 +36,9 @@
     "account": "Account of {name}",
     "newTicketShortcut": "New ticket (C)",
     "askLog": "Ask log",
-    "audit": "Audit"
+    "audit": "Audit",
+    "backups": "Backups",
+    "system": "System status"
   },
   "search": {
     "heading": "Search",
@@ -381,7 +383,8 @@
     "byok_not_acknowledged": "Confirm that questions and ticket excerpts will be sent to the provider",
     "secret_key_missing": "Set APP_SECRET_KEY on the server before saving an API key",
     "reindex_required": "A new embedding model re-embeds every chunk; confirm to continue",
-    "rate_limited": "Too many questions; wait a moment"
+    "rate_limited": "Too many questions; wait a moment",
+    "backup_unavailable": "The backup service is not set up on this server."
   },
   "ticketTypes": {
     "bug": "Bug",
@@ -759,5 +762,47 @@
     "changes": "Changes",
     "system": "System",
     "older": "Older"
+  },
+  "system": {
+    "title": "System status",
+    "adminsOnly": "Only system admins can see the system status.",
+    "database": "Database",
+    "jobs": "Job queue",
+    "jobCounts": "{waiting} waiting, {running} running, {failed} failed",
+    "model": "Model server",
+    "aiOff": "AI is off",
+    "reachable": "Reachable",
+    "unreachable": "Unreachable",
+    "disks": "Storage",
+    "volumes": {
+      "attachments": "Attachments",
+      "backups": "Backups"
+    },
+    "missing": "The folder does not exist on this server",
+    "used": "{used} of {total} ({pct}%)",
+    "warnings": {
+      "disk_attachments": "The attachments disk is 80% full or more.",
+      "disk_backups": "The backups disk is 80% full or more.",
+      "model_unreachable": "The model server is unreachable; Ask and indexing wait.",
+      "jobs_failed": "Some background jobs failed; see Admin → AI → Index status."
+    }
+  },
+  "backups": {
+    "title": "Backups",
+    "adminsOnly": "Only system admins can manage backups.",
+    "runNow": "Run backup now",
+    "requested": "Requested; the backup starts within 30 seconds.",
+    "last": "Last backup",
+    "none": "None yet",
+    "size": "Size",
+    "location": "Location",
+    "file": "File",
+    "when": "When",
+    "restoreTitle": "Restoring a backup",
+    "schedule": "The database is backed up daily at 01:00 server time, without the vectors (they can be rebuilt); backups are kept for 14 days.",
+    "restore1": "Sign in to the server and go to the Muasal install folder.",
+    "restore2": "Run",
+    "restore3": "The script stops the app, restores the database and the attachments, starts it again and re-indexes.",
+    "offsite": "Copying the backups folder off the server (NAS or tape) is up to you."
   }
 }
