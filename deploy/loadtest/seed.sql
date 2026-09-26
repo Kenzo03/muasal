@@ -12,13 +12,26 @@
 \endif
 BEGIN;
 INSERT INTO projects (key, name) VALUES ('LOAD', 'Load test') RETURNING id AS pid \gset
-CREATE TEMP TABLE words (i int, w text);
-INSERT INTO words SELECT row_number() OVER (), w FROM unnest(string_to_array(
+-- A vocabulary of 3,000 words used with a skewed, Zipf-like frequency, as in
+-- real tickets: a few words are everywhere, most are rare. The 60 HR terms sit
+-- every 50th place, so some are common and some rare, and keyword search sees
+-- realistic selectivity.
+CREATE TEMP TABLE hr (i int, w text);
+INSERT INTO hr SELECT row_number() OVER (), w FROM unnest(string_to_array(
   'overtime approval supervisor payroll leave balance attendance shift schedule cutoff bonus tax allowance ' ||
   'lembur persetujuan atasan gaji cuti saldo absensi jadwal potongan tunjangan pajak laporan export import ' ||
   'report dashboard mobile reminder holiday contract probation resign transfer promotion rounding late early ' ||
   'klaim reimbursement medical insurance loan kasbon approval flow level manager director branch region', ' ')) AS w;
-CREATE TEMP TABLE nw AS SELECT count(*)::int AS n FROM words;
+CREATE TEMP TABLE words AS
+SELECT i, coalesce((SELECT w FROM hr WHERE hr.i * 50 = g.i), 'kata' || i) AS w
+FROM generate_series(1, 3000) AS g(i);
+CREATE UNIQUE INDEX ON words (i);
+
+-- phrase(seed, n): n words, the k-th at a skewed place in the vocabulary.
+CREATE FUNCTION pg_temp.phrase(seed bigint, n int) RETURNS text LANGUAGE sql STABLE AS $$
+  SELECT string_agg(w, ' ' ORDER BY k) FROM generate_series(1, n) k
+  JOIN words ON words.i = 1 + floor(2999 * power(((seed * 7919 + k * 104729) % 1000003) / 1000003.0, 2.5))::int
+$$;
 
 INSERT INTO clients (name, code) SELECT 'Load Client ' || i, 'LC' || i FROM generate_series(1, 5) i;
 INSERT INTO project_clients SELECT :pid, id FROM clients WHERE name LIKE 'Load Client %';
@@ -44,11 +57,6 @@ CREATE TEMP TABLE ids AS SELECT
   (SELECT array_agg(id ORDER BY id) FROM users WHERE email LIKE 'load%@example.com') AS users,
   (SELECT array_agg(id ORDER BY id) FROM nodes WHERE project_id = :pid AND type = 'menu') AS menus;
 
--- phrase(seed, n): n vocabulary words picked by seed.
-CREATE FUNCTION pg_temp.phrase(seed bigint, n int) RETURNS text LANGUAGE sql STABLE AS $$
-  SELECT string_agg(w, ' ' ORDER BY k) FROM generate_series(1, n) k
-  JOIN words ON words.i = 1 + ((seed * 7919 + k * 104729) % (SELECT n FROM nw))
-$$;
 
 INSERT INTO tickets (project_id, number, key, type, title, description, reason, status_id, client_id,
                      requester_contact_id, reporter_id, assignee_id, priority, created_at, updated_at, closed_at)
