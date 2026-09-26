@@ -146,6 +146,62 @@ paths:
       responses:
         "204": { description: Revoked. }
         default: { $ref: "#/components/responses/Problem" }
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [me]
+      description: The caller's latest 50 notifications and the unread count (FSD §8.10). Tickets they can no longer see drop out.
+      responses:
+        "200":
+          description: The notifications, newest first.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NotificationList" }
+        default: { $ref: "#/components/responses/Problem" }
+  /notifications/read:
+    post:
+      operationId: markNotificationsRead
+      tags: [me]
+      description: Marks one notification read, or all of them without an id.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id: { type: integer, format: int64 }
+      responses:
+        "204": { description: Marked. }
+        default: { $ref: "#/components/responses/Problem" }
+  /notifications/stream:
+    get:
+      operationId: streamNotifications
+      tags: [me]
+      description: >-
+        Server-sent events for the caller's open tabs (§8.10): a `notification` event carries each new Notification as
+        it is recorded; a comment line every 15 seconds keeps proxies open.
+      responses:
+        "200":
+          description: The stream.
+          content:
+            text/event-stream:
+              schema: { type: string }
+        default: { $ref: "#/components/responses/Problem" }
+  /tickets/{key}/mentionable:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listMentionable
+      tags: [tickets]
+      description: Project members who can see the ticket, for @mentions in comments (§8.7). A mention is @ and the handle.
+      responses:
+        "200":
+          description: The members.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MentionableList" }
+        default: { $ref: "#/components/responses/Problem" }
   /admin/users:
     get:
       operationId: listUsers
@@ -1368,6 +1424,7 @@ components:
         has_password: { type: boolean }
         created_at: { type: string, format: date-time }
         last_login_at: { type: string, format: date-time, nullable: true }
+        notify_prefs: { $ref: "#/components/schemas/NotifyPrefs" }
     UserList:
       type: object
       required: [items]
@@ -1395,6 +1452,7 @@ components:
         timezone: { type: string }
         current_password: { type: string, maxLength: 1024 }
         new_password: { type: string, maxLength: 1024 }
+        notify_prefs: { $ref: "#/components/schemas/NotifyPrefs" }
     UserCreate:
       type: object
       required: [email, name]
@@ -2214,6 +2272,46 @@ components:
       required: [items]
       properties:
         items: { type: array, items: { $ref: "#/components/schemas/ImportRun" } }
+    NotifyPrefs:
+      type: object
+      description: Each event on or off, and browser notifications (§8.10). An absent event is on; browser is off until chosen.
+      properties:
+        assigned: { type: boolean }
+        comment: { type: boolean }
+        mention: { type: boolean }
+        status: { type: boolean }
+        job_done: { type: boolean }
+        browser: { type: boolean }
+    Notification:
+      type: object
+      required: [id, type, payload, created_at, read]
+      properties:
+        id: { type: integer, format: int64 }
+        type: { type: string, enum: [assigned, comment, mention, status, job_done] }
+        ticket_key: { type: string }
+        ticket_title: { type: string }
+        actor: { $ref: "#/components/schemas/Ref" }
+        payload: { type: object, additionalProperties: true, description: "status: the new status name; comment: an excerpt; job_done: kind, name and link." }
+        created_at: { type: string, format: date-time }
+        read: { type: boolean }
+    NotificationList:
+      type: object
+      required: [items, unread]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Notification" } }
+        unread: { type: integer }
+    Mentionable:
+      type: object
+      required: [id, name, handle]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        handle: { type: string, example: rina }
+    MentionableList:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Mentionable" } }
     SearchResults:
       type: object
       required: [tickets, nodes, notes]

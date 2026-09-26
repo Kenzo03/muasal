@@ -152,16 +152,17 @@ func startSSE(w http.ResponseWriter) (send func(event string, data any), stop fu
 	h.Set("Cache-Control", "no-cache")
 	h.Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)
-	flusher, _ := w.(http.Flusher)
+	// The controller reaches Flush through the middleware's wrappers (Unwrap);
+	// a plain http.Flusher assertion on the wrapper would find none and buffer.
+	rc := http.NewResponseController(w)
 	var mu sync.Mutex
 	write := func(s string) {
 		mu.Lock()
 		defer mu.Unlock()
 		fmt.Fprint(w, s)
-		if flusher != nil {
-			flusher.Flush()
-		}
+		_ = rc.Flush()
 	}
+	write(": open\n\n")
 	done := make(chan struct{})
 	go func() {
 		t := time.NewTicker(15 * time.Second)

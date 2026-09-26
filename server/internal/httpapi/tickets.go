@@ -104,6 +104,11 @@ func (s *Server) CreateTicket(w http.ResponseWriter, r *http.Request, key string
 		if err := q.AddTicketNodes(ctx, db.AddTicketNodesParams{TicketID: created.ID, NodeIds: nodeIDs}); err != nil {
 			return err
 		}
+		if created.AssigneeID != nil {
+			if err := notify(ctx, q, "assigned", created.ID, &pc.user.ID, []int64{*created.AssigneeID}, nil); err != nil {
+				return err
+			}
+		}
 		if out, err = readTicket(ctx, q, created.Key, pc.user); err != nil {
 			return err
 		}
@@ -206,6 +211,11 @@ func (s *Server) UpdateTicket(w http.ResponseWriter, r *http.Request, key string
 		}
 		if err := q.AddTicketNodes(ctx, db.AddTicketNodesParams{TicketID: updated.ID, NodeIds: nodeIDs}); err != nil {
 			return err
+		}
+		if a := updated.AssigneeID; a != nil && (row.Ticket.AssigneeID == nil || *row.Ticket.AssigneeID != *a) {
+			if err := notify(ctx, q, "assigned", updated.ID, &pc.user.ID, []int64{*a}, nil); err != nil {
+				return err
+			}
 		}
 		if out, err = readTicket(ctx, q, updated.Key, pc.user); err != nil {
 			return err
@@ -354,6 +364,10 @@ func (s *Server) TransitionTicket(w http.ResponseWriter, r *http.Request, key st
 		}
 		m := webMeta(r).inProject(pc.project.ID)
 		if err := audit(ctx, q, m, &pc.user.ID, "ticket", row.Ticket.ID, "transition", changed(ticketAudit(before), ticketAudit(out))); err != nil {
+			return err
+		}
+		if err := notify(ctx, q, "status", row.Ticket.ID, &pc.user.ID, []int64{row.Ticket.ReporterID, deref(row.Ticket.AssigneeID)},
+			map[string]any{"status": st.Name, "from": row.Status.Name}); err != nil {
 			return err
 		}
 		if d := changed(decisionAudit(before.Decision), decisionAudit(out.Decision)); action != "" && len(d) > 0 {

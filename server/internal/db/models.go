@@ -230,6 +230,17 @@ type NodeClient struct {
 	ClientID  int64
 }
 
+type Notification struct {
+	ID        int64
+	UserID    int64
+	Type      string
+	TicketID  *int64
+	ActorID   *int64
+	Payload   []byte
+	CreatedAt time.Time
+	ReadAt    *time.Time
+}
+
 type Project struct {
 	ID          int64
 	Key         string
@@ -333,4 +344,5 @@ type User struct {
 	DisabledAt   *time.Time
 	LastLoginAt  *time.Time
 	CreatedAt    time.Time
+	NotifyPrefs  []byte
 }

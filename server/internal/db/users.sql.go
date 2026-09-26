@@ -12,7 +12,7 @@ import (
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (email, name, is_admin, locale, timezone)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, email, name, password_hash, is_admin, locale, timezone, failed_logins, failed_since, locked_until, disabled_at, last_login_at, created_at
+RETURNING id, email, name, password_hash, is_admin, locale, timezone, failed_logins, failed_since, locked_until, disabled_at, last_login_at, created_at, notify_prefs
 `
 
 type CreateUserParams struct {
@@ -46,12 +46,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.DisabledAt,
 		&i.LastLoginAt,
 		&i.CreatedAt,
+		&i.NotifyPrefs,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, name, password_hash, is_admin, locale, timezone, failed_logins, failed_since, locked_until, disabled_at, last_login_at, created_at FROM users WHERE lower(email) = lower($1)
+SELECT id, email, name, password_hash, is_admin, locale, timezone, failed_logins, failed_since, locked_until, disabled_at, last_login_at, created_at, notify_prefs FROM users WHERE lower(email) = lower($1)
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -71,12 +72,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.DisabledAt,
 		&i.LastLoginAt,
 		&i.CreatedAt,
+		&i.NotifyPrefs,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, name, password_hash, is_admin, locale, timezone, failed_logins, failed_since, locked_until, disabled_at, last_login_at, created_at FROM users WHERE id = $1
+SELECT id, email, name, password_hash, is_admin, locale, timezone, failed_logins, failed_since, locked_until, disabled_at, last_login_at, created_at, notify_prefs FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
@@ -96,12 +98,13 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 		&i.DisabledAt,
 		&i.LastLoginAt,
 		&i.CreatedAt,
+		&i.NotifyPrefs,
 	)
 	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, email, name, password_hash, is_admin, locale, timezone, failed_logins, failed_since, locked_until, disabled_at, last_login_at, created_at FROM users ORDER BY lower(name), id
+SELECT id, email, name, password_hash, is_admin, locale, timezone, failed_logins, failed_since, locked_until, disabled_at, last_login_at, created_at, notify_prefs FROM users ORDER BY lower(name), id
 `
 
 func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
@@ -127,6 +130,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.DisabledAt,
 			&i.LastLoginAt,
 			&i.CreatedAt,
+			&i.NotifyPrefs,
 		); err != nil {
 			return nil, err
 		}
@@ -171,7 +175,7 @@ const setDisabled = `-- name: SetDisabled :one
 UPDATE users
 SET disabled_at = CASE WHEN $1::boolean THEN coalesce(disabled_at, now()) ELSE NULL END
 WHERE id = $2
-RETURNING id, email, name, password_hash, is_admin, locale, timezone, failed_logins, failed_since, locked_until, disabled_at, last_login_at, created_at
+RETURNING id, email, name, password_hash, is_admin, locale, timezone, failed_logins, failed_since, locked_until, disabled_at, last_login_at, created_at, notify_prefs
 `
 
 type SetDisabledParams struct {
@@ -196,6 +200,7 @@ func (q *Queries) SetDisabled(ctx context.Context, arg SetDisabledParams) (User,
 		&i.DisabledAt,
 		&i.LastLoginAt,
 		&i.CreatedAt,
+		&i.NotifyPrefs,
 	)
 	return i, err
 }
@@ -223,7 +228,7 @@ UPDATE users SET
   locale   = coalesce($3, locale),
   timezone = coalesce($4, timezone)
 WHERE id = $5
-RETURNING id, email, name, password_hash, is_admin, locale, timezone, failed_logins, failed_since, locked_until, disabled_at, last_login_at, created_at
+RETURNING id, email, name, password_hash, is_admin, locale, timezone, failed_logins, failed_since, locked_until, disabled_at, last_login_at, created_at, notify_prefs
 `
 
 type UpdateUserParams struct {
@@ -257,6 +262,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.DisabledAt,
 		&i.LastLoginAt,
 		&i.CreatedAt,
+		&i.NotifyPrefs,
 	)
 	return i, err
 }
