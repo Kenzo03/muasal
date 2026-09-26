@@ -12,7 +12,7 @@ Status: MVP, getting ready for the first pilot (FSD §21 Iteration 6). It covers
 
 Open the printed setup link, choose a password, and sign in at http://localhost.
 
-To install on a server, from the offline bundle or online, see [docs/operations.md](docs/operations.md). To choose hardware, see [docs/hardware.md](docs/hardware.md).
+To install on a server, from the offline bundle or online, see [docs/operations.md](docs/operations.md). To choose hardware, see [docs/hardware.md](docs/hardware.md); to run a pilot, [docs/pilot.md](docs/pilot.md).
 
 ## Develop
 
