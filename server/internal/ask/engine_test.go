@@ -209,3 +209,26 @@ func TestInvalidAnswersAndTheQueue(t *testing.T) {
 		t.Fatalf("queued: %+v %v", res, rec.events)
 	}
 }
+
+// AC-DC-8: a decision note on Overtime Approval is evidence Ask can cite, as
+// HRIS-DN1; a note for Client B never reaches a member scoped to Client A.
+func TestAskCitesDecisionNotes(t *testing.T) {
+	w := newWorld(t)
+	note := w.note("Overtime approval skips the supervisor", &w.a, w.ot, "2025-11-04",
+		"Decision: HR approves overtime for Client A directly.\nWhy: supervisors are often on leave.")
+	w.note("Overtime approval needs two supervisors", &w.b, w.ot, "2025-11-05", "Decision: two supervisors approve Client B overtime.")
+	w.fake.Answer = citeFirst("HR approves overtime directly because supervisors are often on leave.")
+	var rec recorder
+	res := w.ask(w.member, "Why does overtime approval skip the supervisor?", ask.Scope{}, rec.sink())
+	if res.Status != ask.StatusAnswered || len(res.Claims) != 1 || res.Claims[0].Cites[0] != note.Key {
+		t.Fatalf("answer: %+v", res)
+	}
+	for _, it := range rec.evidence {
+		if it.Key == "HRIS-DN2" {
+			t.Fatalf("Client B's note reached the member: %+v", rec.evidence)
+		}
+	}
+	if it := rec.evidence[0]; it.Kind != "note" || it.Title != note.Title || it.RequestedBy != "Hana" || it.Date.Format(time.DateOnly) != "2025-11-04" {
+		t.Fatalf("evidence item: %+v", it)
+	}
+}

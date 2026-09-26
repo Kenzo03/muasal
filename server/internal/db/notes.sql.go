@@ -171,6 +171,22 @@ func (q *Queries) GetNoteByKey(ctx context.Context, key string) (GetNoteByKeyRow
 	return i, err
 }
 
+const isProjectClient = `-- name: IsProjectClient :one
+SELECT EXISTS (SELECT 1 FROM project_clients WHERE project_id = $1 AND client_id = $2)::boolean
+`
+
+type IsProjectClientParams struct {
+	ProjectID int64
+	ClientID  int64
+}
+
+func (q *Queries) IsProjectClient(ctx context.Context, arg IsProjectClientParams) (bool, error) {
+	row := q.db.QueryRow(ctx, isProjectClient, arg.ProjectID, arg.ClientID)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const listAllNoteIDs = `-- name: ListAllNoteIDs :many
 SELECT id FROM decision_notes ORDER BY id DESC
 `
@@ -536,6 +552,64 @@ func (q *Queries) NextNoteNumber(ctx context.Context, id int64) (int64, error) {
 	var note_seq int64
 	err := row.Scan(&note_seq)
 	return note_seq, err
+}
+
+const searchNotes = `-- name: SearchNotes :many
+SELECT n.key, n.title, p.key AS project_key, n.decided_on
+FROM decision_notes n
+JOIN projects p ON p.id = n.project_id
+WHERE n.archived_at IS NULL
+  AND ($1::boolean OR EXISTS (
+        SELECT 1 FROM memberships m
+        WHERE m.user_id = $2::bigint AND m.project_id = n.project_id
+          AND (m.all_clients OR n.client_id IS NULL OR EXISTS (
+                SELECT 1 FROM membership_clients mc
+                WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = n.client_id))))
+  AND (n.key = upper($3::text)
+       OR n.title ILIKE '%' || $3::text || '%'
+       OR to_tsvector('simple', n.title || ' ' || n.attendees || ' ' || n.body) @@ websearch_to_tsquery('simple', $3::text))
+ORDER BY n.key = upper($3::text) DESC, n.decided_on DESC
+LIMIT 20
+`
+
+type SearchNotesParams struct {
+	IsAdmin bool
+	UserID  int64
+	Q       string
+}
+
+type SearchNotesRow struct {
+	Key        string
+	Title      string
+	ProjectKey string
+	DecidedOn  time.Time
+}
+
+// Notes the user may see (R-AC-2, R-AC-3): a key, words in the title or body,
+// or part of the title (FSD §6.1). An exact key comes first.
+func (q *Queries) SearchNotes(ctx context.Context, arg SearchNotesParams) ([]SearchNotesRow, error) {
+	rows, err := q.db.Query(ctx, searchNotes, arg.IsAdmin, arg.UserID, arg.Q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SearchNotesRow
+	for rows.Next() {
+		var i SearchNotesRow
+		if err := rows.Scan(
+			&i.Key,
+			&i.Title,
+			&i.ProjectKey,
+			&i.DecidedOn,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const setNoteNodes = `-- name: SetNoteNodes :exec

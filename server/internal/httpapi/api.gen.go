@@ -1418,6 +1418,91 @@ type NodeUpdate struct {
 	Type        *NodeType `json:"type,omitempty"`
 }
 
+// Note defines model for Note.
+type Note struct {
+	Archived  bool   `json:"archived"`
+	Attendees string `json:"attendees"`
+	Author    Ref    `json:"author"`
+	Body      string `json:"body"`
+
+	// CanEdit The reader is the author or a project admin.
+	CanEdit   bool               `json:"can_edit"`
+	Client    *Ref               `json:"client,omitempty"`
+	CreatedAt time.Time          `json:"created_at"`
+	DecidedOn openapi_types.Date `json:"decided_on"`
+	Id        int64              `json:"id"`
+
+	// Key Example: HRIS-DN7
+	Key        string    `json:"key"`
+	Nodes      []NodeRef `json:"nodes"`
+	ProjectKey string    `json:"project_key"`
+
+	// Tickets Linked tickets the reader can see.
+	Tickets   []NoteTicket `json:"tickets"`
+	Title     string       `json:"title"`
+	UpdatedAt time.Time    `json:"updated_at"`
+}
+
+// NoteInput defines model for NoteInput.
+type NoteInput struct {
+	Attendees *string `json:"attendees,omitempty"`
+
+	// Body Markdown; the form starts with Decision
+	Body string `json:"body"`
+
+	// ClientId Omitted for all clients.
+	ClientId  *int64             `json:"client_id,omitempty"`
+	DecidedOn openapi_types.Date `json:"decided_on"`
+
+	// NodeIds One or more menus or modules of the project.
+	NodeIds []int64 `json:"node_ids"`
+
+	// TicketKeys Tickets the decision relates to, in any project the author can see.
+	TicketKeys *[]string `json:"ticket_keys,omitempty"`
+	Title      string    `json:"title"`
+}
+
+// NoteList defines model for NoteList.
+type NoteList struct {
+	Items []NoteSummary `json:"items"`
+}
+
+// NoteSummary defines model for NoteSummary.
+type NoteSummary struct {
+	Archived  bool               `json:"archived"`
+	Client    *Ref               `json:"client,omitempty"`
+	DecidedOn openapi_types.Date `json:"decided_on"`
+	Key       string             `json:"key"`
+	Title     string             `json:"title"`
+}
+
+// NoteTicket defines model for NoteTicket.
+type NoteTicket struct {
+	Key   string `json:"key"`
+	Title string `json:"title"`
+}
+
+// NoteUpdate defines model for NoteUpdate.
+type NoteUpdate struct {
+	// Archived Archive (true) or restore (false).
+	Archived  *bool   `json:"archived,omitempty"`
+	Attendees *string `json:"attendees,omitempty"`
+
+	// Body Markdown; the form starts with Decision
+	Body string `json:"body"`
+
+	// ClientId Omitted for all clients.
+	ClientId  *int64             `json:"client_id,omitempty"`
+	DecidedOn openapi_types.Date `json:"decided_on"`
+
+	// NodeIds One or more menus or modules of the project.
+	NodeIds []int64 `json:"node_ids"`
+
+	// TicketKeys Tickets the decision relates to, in any project the author can see.
+	TicketKeys *[]string `json:"ticket_keys,omitempty"`
+	Title      string    `json:"title"`
+}
+
 // Priority defines model for Priority.
 type Priority string
 
@@ -1535,9 +1620,18 @@ type SearchNode struct {
 	Type       NodeType `json:"type"`
 }
 
+// SearchNote defines model for SearchNote.
+type SearchNote struct {
+	DecidedOn  openapi_types.Date `json:"decided_on"`
+	Key        string             `json:"key"`
+	ProjectKey string             `json:"project_key"`
+	Title      string             `json:"title"`
+}
+
 // SearchResults defines model for SearchResults.
 type SearchResults struct {
 	Nodes   []SearchNode   `json:"nodes"`
+	Notes   []SearchNote   `json:"notes"`
 	Tickets []SearchTicket `json:"tickets"`
 }
 
@@ -1917,6 +2011,12 @@ type ListNodesParams struct {
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty"`
 }
 
+// ListNotesParams defines parameters for ListNotes.
+type ListNotesParams struct {
+	// Archived Include archived notes.
+	Archived *bool `form:"archived,omitempty" json:"archived,omitempty"`
+}
+
 // ListTicketsParams defines parameters for ListTickets.
 type ListTicketsParams struct {
 	StatusId *int64          `form:"status_id,omitempty" json:"status_id,omitempty"`
@@ -2019,6 +2119,9 @@ type UpdateMeJSONRequestBody = MeUpdate
 // UpdateNodeJSONRequestBody defines body for UpdateNode for application/json ContentType.
 type UpdateNodeJSONRequestBody = NodeUpdate
 
+// UpdateNoteJSONRequestBody defines body for UpdateNote for application/json ContentType.
+type UpdateNoteJSONRequestBody = NoteUpdate
+
 // CreateProjectJSONRequestBody defines body for CreateProject for application/json ContentType.
 type CreateProjectJSONRequestBody = ProjectCreate
 
@@ -2033,6 +2136,9 @@ type SetProjectMembersJSONRequestBody = MembersUpdate
 
 // CreateNodeJSONRequestBody defines body for CreateNode for application/json ContentType.
 type CreateNodeJSONRequestBody = NodeCreate
+
+// CreateNoteJSONRequestBody defines body for CreateNote for application/json ContentType.
+type CreateNoteJSONRequestBody = NoteInput
 
 // SetStatusesJSONRequestBody defines body for SetStatuses for application/json ContentType.
 type SetStatusesJSONRequestBody = StatusesUpdate
@@ -2190,6 +2296,12 @@ type ServerInterface interface {
 	// (GET /nodes/{id}/timeline)
 	GetNodeTimeline(w http.ResponseWriter, r *http.Request, id int64, params GetNodeTimelineParams)
 
+	// (GET /notes/{noteKey})
+	GetNote(w http.ResponseWriter, r *http.Request, noteKey string)
+
+	// (PATCH /notes/{noteKey})
+	UpdateNote(w http.ResponseWriter, r *http.Request, noteKey string)
+
 	// (GET /projects)
 	ListProjects(w http.ResponseWriter, r *http.Request)
 
@@ -2225,6 +2337,12 @@ type ServerInterface interface {
 
 	// (GET /projects/{key}/nodes/recent)
 	ListRecentNodes(w http.ResponseWriter, r *http.Request, key string)
+
+	// (GET /projects/{key}/notes)
+	ListNotes(w http.ResponseWriter, r *http.Request, key string, params ListNotesParams)
+
+	// (POST /projects/{key}/notes)
+	CreateNote(w http.ResponseWriter, r *http.Request, key string)
 
 	// (GET /projects/{key}/statuses)
 	GetStatuses(w http.ResponseWriter, r *http.Request, key string)
@@ -3533,6 +3651,58 @@ func (siw *ServerInterfaceWrapper) GetNodeTimeline(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// GetNote operation middleware
+func (siw *ServerInterfaceWrapper) GetNote(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "noteKey" -------------
+	var noteKey string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "noteKey", r.PathValue("noteKey"), &noteKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "noteKey", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetNote(w, r, noteKey)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateNote operation middleware
+func (siw *ServerInterfaceWrapper) UpdateNote(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "noteKey" -------------
+	var noteKey string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "noteKey", r.PathValue("noteKey"), &noteKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "noteKey", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateNote(w, r, noteKey)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListProjects operation middleware
 func (siw *ServerInterfaceWrapper) ListProjects(w http.ResponseWriter, r *http.Request) {
 
@@ -3828,6 +3998,74 @@ func (siw *ServerInterfaceWrapper) ListRecentNodes(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListRecentNodes(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListNotes operation middleware
+func (siw *ServerInterfaceWrapper) ListNotes(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListNotesParams
+
+	// ------------- Optional query parameter "archived" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "archived", r.URL.Query(), &params.Archived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "archived"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "archived", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListNotes(w, r, key, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateNote operation middleware
+func (siw *ServerInterfaceWrapper) CreateNote(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateNote(w, r, key)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4603,6 +4841,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/attachments", wrapper.UploadAttachment)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/attachments/{id}", wrapper.DeleteAttachment)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/attachments/{id}", wrapper.DownloadAttachment)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/notes", wrapper.ListNotes)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/notes", wrapper.CreateNote)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/notes/{noteKey}", wrapper.GetNote)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/notes/{noteKey}", wrapper.UpdateNote)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/search", wrapper.Search)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/settings/ai", wrapper.GetAISettings)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/admin/settings/ai", wrapper.UpdateAISettings)

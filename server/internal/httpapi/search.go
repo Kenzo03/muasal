@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	openapi_types "github.com/oapi-codegen/runtime/types"
 	"net/http"
 	"strings"
 	"unicode/utf8"
@@ -8,7 +9,7 @@ import (
 	"github.com/kenzo03/muasal/server/internal/db"
 )
 
-// Search finds the tickets and nodes the user may open, across their projects
+// Search finds the tickets, nodes and decision notes the user may open, across their projects
 // (FSD §6.1, §6.2). The membership check runs in SQL, so a hidden row never
 // leaves the database (R-AC-7); the web jumps straight to a ticket whose key
 // matches.
@@ -22,7 +23,7 @@ func (s *Server) Search(w http.ResponseWriter, r *http.Request, params SearchPar
 		writeProblem(w, http.StatusBadRequest, "invalid_parameter", "Search for at most 200 characters")
 		return
 	}
-	out := SearchResults{Tickets: []SearchTicket{}, Nodes: []SearchNode{}}
+	out := SearchResults{Tickets: []SearchTicket{}, Nodes: []SearchNode{}, Notes: []SearchNote{}}
 	if utf8.RuneCountInString(q) < 2 {
 		writeJSON(w, http.StatusOK, out)
 		return
@@ -37,6 +38,14 @@ func (s *Server) Search(w http.ResponseWriter, r *http.Request, params SearchPar
 	if err != nil {
 		s.fail(w, r, err)
 		return
+	}
+	notes, err := s.q.SearchNotes(ctx, db.SearchNotesParams{IsAdmin: u.IsAdmin, UserID: u.ID, Q: q})
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	for _, n := range notes {
+		out.Notes = append(out.Notes, SearchNote{Key: n.Key, Title: n.Title, ProjectKey: n.ProjectKey, DecidedOn: openapi_types.Date{Time: n.DecidedOn}})
 	}
 	for _, t := range tickets {
 		it := SearchTicket{Key: t.Key, Title: t.Title, ProjectKey: t.ProjectKey, Status: toAPIStatus(t.Status)}

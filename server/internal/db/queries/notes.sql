@@ -128,3 +128,25 @@ SELECT DISTINCT dn.note_id FROM decision_note_nodes dn JOIN sub ON sub.id = dn.n
 
 -- name: ListAllNoteIDs :many
 SELECT id FROM decision_notes ORDER BY id DESC;
+
+-- name: SearchNotes :many
+-- Notes the user may see (R-AC-2, R-AC-3): a key, words in the title or body,
+-- or part of the title (FSD §6.1). An exact key comes first.
+SELECT n.key, n.title, p.key AS project_key, n.decided_on
+FROM decision_notes n
+JOIN projects p ON p.id = n.project_id
+WHERE n.archived_at IS NULL
+  AND (sqlc.arg('is_admin')::boolean OR EXISTS (
+        SELECT 1 FROM memberships m
+        WHERE m.user_id = sqlc.arg('user_id')::bigint AND m.project_id = n.project_id
+          AND (m.all_clients OR n.client_id IS NULL OR EXISTS (
+                SELECT 1 FROM membership_clients mc
+                WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = n.client_id))))
+  AND (n.key = upper(sqlc.arg('q')::text)
+       OR n.title ILIKE '%' || sqlc.arg('q')::text || '%'
+       OR to_tsvector('simple', n.title || ' ' || n.attendees || ' ' || n.body) @@ websearch_to_tsquery('simple', sqlc.arg('q')::text))
+ORDER BY n.key = upper(sqlc.arg('q')::text) DESC, n.decided_on DESC
+LIMIT 20;
+
+-- name: IsProjectClient :one
+SELECT EXISTS (SELECT 1 FROM project_clients WHERE project_id = $1 AND client_id = $2)::boolean;

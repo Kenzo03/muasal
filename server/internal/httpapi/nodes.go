@@ -182,13 +182,20 @@ func (s *Server) UpdateNode(w http.ResponseWriter, r *http.Request, id int64) {
 			return err
 		}
 		out = toAPINode(updated, after)
-		// Chunks name each menu's path, so a rename or a move re-indexes the tickets below it (§13.1).
+		// Chunks name each menu's path, so a rename or a move re-indexes the tickets and notes below it (§13.1).
 		if updated.Name != n.Name || in.Move != nil {
 			ids, err := q.ListTicketIDsUnderNode(ctx, id)
 			if err != nil {
 				return err
 			}
 			if err := s.index(ctx, tx, ids...); err != nil {
+				return err
+			}
+			notes, err := q.ListNoteIDsUnderNode(ctx, id)
+			if err != nil {
+				return err
+			}
+			if err := s.indexNote(ctx, tx, notes...); err != nil {
 				return err
 			}
 		}

@@ -808,6 +808,67 @@ paths:
       responses:
         "204": { description: Removed from the ticket. }
         default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/notes:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listNotes
+      tags: [notes]
+      description: The project's decision notes the reader may see, newest decision first (FSD §9.4).
+      parameters:
+        - { name: archived, in: query, schema: { type: boolean }, description: Include archived notes. }
+      responses:
+        "200":
+          description: At most 500 notes.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NoteList" }
+        default: { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createNote
+      tags: [notes]
+      description: Members record a decision made outside tickets, such as in a meeting or a call (FSD §9.4, DC-3).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NoteInput" }
+      responses:
+        "201":
+          description: The note.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Note" }
+        default: { $ref: "#/components/responses/Problem" }
+  /notes/{noteKey}:
+    parameters:
+      - { name: noteKey, in: path, required: true, schema: { type: string, example: HRIS-DN7 } }
+    get:
+      operationId: getNote
+      tags: [notes]
+      responses:
+        "200":
+          description: The note.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Note" }
+        default: { $ref: "#/components/responses/Problem" }
+    patch:
+      operationId: updateNote
+      tags: [notes]
+      description: The author and project admins. Replaces every field; archived archives or restores. Every edit is audited.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NoteUpdate" }
+      responses:
+        "200":
+          description: The note as saved.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Note" }
+        default: { $ref: "#/components/responses/Problem" }
   /search:
     get:
       operationId: search
@@ -1753,16 +1814,96 @@ components:
           type: array
           description: The names from the top of the tree down to this node.
           items: { type: string }
+    NoteInput:
+      type: object
+      required: [title, decided_on, node_ids, body]
+      properties:
+        title: { type: string, maxLength: 200 }
+        decided_on: { type: string, format: date }
+        client_id: { type: integer, format: int64, description: Omitted for all clients. }
+        attendees: { type: string, maxLength: 500 }
+        node_ids:
+          type: array
+          description: One or more menus or modules of the project.
+          items: { type: integer, format: int64 }
+        ticket_keys:
+          type: array
+          description: Tickets the decision relates to, in any project the author can see.
+          items: { type: string }
+        body: { type: string, maxLength: 50000, description: Markdown; the form starts with Decision, Why and Alternatives rejected. }
+    NoteUpdate:
+      allOf:
+        - $ref: "#/components/schemas/NoteInput"
+        - type: object
+          properties:
+            archived: { type: boolean, description: Archive (true) or restore (false). }
+    Note:
+      type: object
+      required: [id, key, project_key, title, decided_on, attendees, body, nodes, tickets, author, created_at, updated_at, archived, can_edit]
+      properties:
+        id: { type: integer, format: int64 }
+        key: { type: string, example: HRIS-DN7 }
+        project_key: { type: string }
+        title: { type: string }
+        decided_on: { type: string, format: date }
+        client: { $ref: "#/components/schemas/Ref" }
+        attendees: { type: string }
+        body: { type: string }
+        nodes:
+          type: array
+          items: { $ref: "#/components/schemas/NodeRef" }
+        tickets:
+          type: array
+          description: Linked tickets the reader can see.
+          items: { $ref: "#/components/schemas/NoteTicket" }
+        author: { $ref: "#/components/schemas/Ref" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        archived: { type: boolean }
+        can_edit: { type: boolean, description: The reader is the author or a project admin. }
+    NoteTicket:
+      type: object
+      required: [key, title]
+      properties:
+        key: { type: string }
+        title: { type: string }
+    NoteSummary:
+      type: object
+      required: [key, title, decided_on, archived]
+      properties:
+        key: { type: string }
+        title: { type: string }
+        decided_on: { type: string, format: date }
+        client: { $ref: "#/components/schemas/Ref" }
+        archived: { type: boolean }
+    NoteList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/NoteSummary" }
     SearchResults:
       type: object
-      required: [tickets, nodes]
+      required: [tickets, nodes, notes]
       properties:
         tickets:
           type: array
           items: { $ref: "#/components/schemas/SearchTicket" }
+        notes:
+          type: array
+          items: { $ref: "#/components/schemas/SearchNote" }
         nodes:
           type: array
           items: { $ref: "#/components/schemas/SearchNode" }
+    SearchNote:
+      type: object
+      required: [key, title, project_key, decided_on]
+      properties:
+        key: { type: string }
+        title: { type: string }
+        project_key: { type: string }
+        decided_on: { type: string, format: date }
     MyTicketsView:
       type: string
       enum: [all, overdue, week, incomplete]
