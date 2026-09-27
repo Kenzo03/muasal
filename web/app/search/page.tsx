@@ -86,7 +86,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                         href={`/p/${n.project_key}/modules/${n.id}`}
                         className="flex items-center gap-2.5 px-3.5 py-2.5 text-ink no-underline hover:bg-paper hover:text-ink"
                       >
-                        <Icon name={n.type === "menu" ? "screen" : "folder"} className="text-muted" />
+                        <Icon name={n.type === "menu" ? "screen" : "folder"} className="size-4 text-muted" />
                         <span className="flex min-w-0 flex-col gap-0.5">
                           <span className="text-sm font-semibold"><Highlight text={n.path.join(" › ")} q={query} /></span>
                           {(n.aliases.length > 0 || n.code) && (
