@@ -45,7 +45,7 @@ export default function DecisionCard({ ticketKey, decision, canEdit }: { ticketK
   return (
     <section aria-labelledby="decision-title" className={cx(panel, "overflow-hidden")}>
       <div className={cx("flex flex-wrap items-center gap-2.5 border-b px-4 py-2.5", confirmed ? "border-[#D3E4D8] bg-[#EEF5F0]" : "border-line-soft bg-paper")}>
-        <Icon name={confirmed ? "check" : "edit"} className={confirmed ? "text-ok" : "text-muted"} />
+        <Icon name={confirmed ? "check" : "edit"} className={confirmed ? "size-4 text-ok" : "size-4 text-muted"} />
         <h2 id="decision-title" className="text-sm font-semibold">{t("title")}</h2>
         <span className={cx(chip, implemented ? "bg-ok-soft text-ok" : "bg-well text-[#4A423C]")}>{implemented ? t("implemented") : t("rejected")}</span>
         <span className="text-xs text-muted">
