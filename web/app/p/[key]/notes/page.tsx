@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
-import { ClientChip } from "@/components/Chips";
+import { ClientChip, showsClients } from "@/components/Chips";
 import PageBar from "@/components/PageBar";
 import { day } from "@/lib/format";
 import { getProject, serverApi } from "@/lib/server-api";
@@ -19,8 +19,13 @@ export default async function NotesPage({ params, searchParams }: {
   const t = await getTranslations("notes");
   const locale = await getLocale();
   const api = await serverApi();
-  const { data } = await api.GET("/projects/{key}/notes", { params: { path: { key }, query: { archived: archived === "1" } } });
+  const path = { params: { path: { key } } };
+  const [{ data }, clients] = await Promise.all([
+    api.GET("/projects/{key}/notes", { params: { path: { key }, query: { archived: archived === "1" } } }),
+    api.GET("/projects/{key}/clients", path),
+  ]);
   const items = data?.items ?? [];
+  const withClients = showsClients(clients.data?.items ?? []);
   return (
     <>
       <PageBar>
@@ -44,7 +49,7 @@ export default async function NotesPage({ params, searchParams }: {
                 <tr>
                   <th className={table.th}>{t("key")}</th>
                   <th className={table.th}>{t("title")}</th>
-                  <th className={table.th}>{t("client")}</th>
+                  {withClients && <th className={table.th}>{t("client")}</th>}
                   <th className={table.th}>{t("decidedOn")}</th>
                 </tr>
               </thead>
@@ -56,7 +61,7 @@ export default async function NotesPage({ params, searchParams }: {
                       <Link href={`/notes/${n.key}`} className="text-ink">{n.title}</Link>
                       {n.archived && <span className="ml-2 text-xs text-muted">{t("archivedLabel")}</span>}
                     </td>
-                    <td className={table.td}><ClientChip client={n.client} coreLabel={t("allClients")} /></td>
+                    {withClients && <td className={table.td}><ClientChip client={n.client} coreLabel={t("allClients")} /></td>}
                     <td className={table.td}>{day(n.decided_on, locale)}</td>
                   </tr>
                 ))}

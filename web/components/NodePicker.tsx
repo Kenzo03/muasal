@@ -32,7 +32,7 @@ export default function NodePicker({ nodes, selected, onToggle, legend, recent =
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="sr-only">{legend}</legend>
-      <label className="flex h-[34px] items-center gap-2 rounded border border-field bg-white px-2.5 text-muted focus-within:outline-2 focus-within:outline-accent">
+      <label className="flex h-10 items-center gap-2 rounded-[10px] border border-field bg-white px-3 text-muted focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
         <Icon name="search" />
         <input
           value={filter}
@@ -42,13 +42,19 @@ export default function NodePicker({ nodes, selected, onToggle, legend, recent =
           className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted"
         />
       </label>
-      <div className="flex max-h-48 flex-col overflow-y-auto rounded border border-line-soft text-[13px]">
+      <div className="flex max-h-52 flex-col gap-0.5 overflow-y-auto rounded-xl border border-line bg-white p-1 text-[13px]">
         {choices.map((n) => (
-          <label key={n.id} className={cx("flex items-center gap-2 border-b border-line-soft px-2.5 py-1.5 last:border-0", selected.has(n.id) && "bg-accent-soft")}>
-            <input type="checkbox" checked={selected.has(n.id)} onChange={(e) => onToggle(n.id, e.target.checked)} className="size-4 accent-accent" />
+          <label
+            key={n.id}
+            className={cx(
+              "flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2",
+              selected.has(n.id) ? "bg-accent-soft font-semibold text-accent-strong" : "hover:bg-paper",
+            )}
+          >
+            <input type="checkbox" checked={selected.has(n.id)} onChange={(e) => onToggle(n.id, e.target.checked)} className="size-4 shrink-0 accent-accent" />
             {pathOf(n.id)}
-            {recent.includes(n.id) && <span className="rounded-[3px] bg-paper px-1.5 text-[11px] font-semibold text-muted">{t("recent")}</span>}
-            {n.code && <span className="ml-auto font-mono text-[11px] text-muted">{n.code}</span>}
+            {recent.includes(n.id) && <span className="rounded-full bg-well px-2 text-[11px] font-semibold leading-[18px] text-muted">{t("recent")}</span>}
+            {n.code && <span className="ml-auto text-[11.5px] font-medium text-muted">{n.code}</span>}
           </label>
         ))}
       </div>

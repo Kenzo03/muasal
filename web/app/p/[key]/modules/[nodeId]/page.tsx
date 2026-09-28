@@ -94,7 +94,7 @@ export default async function NodePage({
 
   return (
     <>
-      <div className="flex flex-col gap-2.5 border-b border-line bg-white px-4 pt-3.5 md:px-5">
+      <div className="flex flex-col gap-3 px-4 pt-1 md:px-5">
         <nav aria-label={t("path")} className="flex flex-wrap items-center gap-1.5 text-[13px] text-muted">
           <Link href={`/p/${key}/modules`}>{t("modules")}</Link>
           {detail.path.map((p) => (
@@ -104,24 +104,24 @@ export default async function NodePage({
             </Fragment>
           ))}
           <Icon name="chevronRight" className="size-3.5" />
-          <span className="text-ink">{node.name}</span>
+          <span className="font-semibold text-ink">{node.name}</span>
         </nav>
         <div className="flex flex-wrap items-start gap-4">
           <div className="flex min-w-0 flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="text-2xl font-semibold leading-tight">{node.name}</h1>
-              <span className="text-[13px] text-muted">{tm(node.type)}</span>
+              <h1 className="text-[32px] font-extrabold leading-tight tracking-[-0.03em]">{node.name}</h1>
+              <span className="text-[13px] font-semibold text-muted">{tm(node.type)}</span>
               {node.type === "menu" &&
                 (node.client_specific ? (
                   node.clients.map((c) => <ClientChip key={c.id} client={c} coreLabel="" />)
                 ) : (
-                  <span className={cx(chip, "bg-well text-[#4A423C]")}>{tm("shared")}</span>
+                  <span className={cx(chip, "bg-well text-ink-soft")}>{tm("shared")}</span>
                 ))}
-              {node.code && <span className="font-mono text-xs text-muted">{node.code}</span>}
+              {node.code && <span className="font-mono text-xs font-medium text-muted">{node.code}</span>}
               {node.archived && <span className={cx(chip, "bg-well text-muted")}>{tm("archivedBadge")}</span>}
             </div>
             {(node.description || node.aliases.length > 0) && (
-              <p className="max-w-[760px] text-sm leading-relaxed text-[#3D3632]">
+              <p className="max-w-[760px] text-[14.5px] leading-relaxed text-ink-soft">
                 {node.description}{" "}
                 {node.aliases.length > 0 && <span className="text-muted">{t("aliases", { aliases: node.aliases.join(", ") })}</span>}
               </p>
@@ -134,15 +134,15 @@ export default async function NodePage({
             </Link>
           )}
         </div>
-        <nav aria-label={t("tabs")} className="flex gap-1">
+        <nav aria-label={t("tabs")} className="flex gap-1 border-b border-line">
           {tabs.map((to) => (
             <Link
               key={to}
               href={to === "timeline" ? "?" : `?tab=${to}`}
               aria-current={tab === to ? "page" : undefined}
               className={cx(
-                "border-b-2 px-3 py-2 text-[13px] no-underline",
-                tab === to ? "border-accent font-semibold text-ink hover:text-ink" : "border-transparent font-medium text-muted hover:text-ink",
+                "-mb-px border-b-[2.5px] px-3.5 py-2.5 text-sm no-underline",
+                tab === to ? "border-accent font-extrabold text-ink hover:text-ink" : "border-transparent font-semibold text-ink-soft hover:text-ink",
               )}
             >
               {t(to)}
@@ -150,7 +150,7 @@ export default async function NodePage({
           ))}
         </nav>
       </div>
-      <main className="flex flex-col gap-4 px-4 py-4 md:px-5">{content}</main>
+      <main className="flex flex-col gap-5 px-4 pb-8 pt-5 md:px-5">{content}</main>
     </>
   );
 }

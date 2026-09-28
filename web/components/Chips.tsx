@@ -12,6 +12,12 @@ const tints = [
   "bg-[#E6ECD6] text-[#4B5A1E]",
 ];
 
+// A project with one client (or none) needs no client chips or filter: every
+// ticket is that client's or core work. ponytail: the list is the user's own
+// client scope, so a member scoped to one client of a larger project loses the
+// chips too; a client count on the project API would tell the two apart.
+export const showsClients = (clients: readonly unknown[]) => clients.length > 1;
+
 export function ClientChip({ client, coreLabel }: { client?: Ref | null; coreLabel: string }) {
   return <span className={cx(chip, client ? tints[client.id % tints.length] : "bg-well text-[#4A423C]")}>{client?.name ?? coreLabel}</span>;
 }
@@ -27,7 +33,7 @@ export function PriorityChip({ priority, label }: { priority: Priority; label: s
   return <span className={cx(chip, priorityTone[priority])}>{label}</span>;
 }
 
-const typeIcon = {
+export const typeIcon = {
   bug: ["bug", "text-[#B23A1A]"],
   change_request: ["change", "text-[#2F6FAF]"],
   feature: ["feature", "text-[#6C5BB5]"],
@@ -46,16 +52,20 @@ export function StatusDot({ color, className = "size-2" }: { color: string; clas
   return <span aria-hidden="true" className={cx("inline-block shrink-0 rounded-full", className)} style={{ background: color }} />;
 }
 
-export function Avatar({ name, className = "size-6 bg-well text-ink" }: { name: string; className?: string }) {
-  const initials = name
+/** The first letters of the first two words: "Rina Wijaya" → "RW". */
+export function initials(name: string): string {
+  return name
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((w) => w[0].toUpperCase())
     .join("");
+}
+
+export function Avatar({ name, className = "size-6 bg-well text-ink" }: { name: string; className?: string }) {
   return (
     <span title={name} className={cx("inline-flex shrink-0 items-center justify-center rounded-full text-[10px] font-semibold", className)}>
-      {initials}
+      {initials(name)}
     </span>
   );
 }

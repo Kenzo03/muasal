@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { typeIcon } from "@/components/Chips";
 import Icon from "@/components/Icon";
 import NodePicker from "@/components/NodePicker";
 import { api } from "@/lib/api";
@@ -10,7 +11,7 @@ import {
   problemKey, useProblemText,
   type Client, type Contact, type Node, type Priority, type Ref, type Ticket, type TicketType,
 } from "@/lib/problem";
-import { button, cx, field } from "@/lib/ui";
+import { button, choice, cx, field } from "@/lib/ui";
 import { pasteImages } from "@/lib/paste";
 import { isWeak } from "@/lib/weak";
 
@@ -30,13 +31,13 @@ const types: TicketType[] = ["change_request", "bug", "feature"];
 const priorities: Priority[] = ["low", "medium", "high", "urgent"];
 const lastClientKey = (projectKey: string) => `muasal:last-client:${projectKey}`;
 
-// One labeled row of the form: the label on the left, the field on the right.
+// One labeled field of the form: the label above, the field and its hints below.
 function Row({ label, htmlFor, id, children }: { label: string; htmlFor?: string; id?: string; children: React.ReactNode }) {
-  const text = "text-sm font-semibold md:pt-1.5";
+  const text = "text-[13px] font-bold";
   return (
-    <div className="grid gap-x-5 gap-y-1.5 md:grid-cols-[170px_minmax(0,1fr)] md:items-start">
+    <div className="flex min-w-0 flex-col gap-2">
       {htmlFor ? <label htmlFor={htmlFor} className={text}>{label}</label> : <span id={id} className={text}>{label}</span>}
-      <div className="flex min-w-0 flex-col gap-2">{children}</div>
+      {children}
     </div>
   );
 }
@@ -174,77 +175,78 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
     router.push(`/t/${data.key}`);
   }
 
-  const radio = "size-4 accent-accent";
   return (
     <form aria-label={ticket ? t("editTitle", { key: ticket.key }) : t("newTitle")} onSubmit={submit} className="flex flex-col">
-      <div className="flex flex-col gap-4 p-5">
-        <Row label={t("client")} htmlFor="tf-client">
-          <select
-            id="tf-client"
-            value={clientId ?? ""}
-            onChange={(e) => {
-              setClientId(e.target.value ? Number(e.target.value) : null);
-              setContactId(null);
-            }}
-            className={field.input}
-          >
-            <option value="">{t("core")}</option>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        </Row>
-        <Row label={t("requestedBy")} id="tf-requester">
-          <div role="radiogroup" aria-labelledby="tf-requester" className="flex flex-wrap gap-x-5 gap-y-2 text-sm md:pt-1.5">
-            <label className="flex items-center gap-2">
-              <input type="radio" name="requester" checked={requester === "user"} onChange={() => setRequester("user")} className={radio} />
-              {userRequester?.name ?? t("me")}
-            </label>
-            <label className="flex items-center gap-2">
-              <input type="radio" name="requester" checked={requester === "contact"} onChange={() => setRequester("contact")} className={radio} />
-              {t("contact")}
-            </label>
-          </div>
-          {requester === "contact" && (
-            <>
-              <div className="flex flex-wrap items-center gap-3">
-                <select
-                  aria-label={t("contactSelect")}
-                  value={contactId ?? ""}
-                  onChange={(e) => setContactId(e.target.value ? Number(e.target.value) : null)}
-                  className={cx(field.input, "min-w-0 flex-1")}
-                >
-                  <option value="">{t("chooseContact")}</option>
-                  {contacts.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                      {c.title ? ` (${c.title})` : ""}
-                      {c.client_name ? ` · ${c.client_name}` : ""}
-                    </option>
-                  ))}
-                </select>
-                {!adding && (
-                  <button type="button" onClick={() => setAdding(true)} className={button.quiet}>{t("addContact")}</button>
-                )}
-              </div>
-              {adding && (
-                <div className="flex flex-wrap items-end gap-3 rounded border border-line-soft bg-paper p-3">
-                  <label className={field.label}>
-                    {t("contactName")}
-                    <input value={newName} onChange={(e) => setNewName(e.target.value)} maxLength={200} className={field.input} />
-                  </label>
-                  <label className={field.label}>
-                    {t("contactTitle")}
-                    <input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} maxLength={200} className={field.input} />
-                  </label>
-                  <button type="button" onClick={addContact} disabled={!newName.trim()} className={button.secondary}>
-                    {t("saveContact")}
-                  </button>
-                </div>
+      <div className="flex flex-col gap-5 p-5 md:p-6">
+        <div className="grid gap-5 md:grid-cols-2">
+          <Row label={t("client")} htmlFor="tf-client">
+            <select
+              id="tf-client"
+              value={clientId ?? ""}
+              onChange={(e) => {
+                setClientId(e.target.value ? Number(e.target.value) : null);
+                setContactId(null);
+              }}
+              className={field.input}
+            >
+              <option value="">{t("core")}</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </Row>
+          <Row label={t("requestedBy")} id="tf-requester">
+            <div role="radiogroup" aria-labelledby="tf-requester" className="flex flex-wrap gap-2">
+              <label className={choice}>
+                <input type="radio" name="requester" checked={requester === "user"} onChange={() => setRequester("user")} />
+                {userRequester?.name ?? t("me")}
+              </label>
+              <label className={choice}>
+                <input type="radio" name="requester" checked={requester === "contact"} onChange={() => setRequester("contact")} />
+                {t("contact")}
+              </label>
+            </div>
+          </Row>
+        </div>
+        {requester === "contact" && (
+          <div className="flex flex-col gap-3 rounded-xl bg-well p-3.5">
+            <div className="flex flex-wrap items-center gap-3">
+              <select
+                aria-label={t("contactSelect")}
+                value={contactId ?? ""}
+                onChange={(e) => setContactId(e.target.value ? Number(e.target.value) : null)}
+                className={cx(field.input, "min-w-0 flex-1")}
+              >
+                <option value="">{t("chooseContact")}</option>
+                {contacts.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                    {c.title ? ` (${c.title})` : ""}
+                    {c.client_name ? ` · ${c.client_name}` : ""}
+                  </option>
+                ))}
+              </select>
+              {!adding && (
+                <button type="button" onClick={() => setAdding(true)} className={button.quiet}>{t("addContact")}</button>
               )}
-            </>
-          )}
-        </Row>
+            </div>
+            {adding && (
+              <div className="flex flex-wrap items-end gap-3">
+                <label className={cx(field.label, "min-w-40 flex-1")}>
+                  {t("contactName")}
+                  <input value={newName} onChange={(e) => setNewName(e.target.value)} maxLength={200} className={field.compact} />
+                </label>
+                <label className={cx(field.label, "min-w-40 flex-1")}>
+                  {t("contactTitle")}
+                  <input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} maxLength={200} className={field.compact} />
+                </label>
+                <button type="button" onClick={addContact} disabled={!newName.trim()} className={button.secondary}>
+                  {t("saveContact")}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
         <Row label={t("title")} htmlFor="tf-title">
           <input id="tf-title" name="title" defaultValue={ticket?.title} required minLength={5} maxLength={200} className={field.input} />
         </Row>
@@ -274,17 +276,11 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
           </p>
         </Row>
         <Row label={t("type")} id="tf-type">
-          <div role="radiogroup" aria-labelledby="tf-type" className="flex flex-wrap" onChange={(e) => setType((e.target as HTMLInputElement).value as TicketType)}>
-            {types.map((ty, i) => (
-              <label
-                key={ty}
-                className={cx(
-                  "flex h-[34px] cursor-pointer items-center gap-2 border border-field px-3 text-[13px] has-[:checked]:z-10 has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:font-semibold has-[:checked]:text-accent-strong",
-                  i === 0 ? "rounded-l" : "-ml-px",
-                  i === types.length - 1 && "rounded-r",
-                )}
-              >
-                <input type="radio" name="type" value={ty} defaultChecked={(ticket?.type ?? "change_request") === ty} className={radio} />
+          <div role="radiogroup" aria-labelledby="tf-type" className="flex flex-wrap gap-2" onChange={(e) => setType((e.target as HTMLInputElement).value as TicketType)}>
+            {types.map((ty) => (
+              <label key={ty} className={choice}>
+                <input type="radio" name="type" value={ty} defaultChecked={(ticket?.type ?? "change_request") === ty} />
+                <Icon name={typeIcon[ty][0]} className={cx("size-3.5", typeIcon[ty][1])} />
                 {tTypes(ty)}
               </label>
             ))}
@@ -327,12 +323,12 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
           />
           <p id="description-hint" className={field.hint}>{t(ticket ? "descriptionHint" : "descriptionHintNew")}</p>
         </Row>
-        <details className="group" open={Boolean(ticket?.assignee || ticket?.due_date)}>
-          <summary className="flex cursor-pointer items-center gap-1.5 text-sm font-semibold">
+        <details className="group rounded-xl border border-line" open={Boolean(ticket?.assignee || ticket?.due_date)}>
+          <summary className="flex cursor-pointer items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-[13px] font-bold hover:bg-paper">
             <Icon name="chevronRight" className="size-4 text-muted transition-transform group-open:rotate-90" />
             {t("more")}
           </summary>
-          <div className="mt-3 grid gap-3 md:ml-[190px] md:grid-cols-3">
+          <div className="grid gap-3 px-3.5 pb-3.5 pt-1 md:grid-cols-3">
             <label className={field.label}>
               {t("assignee")}
               <select name="assignee_id" defaultValue={ticket?.assignee?.id ?? ""} className={field.input}>
@@ -366,7 +362,8 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
         )}
         {notice && <p role="status" className="text-sm text-ok">{notice}</p>}
       </div>
-      <div className="flex flex-wrap items-center gap-2 rounded-b border-t border-line-soft bg-paper px-5 py-3">
+      {/* The buttons stay in view while a long form scrolls. */}
+      <div className="sticky bottom-0 z-10 flex flex-wrap items-center gap-2 rounded-b-2xl border-t border-line-soft bg-paper px-5 py-3.5 md:px-6">
         {ticket ? (
           <>
             <button className={button.primary}>{t("save")}</button>

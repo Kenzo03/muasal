@@ -22,7 +22,7 @@ export default function NodeDetails({ projectKey, node, clients, canEdit, nodes 
   const router = useRouter();
   return (
     <div className="flex max-w-3xl flex-col gap-4">
-      <div className={cx(panel, "p-4")}>
+      <div className={cx(panel, "p-5")}>
         {canEdit && !node.archived ? (
           <NodeForm projectKey={projectKey} node={node} clients={clients} onSaved={() => router.refresh()} />
         ) : (
@@ -62,7 +62,7 @@ function Merge({ projectKey, node, nodes }: { projectKey: string; node: Node; no
   }
 
   return (
-    <form onSubmit={merge} aria-label={t("title")} className={cx(panel, "flex flex-col gap-2 p-4")}>
+    <form onSubmit={merge} aria-label={t("title")} className={cx(panel, "flex flex-col gap-2 p-5")}>
       <h2 className={sectionTitle}>{t("title")}</h2>
       <p className="text-[13px] text-muted">{t("hint")}</p>
       <div className="flex flex-wrap items-end gap-2">

@@ -40,7 +40,16 @@
     "backups": "Backups",
     "system": "System status",
     "tokens": "API tokens",
-    "imports": "Imports"
+    "imports": "Imports",
+    "home": "Home",
+    "ask": "Ask",
+    "admin": "System admin",
+    "pickProject": "Choose a project",
+    "currentProject": "Current project",
+    "collapse": "Collapse navigation",
+    "expand": "Expand navigation",
+    "openMenu": "Open navigation",
+    "closeMenu": "Close navigation"
   },
   "search": {
     "heading": "Search",
@@ -58,7 +67,6 @@
   },
   "home": {
     "title": "Home",
-    "signedInAs": "Signed in as {name}",
     "newProject": "New project",
     "noProjects": "You are not in any project yet. Ask your admin to add you.",
     "noProjectsAdmin": "No projects yet. Create the first one.",
@@ -100,7 +108,9 @@
       "days": "{n} days ago"
     },
     "projects": "My projects",
-    "yourTickets": "{count, plural, =0 {No tickets for you} one {# ticket for you} other {# tickets for you}}"
+    "yourTickets": "{count, plural, =0 {No tickets for you} one {# ticket for you} other {# tickets for you}}",
+    "greeting": "{part, select, morning {Good morning} midday {Good afternoon} afternoon {Good afternoon} other {Good evening}}, {name}",
+    "openCount": "{count, plural, =0 {No open tickets for you.} one {# open ticket for you.} other {# open tickets for you.}}"
   },
   "profile": {
     "title": "Profile",

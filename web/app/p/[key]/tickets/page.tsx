@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
-import { Avatar, ClientChip, PriorityChip, StatusDot, TypeIcon } from "@/components/Chips";
+import { Avatar, ClientChip, PriorityChip, StatusDot, TypeIcon, showsClients } from "@/components/Chips";
+import Icon from "@/components/Icon";
 import PageBar from "@/components/PageBar";
 import TicketFilters from "@/components/TicketFilters";
 import { day, utc } from "@/lib/format";
@@ -34,6 +35,7 @@ export default async function TicketsPage({
     api.GET("/projects/{key}/tickets", { params: { path: { key }, query: ticketQuery(values) } }),
   ]);
   const statusOf = new Map((statuses.data?.items ?? []).map((s) => [s.id, s]));
+  const withClients = showsClients(clients.data?.items ?? []);
   const items = page.data?.items ?? [];
   const next = page.data?.next_cursor;
   const { cursor: _, ...kept } = values;
@@ -45,6 +47,7 @@ export default async function TicketsPage({
         <span className="mr-2 text-[13px] text-muted">{project.name}</span>
         <TicketFilters action={`/p/${key}/tickets`} values={values} clients={clients.data?.items ?? []} statuses={statuses.data?.items ?? []} />
         <a href={`/api/v1/projects/${key}/tickets?${new URLSearchParams({ ...exportQuery(ticketQuery(values)), format: "csv" })}`} download className={button.secondary}>
+          <Icon name="download" />
           {t("exportCsv")}
         </a>
       </PageBar>
@@ -56,7 +59,8 @@ export default async function TicketsPage({
             <table className={table.table}>
               <thead className={table.head}>
                 <tr>
-                  {(["key", "title", "status", "client", "assignee", "requestedBy", "menus", "priority", "updated", "due"] as const).map((c) => (
+                  <th className={cx(table.th, "pl-5")}>{tp("tickets")}</th>
+                  {(["status", "client", "requestedBy", "assignee", "updated", "due"] as const).filter((c) => c !== "client" || withClients).map((c) => (
                     <th key={c} className={table.th}>{t(c)}</th>
                   ))}
                 </tr>
@@ -66,42 +70,46 @@ export default async function TicketsPage({
                   const status = statusOf.get(it.status_id);
                   return (
                     <tr key={it.id} className={cx(table.row, "hover:bg-paper")}>
-                      <td className={cx(table.td, "whitespace-nowrap")}>
-                        <span className="flex items-center gap-1.5">
-                          <TypeIcon type={it.type} label={tTypes(it.type)} />
-                          <Link href={`/t/${it.key}`} className="font-mono font-semibold">{it.key}</Link>
+                      <td className={cx(table.td, "min-w-80 py-3 pl-5")}>
+                        <span className="flex items-start gap-2.5">
+                          <span className="pt-0.5">
+                            <TypeIcon type={it.type} label={tTypes(it.type)} />
+                          </span>
+                          <span className="flex min-w-0 flex-col gap-0.5">
+                            <span className="flex flex-wrap items-baseline gap-x-2">
+                              <Link href={`/t/${it.key}`} className="text-xs font-bold text-muted no-underline hover:text-ink">{it.key}</Link>
+                              <Link href={`/t/${it.key}`} className="text-sm font-bold text-ink no-underline hover:text-ink hover:underline">{it.title}</Link>
+                              {(it.priority === "high" || it.priority === "urgent") && <PriorityChip priority={it.priority} label={tPri(it.priority)} />}
+                            </span>
+                            <span className="text-[12.5px] text-muted">
+                              {it.node_names[0] ?? "—"}
+                              {it.node_names.length > 1 ? ` +${it.node_names.length - 1}` : ""}
+                            </span>
+                          </span>
                         </span>
                       </td>
-                      <td className={cx(table.td, "min-w-64 font-medium")}>
-                        <Link href={`/t/${it.key}`} className="text-ink no-underline hover:text-ink hover:underline">{it.title}</Link>
-                      </td>
-                      <td className={cx(table.td, "whitespace-nowrap")}>
+                      <td className={cx(table.td, "whitespace-nowrap py-3")}>
                         {status && (
-                          <span className="flex items-center gap-1.5">
+                          <span className="flex items-center gap-1.5 font-semibold text-ink-soft">
                             <StatusDot color={status.color} />
                             {status.name}
                           </span>
                         )}
                       </td>
-                      <td className={table.td}><ClientChip client={it.client} coreLabel={t("core")} /></td>
-                      <td className={cx(table.td, "whitespace-nowrap")}>
+                      {withClients && <td className={cx(table.td, "py-3")}><ClientChip client={it.client} coreLabel={t("core")} /></td>}
+                      <td className={cx(table.td, "py-3 text-ink-soft")}>{it.requester_name}</td>
+                      <td className={cx(table.td, "whitespace-nowrap py-3")}>
                         {it.assignee ? (
-                          <span className="flex items-center gap-1.5">
-                            <Avatar name={it.assignee.name} className="size-5 bg-well text-[9px] text-ink" />
+                          <span className="flex items-center gap-1.5 text-ink-soft">
+                            <Avatar name={it.assignee.name} className="size-6 bg-accent-soft text-[10px] font-bold text-accent-strong" />
                             {it.assignee.name}
                           </span>
                         ) : (
                           <span className="text-muted">—</span>
                         )}
                       </td>
-                      <td className={table.td}>{it.requester_name}</td>
-                      <td className={cx(table.td, "font-mono text-xs text-muted")}>
-                        {it.node_names[0] ?? "—"}
-                        {it.node_names.length > 1 ? ` +${it.node_names.length - 1}` : ""}
-                      </td>
-                      <td className={table.td}><PriorityChip priority={it.priority} label={tPri(it.priority)} /></td>
-                      <td className={cx(table.td, "whitespace-nowrap text-muted")}>{utc(it.updated_at, locale)}</td>
-                      <td className={cx(table.td, "whitespace-nowrap", it.due_date && it.due_date < today ? "font-medium text-danger" : "text-muted")}>
+                      <td className={cx(table.td, "whitespace-nowrap py-3 text-muted")} title={utc(it.updated_at, locale)}>{day(it.updated_at, locale)}</td>
+                      <td className={cx(table.td, "whitespace-nowrap py-3 pr-5", it.due_date && it.due_date < today ? "font-semibold text-danger" : "text-muted")}>
                         {it.due_date ? day(it.due_date, locale) : "—"}
                       </td>
                     </tr>

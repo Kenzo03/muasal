@@ -8,13 +8,16 @@ type Props = {
   summary: React.ReactNode;
   summaryClassName?: string;
   align?: "left" | "right";
+  // "up" opens above the summary, for menus at the bottom of the sidebar.
+  side?: "down" | "up";
+  panelClassName?: string;
   id?: string;
   children: React.ReactNode;
 };
 
 // A dropdown on native <details>, so the summary is a real button for keyboards
 // and screen readers. A click outside, Escape or following a link closes it.
-export default function Menu({ label, summary, summaryClassName, align = "left", id, children }: Props) {
+export default function Menu({ label, summary, summaryClassName, align = "left", side = "down", panelClassName, id, children }: Props) {
   const ref = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
     const close = () => {
@@ -46,8 +49,10 @@ export default function Menu({ label, summary, summaryClassName, align = "left",
           if ((e.target as HTMLElement).closest("a, button") && ref.current) ref.current.open = false;
         }}
         className={cx(
-          "absolute top-full z-30 mt-1 min-w-60 rounded border border-line bg-white py-1 text-ink shadow-lg",
+          "absolute z-30 min-w-60 overflow-hidden rounded-xl border border-line bg-white py-1.5 text-ink shadow-[0_12px_32px_rgba(43,36,32,0.12),0_2px_6px_rgba(43,36,32,0.06)]",
+          side === "up" ? "bottom-full mb-2" : "top-full mt-1.5",
           align === "right" ? "right-0" : "left-0",
+          panelClassName,
         )}
       >
         {children}

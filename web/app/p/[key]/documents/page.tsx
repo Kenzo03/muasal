@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
-import { ClientChip } from "@/components/Chips";
+import { ClientChip, showsClients } from "@/components/Chips";
 import PageBar from "@/components/PageBar";
 import { utc } from "@/lib/format";
 import { getProject, serverApi } from "@/lib/server-api";
@@ -19,6 +19,7 @@ export default async function DocumentsPage({ params }: { params: Promise<{ key:
   const api = await serverApi();
   const path = { params: { path: { key } } };
   const [docs, clients] = await Promise.all([api.GET("/projects/{key}/documents", path), api.GET("/projects/{key}/clients", path)]);
+  const withClients = showsClients(clients.data?.items ?? []);
   const items = docs.data?.items ?? [];
   return (
     <>
@@ -38,7 +39,7 @@ export default async function DocumentsPage({ params }: { params: Promise<{ key:
                 <tr>
                   <th className={table.th}>{t("key")}</th>
                   <th className={table.th}>{t("title")}</th>
-                  <th className={table.th}>{t("client")}</th>
+                  {withClients && <th className={table.th}>{t("client")}</th>}
                   <th className={table.th}>{t("uploaded")}</th>
                 </tr>
               </thead>
@@ -50,7 +51,7 @@ export default async function DocumentsPage({ params }: { params: Promise<{ key:
                       <Link href={`/documents/${d.key}`} className="text-ink">{d.title}</Link>
                       {d.superseded_by && <span className="ml-2 text-xs text-muted">{t("supersededBy", { key: d.superseded_by })}</span>}
                     </td>
-                    <td className={table.td}><ClientChip client={d.client} coreLabel={t("allClients")} /></td>
+                    {withClients && <td className={table.td}><ClientChip client={d.client} coreLabel={t("allClients")} /></td>}
                     <td className={table.td}>{utc(d.created_at, locale)} · {d.uploaded_by}</td>
                   </tr>
                 ))}

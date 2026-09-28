@@ -7,7 +7,7 @@ import Icon from "@/components/Icon";
 import { api } from "@/lib/api";
 import { fileSize } from "@/lib/format";
 import { useProblemText, type Ticket } from "@/lib/problem";
-import { button, cx, field, panel, sectionTitle } from "@/lib/ui";
+import { button, cx, field, panel } from "@/lib/ui";
 
 type Props = { ticketKey: string; files: Ticket["attachments"]; meId: number; isProjectAdmin: boolean; canUpload: boolean };
 
@@ -42,8 +42,8 @@ export default function Attachments({ ticketKey, files, meId, isProjectAdmin, ca
   }
 
   return (
-    <section aria-labelledby="attachments-title" className={cx(panel, "flex flex-col gap-2.5 px-4 py-3.5")}>
-      <h2 id="attachments-title" className={sectionTitle}>{t("title")}</h2>
+    <section aria-labelledby="attachments-title" className={cx(panel, "flex flex-col gap-3 px-5 py-4")}>
+      <h2 id="attachments-title" className="text-sm font-extrabold">{t("title")}</h2>
       {files.length === 0 ? (
         <p className="text-[13px] text-muted">{t("none")}</p>
       ) : (
@@ -61,8 +61,15 @@ export default function Attachments({ ticketKey, files, meId, isProjectAdmin, ca
         </ul>
       )}
       {canUpload && (
-        <label className={cx(button.secondary, "w-full border-dashed border-field bg-paper", busy && "opacity-40")}>
-          <Icon name="upload" />
+        <label
+          className={cx(
+            "flex cursor-pointer flex-col items-center gap-2 rounded-xl border-[1.5px] border-dashed border-field bg-paper px-3 py-4 text-[13.5px] font-semibold text-ink hover:border-accent focus-within:border-accent",
+            busy && "opacity-40",
+          )}
+        >
+          <span className="flex size-8 items-center justify-center rounded-full bg-white text-accent shadow-[0_1px_2px_rgba(43,36,32,0.1)]">
+            <Icon name="upload" />
+          </span>
           {t("upload")}
           <input type="file" onChange={upload} disabled={busy} className="sr-only" />
         </label>

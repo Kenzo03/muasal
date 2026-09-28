@@ -1,0 +1,53 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
+import type { Project, User } from "@/lib/problem";
+import Sidebar from "./Sidebar";
+import TopBar from "./TopBar";
+
+// The project a page belongs to: /p/{key}/… or a ticket page such as /t/HRIS-231.
+function currentKey(path: string): string | undefined {
+  const m = path.match(/^\/p\/([^/]+)/) ?? path.match(/^\/t\/(.+)-\d+$/);
+  return m?.[1].toUpperCase();
+}
+
+// The signed-in frame of the Terakota Lembut design: the sidebar, the top bar and
+// the page. From md up the sidebar can shrink to a rail of icons; the choice
+// lives in the `nav` cookie so the server renders it the same way. On phones the
+// sidebar is a drawer behind the top bar's menu button.
+export default function Frame({ me, projects, rail: railCookie, children }: { me: User; projects: Project[]; rail: boolean; children: React.ReactNode }) {
+  const t = useTranslations("nav");
+  const path = usePathname();
+  const project = projects.find((p) => p.key === currentKey(path));
+  const [rail, setRail] = useState(railCookie);
+  const [drawer, setDrawer] = useState(false);
+
+  useEffect(() => {
+    if (!drawer) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDrawer(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [drawer]);
+
+  function toggleRail() {
+    document.cookie = rail ? "nav=; path=/; max-age=0" : "nav=rail; path=/; max-age=31536000; samesite=lax";
+    setRail(!rail);
+  }
+
+  return (
+    <div className="flex min-h-screen">
+      {drawer && (
+        <button type="button" aria-label={t("closeMenu")} onClick={() => setDrawer(false)} className="fixed inset-0 z-30 cursor-default bg-ink/30 md:hidden" />
+      )}
+      <Sidebar me={me} projects={projects} project={project} rail={rail} drawer={drawer} onNavigate={() => setDrawer(false)} onToggleRail={toggleRail} />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <TopBar me={me} projects={projects} project={project} drawer={drawer} onMenu={() => setDrawer(true)} />
+        {children}
+      </div>
+    </div>
+  );
+}

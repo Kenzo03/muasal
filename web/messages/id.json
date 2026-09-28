@@ -40,7 +40,16 @@
     "backups": "Cadangan",
     "system": "Status sistem",
     "tokens": "Token API",
-    "imports": "Impor"
+    "imports": "Impor",
+    "home": "Beranda",
+    "ask": "Tanya",
+    "admin": "Admin sistem",
+    "pickProject": "Pilih proyek",
+    "currentProject": "Proyek aktif",
+    "collapse": "Ringkas navigasi",
+    "expand": "Lebarkan navigasi",
+    "openMenu": "Buka navigasi",
+    "closeMenu": "Tutup navigasi"
   },
   "search": {
     "heading": "Pencarian",
@@ -58,7 +67,6 @@
   },
   "home": {
     "title": "Beranda",
-    "signedInAs": "Masuk sebagai {name}",
     "newProject": "Proyek baru",
     "noProjects": "Anda belum tergabung dalam proyek. Minta admin menambahkan Anda.",
     "noProjectsAdmin": "Belum ada proyek. Buat proyek pertama.",
@@ -100,7 +108,9 @@
       "days": "{n} hari lalu"
     },
     "projects": "Proyek saya",
-    "yourTickets": "{count, plural, =0 {belum ada tiket Anda} other {# tiket Anda}}"
+    "yourTickets": "{count, plural, =0 {belum ada tiket Anda} other {# tiket Anda}}",
+    "greeting": "{part, select, morning {Selamat pagi} midday {Selamat siang} afternoon {Selamat sore} other {Selamat malam}}, {name}",
+    "openCount": "{count, plural, =0 {Tidak ada tiket terbuka untuk Anda.} other {# tiket terbuka untuk Anda.}}"
   },
   "profile": {
     "title": "Profil",

@@ -1,7 +1,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import type { components } from "@/lib/api-types";
 import { utc } from "@/lib/format";
-import { chip, cx, panel, sectionTitle } from "@/lib/ui";
+import { chip, cx, panel } from "@/lib/ui";
 
 type TicketCode = components["schemas"]["TicketCode"];
 
@@ -19,8 +19,8 @@ export default function Code({ code }: { code: TicketCode }) {
   const locale = useLocale();
   if (code.merge_requests.length === 0 && code.commits.length === 0) return null;
   return (
-    <section aria-labelledby="code-title" className={cx(panel, "flex flex-col gap-2.5 px-4 py-3.5")}>
-      <h2 id="code-title" className={sectionTitle}>{t("title")}</h2>
+    <section aria-labelledby="code-title" className={cx(panel, "flex flex-col gap-2.5 px-5 py-4")}>
+      <h2 id="code-title" className="text-sm font-extrabold">{t("title")}</h2>
       {code.merge_requests.length > 0 && (
         <ul aria-label={t("mergeRequests")} className="flex flex-col gap-1.5">
           {code.merge_requests.map((m) => {

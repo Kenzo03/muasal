@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { ClientChip } from "@/components/Chips";
 import { api } from "@/lib/api";
 import { useProblemText, type Client, type Node } from "@/lib/problem";
-import { button, chip, cx, field } from "@/lib/ui";
+import { button, chip, choice, cx, field } from "@/lib/ui";
 
 type Props = {
   projectKey: string;
@@ -54,12 +54,12 @@ export default function NodeForm({ projectKey, node, parentId, parentPath, clien
 
   const title = node ? t("editTitle", { name: node.name }) : t("newTitle");
   return (
-    <form aria-label={title} onSubmit={onSubmit} className="flex flex-col gap-3">
-      <div>
-        <h2 className="text-base font-semibold">{title}</h2>
-        {parentPath && <p className="text-xs text-muted">{t("under", { path: parentPath })}</p>}
+    <form aria-label={title} onSubmit={onSubmit} className="flex flex-col gap-4">
+      <div className="flex flex-col gap-0.5">
+        <h2 className="text-[17px] font-extrabold tracking-[-0.01em]">{title}</h2>
+        {parentPath && <p className="text-[13px] text-muted">{t("under", { path: parentPath })}</p>}
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2">
         <label className={field.label}>
           {t("name")}
           <input name="name" defaultValue={node?.name} required maxLength={200} className={field.input} />
@@ -73,7 +73,7 @@ export default function NodeForm({ projectKey, node, parentId, parentPath, clien
         </label>
         <label className={field.label}>
           {t("code")}
-          <input name="code" defaultValue={node?.code ?? ""} maxLength={100} className={cx(field.input, "font-mono")} />
+          <input name="code" defaultValue={node?.code ?? ""} maxLength={100} className={field.input} />
         </label>
         <label className={field.label}>
           {t("aliases")}
@@ -85,26 +85,26 @@ export default function NodeForm({ projectKey, node, parentId, parentPath, clien
         <textarea name="description" defaultValue={node?.description} maxLength={5000} rows={3} className={field.textarea} />
       </label>
       {type === "menu" && (
-        <fieldset className="flex flex-col gap-2 text-[13px]">
-          <legend className="mb-1 font-medium">{t("scope")}</legend>
-          <div className="flex flex-wrap gap-x-5 gap-y-2">
-            <label className="flex items-center gap-2">
-              <input type="radio" name="scope" checked={!specific} onChange={() => setSpecific(false)} className="size-4 accent-accent" />
+        <fieldset className="flex flex-col gap-2.5">
+          <legend className="mb-2 text-[13px] font-semibold">{t("scope")}</legend>
+          <div className="flex flex-wrap gap-2">
+            <label className={choice}>
+              <input type="radio" name="scope" checked={!specific} onChange={() => setSpecific(false)} />
               {t("shared")}
             </label>
-            <label className="flex items-center gap-2">
-              <input type="radio" name="scope" checked={specific} onChange={() => setSpecific(true)} className="size-4 accent-accent" />
+            <label className={choice}>
+              <input type="radio" name="scope" checked={specific} onChange={() => setSpecific(true)} />
               {t("clientSpecific")}
             </label>
           </div>
           {specific &&
             (clients.length === 0 ? (
-              <p className="text-muted">{t("noLinkedClients")}</p>
+              <p className="text-[13px] text-muted">{t("noLinkedClients")}</p>
             ) : (
-              <div className="flex flex-wrap gap-x-4 gap-y-2 rounded border border-line-soft bg-paper p-2.5">
+              <div className="flex flex-wrap gap-2 rounded-xl bg-well p-3">
                 {clients.map((c) => (
-                  <label key={c.id} className="flex items-center gap-2">
-                    <input type="checkbox" name="client_ids" value={c.id} defaultChecked={node?.clients.some((x) => x.id === c.id)} className="size-4 accent-accent" />
+                  <label key={c.id} className={choice}>
+                    <input type="checkbox" name="client_ids" value={c.id} defaultChecked={node?.clients.some((x) => x.id === c.id)} />
                     {c.name}
                   </label>
                 ))}
@@ -129,23 +129,23 @@ export default function NodeForm({ projectKey, node, parentId, parentPath, clien
 export function ReadOnlyNode({ node }: { node: Node }) {
   const t = useTranslations("modules");
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-lg font-semibold">{node.name}</h2>
-        <span className="text-[13px] text-muted">{t(node.type)}</span>
+        <h2 className="text-[17px] font-extrabold tracking-[-0.01em]">{node.name}</h2>
+        <span className={cx(chip, "bg-well text-ink-soft")}>{t(node.type)}</span>
         {node.type === "menu" &&
           (node.client_specific ? (
             node.clients.map((c) => <ClientChip key={c.id} client={c} coreLabel="" />)
           ) : (
-            <span className={cx(chip, "bg-ground text-[#4A423C]")}>{t("shared")}</span>
+            <span className={cx(chip, "bg-well text-ink-soft")}>{t("shared")}</span>
           ))}
       </div>
-      <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-[13px]">
-        <dt className="text-muted">{t("code")}</dt>
-        <dd className="font-mono">{node.code ?? "—"}</dd>
-        <dt className="text-muted">{t("aliasesTitle")}</dt>
+      <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-2.5 text-[13px]">
+        <dt className="font-semibold text-muted">{t("code")}</dt>
+        <dd>{node.code ?? "—"}</dd>
+        <dt className="font-semibold text-muted">{t("aliasesTitle")}</dt>
         <dd>{node.aliases.join(", ") || "—"}</dd>
-        <dt className="text-muted">{t("description")}</dt>
+        <dt className="font-semibold text-muted">{t("description")}</dt>
         <dd className="whitespace-pre-wrap">{node.description || "—"}</dd>
       </dl>
     </div>
