@@ -31,4 +31,7 @@ export async function drag(page: Page, source: Locator, target: Locator, to = { 
   await page.mouse.move(from.x + 20, from.y + 20, { steps: 4 });
   await page.mouse.move(box.x + box.width * to.x, box.y + box.height * to.y, { steps: 12 });
   await page.mouse.up();
+  // dnd-kit stops every click for 50 ms after a drop, so a click on what the drop
+  // opens (the close dialog's Batal) can be lost on a fast server. Wait it out.
+  await page.waitForTimeout(100);
 }
