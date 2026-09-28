@@ -27,6 +27,34 @@ WHERE (sqlc.narg('project_id')::bigint IS NULL OR s.project_id = sqlc.narg('proj
 ORDER BY s.created_at DESC
 LIMIT 100;
 
+-- name: CreateSummarySchedule :one
+INSERT INTO summary_schedules (project_id, client_id, language, audience, weekday, created_by)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING *;
+
+-- name: ListSummarySchedules :many
+SELECT sqlc.embed(ss), c.name AS client_name, u.name AS creator_name
+FROM summary_schedules ss
+LEFT JOIN clients c ON c.id = ss.client_id
+JOIN users u ON u.id = ss.created_by
+WHERE ss.project_id = $1
+ORDER BY ss.weekday, lower(coalesce(c.name, '')), ss.id;
+
+-- name: GetSummarySchedule :one
+SELECT * FROM summary_schedules WHERE id = $1;
+
+-- name: DeleteSummarySchedule :exec
+DELETE FROM summary_schedules WHERE id = $1;
+
+-- name: ListDueSummarySchedules :many
+-- The weekly summaries due on this weekday that have not run today.
+SELECT * FROM summary_schedules
+WHERE weekday = sqlc.arg('weekday')::smallint AND (last_run_on IS NULL OR last_run_on < sqlc.arg('today')::date)
+ORDER BY id;
+
+-- name: MarkSummaryScheduleRun :exec
+UPDATE summary_schedules SET last_run_on = sqlc.arg('today')::date WHERE id = sqlc.arg('id');
+
 -- name: ListNodesOfTickets :many
 SELECT tn.ticket_id, tn.node_id FROM ticket_nodes tn WHERE tn.ticket_id = ANY (sqlc.arg('ticket_ids')::bigint[]) ORDER BY tn.ticket_id, tn.node_id;
 

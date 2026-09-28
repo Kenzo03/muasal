@@ -30,17 +30,23 @@ func (s *Server) ListTickets(w http.ResponseWriter, r *http.Request, key string,
 	if csvOut {
 		limit, offset = exportMax, 0
 	}
+	if !staleDaysOK(w, params.StaleDays) {
+		return
+	}
 	filter := db.ListTicketsParams{
 		ProjectID: pc.project.ID, AllClients: pc.scope.AllClients, ClientIds: orEmpty(pc.scope.ClientIDs),
 		StatusID: params.StatusId, OpenOnly: deref(params.Open), ClientID: params.ClientId, CoreOnly: deref(params.Core),
-		AssigneeID: params.AssigneeId, Q: strings.TrimSpace(deref(params.Q)), Sort: "updated",
+		AssigneeID: params.AssigneeId, Unassigned: deref(params.Unassigned), Q: strings.TrimSpace(deref(params.Q)), Sort: "updated",
 		MissingReason: params.Missing != nil && *params.Missing == ListTicketsParamsMissingReason,
 		MissingMenus:  params.Missing != nil && *params.Missing == ListTicketsParamsMissingMenus,
-		ClosedDays:    params.ClosedDays,
-		Lim:           int32(limit + 1), Off: int32(offset),
+		ClosedDays:    params.ClosedDays, StaleDays: params.StaleDays,
+		Lim: int32(limit + 1), Off: int32(offset),
 	}
 	if params.Category != nil {
 		filter.Category = ptr(string(*params.Category))
+	}
+	if params.Due != nil {
+		filter.Due = ptr(string(*params.Due))
 	}
 	if params.Type != nil {
 		filter.Type = ptr(string(*params.Type))
@@ -78,6 +84,15 @@ func (s *Server) ListTickets(w http.ResponseWriter, r *http.Request, key string,
 		page.Items = append(page.Items, toTicketSummary(t))
 	}
 	writeJSON(w, http.StatusOK, page)
+}
+
+// staleDaysOK answers 400 for a stale_days outside 1–365.
+func staleDaysOK(w http.ResponseWriter, days *int32) bool {
+	if days != nil && (*days < 1 || *days > 365) {
+		writeProblem(w, http.StatusBadRequest, "invalid_parameter", "stale_days is a number of days from 1 to 365")
+		return false
+	}
+	return true
 }
 
 // paging reads a page size (50 by default, at most 1,000) and an offset cursor

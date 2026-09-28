@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"regexp"
@@ -91,11 +92,25 @@ func (s *Server) CreateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	key := strings.ToUpper(strings.TrimSpace(in.Key))
-	if fields := validateProject(&key, &in.Name, in.Description); len(fields) > 0 {
+	fields := validateProject(&key, &in.Name, in.Description)
+	ctx := r.Context()
+	var template *db.Project
+	if k := strings.ToUpper(strings.TrimSpace(deref(in.TemplateKey))); k != "" {
+		t, err := s.q.GetProjectByKey(ctx, k)
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+			fields = append(fields, FieldError{Field: "template_key", Code: "invalid", Message: "Choose an existing project to copy"})
+		case err != nil:
+			s.fail(w, r, err)
+			return
+		default:
+			template = &t
+		}
+	}
+	if len(fields) > 0 {
 		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields", fields...)
 		return
 	}
-	ctx := r.Context()
 	var p db.Project
 	err := s.inTx(ctx, func(q *db.Queries) error {
 		var err error
@@ -104,7 +119,14 @@ func (s *Server) CreateProject(w http.ResponseWriter, r *http.Request) {
 		}); err != nil {
 			return err
 		}
-		return audit(ctx, q, webMeta(r).inProject(p.ID), &admin.ID, "project", p.ID, "create", projectAudit(p))
+		change := projectAudit(p)
+		if template != nil {
+			if err := copyTemplate(ctx, q, template.ID, p.ID); err != nil {
+				return err
+			}
+			change["template"] = template.Key
+		}
+		return audit(ctx, q, webMeta(r).inProject(p.ID), &admin.ID, "project", p.ID, "create", change)
 	})
 	if isUniqueViolation(err) {
 		projectKeyTaken(w)
@@ -190,6 +212,41 @@ func projectKeyTaken(w http.ResponseWriter) {
 
 func projectAudit(p db.Project) map[string]any {
 	return map[string]any{"key": p.Key, "name": p.Name, "description": p.Description}
+}
+
+// copyTemplate gives a new project a template's statuses, in place of the
+// defaults, and its live module tree in the same order. Client-specific menus
+// arrive shared: the new project links no clients yet.
+func copyTemplate(ctx context.Context, q *db.Queries, from, to int64) error {
+	if err := q.DeleteProjectStatuses(ctx, to); err != nil {
+		return err
+	}
+	if err := q.CopyStatuses(ctx, db.CopyStatusesParams{ProjectID: to, TemplateID: from}); err != nil {
+		return err
+	}
+	nodes, err := q.ListNodes(ctx, db.ListNodesParams{ProjectID: from, AllClients: true, ClientIds: []int64{}})
+	if err != nil {
+		return err
+	}
+	kids := map[int64][]db.ListNodesRow{} // by parent id, 0 for the top; siblings in position order
+	for _, n := range nodes {
+		kids[deref(n.ParentID)] = append(kids[deref(n.ParentID)], n)
+	}
+	var copyUnder func(parent int64, newParent *int64) error
+	copyUnder = func(parent int64, newParent *int64) error {
+		for _, n := range kids[parent] {
+			c, err := q.CreateNode(ctx, db.CreateNodeParams{ProjectID: to, ParentID: newParent, Type: n.Type, Name: n.Name,
+				Code: n.Code, Aliases: n.Aliases, Description: n.Description})
+			if err != nil {
+				return err
+			}
+			if err := copyUnder(n.ID, &c.ID); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	return copyUnder(0, nil)
 }
 
 func toAPIProject(p db.Project, role string) Project {

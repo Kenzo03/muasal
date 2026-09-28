@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -72,7 +73,7 @@ func (s *Server) summaryScope(w http.ResponseWriter, r *http.Request, in Summary
 		}
 		clientName = c.Name
 	}
-	items, err := s.summaryItems(ctx, pc, in, nodes, names)
+	items, err := s.summaryItems(ctx, pc, subtree(nodes, in.NodeId), in.ClientId, in.From.Time, in.To.Time, deref(in.IncludeCancelled), names)
 	if err != nil {
 		s.fail(w, r, err)
 		return projectCtx{}, db.Node{}, "", nil, false
@@ -80,9 +81,9 @@ func (s *Server) summaryScope(w http.ResponseWriter, r *http.Request, in Summary
 	return pc, node, clientName, items, true
 }
 
-func (s *Server) summaryItems(ctx context.Context, pc projectCtx, in SummaryScope, nodes []db.ListNodesRow, names map[int64]string) ([]summaryItem, error) {
-	ids := subtree(nodes, in.NodeId)
-	from, to := in.From.Time, in.To.Time
+// summaryItems lists the visible closed tickets and decision notes on the nodes
+// ids between from and to, for one client with core work (clientID) or all.
+func (s *Server) summaryItems(ctx context.Context, pc projectCtx, ids []int64, clientID *int64, from, to time.Time, cancelled bool, names map[int64]string) ([]summaryItem, error) {
 	rows, err := s.q.ListNodeTimeline(ctx, db.ListNodeTimelineParams{
 		ProjectID: pc.project.ID, NodeIds: ids, AllClients: pc.scope.AllClients, ClientIds: orEmpty(pc.scope.ClientIDs),
 		FromDate: &from, ToDate: &to, Lim: 2000,
@@ -98,7 +99,7 @@ func (s *Server) summaryItems(ctx context.Context, pc projectCtx, in SummaryScop
 		return nil, err
 	}
 	// One client's summary also covers core work and notes for all clients.
-	forClient := func(id *int64) bool { return in.ClientId == nil || id == nil || *id == *in.ClientId }
+	forClient := func(id *int64) bool { return clientID == nil || id == nil || *id == *clientID }
 	var ticketIDs, noteIDs []int64
 	var items []summaryItem
 	for i := range rows {
@@ -106,15 +107,15 @@ func (s *Server) summaryItems(ctx context.Context, pc projectCtx, in SummaryScop
 		if !forClient(t.ClientID) {
 			continue
 		}
-		cancelled := t.Status.Category == string(StatusCategoryCancelled)
-		if t.ClosedAt == nil || !(t.Status.Category == string(StatusCategoryDone) || cancelled && deref(in.IncludeCancelled)) {
+		isCancelled := t.Status.Category == string(StatusCategoryCancelled)
+		if t.ClosedAt == nil || !(t.Status.Category == string(StatusCategoryDone) || isCancelled && cancelled) {
 			continue
 		}
 		it := summaryItem{ticketID: t.ID, decision: t, api: SummaryItem{
 			Key: t.Key, Kind: SummaryItemKindTicket, Title: t.Title, Date: openapi_types.Date{Time: *t.ClosedAt},
 			Client: t.ClientName, RequestedBy: ptr(deref(t.RequesterContactName) + deref(t.RequesterUserName)),
 		}}
-		if cancelled {
+		if isCancelled {
 			it.api.Cancelled = ptr(true)
 		}
 		items = append(items, it)
@@ -225,6 +226,34 @@ func (s *Server) CreateSummary(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	client := in.Audience == SummaryAudienceClient
 	lang := string(in.Language)
+	inputs, outItems, err := s.summaryInputs(ctx, items, client)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	res, err := draft.Summarize(ctx, s.ai, inputs, lang, client)
+	if err != nil {
+		s.draftFailed(w, r, err)
+		return
+	}
+	title := draft.Title(node.Name, clientName, in.From.Time, in.To.Time, lang)
+	md := draft.Markdown(title, res, inputs, lang, client)
+	params, _ := json.Marshal(scope)
+	itemsJSON, _ := json.Marshal(outItems)
+	row, err := s.q.CreateSummary(ctx, db.CreateSummaryParams{
+		ProjectID: pc.project.ID, CreatedBy: pc.user.ID, Title: title, Params: params, Items: itemsJSON, Markdown: md, Model: res.Model,
+	})
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, toAPISummary(row, pc.project.Key, pc.user.Name))
+}
+
+// summaryInputs builds what the model reads for each item: the decision record,
+// and for the team also the ticket's reason, description and latest five
+// comments; a client-facing summary reads Client-safe comments only (AC-TK-10).
+func (s *Server) summaryInputs(ctx context.Context, items []summaryItem, client bool) ([]draft.Item, []SummaryItem, error) {
 	var ticketIDs []int64
 	for _, it := range items {
 		if it.ticketID != 0 {
@@ -233,8 +262,7 @@ func (s *Server) CreateSummary(w http.ResponseWriter, r *http.Request) {
 	}
 	comments, err := s.q.ListCommentsOfTickets(ctx, db.ListCommentsOfTicketsParams{TicketIds: ticketIDs, ClientSafe: client})
 	if err != nil {
-		s.fail(w, r, err)
-		return
+		return nil, nil, err
 	}
 	byTicket := map[int64][]string{}
 	for _, c := range comments {
@@ -255,8 +283,7 @@ func (s *Server) CreateSummary(w http.ResponseWriter, r *http.Request) {
 			if !client {
 				t, err := s.q.GetTicketByKey(ctx, d.Key)
 				if err != nil {
-					s.fail(w, r, err)
-					return
+					return nil, nil, err
 				}
 				if t.Ticket.Reason != "" {
 					fmt.Fprintf(&b, "Reason: %s\n", t.Ticket.Reason)
@@ -276,23 +303,7 @@ func (s *Server) CreateSummary(w http.ResponseWriter, r *http.Request) {
 			Client: deref(it.api.Client), RequestedBy: deref(it.api.RequestedBy), Date: it.api.Date.Time,
 			Cancelled: deref(it.api.Cancelled), Text: b.String()}
 	}
-	res, err := draft.Summarize(ctx, s.ai, inputs, lang, client)
-	if err != nil {
-		s.draftFailed(w, r, err)
-		return
-	}
-	title := draft.Title(node.Name, clientName, in.From.Time, in.To.Time, lang)
-	md := draft.Markdown(title, res, inputs, lang, client)
-	params, _ := json.Marshal(scope)
-	itemsJSON, _ := json.Marshal(outItems)
-	row, err := s.q.CreateSummary(ctx, db.CreateSummaryParams{
-		ProjectID: pc.project.ID, CreatedBy: pc.user.ID, Title: title, Params: params, Items: itemsJSON, Markdown: md, Model: res.Model,
-	})
-	if err != nil {
-		s.fail(w, r, err)
-		return
-	}
-	writeJSON(w, http.StatusCreated, toAPISummary(row, pc.project.Key, pc.user.Name))
+	return inputs, outItems, nil
 }
 
 // summaryFor loads a summary for its creator or a project admin; anyone else gets 404.

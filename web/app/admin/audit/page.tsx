@@ -7,7 +7,7 @@ import { getMe, serverApi } from "@/lib/server-api";
 import { one } from "@/lib/ticket-query";
 import { button, cx, field, table } from "@/lib/ui";
 
-const entities = ["ticket", "comment", "node", "project", "status", "statuses", "client", "contact", "user", "ai_settings"];
+const entities = ["ticket", "comment", "node", "project", "status", "statuses", "client", "contact", "user", "ai_settings", "summary_schedule"];
 
 // Admin → Audit log (FSD §15.4): read-only, filtered by actor, entity, action
 // and date, with a CSV export of the same filter.

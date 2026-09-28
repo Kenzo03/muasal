@@ -256,6 +256,7 @@ type Options struct {
 	OwnerURL     string               // MIGRATE_DATABASE_URL, for ChangeDimension
 	AskLogDays   int                  // Ask log retention in days; 0 keeps it (FSD §15.4)
 	Register     func(*river.Workers) // adds other packages' workers, such as ticket imports
+	Periodic     []*river.PeriodicJob // other packages' periodic jobs, such as weekly summaries
 }
 
 // NewClient returns the River client that `app serve` starts: the index queue's
@@ -278,11 +279,11 @@ func NewClient(pool *pgxpool.Pool, rt *ai.Runtime, log *slog.Logger, opts Option
 		Queues:            map[string]river.QueueConfig{QueueIndex: {MaxWorkers: cmp.Or(opts.Workers, 4)}},
 		Workers:           workers,
 		MaxAttempts:       10,
-		PeriodicJobs: []*river.PeriodicJob{
+		PeriodicJobs: append([]*river.PeriodicJob{
 			river.NewPeriodicJob(river.PeriodicInterval(time.Minute),
 				func() (river.JobArgs, *river.InsertOpts) { return EmbedPending{}, nil }, &river.PeriodicJobOpts{RunOnStart: true}),
 			river.NewPeriodicJob(river.PeriodicInterval(24*time.Hour),
 				func() (river.JobArgs, *river.InsertOpts) { return PurgeAsk{}, nil }, &river.PeriodicJobOpts{RunOnStart: true}),
-		},
+		}, opts.Periodic...),
 	})
 }

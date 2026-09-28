@@ -29,9 +29,10 @@ export default async function TicketsPage({
   const tPri = await getTranslations("priorities");
   const api = await serverApi();
   const path = { params: { path: { key } } };
-  const [clients, statuses, page] = await Promise.all([
+  const [clients, statuses, assignees, page] = await Promise.all([
     api.GET("/projects/{key}/clients", path),
     api.GET("/projects/{key}/statuses", path),
+    api.GET("/projects/{key}/assignees", path),
     api.GET("/projects/{key}/tickets", { params: { path: { key }, query: ticketQuery(values) } }),
   ]);
   const statusOf = new Map((statuses.data?.items ?? []).map((s) => [s.id, s]));
@@ -45,7 +46,13 @@ export default async function TicketsPage({
       <PageBar>
         <h1 className="text-base font-semibold">{tp("tickets")}</h1>
         <span className="mr-2 text-[13px] text-muted">{project.name}</span>
-        <TicketFilters action={`/p/${key}/tickets`} values={values} clients={clients.data?.items ?? []} statuses={statuses.data?.items ?? []} />
+        <TicketFilters
+          action={`/p/${key}/tickets`}
+          values={values}
+          clients={clients.data?.items ?? []}
+          assignees={assignees.data?.items ?? []}
+          statuses={statuses.data?.items ?? []}
+        />
         <a href={`/api/v1/projects/${key}/tickets?${new URLSearchParams({ ...exportQuery(ticketQuery(values)), format: "csv" })}`} download className={button.secondary}>
           <Icon name="download" />
           {t("exportCsv")}

@@ -23,9 +23,10 @@ export default async function BoardPage({
   const api = await serverApi();
   const path = { params: { path: { key } } };
   const showAll = values.closed === "all";
-  const [clients, statuses, nodes, page] = await Promise.all([
+  const [clients, statuses, assignees, nodes, page] = await Promise.all([
     api.GET("/projects/{key}/clients", path),
     api.GET("/projects/{key}/statuses", path),
+    api.GET("/projects/{key}/assignees", path),
     api.GET("/projects/{key}/nodes", path), // the close dialog's menu picker
     // ponytail: one page of up to 1,000 cards; per-column "Show more" comes with larger boards.
     // Done and Cancelled hold the last 14 days unless "Show all" (FSD §8.4).
@@ -38,7 +39,7 @@ export default async function BoardPage({
       <PageBar>
         <h1 className="text-base font-semibold">{t("board")}</h1>
         <span className="mr-2 text-[13px] text-muted">{project.name}</span>
-        <TicketFilters action={`/p/${key}/board`} values={values} clients={clients.data?.items ?? []} />
+        <TicketFilters action={`/p/${key}/board`} values={values} clients={clients.data?.items ?? []} assignees={assignees.data?.items ?? []} />
       </PageBar>
       <main className="px-4 py-4 md:px-5">
         <Board

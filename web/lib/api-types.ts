@@ -584,6 +584,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{key}/workload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description Open tickets per person, for whoever leads the project: every member who can own tickets, even with none, then anyone else who still owns some, then unassigned work. The counts cover the tickets the caller may see. */
+        get: operations["getWorkload"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{key}/summary-schedules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description Project admins. The project's weekly change summaries. */
+        get: operations["listSummarySchedules"];
+        put?: never;
+        /** @description Project admins. Every week on the weekday (by UTC date), a summary of the past seven days' closed tickets and decision notes, for one client with core work or for all clients, joins the scheduler's summaries and rings their bell. A week without changes writes none. With AI off or unavailable, the summary lists each change from its decision record instead of the model's prose. */
+        post: operations["createSummarySchedule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/summary-schedules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Project admins. Summaries already written stay. */
+        delete: operations["deleteSummarySchedule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{key}/tickets": {
         parameters: {
             query?: never;
@@ -1535,6 +1593,8 @@ export interface components {
             key: string;
             name: string;
             description?: string;
+            /** @description A project whose statuses and live module tree the new project copies. Client-specific menus arrive as shared ones, since the new project links no clients yet. */
+            template_key?: string;
         };
         ProjectUpdate: {
             key?: string;
@@ -2010,7 +2070,7 @@ export interface components {
             project_key: string;
             /**
              * Format: int64
-             * @description The node
+             * @description The node, with its sub-nodes; 0 in a weekly summary, which covers the whole project.
              */
             node_id: number;
             /**
@@ -2082,6 +2142,52 @@ export interface components {
         };
         SummaryList: {
             items: components["schemas"]["SummaryListItem"][];
+        };
+        SummarySchedule: {
+            /** Format: int64 */
+            id: number;
+            client?: components["schemas"]["Ref"];
+            language: components["schemas"]["SummaryLanguage"];
+            audience: components["schemas"]["SummaryAudience"];
+            /** @description ISO weekday: 1 is Monday. */
+            weekday: number;
+            created_by: components["schemas"]["Ref"];
+            /**
+             * Format: date
+             * @description The day it last ran; omitted before its first run.
+             */
+            last_run_on?: string;
+        };
+        SummaryScheduleCreate: {
+            /**
+             * Format: int64
+             * @description One client
+             */
+            client_id?: number;
+            language: components["schemas"]["SummaryLanguage"];
+            audience: components["schemas"]["SummaryAudience"];
+            weekday: number;
+        };
+        SummaryScheduleList: {
+            items: components["schemas"]["SummarySchedule"][];
+        };
+        WorkloadRow: {
+            assignee?: components["schemas"]["Ref"];
+            /** @description To do and In progress. */
+            open: number;
+            in_progress: number;
+            overdue: number;
+            /** @description Due from today through 7 days ahead. */
+            due_week: number;
+            /** @description Unchanged for stale_days or more. */
+            stale: number;
+            /** @description Urgent or high priority. */
+            high: number;
+        };
+        Workload: {
+            /** @description People by name; a row without assignee counts unassigned tickets. */
+            rows: components["schemas"]["WorkloadRow"][];
+            stale_days: number;
         };
         /** @enum {string} */
         DecisionOutcome: "implemented" | "rejected";
@@ -3993,6 +4099,103 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    getWorkload: {
+        parameters: {
+            query?: {
+                /** @description What counts as stale; 7 by default. */
+                stale_days?: number;
+            };
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One row per person by name, and a last row for unassigned tickets when there are any. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Workload"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listSummarySchedules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description By weekday, then client. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SummaryScheduleList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createSummarySchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SummaryScheduleCreate"];
+            };
+        };
+        responses: {
+            /** @description The schedule. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SummarySchedule"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteSummarySchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     listTickets: {
         parameters: {
             query?: {
@@ -4009,6 +4212,12 @@ export interface operations {
                 assignee_id?: number;
                 /** @description Only tickets assigned to the caller. */
                 mine?: boolean;
+                /** @description Only tickets nobody owns. */
+                unassigned?: boolean;
+                /** @description Open tickets past their due date (overdue), or due from today through 7 days ahead (week), as Home counts them. */
+                due?: "overdue" | "week";
+                /** @description Open tickets unchanged for at least this many days; comments, files and decision records count as changes. */
+                stale_days?: number;
                 /** @description Tickets on this node or its sub-nodes. */
                 node_id?: number;
                 /** @description Words in the title */

@@ -81,6 +81,13 @@ WHERE t.project_id = sqlc.arg('project_id')
   AND (sqlc.narg('client_id')::bigint IS NULL OR t.client_id = sqlc.narg('client_id')::bigint)
   AND (NOT sqlc.arg('core_only')::boolean OR t.client_id IS NULL)
   AND (sqlc.narg('assignee_id')::bigint IS NULL OR t.assignee_id = sqlc.narg('assignee_id')::bigint)
+  AND (NOT sqlc.arg('unassigned')::boolean OR t.assignee_id IS NULL)
+  -- due and stale_days count open tickets only, as Home and the workload page do.
+  AND (sqlc.narg('due')::text IS NULL OR (s.category IN ('todo', 'in_progress') AND (
+        (sqlc.narg('due')::text = 'overdue' AND t.due_date < current_date)
+        OR (sqlc.narg('due')::text = 'week' AND t.due_date BETWEEN current_date AND current_date + 7))))
+  AND (sqlc.narg('stale_days')::int IS NULL OR (s.category IN ('todo', 'in_progress')
+        AND t.updated_at < now() - make_interval(days => sqlc.narg('stale_days')::int)))
   AND (sqlc.narg('node_ids')::bigint[] IS NULL OR EXISTS (
         SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id AND tn.node_id = ANY (sqlc.narg('node_ids')::bigint[])))
   AND (NOT sqlc.arg('missing_reason')::boolean OR t.reason = '')

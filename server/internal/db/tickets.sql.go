@@ -234,18 +234,25 @@ WHERE t.project_id = $1
   AND ($9::bigint IS NULL OR t.client_id = $9::bigint)
   AND (NOT $10::boolean OR t.client_id IS NULL)
   AND ($11::bigint IS NULL OR t.assignee_id = $11::bigint)
-  AND ($12::bigint[] IS NULL OR EXISTS (
-        SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id AND tn.node_id = ANY ($12::bigint[])))
-  AND (NOT $13::boolean OR t.reason = '')
-  AND (NOT $14::boolean OR NOT EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id))
-  AND ($15::text = '' OR t.title ILIKE '%' || $15::text || '%' OR t.key = upper($15::text))
+  AND (NOT $12::boolean OR t.assignee_id IS NULL)
+  -- due and stale_days count open tickets only, as Home and the workload page do.
+  AND ($13::text IS NULL OR (s.category IN ('todo', 'in_progress') AND (
+        ($13::text = 'overdue' AND t.due_date < current_date)
+        OR ($13::text = 'week' AND t.due_date BETWEEN current_date AND current_date + 7))))
+  AND ($14::int IS NULL OR (s.category IN ('todo', 'in_progress')
+        AND t.updated_at < now() - make_interval(days => $14::int)))
+  AND ($15::bigint[] IS NULL OR EXISTS (
+        SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id AND tn.node_id = ANY ($15::bigint[])))
+  AND (NOT $16::boolean OR t.reason = '')
+  AND (NOT $17::boolean OR NOT EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id))
+  AND ($18::text = '' OR t.title ILIKE '%' || $18::text || '%' OR t.key = upper($18::text))
 ORDER BY
-  CASE WHEN $16::text = 'priority' THEN array_position(ARRAY['urgent', 'high', 'medium', 'low'], t.priority) END,
-  CASE WHEN $16::text IN ('priority', 'due') THEN t.due_date END NULLS LAST,
-  CASE WHEN $16::text = 'updated' THEN t.updated_at END DESC,
-  CASE WHEN $16::text = 'created' THEN t.number END DESC,
+  CASE WHEN $19::text = 'priority' THEN array_position(ARRAY['urgent', 'high', 'medium', 'low'], t.priority) END,
+  CASE WHEN $19::text IN ('priority', 'due') THEN t.due_date END NULLS LAST,
+  CASE WHEN $19::text = 'updated' THEN t.updated_at END DESC,
+  CASE WHEN $19::text = 'created' THEN t.number END DESC,
   t.number
-LIMIT $18 OFFSET $17
+LIMIT $21 OFFSET $20
 `
 
 type ListTicketsParams struct {
@@ -260,6 +267,9 @@ type ListTicketsParams struct {
 	ClientID      *int64
 	CoreOnly      bool
 	AssigneeID    *int64
+	Unassigned    bool
+	Due           *string
+	StaleDays     *int32
 	NodeIds       []int64
 	MissingReason bool
 	MissingMenus  bool
@@ -302,6 +312,9 @@ func (q *Queries) ListTickets(ctx context.Context, arg ListTicketsParams) ([]Lis
 		arg.ClientID,
 		arg.CoreOnly,
 		arg.AssigneeID,
+		arg.Unassigned,
+		arg.Due,
+		arg.StaleDays,
 		arg.NodeIds,
 		arg.MissingReason,
 		arg.MissingMenus,
