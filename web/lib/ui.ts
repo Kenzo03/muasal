@@ -14,10 +14,11 @@ export const button = {
   quiet: "inline-flex cursor-pointer items-center gap-1 text-[13px] font-semibold text-link hover:text-link-hover hover:underline disabled:opacity-40",
 };
 
+// A control marked aria-invalid gets a red border, so an error points at its field.
 export const field = {
-  input: "h-10 rounded-[10px] border border-field bg-white px-3 text-sm text-ink placeholder:text-muted disabled:opacity-50",
-  compact: "h-9 rounded-[10px] border border-line bg-white px-2.5 text-[13px] text-ink",
-  textarea: "rounded-xl border border-field bg-white px-3 py-2.5 text-sm leading-relaxed text-ink placeholder:text-muted",
+  input: "h-10 rounded-[10px] border border-field bg-white px-3 text-sm text-ink placeholder:text-muted disabled:opacity-50 aria-invalid:border-danger",
+  compact: "h-9 rounded-[10px] border border-line bg-white px-2.5 text-[13px] text-ink aria-invalid:border-danger",
+  textarea: "rounded-xl border border-field bg-white px-3 py-2.5 text-sm leading-relaxed text-ink placeholder:text-muted aria-invalid:border-danger",
   label: "flex flex-col gap-1.5 text-[13px] font-semibold text-ink",
   hint: "text-xs text-muted",
   error: "text-[13px] text-danger",

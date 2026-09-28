@@ -14,13 +14,26 @@ export function problemKey(p?: Problem): string {
   return p?.errors?.[0]?.code ?? p?.code ?? "generic";
 }
 
+type Translate = { (key: string, values?: Record<string, string>): string; has: (key: string) => boolean };
+
+/**
+ * An API problem as a sentence, from the "errors" messages. A field error whose
+ * code alone would not say which field ("invalid", "required") names the field
+ * when its label is known: "Periksa isian Kunci", not "Periksa isian ini".
+ */
+export function problemMessage(p: Problem | undefined, t: Translate): string {
+  const key = problemKey(p);
+  const field = p?.errors?.[0]?.field.split(".").pop();
+  if ((key === "invalid" || key === "required") && field && t.has(`fields.${field}`)) {
+    return t(`${key}Field`, { field: t(`fields.${field}`) });
+  }
+  return t.has(key) ? t(key) : t("generic");
+}
+
 /** Turns an API problem into a sentence in the user's language. */
 export function useProblemText() {
   const t = useTranslations("errors");
-  return (p?: Problem) => {
-    const key = problemKey(p);
-    return t.has(key) ? t(key) : t("generic");
-  };
+  return (p?: Problem) => problemMessage(p, t);
 }
 export type Status = components["schemas"]["Status"];
 export type Ticket = components["schemas"]["Ticket"];
