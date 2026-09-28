@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 // The tests run in the default UI language, Indonesian: after sign-in the UI
 // follows the user's profile language, and new users start with `id`.
@@ -12,11 +12,24 @@ export async function setPassword(page: Page, link: string, password: string) {
 }
 
 export async function signIn(page: Page, email: string, password: string) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Kata sandi").fill(password);
-  await page.getByRole("button", { name: "Masuk" }).click();
-  await expect(page).toHaveURL(/\/$/);
+  for (let tries = 0; ; tries++) {
+    await page.goto("/login");
+    await page.getByLabel("Email").fill(email);
+    await page.getByLabel("Kata sandi").fill(password);
+    const answer = page.waitForResponse((r) => r.url().endsWith("/auth/login"));
+    await page.getByRole("button", { name: "Masuk" }).click();
+    const res = await answer;
+    // The server takes 20 sign-ins a minute from one address (FSD §15.1), and a
+    // full run signs in more often than that, so a limited attempt waits for the
+    // next minute and tries once more.
+    if (tries === 0 && res.status() === 429 && (await res.json()).code === "rate_limited") {
+      test.info().setTimeout(test.info().timeout + 65_000);
+      await page.waitForTimeout(61_000);
+      continue;
+    }
+    await expect(page).toHaveURL(/\/$/);
+    return;
+  }
 }
 
 // Drags with several pointer moves, as dnd-kit waits for a short move before a
