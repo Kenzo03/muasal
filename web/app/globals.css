@@ -56,6 +56,21 @@
   }
 }
 
+/* Selects draw the app's chevron, set in from the edge, in place of the
+   browser's arrow, which hugs the border. The rule sits in the utilities layer
+   and its selector outranks a single class, so the room the chevron needs wins
+   over a select's own px-* or pr-* class. */
+@layer utilities {
+  select:not([multiple]) {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2371655c' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 6.5 8 10l3.5-3.5'/%3E%3C/svg%3E");
+    background-position: right 0.625rem center;
+    background-repeat: no-repeat;
+    background-size: 1rem;
+    padding-right: 2rem;
+  }
+}
+
 /* A change summary's print view (FSD §12.1): A4, page numbers, no app chrome. */
 @page {
   size: A4;

@@ -96,7 +96,7 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
                 value={ticket.status.id}
                 disabled={!canEdit}
                 onChange={(e) => transition(Number(e.target.value))}
-                className="h-full cursor-pointer rounded-full bg-transparent pr-2.5 text-[13.5px] font-bold text-ink outline-none disabled:cursor-default"
+                className="h-full cursor-pointer rounded-full bg-transparent text-[13.5px] font-bold text-ink outline-none disabled:cursor-default"
               >
                 {statuses.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>

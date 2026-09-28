@@ -52,8 +52,8 @@ export default async function Timeline({ items, notes, failed, more, limit, clie
   const requester = (it: TimelineEntry) => `${it.requester.name}${it.requester.title ? ` (${it.requester.title})` : ""}`;
   const grid = "grid grid-cols-[88px_22px_minmax(0,1fr)] gap-x-3 md:grid-cols-[112px_24px_minmax(0,1fr)] md:gap-x-3.5";
   // Each filter is a chip: its name, then a borderless control.
-  const pick = "flex h-9 items-center gap-1 rounded-[10px] border border-line bg-white pl-3 pr-1 text-[13.5px] font-semibold text-ink focus-within:border-accent";
-  const control = "h-full cursor-pointer rounded-[10px] bg-transparent pr-1 text-[13.5px] font-medium text-muted outline-none";
+  const pick = "flex h-9 items-center gap-1 rounded-[10px] border border-line bg-white pl-3 text-[13.5px] font-semibold text-ink focus-within:border-accent";
+  const control = "h-full cursor-pointer rounded-[10px] bg-transparent text-[13.5px] font-medium text-muted outline-none";
   const card = "rounded-2xl border border-line bg-white shadow-[0_1px_2px_rgba(43,36,32,0.04)]";
 
   return (

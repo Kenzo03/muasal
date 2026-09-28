@@ -17,8 +17,8 @@ export default async function TicketFilters({ action, values, clients, statuses 
   const t = await getTranslations("ticketFilters");
   const tTypes = await getTranslations("ticketTypes");
   // Each filter is a chip: its name, then a borderless select.
-  const pick = "flex h-9 items-center gap-1 rounded-[10px] border border-line bg-white pl-3 pr-1 text-[13.5px] font-semibold text-ink focus-within:border-accent";
-  const select = "h-full cursor-pointer rounded-[10px] bg-transparent pr-1 text-[13.5px] font-medium text-muted outline-none";
+  const pick = "flex h-9 items-center gap-1 rounded-[10px] border border-line bg-white pl-3 text-[13.5px] font-semibold text-ink focus-within:border-accent";
+  const select = "h-full cursor-pointer rounded-[10px] bg-transparent text-[13.5px] font-medium text-muted outline-none";
   return (
     <form method="get" action={action} aria-label={t("label")} className="flex flex-wrap items-center gap-2">
       <label className="flex h-9 items-center gap-2 rounded-[10px] border border-line bg-white px-3 text-muted focus-within:border-accent">

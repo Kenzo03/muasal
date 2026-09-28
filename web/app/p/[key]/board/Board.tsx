@@ -175,7 +175,7 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, s
                           aria-label={t("moveTo", { key: c.key })}
                           value={c.status_id}
                           onChange={(e) => move(c.id, Number(e.target.value))}
-                          className="ml-auto h-7 max-w-32 cursor-pointer rounded-lg bg-well px-1.5 text-xs font-semibold text-ink-soft hover:text-ink"
+                          className="ml-auto h-7 max-w-32 cursor-pointer rounded-lg bg-well pl-2 text-xs font-semibold text-ink-soft hover:text-ink"
                         >
                           {statuses.map((o) => (
                             <option key={o.id} value={o.id}>{o.name}</option>

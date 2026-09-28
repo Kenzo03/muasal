@@ -150,7 +150,7 @@ export default function AskView({ chips: preset = [], threadId: initialThread, q
               </button>
             </div>
           </details>
-          <label className="flex h-8 items-center gap-1 rounded-[9px] border border-line bg-paper pl-3 pr-1 text-[13px] font-semibold text-ink focus-within:border-accent">
+          <label className="flex h-8 items-center gap-1 rounded-[9px] border border-line bg-paper pl-3 text-[13px] font-semibold text-ink focus-within:border-accent">
             {t("language")}
             <select value={language} onChange={(e) => setLanguage(e.target.value as typeof language)} className="h-full cursor-pointer bg-transparent font-medium text-muted outline-none">
               <option value="auto">{t("langAuto")}</option>
