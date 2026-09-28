@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import Icon from "@/components/Icon";
 import { api } from "@/lib/api";
 import { useProblemText } from "@/lib/problem";
 import { button } from "@/lib/ui";
@@ -28,6 +29,7 @@ export default function DraftButton({ docKey }: { docKey: string }) {
           router.push(`/tree-drafts/${data.id}`);
         }}
       >
+        <Icon name="tree" />
         {t("draftTree")}
       </button>
       {error && <span role="alert" className="text-xs text-danger">{error}</span>}

@@ -1,16 +1,35 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { Project, User } from "@/lib/problem";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 
-// The project a page belongs to: /p/{key}/… or a ticket page such as /t/HRIS-231.
+// The project a page belongs to, read from its URL: /p/{key}/…, a ticket such as
+// /t/HRIS-231, a document such as /documents/HRIS-DOC1 or a note such as /notes/HRIS-DN7.
 function currentKey(path: string): string | undefined {
-  const m = path.match(/^\/p\/([^/]+)/) ?? path.match(/^\/t\/(.+)-\d+$/);
+  const m =
+    path.match(/^\/p\/([^/]+)/) ??
+    path.match(/^\/t\/(.+)-\d+$/) ??
+    path.match(/^\/documents\/(.+)-DOC\d+$/i) ??
+    path.match(/^\/notes\/(.+)-DN\d+$/i);
   return m?.[1].toUpperCase();
+}
+
+const PageProject = createContext<(key?: string) => void>(() => {});
+
+// Pages whose URL does not name their project, such as a tree draft or a
+// summary, render <ProjectOf> so the sidebar still shows that project.
+export function ProjectOf({ projectKey }: { projectKey: string }) {
+  const set = useContext(PageProject);
+  // Before paint, so client navigation does not flash the project list.
+  useLayoutEffect(() => {
+    set(projectKey);
+    return () => set(undefined);
+  }, [projectKey, set]);
+  return null;
 }
 
 // The signed-in frame of the Terakota Lembut design: the sidebar, the top bar and
@@ -20,7 +39,8 @@ function currentKey(path: string): string | undefined {
 export default function Frame({ me, projects, rail: railCookie, children }: { me: User; projects: Project[]; rail: boolean; children: React.ReactNode }) {
   const t = useTranslations("nav");
   const path = usePathname();
-  const project = projects.find((p) => p.key === currentKey(path));
+  const [pageKey, setPageKey] = useState<string>();
+  const project = projects.find((p) => p.key === (currentKey(path) ?? pageKey));
   const [rail, setRail] = useState(railCookie);
   const [drawer, setDrawer] = useState(false);
 
@@ -46,7 +66,7 @@ export default function Frame({ me, projects, rail: railCookie, children }: { me
       <Sidebar me={me} projects={projects} project={project} rail={rail} drawer={drawer} onNavigate={() => setDrawer(false)} onToggleRail={toggleRail} />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar me={me} projects={projects} project={project} drawer={drawer} onMenu={() => setDrawer(true)} />
-        {children}
+        <PageProject.Provider value={setPageKey}>{children}</PageProject.Provider>
       </div>
     </div>
   );

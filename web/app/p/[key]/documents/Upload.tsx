@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import Icon from "@/components/Icon";
 import type { components } from "@/lib/api-types";
 import { documentExtensions, toMarkdown } from "@/lib/convert";
+import { fileSize } from "@/lib/format";
 import { useProblemText, type Client, type Problem } from "@/lib/problem";
 import { button, cx, field, panel } from "@/lib/ui";
 
@@ -17,6 +19,7 @@ export default function Upload({ projectKey, clients, documents }: { projectKey:
   const router = useRouter();
   const problemText = useProblemText();
   const [title, setTitle] = useState("");
+  const [file, setFile] = useState<File>();
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
 
@@ -49,9 +52,16 @@ export default function Upload({ projectKey, clients, documents }: { projectKey:
   }
 
   return (
-    <form onSubmit={submit} aria-label={t("upload")} className={cx(panel, "flex flex-wrap items-end gap-3 p-4")}>
-      <label className={field.label}>
-        {t("file")}
+    <form onSubmit={submit} aria-label={t("upload")} className={cx(panel, "flex flex-col gap-4 p-5")}>
+      <h2 className="text-[15px] font-extrabold">{t("uploadTitle")}</h2>
+      {/* The file input spans the zone, invisible, so a click opens the picker and a dropped file lands in it. */}
+      <label className="relative flex flex-col items-center gap-1.5 rounded-xl border-2 border-dashed border-field bg-paper px-4 py-6 text-center hover:border-accent has-[:focus-visible]:border-accent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent">
+        <span className="sr-only">{t("file")}</span>
+        <span aria-hidden="true" className="mb-1 flex size-10 items-center justify-center rounded-full bg-white text-accent shadow-[0_1px_3px_rgba(43,36,32,0.12)]">
+          <Icon name="upload" className="size-5" />
+        </span>
+        <span aria-hidden="true" className={cx("max-w-full text-[13.5px] font-semibold text-ink", file && "truncate")}>{file ? file.name : t("drop")}</span>
+        <span aria-hidden="true" className="text-xs text-muted">{file ? fileSize(file.size) : t("fileTypes")}</span>
         <input
           type="file"
           name="file"
@@ -59,9 +69,10 @@ export default function Upload({ projectKey, clients, documents }: { projectKey:
           accept={documentExtensions.join(",")}
           onChange={(e) => {
             const f = e.target.files?.[0];
+            setFile(f);
             if (f && !title) setTitle(f.name.replace(/\.[^.]+$/, ""));
           }}
-          className="text-sm"
+          className="absolute inset-0 cursor-pointer opacity-0"
         />
       </label>
       <label className={field.label}>
@@ -88,9 +99,12 @@ export default function Upload({ projectKey, clients, documents }: { projectKey:
           </select>
         </label>
       )}
-      <button disabled={busy !== ""} className={button.primary}>{busy || t("upload")}</button>
-      {error && <p role="alert" className={cx(field.error, "w-full")}>{error}</p>}
-      <p className="w-full text-xs text-muted">{t("uploadHint")}</p>
+      <button disabled={busy !== ""} className={cx(button.primary, "w-full")}>
+        <Icon name="upload" />
+        {busy || t("upload")}
+      </button>
+      {error && <p role="alert" className={field.error}>{error}</p>}
+      <p className="text-xs leading-relaxed text-muted">{t("uploadHint")}</p>
     </form>
   );
 }

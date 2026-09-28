@@ -1204,17 +1204,20 @@
     "uploading": "Uploading…",
     "unreadable": "Muasal could not read text from this file.",
     "uploadHint": "The file is read in your browser; its headings become sections. Scanned PDFs without text cannot be read.",
+    "uploadTitle": "Upload a document",
+    "drop": "Drop a file here, or click to choose",
+    "fileTypes": "PDF, DOCX or Markdown, up to 20 MB",
     "download": "Download {name}",
     "uploadedBy": "Uploaded by {name}, {date}",
     "outline": "Outline",
     "drafts": "Tree drafts",
     "draftTree": "Draft module tree",
     "status": {
-      "running": "running",
-      "ready": "ready to review",
-      "applied": "applied",
-      "discarded": "discarded",
-      "failed": "failed"
+      "running": "Running",
+      "ready": "Ready to review",
+      "applied": "Applied",
+      "discarded": "Discarded",
+      "failed": "Failed"
     },
     "reviewHint": "Applying creates the ticked nodes the tree lacks, and links every node to its sections so Ask can cite them."
   },

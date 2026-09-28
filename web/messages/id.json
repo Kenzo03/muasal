@@ -1204,17 +1204,20 @@
     "uploading": "Mengunggah…",
     "unreadable": "Muasal tidak dapat membaca teks dari berkas ini.",
     "uploadHint": "Berkas dibaca di peramban Anda; judul-judulnya menjadi bagian. PDF hasil pindai tanpa teks tidak dapat dibaca.",
+    "uploadTitle": "Unggah dokumen",
+    "drop": "Tarik berkas ke sini, atau klik untuk memilih",
+    "fileTypes": "PDF, DOCX, atau Markdown, maks. 20 MB",
     "download": "Unduh {name}",
     "uploadedBy": "Diunggah oleh {name}, {date}",
     "outline": "Daftar isi",
     "drafts": "Draf pohon",
     "draftTree": "Susun draf pohon modul",
     "status": {
-      "running": "berjalan",
-      "ready": "siap ditinjau",
-      "applied": "diterapkan",
-      "discarded": "dibuang",
-      "failed": "gagal"
+      "running": "Berjalan",
+      "ready": "Siap ditinjau",
+      "applied": "Diterapkan",
+      "discarded": "Dibuang",
+      "failed": "Gagal"
     },
     "reviewHint": "Menerapkan membuat node yang dicentang dan belum ada di pohon, serta menautkan setiap node ke bagiannya agar Tanya dapat mengutipnya."
   },

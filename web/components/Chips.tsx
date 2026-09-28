@@ -1,4 +1,5 @@
 import Icon from "./Icon";
+import type { components } from "@/lib/api-types";
 import type { Priority, Ref, TicketType } from "@/lib/problem";
 import { chip, cx } from "@/lib/ui";
 
@@ -31,6 +32,19 @@ const priorityTone: Record<Priority, string> = {
 
 export function PriorityChip({ priority, label }: { priority: Priority; label: string }) {
   return <span className={cx(chip, priorityTone[priority])}>{label}</span>;
+}
+
+type DraftStatus = components["schemas"]["TreeDraftStatus"];
+const draftTone: Record<DraftStatus, string> = {
+  running: "bg-warn-soft text-warn",
+  ready: "bg-accent-soft text-accent-strong",
+  applied: "bg-ok-soft text-ok",
+  discarded: "bg-well text-muted",
+  failed: "bg-danger-soft text-danger",
+};
+
+export function DraftStatusChip({ status, label }: { status: DraftStatus; label: string }) {
+  return <span className={cx(chip, draftTone[status])}>{label}</span>;
 }
 
 export const typeIcon = {
