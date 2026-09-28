@@ -37,10 +37,11 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Every page; not the API, Next.js assets or prefetches (which carry no nonce).
+  // Every page; not the API, Next.js assets, the app icons (the sign-in page
+  // shows them too) or prefetches (which carry no nonce).
   matcher: [
     {
-      source: "/((?!api|_next/static|_next/image|favicon.ico).*)",
+      source: "/((?!api|_next/static|_next/image|favicon.ico|icon.svg|apple-icon).*)",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "purpose", value: "prefetch" },
