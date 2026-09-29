@@ -83,3 +83,18 @@ func TestSimilarity(t *testing.T) {
 		t.Fatalf("different names: %v", s)
 	}
 }
+
+// MSL-3, MSL-17: a heading's trailing ID in brackets is split off; words in
+// brackets are part of the name.
+func TestHeadingName(t *testing.T) {
+	for title, want := range map[string][2]string{
+		"Persetujuan Sales Order (SO-02)": {"Persetujuan Sales Order", "SO-02"},
+		"Laporan Umur Piutang (AR-03) ":   {"Laporan Umur Piutang", "AR-03"},
+		"Catatan (Opsional)":              {"Catatan (Opsional)", ""},
+		"Overtime Approval":               {"Overtime Approval", ""},
+	} {
+		if name, id := HeadingName(title); [2]string{name, id} != want {
+			t.Errorf("%q: %q %q, want %v", title, name, id, want)
+		}
+	}
+}

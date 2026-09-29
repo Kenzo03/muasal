@@ -39,7 +39,7 @@ export default async function TreeDraftPage({ params }: { params: Promise<{ id: 
         </div>
       </PageBar>
       <main className="px-4 py-4 md:px-5">
-        <Review initial={data} projectKey={projectKey} />
+        <Review initial={data} projectKey={projectKey} sections={Object.fromEntries((doc.data?.sections ?? []).map((s) => [s.number, s.title]))} />
       </main>
     </>
   );

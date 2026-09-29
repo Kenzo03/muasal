@@ -65,6 +65,31 @@ func Split(markdown, title string) []Section {
 	return out
 }
 
+// idRe finds a heading's trailing ID in brackets, such as "(SO-02)": no
+// spaces and at least one digit, so "(Opsional)" stays part of the name.
+var idRe = regexp.MustCompile(`\s*\(([^()\s]*\d[^()\s]*)\)\s*$`)
+
+// HeadingName splits a heading's title into its name and a trailing ID:
+// "Persetujuan Sales Order (SO-02)" gives "Persetujuan Sales Order", "SO-02".
+func HeadingName(title string) (name, id string) {
+	if m := idRe.FindStringSubmatchIndex(title); m != nil {
+		return strings.TrimSpace(title[:m[0]]), title[m[2]:m[3]]
+	}
+	return strings.TrimSpace(title), ""
+}
+
+// SectionFor returns the number of the section whose heading names name,
+// ignoring case, spacing and a trailing ID; "" when none does.
+func SectionFor(sections []Section, name string) string {
+	name = strings.Join(strings.Fields(name), " ")
+	for _, s := range sections {
+		if n, _ := HeadingName(s.Title); strings.EqualFold(strings.Join(strings.Fields(n), " "), name) {
+			return s.Number
+		}
+	}
+	return ""
+}
+
 // Parts groups sections, in order, into parts of at most budget characters
 // (§7.7). A section alone over the budget is split at paragraph ends, or
 // hard cut when a paragraph is itself too long.

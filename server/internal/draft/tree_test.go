@@ -21,3 +21,26 @@ func TestOutline(t *testing.T) {
 		t.Fatalf("not cut: %d chars", len(long))
 	}
 }
+
+// MSL-3: a node links to the heading that names it, whatever the model
+// picked; the model's choice stands only when no heading names the node.
+func TestLinkSection(t *testing.T) {
+	part := []docs.Section{
+		{Number: "s1", Title: "Arunika DMS — Spesifikasi Fungsional v1.0", Level: 1},
+		{Number: "1", Title: "Penjualan", Level: 2},
+		{Number: "1.1", Title: "Sales Order (SO-01)", Level: 3},
+		{Number: "1.2", Title: "Persetujuan Sales Order (SO-02)", Level: 3},
+	}
+	for _, c := range []struct {
+		path        []string
+		model, want string
+	}{
+		{[]string{"Penjualan", "Persetujuan  sales order"}, "s1", "1.2"},
+		{[]string{"Penjualan"}, "s1", "1"},
+		{[]string{"Penjualan", "Konsinyasi"}, "1.1", "1.1"},
+	} {
+		if got := linkSection(part, c.path, c.model); got != c.want {
+			t.Errorf("%v: %q, want %q", c.path, got, c.want)
+		}
+	}
+}
