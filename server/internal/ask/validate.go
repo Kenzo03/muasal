@@ -9,7 +9,7 @@ import (
 // Dropped records what validation removed and why, for the Ask log (§10.8).
 type Dropped struct {
 	Claim   Claim    `json:"claim"`
-	Reason  string   `json:"reason"`            // no_citation, outside_key, empty, citation_removed, citation_unsupported
+	Reason  string   `json:"reason"`            // no_citation, outside_key, empty, citation_removed, citation_unsupported, contradicts_reason
 	Removed []string `json:"removed,omitempty"` // citations outside the evidence
 }
 
@@ -67,6 +67,24 @@ var (
 	// HRIS-231, HRIS-DN7, HRIS-DOC1/7.4, and FSD menu IDs such as PAY-PR-03.
 	citeKeyRe = regexp.MustCompile(`(?i)\b[a-z][a-z0-9]{1,9}-(?:doc\d+/[\w.]+|dn\d+|[a-z]{1,5}-\d+|\d+)\b`)
 )
+
+var (
+	// noReasonRe finds a claim that the evidence records no reason, as the
+	// small model writes it in Indonesian or English.
+	noReasonRe = regexp.MustCompile(`(?i)\b(tidak|belum|tak)\b.{0,60}\b(dicatat|tercatat|disebut\w*|menyebut\w*|menyatakan|dinyatakan|menjelaskan|dijelaskan|ada catatan)\b.{0,60}\b(alasan\w*|mengapa|kenapa)\b` +
+		`|\balasan\w*\b.{0,40}\b(tidak|belum|tak)\b.{0,20}\b(dicatat|tercatat|disebut\w*|dinyatakan|dijelaskan|ada)\b` +
+		`|\b(tidak|belum|tak)\s+ada\s+alasan\b|\bno\s+(reason|explanation)\b` +
+		`|\b(does not|doesn't|do not|don't|did not|didn't|not)\b.{0,40}\b(say|says|state|states|stated|record|records|recorded|explain|explains|mention|mentions|give|gives)\b.{0,40}\b(why|reason)\b` +
+		`|\breasons?\b.{0,30}\b(is|are|was|were)\s+not\s+(recorded|stated|given|documented|mentioned)\b`)
+	// becauseRe finds a claim that gives a reason.
+	becauseRe = regexp.MustCompile(`(?i)\b(karena|sebab|disebabkan|akibat|agar|supaya|because|due to|so that)\b`)
+)
+
+// saysNoReason reports whether a claim says the reason is not recorded.
+func saysNoReason(text string) bool { return noReasonRe.MatchString(text) }
+
+// givesReason reports whether a claim gives a reason.
+func givesReason(text string) bool { return becauseRe.MatchString(text) && !saysNoReason(text) }
 
 // figures lists a text's numbers of two digits or more, without leading
 // zeros, so 09 and 9 match. One digit is no evidence: dates, versions and

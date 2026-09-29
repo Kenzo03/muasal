@@ -215,6 +215,22 @@ func (e *Engine) Ask(ctx context.Context, r Request, sink Sink) (Result, error) 
 		Temperature: s.Temperature, MaxTokens: 600, Seed: e.Seed,
 	})
 	if err == nil {
+		accept := func(c Claim) {
+			if len(res.Claims) >= 6 {
+				return
+			}
+			if len(res.Claims) == 0 {
+				logRow.firstClaim = e.now().Sub(start)
+			}
+			res.Claims = append(res.Claims, c)
+			if sink.Claim != nil {
+				sink.Claim(c)
+			}
+		}
+		// A why answer's "the reason is not recorded" waits for the rest: it
+		// stands only when no other claim gives a reason (MSL-4).
+		why := asksWhy(r.Question)
+		var noReason []Claim
 		err = Claims(body, func(c Claim) {
 			valid, dropped := Validate(c, packed)
 			if dropped != nil {
@@ -227,15 +243,21 @@ func (e *Engine) Ask(ctx context.Context, r Request, sink Sink) (Result, error) 
 				valid = recited
 				logRow.dropped = append(logRow.dropped, *moved)
 			}
-			if len(res.Claims) == 0 {
-				logRow.firstClaim = e.now().Sub(start)
+			if why && saysNoReason(valid.Text) {
+				noReason = append(noReason, valid)
+				return
 			}
-			res.Claims = append(res.Claims, valid)
-			if sink.Claim != nil {
-				sink.Claim(valid)
-			}
+			accept(valid)
 		})
 		body.Close()
+		reasoned := slices.ContainsFunc(res.Claims, func(c Claim) bool { return givesReason(c.Text) })
+		for _, c := range noReason {
+			if reasoned {
+				logRow.dropped = append(logRow.dropped, Dropped{Claim: c, Reason: "contradicts_reason"})
+			} else {
+				accept(c)
+			}
+		}
 	}
 	timedOut := genCtx.Err() != nil
 	cancel()

@@ -139,6 +139,37 @@ func TestInventedCitationsAreDropped(t *testing.T) {
 	}
 }
 
+// MSL-4: a why answer that gives a reason drops its own "the reason is not
+// recorded" claim, whichever comes first; without a reason, that claim stays.
+func TestAWhyAnswerNeverContradictsItsReason(t *testing.T) {
+	w := newWorld(t)
+	tk := w.ticket("Overtime approval skips supervisor", &w.a, w.ot, "Supervisors are on leave.", "2025-06-10", "HR approves overtime.")
+	answer := func(texts ...string) func(string, string, json.RawMessage) string {
+		return func(string, string, json.RawMessage) string {
+			claims := make([]string, len(texts))
+			for i, s := range texts {
+				claims[i] = fmt.Sprintf(`{"text":%q,"cites":[%q]}`, s, tk.Key)
+			}
+			return `{"claims":[` + strings.Join(claims, ",") + `]}`
+		}
+	}
+	w.fake.Answer = answer("The evidence does not say why HR approves overtime.", "HR approves overtime because supervisors are on leave.")
+	res := w.ask(w.member, "Why does HR approve overtime?", ask.Scope{}, ask.Sink{})
+	if len(res.Claims) != 1 || !strings.Contains(res.Claims[0].Text, "because") {
+		t.Fatalf("with a reason: %+v", res.Claims)
+	}
+	var dropped string
+	w.check(w.d.Pool.QueryRow(context.Background(), "SELECT dropped::text FROM ask_queries WHERE id = $1", res.QueryID).Scan(&dropped))
+	if !strings.Contains(dropped, "contradicts_reason") {
+		t.Fatalf("log: %s", dropped)
+	}
+	w.fake.Answer = answer("The evidence does not say why HR approves overtime.", "HR approves overtime.")
+	res = w.ask(w.member, "Why does HR approve overtime?", ask.Scope{}, ask.Sink{})
+	if len(res.Claims) != 2 || res.Claims[1].Text != "The evidence does not say why HR approves overtime." {
+		t.Fatalf("without a reason: %+v", res.Claims)
+	}
+}
+
 // AC-AK-7: an English question about Indonesian tickets is answered in English.
 func TestTheQuestionsLanguageWins(t *testing.T) {
 	w := newWorld(t)
