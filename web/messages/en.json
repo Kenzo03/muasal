@@ -641,7 +641,9 @@
     "draftWithAI": "Draft with AI",
     "drafting": "Drafting…",
     "drafted": "Drafted by {model} from the thread. Check each field; nothing is saved until Close ticket.",
-    "noWhy": "The thread never says why. Ask the requester and write the reason here."
+    "noWhy": "The thread never says why. Ask the requester and write the reason here.",
+    "draftWhy": "The draft's why:",
+    "useDraftWhy": "Use it"
   },
   "decision": {
     "title": "Decision record",

@@ -641,7 +641,9 @@
     "draftWithAI": "Draf dengan AI",
     "drafting": "Menyusun draf…",
     "drafted": "Draf dari {model} berdasarkan percakapan tiket. Periksa setiap kolom; tidak ada yang tersimpan sebelum Tutup tiket.",
-    "noWhy": "Percakapan tiket tidak menyebut alasannya. Tanyakan kepada peminta lalu tulis alasannya di sini."
+    "noWhy": "Percakapan tiket tidak menyebut alasannya. Tanyakan kepada peminta lalu tulis alasannya di sini.",
+    "draftWhy": "Alasan versi draf:",
+    "useDraftWhy": "Pakai"
   },
   "decision": {
     "title": "Catatan keputusan",

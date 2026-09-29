@@ -53,6 +53,7 @@ export default function CloseDialog({ ticket, status, nodes, onDone, onCancel }:
   const [typed, setTyped] = useState<Set<string>>(() => new Set());
   const [drafting, setDrafting] = useState(false);
   const [drafted, setDrafted] = useState<{ model: string; noWhy: boolean }>();
+  const [draftWhy, setDraftWhy] = useState(""); // the draft's why, offered when the field already has one (MSL-8)
   const typing = (name: string, set: (v: string) => void) => (v: string) => {
     setTyped((s) => new Set(s).add(name));
     set(v);
@@ -90,7 +91,11 @@ export default function CloseDialog({ ticket, status, nodes, onDone, onCancel }:
       if (!typed.has(name) || current.trim() === "") set(value);
     };
     fill("what", data.what_changed, whatChanged, setWhatChanged);
-    fill("why", data.why, why, setWhy);
+    // AC-DC-7: no reason in the thread empties an untyped prefill, so the
+    // requester gets asked. MSL-8: otherwise a why already there keeps its
+    // facts, and the draft's differing why is offered beside it, not over it.
+    if (data.why.trim() === "" || why.trim() === "") fill("why", data.why, why, setWhy);
+    else setDraftWhy(data.why.trim() !== why.trim() ? data.why.trim() : "");
     fill("alternatives", data.alternatives, alternatives, setAlternatives);
     setDrafted({ model: data.model, noWhy: data.why.trim() === "" });
   }
@@ -174,6 +179,13 @@ export default function CloseDialog({ ticket, status, nodes, onDone, onCancel }:
             hint={drafted?.noWhy && why.trim() === "" ? t("noWhy") : prior ? t("fromRecord") : ticket.reason ? t("fromReason") : undefined}
             error={serverError("decision.why")}
           />
+          {draftWhy && (
+            <div className="-mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded-lg bg-well px-3 py-2 text-xs text-ink-soft">
+              <span className="font-semibold">{t("draftWhy")}</span>
+              <span className="min-w-0 flex-1">{draftWhy}</span>
+              <button type="button" className="font-semibold text-accent-strong" onClick={() => { setWhy(draftWhy); setDraftWhy(""); }}>{t("useDraftWhy")}</button>
+            </div>
+          )}
           <Area
             id="close-alternatives"
             label={t("alternatives")}

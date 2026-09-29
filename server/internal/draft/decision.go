@@ -48,7 +48,8 @@ func decisionSystem(lang string) string {
 	return strings.Join([]string{
 		"You draft the decision record of a software ticket that is being closed.",
 		"what_changed: what the system does differently now, in 1-2 sentences.",
-		"why: the business reason the thread gives, such as the client's policy or the problem it solves.",
+		"why: the business reason the thread gives, such as the client's policy or the problem it solves. When the ticket's Reason states it, keep its facts, names and figures.",
+		"Never state as done what a comment only asks about, suggests or plans.",
 		"alternatives_rejected: options the thread considered and turned down.",
 		"Use only the THREAD. If it never says why, return why as an empty string. If it names no alternatives, return an empty string. Never invent a reason.",
 		"Write in " + languageName(lang) + ". Keep ticket keys, people's names and menu names exactly as written.",
