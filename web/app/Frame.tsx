@@ -36,13 +36,32 @@ export function ProjectOf({ projectKey }: { projectKey: string }) {
 // the page. From md up the sidebar can shrink to a rail of icons; the choice
 // lives in the `nav` cookie so the server renders it the same way. On phones the
 // sidebar is a drawer behind the top bar's menu button.
-export default function Frame({ me, projects, rail: railCookie, children }: { me: User; projects: Project[]; rail: boolean; children: React.ReactNode }) {
+export default function Frame({ me, projects, rail: railCookie, recent: recentCookie, children }: {
+  me: User;
+  projects: Project[];
+  rail: boolean;
+  recent: string[];
+  children: React.ReactNode;
+}) {
   const t = useTranslations("nav");
   const path = usePathname();
   const [pageKey, setPageKey] = useState<string>();
   const project = projects.find((p) => p.key === (currentKey(path) ?? pageKey));
   const [rail, setRail] = useState(railCookie);
   const [drawer, setDrawer] = useState(false);
+  const [recent, setRecent] = useState(recentCookie);
+
+  // The last five projects opened, for the sidebar outside a project; a cookie,
+  // so the server draws the same list.
+  const openKey = project?.key;
+  useEffect(() => {
+    if (!openKey) return;
+    setRecent((keys) => {
+      const next = [openKey, ...keys.filter((k) => k !== openKey)].slice(0, 5);
+      document.cookie = `recent=${next.join(",")}; path=/; max-age=31536000; samesite=lax`;
+      return next;
+    });
+  }, [openKey]);
 
   useEffect(() => {
     if (!drawer) return;
@@ -63,9 +82,18 @@ export default function Frame({ me, projects, rail: railCookie, children }: { me
       {drawer && (
         <button type="button" aria-label={t("closeMenu")} onClick={() => setDrawer(false)} className="fixed inset-0 z-30 cursor-default bg-ink/30 md:hidden" />
       )}
-      <Sidebar me={me} projects={projects} project={project} rail={rail} drawer={drawer} onNavigate={() => setDrawer(false)} onToggleRail={toggleRail} />
+      <Sidebar
+        me={me}
+        projects={projects}
+        project={project}
+        recent={recent}
+        rail={rail}
+        drawer={drawer}
+        onNavigate={() => setDrawer(false)}
+        onToggleRail={toggleRail}
+      />
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar me={me} projects={projects} project={project} drawer={drawer} onMenu={() => setDrawer(true)} />
+        <TopBar me={me} projects={projects} project={project} recent={recent} drawer={drawer} onMenu={() => setDrawer(true)} />
         <PageProject.Provider value={setPageKey}>{children}</PageProject.Provider>
       </div>
     </div>

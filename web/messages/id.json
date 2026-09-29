@@ -28,6 +28,10 @@
     "switchProject": "Ganti proyek",
     "projects": "Proyek",
     "allProjects": "Semua proyek",
+    "recent": "Terakhir dibuka",
+    "allProjectsCount": "Semua proyek ({count})",
+    "findProject": "Cari proyek",
+    "noProjectFound": "Tidak ada proyek yang cocok.",
     "newTicket": "Tiket baru",
     "chooseProject": "Tiket baru di",
     "search": "Cari tiket atau menu",
@@ -68,6 +72,7 @@
   "home": {
     "title": "Beranda",
     "newProject": "Proyek baru",
+    "allProjects": "Semua proyek ({count})",
     "noProjects": "Anda belum tergabung dalam proyek. Minta admin menambahkan Anda.",
     "noProjectsAdmin": "Belum ada proyek. Buat proyek pertama.",
     "mine": "Tiket saya",
@@ -141,6 +146,12 @@
     "resetPassword": "Reset kata sandi",
     "adminsOnly": "Hanya admin yang dapat mengelola pengguna.",
     "back": "Kembali"
+  },
+  "projectList": {
+    "heading": "Semua proyek",
+    "count": "{count} proyek",
+    "find": "Cari proyek menurut nama atau kunci",
+    "none": "Tidak ada proyek yang cocok."
   },
   "newProject": {
     "title": "Proyek baru",
