@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" database/sql driver for goose
 	"github.com/pressly/goose/v3"
@@ -66,15 +65,21 @@ func ensureAppRole(ctx context.Context, conn *pgx.Conn, appURL string) error {
 	}
 	ident := pgx.Identifier{role}.Sanitize()
 	literal := "'" + strings.ReplaceAll(password, "'", "''") + "'"
+	// Check for the role first: PostgreSQL logs a failed statement with its
+	// text, and this one carries the password.
 	// ponytail: roles are server-wide and this runs outside the advisory lock, so
-	// concurrent runs for one role fail (23505 or "tuple concurrently updated").
-	// One app replica migrates today; add a retry here before running several.
-	_, err = conn.Exec(ctx, "CREATE ROLE "+ident+" LOGIN PASSWORD "+literal)
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) && pgErr.Code == "42710" { // duplicate_object: the role exists already
-		_, err = conn.Exec(ctx, "ALTER ROLE "+ident+" LOGIN PASSWORD "+literal)
+	// concurrent runs for one role fail (42710, 23505 or "tuple concurrently
+	// updated") and log the password. One app replica migrates today; take an
+	// advisory lock around this before running several.
+	var exists bool
+	if err := conn.QueryRow(ctx, "SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = $1)", role).Scan(&exists); err != nil {
+		return fmt.Errorf("app role: %w", err)
 	}
-	if err != nil {
+	verb := "CREATE"
+	if exists {
+		verb = "ALTER"
+	}
+	if _, err := conn.Exec(ctx, verb+" ROLE "+ident+" LOGIN PASSWORD "+literal); err != nil {
 		return fmt.Errorf("app role: %w", err)
 	}
 	for _, stmt := range []string{

@@ -2,7 +2,10 @@ package migrate_test
 
 import (
 	"context"
+	"strings"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/kenzo03/muasal/server/internal/migrate"
 	"github.com/kenzo03/muasal/server/internal/testdb"
@@ -36,4 +39,51 @@ func TestUpPreparesRiverForTheAppRole(t *testing.T) {
 	if _, err := d.Pool.Exec(ctx, `SELECT 1 FROM river_migration`); err == nil {
 		t.Fatal("the app role must not read River's migrations")
 	}
+}
+
+// PostgreSQL logs a failed statement with its text, and the role statement
+// carries the app role's password, so a run against an existing role must not
+// try CREATE ROLE, and nothing it sends may fail.
+func TestSecondRunKeepsThePasswordOutOfTheServerLog(t *testing.T) {
+	d := testdb.New(t) // runs migrate.Up once, which creates the role
+	ctx := context.Background()
+	cfg, err := pgx.ParseConfig(d.OwnerURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sent statements
+	cfg.Tracer = &sent
+	conn, err := pgx.ConnectConfig(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close(ctx)
+	if err := migrate.EnsureAppRole(ctx, conn, d.AppURL); err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range sent {
+		if strings.HasPrefix(s.sql, "CREATE ROLE") {
+			t.Error("tried CREATE ROLE on an existing role")
+		}
+		if s.err != nil {
+			t.Errorf("a statement failed, so the server logged it: %v", s.err)
+		}
+	}
+}
+
+type statement struct {
+	sql string
+	err error
+}
+
+// statements records what a connection sends and how each statement ended.
+type statements []statement
+
+func (s *statements) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
+	*s = append(*s, statement{sql: data.SQL})
+	return ctx
+}
+
+func (s *statements) TraceQueryEnd(_ context.Context, _ *pgx.Conn, data pgx.TraceQueryEndData) {
+	(*s)[len(*s)-1].err = data.Err
 }
