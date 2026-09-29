@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getLocale, getTimeZone, getTranslations } from "next-intl/server";
 import PageBar from "@/components/PageBar";
-import { utc } from "@/lib/format";
+import { dateTime } from "@/lib/format";
 import { getMe, serverApi } from "@/lib/server-api";
 import { one } from "@/lib/ticket-query";
 import { button, cx, field, table } from "@/lib/ui";
@@ -16,6 +16,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
   if (!me) redirect("/login");
   const t = await getTranslations("audit");
   const locale = await getLocale();
+  const timeZone = await getTimeZone();
   const v = one(await searchParams);
   const filter = {
     actor_id: Number(v.actor) || undefined,
@@ -97,7 +98,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                   <tbody>
                     {page.data.items.map((e) => (
                       <tr key={e.id} className={table.row}>
-                        <td className={cx(table.td, "whitespace-nowrap text-muted")}>{utc(e.occurred_at, locale)}</td>
+                        <td className={cx(table.td, "whitespace-nowrap text-muted")}>{dateTime(e.occurred_at, locale, timeZone)}</td>
                         <td className={table.td}>{e.actor?.name ?? t("system")}</td>
                         <td className={cx(table.td, "whitespace-nowrap")}>
                           {e.entity} <span className="font-mono text-xs text-muted">#{e.entity_id}</span>

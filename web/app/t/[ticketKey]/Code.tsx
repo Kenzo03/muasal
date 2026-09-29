@@ -1,6 +1,6 @@
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale, useTimeZone, useTranslations } from "next-intl";
 import type { components } from "@/lib/api-types";
-import { utc } from "@/lib/format";
+import { dateTime } from "@/lib/format";
 import { chip, cx, panel } from "@/lib/ui";
 
 type TicketCode = components["schemas"]["TicketCode"];
@@ -17,6 +17,7 @@ const stateStyle: Record<string, string> = {
 export default function Code({ code }: { code: TicketCode }) {
   const t = useTranslations("code");
   const locale = useLocale();
+  const timeZone = useTimeZone();
   if (code.merge_requests.length === 0 && code.commits.length === 0) return null;
   return (
     <section aria-labelledby="code-title" className={cx(panel, "flex flex-col gap-2.5 px-5 py-4")}>
@@ -30,7 +31,7 @@ export default function Code({ code }: { code: TicketCode }) {
                 <span className={cx(chip, stateStyle[state] ?? stateStyle.closed)}>{t.has(`state.${state}`) ? t(`state.${state}`) : state}</span>
                 <span className="font-mono text-xs text-muted">{m.repo}#{m.number}</span>
                 {m.url ? <a href={m.url} target="_blank" rel="noreferrer" className="min-w-0 truncate">{m.title}</a> : <span className="min-w-0 truncate">{m.title}</span>}
-                {m.merged_at && <span className="ml-auto text-xs text-muted">{utc(m.merged_at, locale)}</span>}
+                {m.merged_at && <span className="ml-auto text-xs text-muted">{dateTime(m.merged_at, locale, timeZone)}</span>}
               </li>
             );
           })}
@@ -47,7 +48,7 @@ export default function Code({ code }: { code: TicketCode }) {
               )}
               <span className="min-w-0 flex-1 truncate">{c.message}</span>
               <span className="text-xs text-muted">
-                {[c.author, c.committed_at && utc(c.committed_at, locale)].filter(Boolean).join(" · ")}
+                {[c.author, c.committed_at && dateTime(c.committed_at, locale, timeZone)].filter(Boolean).join(" · ")}
               </span>
             </li>
           ))}

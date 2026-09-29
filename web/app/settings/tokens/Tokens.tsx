@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale, useTimeZone, useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import type { components } from "@/lib/api-types";
-import { utc } from "@/lib/format";
+import { dateTime } from "@/lib/format";
 import { useProblemText } from "@/lib/problem";
 import { button, cx, field, panel, table } from "@/lib/ui";
 
@@ -16,6 +16,7 @@ type APIToken = components["schemas"]["APIToken"];
 export default function Tokens({ tokens }: { tokens: APIToken[] }) {
   const t = useTranslations("tokens");
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const router = useRouter();
   const problemText = useProblemText();
   const [secret, setSecret] = useState("");
@@ -103,9 +104,9 @@ export default function Tokens({ tokens }: { tokens: APIToken[] }) {
                 <tr key={tok.id} className={table.row}>
                   <td className={table.td}>{tok.name}</td>
                   <td className={table.td}>{tok.read_only ? t("readOnly") : t("readWrite")}</td>
-                  <td className={table.td}>{utc(tok.created_at, locale)}</td>
-                  <td className={table.td}>{tok.last_used_at ? utc(tok.last_used_at, locale) : t("never")}</td>
-                  <td className={table.td}>{tok.expires_at ? utc(tok.expires_at, locale) : t("noExpiry")}</td>
+                  <td className={table.td}>{dateTime(tok.created_at, locale, timeZone)}</td>
+                  <td className={table.td}>{tok.last_used_at ? dateTime(tok.last_used_at, locale, timeZone) : t("never")}</td>
+                  <td className={table.td}>{tok.expires_at ? dateTime(tok.expires_at, locale, timeZone) : t("noExpiry")}</td>
                   <td className={table.td}>
                     <button type="button" onClick={() => revoke(tok)} className={cx(button.quiet, "text-danger")}>{t("revoke")}</button>
                   </td>

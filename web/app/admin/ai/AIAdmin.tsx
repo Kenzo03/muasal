@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale, useTimeZone, useTranslations } from "next-intl";
 import { api } from "@/lib/api";
-import { utc } from "@/lib/format";
+import { dateTime } from "@/lib/format";
 import { useProblemText, type AIMode, type AISettings, type AITestResult, type IndexStatus, type Problem } from "@/lib/problem";
 import { button, cx, field, panel, sectionTitle, table } from "@/lib/ui";
 
@@ -17,6 +17,7 @@ type Endpoint = { url: string; model: string; key: string; clearKey: boolean };
 export default function AIAdmin({ settings, status }: { settings: AISettings; status: IndexStatus }) {
   const t = useTranslations("ai");
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const problemText = useProblemText();
   const router = useRouter();
   const [mode, setMode] = useState<AIMode>(settings.mode);
@@ -219,7 +220,7 @@ export default function AIAdmin({ settings, status }: { settings: AISettings; st
           <dt className="text-muted">{t("queuedJobs")}</dt>
           <dd>{status.queued_jobs}</dd>
           <dt className="text-muted">{t("lastIndexed")}</dt>
-          <dd>{status.last_indexed_at ? utc(status.last_indexed_at, locale) : "—"}</dd>
+          <dd>{status.last_indexed_at ? dateTime(status.last_indexed_at, locale, timeZone) : "—"}</dd>
         </dl>
         {status.chunks_by_model.length > 0 && (
           <div className={table.wrap}>
@@ -250,7 +251,7 @@ export default function AIAdmin({ settings, status }: { settings: AISettings; st
             <ul className="flex flex-col gap-1 text-xs">
               {status.failed_jobs.map((f) => (
                 <li key={f.id} className="break-all text-muted">
-                  {utc(f.at, locale)} · #{f.ticket_id} · {f.error}
+                  {dateTime(f.at, locale, timeZone)} · #{f.ticket_id} · {f.error}
                 </li>
               ))}
             </ul>

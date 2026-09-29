@@ -1,11 +1,11 @@
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getLocale, getTimeZone, getTranslations } from "next-intl/server";
 import { ClientChip, PriorityChip, StatusDot, TypeIcon, initials } from "@/components/Chips";
 import Icon from "@/components/Icon";
 import { describeChange } from "@/lib/activity";
-import { day } from "@/lib/format";
+import { dateIn, day, dayOf } from "@/lib/format";
 import { getMe, getProjects, serverApi } from "@/lib/server-api";
 import { one } from "@/lib/ticket-query";
 import { button, cx, panel } from "@/lib/ui";
@@ -26,6 +26,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const tTypes = await getTranslations("ticketTypes");
   const tPri = await getTranslations("priorities");
   const locale = await getLocale();
+  const timeZone = await getTimeZone();
   const projects = await getProjects();
   const api = await serverApi();
   const [mine, updates] = await Promise.all([
@@ -49,7 +50,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   ].slice(0, 5);
   const changes = updates.data?.items ?? [];
   const now = new Date();
-  const today = now.toISOString().slice(0, 10);
+  const today = dateIn(now, timeZone);
   // Home renders on the server, so "now" is one moment for the whole page.
   const ago = (iso: string) => {
     const minutes = Math.floor((now.getTime() - Date.parse(iso)) / 60_000);
@@ -59,16 +60,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
     if (hours < 24) return t("ago.hours", { n: hours });
     const days = Math.floor(hours / 24);
     if (days === 1) return t("ago.yesterday");
-    return days < 7 ? t("ago.days", { n: days }) : day(iso, locale);
+    return days < 7 ? t("ago.days", { n: days }) : dayOf(iso, locale, timeZone);
   };
 
   // "Selamat pagi" by the clock in the user's profile timezone.
-  let hour = now.getUTCHours();
-  try {
-    hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: me.timezone }).format(now));
-  } catch {
-    // an unknown timezone keeps UTC
-  }
+  const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone }).format(now));
   const part = hour < 11 ? "morning" : hour < 15 ? "midday" : hour < 18 ? "afternoon" : "evening";
 
   return (

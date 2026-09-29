@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getLocale, getTimeZone, getTranslations } from "next-intl/server";
 import { ClientChip, DraftStatusChip, showsClients } from "@/components/Chips";
 import Icon from "@/components/Icon";
 import Markdown from "@/components/Markdown";
 import PageBar from "@/components/PageBar";
-import { day, utc } from "@/lib/format";
+import { dateTime, dayOf } from "@/lib/format";
 import { getProject, serverApi } from "@/lib/server-api";
 import { button, chip, cx, panel, sectionTitle } from "@/lib/ui";
 import DraftButton from "./DraftButton";
@@ -25,6 +25,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ docKe
   const t = await getTranslations("documents");
   const tt = await getTranslations("ticket");
   const locale = await getLocale();
+  const timeZone = await getTimeZone();
   const admin = project?.role === "admin";
   // Unnumbered headings get a running s1, s2…: those show no number.
   const numbered = (n: string) => !/^s\d/.test(n);
@@ -57,7 +58,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ docKe
             <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
               <span className="font-bold">{doc.key}</span>
               {showsClients(clients.data?.items ?? []) && <ClientChip client={doc.client} coreLabel={t("allClients")} />}
-              {t("uploadedBy", { name: doc.uploaded_by, date: utc(doc.created_at, locale) })}
+              {t("uploadedBy", { name: doc.uploaded_by, date: dateTime(doc.created_at, locale, timeZone) })}
             </p>
             {doc.sections.map((s) => (
               <section
@@ -102,7 +103,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ docKe
               {doc.drafts.map((d) => (
                 <Link key={d.id} href={`/tree-drafts/${d.id}`} className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] font-semibold text-ink no-underline hover:bg-paper hover:text-ink">
                   <Icon name="tree" className="size-4 text-muted" />
-                  <span title={utc(d.created_at, locale)}>{day(d.created_at, locale)}</span>
+                  <span title={dateTime(d.created_at, locale, timeZone)}>{dayOf(d.created_at, locale, timeZone)}</span>
                   <span className="ml-auto">
                     <DraftStatusChip status={d.status} label={t(`status.${d.status}`)} />
                   </span>

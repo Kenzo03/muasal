@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getLocale, getTimeZone, getTranslations } from "next-intl/server";
 import { ClientChip, showsClients } from "@/components/Chips";
 import Icon from "@/components/Icon";
 import PageBar from "@/components/PageBar";
-import { day, utc } from "@/lib/format";
+import { dateTime, dayOf } from "@/lib/format";
 import { getProject, serverApi } from "@/lib/server-api";
 import { chip, cx, panel } from "@/lib/ui";
 import Upload from "./Upload";
@@ -28,6 +28,7 @@ export default async function DocumentsPage({ params }: { params: Promise<{ key:
   if (!project) notFound();
   const t = await getTranslations("documents");
   const locale = await getLocale();
+  const timeZone = await getTimeZone();
   const api = await serverApi();
   const path = { params: { path: { key } } };
   const [docs, clients] = await Promise.all([api.GET("/projects/{key}/documents", path), api.GET("/projects/{key}/clients", path)]);
@@ -59,7 +60,7 @@ export default async function DocumentsPage({ params }: { params: Promise<{ key:
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <span className={cx("text-sm font-semibold", d.superseded_by && "text-muted")}>{d.title}</span>
                       <span className="text-xs text-muted">
-                        <span className="font-bold">{d.key}</span> · <span title={utc(d.created_at, locale)}>{day(d.created_at, locale)}</span> · {d.uploaded_by}
+                        <span className="font-bold">{d.key}</span> · <span title={dateTime(d.created_at, locale, timeZone)}>{dayOf(d.created_at, locale, timeZone)}</span> · {d.uploaded_by}
                       </span>
                     </span>
                     {d.superseded_by && <span className={cx(chip, "bg-warn-soft text-warn")}>{t("supersededBy", { key: d.superseded_by })}</span>}

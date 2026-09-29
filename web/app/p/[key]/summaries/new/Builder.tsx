@@ -2,19 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale, useTimeZone, useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import type { components } from "@/lib/api-types";
-import { day } from "@/lib/format";
+import { dateIn, day } from "@/lib/format";
 import { nodePaths } from "@/lib/nodes";
 import { useProblemText, type Client, type Node, type Problem } from "@/lib/problem";
 import { button, cx, field, panel, sectionTitle } from "@/lib/ui";
 
 type Scope = components["schemas"]["SummaryScope"];
 type Preview = components["schemas"]["SummaryPreview"];
-
-const today = () => new Date().toISOString().slice(0, 10);
-const yearStart = () => `${new Date().getFullYear()}-01-01`;
 
 // The summary builder (FSD §12.1): pick the scope, preview the closed tickets
 // and notes by menu, untick what should stay out, then generate. Unticked
@@ -27,12 +24,14 @@ export default function Builder({ projectKey, clients, nodes, locale }: {
 }) {
   const t = useTranslations("summaries");
   const uiLocale = useLocale();
+  // The scope starts as this year up to today, on the user's calendar.
+  const today = dateIn(new Date(), useTimeZone());
   const router = useRouter();
   const problemText = useProblemText();
   const pathOf = useMemo(() => nodePaths(nodes), [nodes]);
   const sorted = useMemo(() => [...nodes].sort((a, b) => pathOf(a.id).localeCompare(pathOf(b.id))), [nodes, pathOf]);
   const [scope, setScope] = useState<Scope>({
-    project_key: projectKey, node_id: sorted[0]?.id ?? 0, from: yearStart(), to: today(), include_cancelled: false, language: locale, audience: "client",
+    project_key: projectKey, node_id: sorted[0]?.id ?? 0, from: `${today.slice(0, 4)}-01-01`, to: today, include_cancelled: false, language: locale, audience: "client",
   });
   const [preview, setPreview] = useState<Preview>();
   const [ticked, setTicked] = useState<Set<string>>(new Set());

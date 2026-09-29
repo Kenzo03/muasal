@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getTimeZone, getTranslations } from "next-intl/server";
 import { showsClients } from "@/components/Chips";
 import PageBar from "@/components/PageBar";
 import TicketFilters from "@/components/TicketFilters";
+import { dateIn } from "@/lib/format";
 import { getProject, serverApi } from "@/lib/server-api";
 import { one, ticketQuery } from "@/lib/ticket-query";
 import Board from "./Board";
@@ -49,7 +50,7 @@ export default async function BoardPage({
           nodes={nodes.data?.items ?? []}
           canEdit={project.role !== "viewer"}
           showClients={showsClients(clients.data?.items ?? [])}
-          today={new Date().toISOString().slice(0, 10)}
+          today={dateIn(new Date(), await getTimeZone())}
           query={values}
         />
       </main>

@@ -1,9 +1,9 @@
 import { Fragment } from "react";
 import Link from "next/link";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getLocale, getTimeZone, getTranslations } from "next-intl/server";
 import { ClientChip, StatusDot, showsClients } from "@/components/Chips";
 import Icon from "@/components/Icon";
-import { day } from "@/lib/format";
+import { dateIn, day, dayOf } from "@/lib/format";
 import type { Client, TimelineEntry, TimelineNote } from "@/lib/problem";
 import { button, chip, cx, field } from "@/lib/ui";
 
@@ -39,13 +39,15 @@ export default async function Timeline({ items, notes, failed, more, limit, clie
   const t = await getTranslations("nodePage");
   const tt = await getTranslations("ticketTypes");
   const locale = await getLocale();
+  const timeZone = await getTimeZone();
   const open = items.filter((it) => !it.closed_at);
   const closedTickets = items.filter((it) => it.closed_at);
-  const oldest = closedTickets.at(-1)?.closed_at?.slice(0, 10) ?? "";
+  // Closed tickets sort, group by year and meet the notes on the user's calendar day.
+  const oldest = closedTickets.length ? dateIn(closedTickets.at(-1)!.closed_at!, timeZone) : "";
   const shownNotes = more ? notes.filter((n) => n.decided_on >= oldest) : notes;
   type Row = { kind: "ticket"; at: string; it: TimelineEntry } | { kind: "note"; at: string; note: TimelineNote };
   const closed: Row[] = [
-    ...closedTickets.map((it): Row => ({ kind: "ticket", at: it.closed_at!, it })),
+    ...closedTickets.map((it): Row => ({ kind: "ticket", at: dateIn(it.closed_at!, timeZone), it })),
     ...shownNotes.map((note): Row => ({ kind: "note", at: note.decided_on, note })),
   ].sort((a, b) => (a.at.slice(0, 10) === b.at.slice(0, 10) ? 0 : a.at < b.at ? 1 : -1));
   const withClients = showsClients(clients);
@@ -108,7 +110,7 @@ export default async function Timeline({ items, notes, failed, more, limit, clie
               <ol className="flex flex-col">
                 {open.map((it) => (
                   <li key={it.key} className={grid}>
-                    <div className="pt-3.5 text-right text-xs font-semibold text-muted">{t("createdOn", { date: day(it.created_at, locale) })}</div>
+                    <div className="pt-3.5 text-right text-xs font-semibold text-muted">{t("createdOn", { date: dayOf(it.created_at, locale, timeZone) })}</div>
                     <Rail color={it.status.color} open />
                     <article
                       aria-label={`${it.key} ${it.title}`}
@@ -175,7 +177,7 @@ export default async function Timeline({ items, notes, failed, more, limit, clie
                     {marker}
                     <li className={grid}>
                       <div className="flex flex-col items-end gap-0.5 pt-4">
-                        <span className="text-sm font-extrabold">{day(it.closed_at!, locale)}</span>
+                        <span className="text-sm font-extrabold">{dayOf(it.closed_at!, locale, timeZone)}</span>
                         <span className="text-xs text-muted">{it.status.name}</span>
                       </div>
                       <Rail color={it.status.color} />

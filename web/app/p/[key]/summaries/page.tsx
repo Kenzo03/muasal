@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getLocale, getTimeZone, getTranslations } from "next-intl/server";
 import PageBar from "@/components/PageBar";
-import { utc } from "@/lib/format";
+import { dateTime } from "@/lib/format";
 import { getProject, serverApi } from "@/lib/server-api";
 import { button, cx, table } from "@/lib/ui";
 import Schedules from "./Schedules";
@@ -14,6 +14,7 @@ export default async function SummariesPage({ params }: { params: Promise<{ key:
   if (!project) notFound();
   const t = await getTranslations("summaries");
   const locale = await getLocale();
+  const timeZone = await getTimeZone();
   const api = await serverApi();
   const admin = project.role === "admin";
   const path = { params: { path: { key } } };
@@ -52,7 +53,7 @@ export default async function SummariesPage({ params }: { params: Promise<{ key:
                   <tr key={s.id} className={table.row}>
                     <td className={table.td}><Link href={`/summaries/${s.id}`} className="text-ink">{s.title}</Link></td>
                     <td className={table.td}>{s.creator}</td>
-                    <td className={table.td}>{utc(s.created_at, locale)}</td>
+                    <td className={table.td}>{dateTime(s.created_at, locale, timeZone)}</td>
                   </tr>
                 ))}
               </tbody>
