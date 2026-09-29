@@ -56,7 +56,8 @@ export default function Answer({ turn, onRemoveChip }: { turn: Turn; onRemoveChi
       </p>
     );
   } else if (turn.status === "answered") {
-    status = <p className="text-[13px] font-semibold text-ink">{t("answeredFrom", { count: turn.evidence.length })}</p>;
+    // MSL-24: the sources the claims cite, as listed below, not everything retrieved.
+    status = <p className="text-[13px] font-semibold text-ink">{t("answeredFrom", { count: cited.length })}</p>;
   } else if (turn.status === "not_enough_info") {
     status = <p className="text-[13px] font-semibold text-ink">{t("notEnough")}</p>;
   } else if (turn.status === "ai_off") {
