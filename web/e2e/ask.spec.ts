@@ -67,7 +67,7 @@ test("a member asks from Home and the node page, and an admin reads the Ask and 
   await box.getByLabel("Pertanyaan").fill("Why is the supervisor skipped, requested by Budi?");
   await box.getByLabel("Pertanyaan").press("Enter");
   const answer = page.getByRole("article", { name: "Why is the supervisor skipped, requested by Budi?" }).first();
-  await expect(answer.getByText("Dijawab dari 1 tiket")).toBeVisible();
+  await expect(answer.getByText("Dijawab dari 1 sumber")).toBeVisible();
   const chip = answer.getByRole("list").first().getByRole("link", { name: ticket.key }); // the claim's chip, not the source row
   await expect(chip).toHaveAttribute("target", "_blank");
   await chip.hover();
