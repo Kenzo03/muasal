@@ -887,8 +887,9 @@ func (e ListTicketsParamsDue) Valid() bool {
 
 // Defines values for ListTicketsParamsMissing.
 const (
-	ListTicketsParamsMissingMenus  ListTicketsParamsMissing = "menus"
-	ListTicketsParamsMissingReason ListTicketsParamsMissing = "reason"
+	ListTicketsParamsMissingMenus      ListTicketsParamsMissing = "menus"
+	ListTicketsParamsMissingReason     ListTicketsParamsMissing = "reason"
+	ListTicketsParamsMissingWeakReason ListTicketsParamsMissing = "weak_reason"
 )
 
 // Valid indicates whether the value is a known member of the ListTicketsParamsMissing enum.
@@ -897,6 +898,8 @@ func (e ListTicketsParamsMissing) Valid() bool {
 	case ListTicketsParamsMissingMenus:
 		return true
 	case ListTicketsParamsMissingReason:
+		return true
+	case ListTicketsParamsMissingWeakReason:
 		return true
 	default:
 		return false
@@ -2984,7 +2987,9 @@ type ListTicketsParams struct {
 	NodeId *int64 `form:"node_id,omitempty" json:"node_id,omitempty"`
 
 	// Q Words in the title
-	Q       *string                   `form:"q,omitempty" json:"q,omitempty"`
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// Missing weak_reason: a reason under 20 characters once stock phrases such as 'permintaan klien' are removed, the form's hint rule (R-DC-8).
 	Missing *ListTicketsParamsMissing `form:"missing,omitempty" json:"missing,omitempty"`
 	Sort    *ListTicketsParamsSort    `form:"sort,omitempty" json:"sort,omitempty"`
 	Limit   *int32                    `form:"limit,omitempty" json:"limit,omitempty"`

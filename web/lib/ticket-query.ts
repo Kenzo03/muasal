@@ -32,7 +32,7 @@ export function ticketQuery(v: Record<string, string>) {
     open: v.status === "open" ? true : undefined,
     due: (["overdue", "week"] as const).find((d) => d === v.due),
     stale_days: stale && stale <= 365 ? stale : undefined,
-    missing: v.missing as "reason" | "menus" | undefined,
+    missing: v.missing as "reason" | "menus" | "weak_reason" | undefined,
     sort: v.sort as "updated" | "created" | "key" | "priority" | "due" | undefined,
     cursor: v.cursor,
   };

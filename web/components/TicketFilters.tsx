@@ -96,6 +96,7 @@ export default async function TicketFilters({ action, values, clients, assignees
               <option value="">{t("nothingMissing")}</option>
               <option value="reason">{t("missingReason")}</option>
               <option value="menus">{t("missingMenus")}</option>
+              <option value="weak_reason">{t("weakReason")}</option>
             </select>
           </label>
           <label className={pick}>

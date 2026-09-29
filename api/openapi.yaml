@@ -794,7 +794,7 @@ paths:
           description: Open tickets unchanged for at least this many days; comments, files and decision records count as changes.
         - { name: node_id, in: query, schema: { type: integer, format: int64 }, description: Tickets on this node or its sub-nodes. }
         - { name: q, in: query, schema: { type: string, maxLength: 200 }, description: Words in the title, or a ticket key. }
-        - { name: missing, in: query, schema: { type: string, enum: [reason, menus] } }
+        - { name: missing, in: query, schema: { type: string, enum: [reason, menus, weak_reason] }, description: "weak_reason: a reason under 20 characters once stock phrases such as 'permintaan klien' are removed, the form's hint rule (R-DC-8)." }
         - { name: sort, in: query, schema: { type: string, enum: [updated, created, key, priority, due] } }
         - { name: limit, in: query, schema: { type: integer, format: int32, minimum: 1, maximum: 1000 } }
         - { name: cursor, in: query, schema: { type: string } }

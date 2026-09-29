@@ -4252,7 +4252,8 @@ export interface operations {
                 node_id?: number;
                 /** @description Words in the title */
                 q?: string;
-                missing?: "reason" | "menus";
+                /** @description weak_reason: a reason under 20 characters once stock phrases such as 'permintaan klien' are removed, the form's hint rule (R-DC-8). */
+                missing?: "reason" | "menus" | "weak_reason";
                 sort?: "updated" | "created" | "key" | "priority" | "due";
                 limit?: number;
                 cursor?: string;
