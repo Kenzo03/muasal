@@ -5,6 +5,7 @@ import { ClientChip, DraftStatusChip, showsClients } from "@/components/Chips";
 import Icon from "@/components/Icon";
 import Markdown from "@/components/Markdown";
 import PageBar from "@/components/PageBar";
+import { asTables } from "@/lib/convert";
 import { dateTime, dayOf } from "@/lib/format";
 import { getProject, serverApi } from "@/lib/server-api";
 import { button, chip, cx, panel, sectionTitle } from "@/lib/ui";
@@ -93,7 +94,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ docKe
                     ))}
                   </div>
                 )}
-                {s.body && <Markdown text={s.body} className="mt-2 text-[14.5px] leading-relaxed text-ink-soft" />}
+                {s.body && <Markdown text={asTables(s.body)} className="mt-2 text-[14.5px] leading-relaxed text-ink-soft" />}
               </section>
             ))}
           </article>

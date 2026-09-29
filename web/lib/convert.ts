@@ -110,3 +110,29 @@ export function linesToMarkdown(lines: Line[]): string {
   }
   return out.join("\n").replace(/\n{3,}/g, "\n\n").trim() + "\n";
 }
+
+// asTables draws the converters' rows of cells as tables: GFM needs a
+// delimiter row after a table's first row, which the stored Markdown leaves
+// out (sections keep rows as plain lines). The first row widens to the widest
+// row, as GFM drops cells beyond it. Fenced code is left alone.
+export function asTables(md: string): string {
+  const row = /^\s*\|.*\|\s*$/;
+  const delimiter = /^\s*\|\s*:?-{3,}/;
+  const cells = (l: string) => l.trim().slice(1, -1).split("|").length;
+  const lines = md.split("\n");
+  const out: string[] = [];
+  let fenced = false;
+  for (let i = 0; i < lines.length; i++) {
+    if (/^\s*(```|~~~)/.test(lines[i])) fenced = !fenced;
+    const starts = !fenced && row.test(lines[i]) && !row.test(lines[i - 1] ?? "") && !delimiter.test(lines[i + 1] ?? "");
+    if (!starts) {
+      out.push(lines[i]);
+      continue;
+    }
+    let end = i;
+    while (row.test(lines[end + 1] ?? "")) end++;
+    const width = Math.max(...lines.slice(i, end + 1).map(cells));
+    out.push(lines[i].trimEnd() + " |".repeat(width - cells(lines[i])), "|" + " --- |".repeat(width));
+  }
+  return out.join("\n");
+}

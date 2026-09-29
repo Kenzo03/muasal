@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { linesToMarkdown } from "./convert.ts";
+import { asTables, linesToMarkdown } from "./convert.ts";
 
 test("numbered and larger short lines become headings", () => {
   const md = linesToMarkdown([
@@ -31,4 +31,15 @@ test("table rows stay rows; a number set apart from its title is still a heading
     md,
     "## 1. Document Author\n\n| 1 | Hartono | Project Sponsor |\n| 3 | Willy Project Manager |\n\n### 3.2 Appendix\n\n| E-MSTK-01 | Dashboard |\nDashboard is the home page that every employee sees first.\n",
   );
+});
+
+// Stored rows of cells have no delimiter row, so the viewer saw one long line.
+test("rows of cells become tables for display", () => {
+  assert.equal(asTables("Intro\n\n| ID | Menu |\n| PAY-1 | Slip |\n\nAfter"), "Intro\n\n| ID | Menu |\n| --- | --- |\n| PAY-1 | Slip |\n\nAfter");
+  // A wider row widens the first, so no cell is dropped.
+  assert.equal(asTables("| 1 | Hartono |\n| 3 | Willy | PM |"), "| 1 | Hartono | |\n| --- | --- | --- |\n| 3 | Willy | PM |");
+  const done = "| a | b |\n| --- | --- |\n| c | d |";
+  assert.equal(asTables(done), done);
+  const code = "```\n| not | a table |\n```";
+  assert.equal(asTables(code), code);
 });
