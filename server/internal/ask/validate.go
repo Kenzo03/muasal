@@ -24,12 +24,12 @@ func Validate(c Claim, evidence []string) (Claim, *Dropped) {
 	}
 	var removed []string
 	for _, k := range c.Cites {
-		k = strings.ToUpper(strings.TrimSpace(k))
-		switch {
-		case !slices.Contains(evidence, k):
-			removed = append(removed, k)
-		case !slices.Contains(out.Cites, k):
-			out.Cites = append(out.Cites, k)
+		k = strings.TrimSpace(k)
+		switch e := evidenceKey(evidence, k); {
+		case e == "":
+			removed = append(removed, strings.ToUpper(k))
+		case !slices.Contains(out.Cites, e):
+			out.Cites = append(out.Cites, e)
 		}
 	}
 	switch {
@@ -39,7 +39,7 @@ func Validate(c Claim, evidence []string) (Claim, *Dropped) {
 		return Claim{}, &Dropped{Claim: c, Reason: "no_citation", Removed: removed}
 	}
 	for _, m := range keyRe.FindAllStringSubmatch(out.Text, -1) {
-		if !slices.Contains(evidence, strings.ToUpper(m[1])) {
+		if evidenceKey(evidence, m[1]) == "" {
 			return Claim{}, &Dropped{Claim: c, Reason: "outside_key", Removed: removed}
 		}
 	}
@@ -47,6 +47,17 @@ func Validate(c Claim, evidence []string) (Claim, *Dropped) {
 		return out, &Dropped{Claim: c, Reason: "citation_removed", Removed: removed}
 	}
 	return out, nil
+}
+
+// evidenceKey returns the packed key k names, ignoring case, or "". Keys
+// keep their spelling: a section under an unnumbered heading is DOC1/s3.
+func evidenceKey(evidence []string, k string) string {
+	for _, e := range evidence {
+		if strings.EqualFold(e, k) {
+			return e
+		}
+	}
+	return ""
 }
 
 var (
