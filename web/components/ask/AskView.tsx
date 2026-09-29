@@ -30,6 +30,13 @@ export default function AskView({ chips: preset = [], threadId: initialThread, q
   const busy = turns.some((x) => x.streaming);
   const started = useRef(false);
   const ignoredBy = useRef(new Map<number, AskIgnore[]>()); // per turn: the detected chips removed
+  const thread = useRef<HTMLDivElement>(null);
+
+  // In the panel the thread scrolls above a pinned Ask box, so a new question
+  // would start out of sight: bring it to the top of the thread.
+  useEffect(() => {
+    if (compact && turns.length > 0) thread.current?.lastElementChild?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [compact, turns.length]);
 
   async function run(q: string, ignore: AskIgnore[] = []) {
     const index = turns.length;
@@ -82,11 +89,15 @@ export default function AskView({ chips: preset = [], threadId: initialThread, q
   }
 
   return (
-    <div className={cx("flex flex-col gap-4", compact ? "" : "max-w-3xl")}>
-      {turns.length > 0 && (
-        <div className="flex flex-col gap-4">
+    <div className={compact ? "flex h-full flex-col" : "flex max-w-3xl flex-col gap-4"}>
+      {(compact || turns.length > 0) && (
+        <div ref={thread} className={cx("flex flex-col gap-4", compact && "min-h-0 flex-1 overflow-y-auto p-4")}>
           {turns.map((turn, i) => (
-            <Answer key={i} turn={turn} onRemoveChip={i === turns.length - 1 && !busy ? (c) => removeDetected(i, c) : undefined} />
+            // In the panel the newest turn is at least as tall as the thread, so
+            // its question can scroll to the top while the answer streams below.
+            <div key={i} className={compact && i === turns.length - 1 ? "min-h-full scroll-mt-4" : undefined}>
+              <Answer turn={turn} onRemoveChip={i === turns.length - 1 && !busy ? (c) => removeDetected(i, c) : undefined} />
+            </div>
           ))}
         </div>
       )}
@@ -99,7 +110,10 @@ export default function AskView({ chips: preset = [], threadId: initialThread, q
           setQuestion("");
           run(q);
         }}
-        className="flex flex-col gap-2.5 rounded-2xl border border-field bg-white p-3.5 shadow-[0_1px_2px_rgba(43,36,32,0.04),0_8px_24px_rgba(43,36,32,0.06)] focus-within:border-accent"
+        className={cx(
+          "flex flex-col gap-2.5 rounded-2xl border border-field bg-white p-3.5 shadow-[0_1px_2px_rgba(43,36,32,0.04),0_8px_24px_rgba(43,36,32,0.06)] focus-within:border-accent",
+          compact && "m-4 mt-0 shrink-0",
+        )}
       >
         {chips.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
@@ -129,7 +143,8 @@ export default function AskView({ chips: preset = [], threadId: initialThread, q
               <Icon name="calendar" className="size-3.5 text-muted" />
               {t("addDates")}
             </summary>
-            <div className="absolute left-0 z-10 mt-1.5 flex flex-col gap-2.5 rounded-xl border border-line bg-white p-3.5 shadow-[0_12px_32px_rgba(43,36,32,0.12),0_2px_6px_rgba(43,36,32,0.06)]">
+            {/* In the panel the box sits at the bottom, so the dates open upward. */}
+            <div className={cx("absolute left-0 z-10 flex flex-col gap-2.5 rounded-xl border border-line bg-white p-3.5 shadow-[0_12px_32px_rgba(43,36,32,0.12),0_2px_6px_rgba(43,36,32,0.06)]", compact ? "bottom-full mb-1.5" : "mt-1.5")}>
               <label className={field.label}>
                 {t("from")}
                 <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={field.compact} />
