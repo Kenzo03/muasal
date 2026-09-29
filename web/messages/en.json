@@ -386,7 +386,9 @@
     "ask": "Ask",
     "note": "Decision note",
     "attendees": "With {names}",
-    "supersededBy": "Superseded by {key}"
+    "supersededBy": "Superseded by {key}",
+    "spec": "Specification",
+    "specTitle": "Where it started in the documents"
   },
   "errors": {
     "generic": "Something went wrong. Try again.",
@@ -795,12 +797,12 @@
     "searching": "Looking for evidence…",
     "answering": "Writing the answer…",
     "waiting": "Waiting for the AI server, {count, plural, one {# question} other {# questions}} ahead",
-    "answeredFrom": "Answered from {count, plural, one {# ticket} other {# tickets}}",
-    "notEnough": "Not enough information in the tickets you can access to answer this.",
+    "answeredFrom": "Answered from {count, plural, one {# source} other {# sources}}",
+    "notEnough": "Not enough information in what you can access to answer this.",
     "suggestions": "Try widening the date range, removing the client chip or checking the menu name.",
-    "closest": "Closest tickets",
+    "closest": "Closest sources",
     "results": "Keyword results",
-    "noResults": "No matching tickets.",
+    "noResults": "No matches.",
     "aiOff": "AI is turned off.",
     "aiOffHint": "These are keyword results under the same scope.",
     "sources": "Sources",
@@ -845,7 +847,7 @@
       "why": "What was wrong?",
       "reasons": {
         "wrong": "Wrong",
-        "missing_tickets": "Missing tickets",
+        "missing_tickets": "Missing sources",
         "wrong_citation": "Wrong citation",
         "too_vague": "Too vague"
       },
@@ -1292,7 +1294,13 @@
       "discarded": "Discarded",
       "failed": "Failed"
     },
-    "reviewHint": "Applying creates the ticked nodes the tree lacks, and links every node to its sections so Ask can cite them."
+    "reviewHint": "Applying creates the ticked nodes the tree lacks, and links every node to its sections so Ask can cite them.",
+    "version": "Version",
+    "replaceHint": "Mark this document replaced by a newer version. Ask then uses it only as history.",
+    "replace": "Mark replaced",
+    "makeCurrent": "Make current again",
+    "noNewer": "No other current document in this project yet.",
+    "replacedBy": "Replaced by"
   },
   "treeDraft": {
     "heading": "Tree draft",

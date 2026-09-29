@@ -169,6 +169,76 @@ func TestDocumentTreeFromHeadings(t *testing.T) {
 		len(doc.Drafts) != 1 || doc.Drafts[0].Status != "applied" {
 		t.Fatalf("document after apply: %+v", doc)
 	}
+
+	// A node's timeline starts from the sections it came from, with its
+	// sub-nodes' by default; a Client B member never sees a Client A document.
+	sections := func(c *http.Client, path string) []string {
+		t.Helper()
+		var tl httpapi.TimelinePage
+		if code := e.call(c, http.MethodGet, path, nil, &tl); code != http.StatusOK {
+			t.Fatalf("%s: %d", path, code)
+		}
+		out := []string{}
+		for _, s := range tl.Sections {
+			out = append(out, s.Key+" "+s.Title)
+		}
+		return out
+	}
+	hr := fmt.Sprintf("/nodes/%d/timeline", w.hr.ID)
+	if got := sections(lead, fmt.Sprintf("/nodes/%d/timeline", w.ot.ID)); len(got) != 1 || got[0] != "HRIS-DOC1/"+doc.Sections[2].Number+" Overtime Approval" {
+		t.Fatalf("Overtime Approval's sections: %v", got)
+	}
+	if got := sections(lead, hr); len(got) != 3 {
+		t.Fatalf("HR with its sub-nodes: %v", got)
+	}
+	if got := sections(lead, hr+"?sub_nodes=false"); len(got) != 1 {
+		t.Fatalf("HR alone: %v", got)
+	}
+	if got := sections(bayu, hr); len(got) != 0 {
+		t.Fatalf("a Client B member sees a Client A document: %v", got)
+	}
+}
+
+// §7.7: an admin marks a document replaced after its upload, when the upload
+// did not say so, or current again. Only a current document can replace one,
+// so replacements never loop.
+func TestDocumentReplacedAfterUpload(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	lead, leadUser := e.signedIn("lead@example.com", false)
+	e.seedMember(leadUser, w.p, "admin")
+	fields := map[string]string{"title": "HRIS FSD", "markdown": hrisFSD}
+	e.uploadDoc(lead, fields, "fsd-v1.md", hrisFSD)
+	if code, doc := e.uploadDoc(lead, fields, "fsd-v2.md", hrisFSD); code != http.StatusCreated || doc.Key != "HRIS-DOC2" {
+		t.Fatalf("second upload: %d %+v", code, doc)
+	}
+	replace := func(c *http.Client, key string, by any) (int, *string) {
+		t.Helper()
+		var doc httpapi.Document
+		code := e.call(c, http.MethodPatch, "/documents/"+key, map[string]any{"superseded_by": by}, &doc)
+		return code, doc.SupersededBy
+	}
+	if code, _ := replace(w.pm, "HRIS-DOC1", "HRIS-DOC2"); code != http.StatusForbidden {
+		t.Fatalf("a member replaces a document: %d", code)
+	}
+	for _, by := range []string{"HRIS-DOC1", "HRIS-DOC9", "OTHER-DOC1"} {
+		if code, _ := replace(lead, "HRIS-DOC1", by); code != http.StatusUnprocessableEntity {
+			t.Fatalf("replaced by %s: %d", by, code)
+		}
+	}
+	if code, by := replace(lead, "hris-doc1", "hris-doc2"); code != http.StatusOK || by == nil || *by != "HRIS-DOC2" {
+		t.Fatalf("replace: %d %v", code, by)
+	}
+	if code, _ := replace(lead, "HRIS-DOC2", "HRIS-DOC1"); code != http.StatusUnprocessableEntity {
+		t.Fatalf("a replaced document replaces its successor: %d", code)
+	}
+	if code, by := replace(lead, "HRIS-DOC1", nil); code != http.StatusOK || by != nil {
+		t.Fatalf("current again: %d %v", code, by)
+	}
+	var n int
+	if err := e.d.Pool.QueryRow(t.Context(), `SELECT count(*) FROM audit_events WHERE entity = 'document' AND action = 'update'`).Scan(&n); err != nil || n != 2 {
+		t.Fatalf("audit events: %v %d", err, n)
+	}
 }
 
 // §7.7 with AI on (AC-MR-8, AC-MR-9): the model proposes nodes with their

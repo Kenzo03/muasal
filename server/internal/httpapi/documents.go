@@ -228,6 +228,53 @@ func (s *Server) GetDocument(w http.ResponseWriter, r *http.Request, key string)
 	s.writeDocument(w, r, pc, strings.ToUpper(key), http.StatusOK)
 }
 
+// UpdateDocument marks a document replaced by a newer one of the project, for
+// when its upload did not say so, or current again with null (§7.7). Only a
+// current document can replace another, so replacements never loop. Its
+// sections are indexed again: their chunks say whether they are history.
+func (s *Server) UpdateDocument(w http.ResponseWriter, r *http.Request, key string) {
+	pc, d, ok := s.documentFor(w, r, key, access.Admin)
+	if !ok {
+		return
+	}
+	var in DocumentUpdate
+	if !decodeJSON(w, r, &in) {
+		return
+	}
+	ctx := r.Context()
+	var by *int64
+	var newKey *string
+	if in.SupersededBy != nil {
+		newer, err := s.q.GetDocumentByKey(ctx, strings.ToUpper(strings.TrimSpace(*in.SupersededBy)))
+		if err != nil || newer.Document.ProjectID != pc.project.ID || newer.Document.ArchivedAt != nil ||
+			newer.Document.ID == d.Document.ID || newer.Document.SupersededBy != nil {
+			writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields",
+				FieldError{Field: "superseded_by", Code: "invalid", Message: "Choose another current document of this project"})
+			return
+		}
+		by, newKey = &newer.Document.ID, &newer.Document.Key
+	}
+	err := s.inJobTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
+		if err := q.SetDocumentSupersededBy(ctx, db.SetDocumentSupersededByParams{ID: d.Document.ID, By: by}); err != nil {
+			return err
+		}
+		changes := changed(map[string]any{"superseded_by": d.SupersededByKey}, map[string]any{"superseded_by": newKey})
+		if err := audit(ctx, q, webMeta(r).inProject(pc.project.ID), &pc.user.ID, "document", d.Document.ID, "update", changes); err != nil {
+			return err
+		}
+		ids, err := q.ListDocumentSectionIDs(ctx, d.Document.ID)
+		if err != nil {
+			return err
+		}
+		return s.indexSections(ctx, tx, ids...)
+	})
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	s.writeDocument(w, r, pc, d.Document.Key, http.StatusOK)
+}
+
 func (s *Server) writeDocument(w http.ResponseWriter, r *http.Request, pc projectCtx, key string, status int) {
 	ctx := r.Context()
 	d, err := s.q.GetDocumentByKey(ctx, key)

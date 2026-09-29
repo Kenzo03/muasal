@@ -1643,6 +1643,12 @@ type DocumentSection struct {
 	Title  string `json:"title"`
 }
 
+// DocumentUpdate defines model for DocumentUpdate.
+type DocumentUpdate struct {
+	// SupersededBy A newer document's key
+	SupersededBy *string `json:"superseded_by"`
+}
+
 // FailedJob defines model for FailedJob.
 type FailedJob struct {
 	At       time.Time `json:"at"`
@@ -2666,6 +2672,29 @@ type TimelinePage struct {
 
 	// Notes Decision notes on the node, newest decision first (FSD §9.4). Only the first page carries them, all of them; later pages, and a ticket type filter, leave the list empty.
 	Notes []TimelineNote `json:"notes"`
+
+	// Sections The document sections the node and its sub-nodes came from (FSD §7.7): where their history starts. Current documents first, newest upload first. Carried like notes: the first page only, and none with a ticket type filter.
+	Sections []TimelineSection `json:"sections"`
+}
+
+// TimelineSection defines model for TimelineSection.
+type TimelineSection struct {
+	Client        *Ref   `json:"client,omitempty"`
+	DocumentKey   string `json:"document_key"`
+	DocumentTitle string `json:"document_title"`
+
+	// Excerpt The start of the section's Markdown.
+	Excerpt string `json:"excerpt"`
+
+	// Key The section's citation
+	//
+	// Example: HRIS-DOC1/7.4
+	Key string `json:"key"`
+
+	// SupersededBy The key of the document that replaced this one.
+	SupersededBy *string   `json:"superseded_by,omitempty"`
+	Title        string    `json:"title"`
+	UploadedAt   time.Time `json:"uploaded_at"`
 }
 
 // TransitionRequest defines model for TransitionRequest.
@@ -3064,6 +3093,9 @@ type CreateContactJSONRequestBody = ContactInput
 // UpdateContactJSONRequestBody defines body for UpdateContact for application/json ContentType.
 type UpdateContactJSONRequestBody = ContactInput
 
+// UpdateDocumentJSONRequestBody defines body for UpdateDocument for application/json ContentType.
+type UpdateDocumentJSONRequestBody = DocumentUpdate
+
 // CreateImportMultipartRequestBody defines body for CreateImport for multipart/form-data ContentType.
 type CreateImportMultipartRequestBody CreateImportMultipartBody
 
@@ -3267,6 +3299,9 @@ type ServerInterface interface {
 
 	// (GET /documents/{key})
 	GetDocument(w http.ResponseWriter, r *http.Request, key string)
+
+	// (PATCH /documents/{key})
+	UpdateDocument(w http.ResponseWriter, r *http.Request, key string)
 
 	// (GET /documents/{key}/file)
 	DownloadDocument(w http.ResponseWriter, r *http.Request, key string)
@@ -4437,6 +4472,32 @@ func (siw *ServerInterfaceWrapper) GetDocument(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetDocument(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateDocument operation middleware
+func (siw *ServerInterfaceWrapper) UpdateDocument(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateDocument(w, r, key)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -6949,6 +7010,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/documents", wrapper.ListDocuments)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/documents", wrapper.UploadDocument)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/documents/{key}", wrapper.GetDocument)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/documents/{key}", wrapper.UpdateDocument)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/documents/{key}/file", wrapper.DownloadDocument)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/documents/{key}/tree-drafts", wrapper.StartTreeDraft)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/tree-drafts/{id}", wrapper.GetTreeDraft)

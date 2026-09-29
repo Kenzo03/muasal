@@ -65,6 +65,7 @@ export default async function NodePage({
       <Timeline
         items={timeline.data?.items ?? []}
         notes={timeline.data?.notes ?? []}
+        sections={timeline.data?.sections ?? []}
         failed={Boolean(timeline.error)}
         more={Boolean(timeline.data?.next_cursor)}
         limit={limit}

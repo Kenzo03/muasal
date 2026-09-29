@@ -942,6 +942,25 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Document" }
         default: { $ref: "#/components/responses/Problem" }
+    patch:
+      operationId: updateDocument
+      tags: [documents]
+      description: >-
+        Project admins. Marks the document replaced by a newer document of the project, for when the upload did not
+        say so, or current again with null (FSD §7.7). Only a current document can replace another. Ask then treats
+        the replaced document's sections as history.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DocumentUpdate" }
+      responses:
+        "200":
+          description: The document.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Document" }
+        default: { $ref: "#/components/responses/Problem" }
   /documents/{key}/file:
     parameters:
       - { name: key, in: path, required: true, schema: { type: string } }
@@ -2133,7 +2152,7 @@ components:
         decision: { $ref: "#/components/schemas/DecisionRecord" }
     TimelinePage:
       type: object
-      required: [items, notes, next_cursor]
+      required: [items, notes, sections, next_cursor]
       properties:
         items:
           type: array
@@ -2144,7 +2163,26 @@ components:
             Decision notes on the node, newest decision first (FSD §9.4). Only the first page carries them, all of
             them; later pages, and a ticket type filter, leave the list empty.
           items: { $ref: "#/components/schemas/TimelineNote" }
+        sections:
+          type: array
+          description: >-
+            The document sections the node and its sub-nodes came from (FSD §7.7): where their history starts.
+            Current documents first, newest upload first. Carried like notes: the first page only, and none with a
+            ticket type filter.
+          items: { $ref: "#/components/schemas/TimelineSection" }
         next_cursor: { type: string, nullable: true }
+    TimelineSection:
+      type: object
+      required: [key, document_key, document_title, title, excerpt, uploaded_at]
+      properties:
+        key: { type: string, example: HRIS-DOC1/7.4, description: The section's citation, as Ask writes it. }
+        document_key: { type: string }
+        document_title: { type: string }
+        title: { type: string }
+        excerpt: { type: string, description: The start of the section's Markdown. }
+        uploaded_at: { type: string, format: date-time }
+        client: { $ref: "#/components/schemas/Ref" }
+        superseded_by: { type: string, description: The key of the document that replaced this one. }
     TimelineNote:
       type: object
       required: [key, title, decided_on, attendees, body, author]
@@ -2377,6 +2415,11 @@ components:
         level: { type: integer }
         body: { type: string, description: The Markdown under the heading. }
         nodes: { type: array, items: { $ref: "#/components/schemas/Ref" }, description: The nodes this section produced. }
+    DocumentUpdate:
+      type: object
+      required: [superseded_by]
+      properties:
+        superseded_by: { type: string, nullable: true, description: A newer document's key, e.g. HRIS-DOC2; null makes this document current again. }
     Document:
       type: object
       required: [key, project_key, title, filename, markdown, sections, drafts, uploaded_by, created_at]
