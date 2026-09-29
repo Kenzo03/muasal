@@ -2,15 +2,16 @@
 -- Everything a ticket's chunks say about it (FSD §13.1).
 SELECT t.id, t.key, t.external_ref, t.type, t.title, t.description, t.reason, t.project_id, t.client_id,
        t.requester_contact_id, t.requester_user_id, t.reporter_id, t.assignee_id, t.created_at, t.closed_at,
-       s.name AS status_name, c.name AS client_name,
+       t.priority, t.due_date, s.name AS status_name, c.name AS client_name,
        rc.name AS contact_name, rc.title AS contact_title, rcc.name AS contact_client_name,
-       ru.name AS requester_user_name
+       ru.name AS requester_user_name, au.name AS assignee_name
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
 LEFT JOIN clients c ON c.id = t.client_id
 LEFT JOIN contacts rc ON rc.id = t.requester_contact_id
 LEFT JOIN clients rcc ON rcc.id = rc.client_id
 LEFT JOIN users ru ON ru.id = t.requester_user_id
+LEFT JOIN users au ON au.id = t.assignee_id
 WHERE t.id = $1;
 
 -- name: ListTicketNodePaths :many

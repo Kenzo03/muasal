@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/kenzo03/muasal/server/internal/ask"
 	"github.com/kenzo03/muasal/server/internal/db"
@@ -128,12 +129,12 @@ func TestPackKeepsTheBudget(t *testing.T) {
 		src := must(indexer.Load(context.Background(), w.q, tk.ID))
 		items = append(items, ask.Evidence{Ticket: &src})
 	}
-	text, keys, _ := ask.Pack(items, 10000)
-	if len(keys) != 3 || !strings.Contains(text, "[HRIS-1] Change request · Client A · closed 2026-05-01 as Done · requested by Hana\nTitle: Overtime approval by HR\nMenus: HR › Attendance › Overtime Approval\nReason: Supervisors are on leave.\nDecision (implemented): HR approves overtime.") ||
+	text, keys, _ := ask.Pack(items, 10000, time.Time{})
+	if len(keys) != 3 || !strings.Contains(text, "[HRIS-1] Change request · Client A · closed 2026-05-01 as Done · requested by Hana\nTitle: Overtime approval by HR\nAssigned to nobody · priority medium\nMenus: HR › Attendance › Overtime Approval\nReason: Supervisors are on leave.\nDecision (implemented): HR approves overtime.") ||
 		strings.Count(text, "Comment ") != 3 {
 		t.Fatalf("roomy budget:\n%s", text)
 	}
-	text, keys, _ = ask.Pack(items, 180) // room for two tickets without comments
+	text, keys, _ = ask.Pack(items, 180, time.Time{}) // room for two tickets without comments
 	if !slices.Equal(keys, []string{"HRIS-1", "HRIS-2"}) || strings.Count(text, "Comment ") != 0 {
 		t.Fatalf("tight budget: %v\n%s", keys, text)
 	}
@@ -156,10 +157,28 @@ func TestPackNamesReversals(t *testing.T) {
 		src := must(indexer.Load(ctx, w.q, tk.ID))
 		items = append(items, ask.Evidence{Ticket: &src})
 	}
-	_, _, blocks := ask.Pack(items, 2500)
+	_, _, blocks := ask.Pack(items, 2500, time.Time{})
 	if !strings.Contains(blocks[undo.Key], "Reverses "+old.Key+": Lower the approval threshold") ||
 		!strings.Contains(blocks[old.Key], "Reversed later by "+undo.Key) || strings.Contains(blocks[undo.Key], other.Key) {
 		t.Fatalf("blocks:\n%s\n\n%s", blocks[undo.Key], blocks[old.Key])
+	}
+}
+
+// MSL-7: a ticket's block says who has it, its priority and, while open,
+// whether it is overdue on the asker's today.
+func TestPackSaysWhoHasItAndWhetherItIsLate(t *testing.T) {
+	w := newWorld(t)
+	ctx := context.Background()
+	tk := w.ticket("Delivery note prints the wrong warehouse", &w.a, w.ot, "Drivers went to the wrong warehouse.", "", "")
+	_, err := w.d.Pool.Exec(ctx, "UPDATE tickets SET assignee_id = $1, priority = 'urgent', due_date = '2026-09-26' WHERE id = $2", w.member.ID, tk.ID)
+	w.check(err)
+	src := must(indexer.Load(ctx, w.q, tk.ID))
+	items := []ask.Evidence{{Ticket: &src}}
+	for today, want := range map[string]string{"2026-09-29": "due 2026-09-26, overdue", "2026-09-26": "due 2026-09-26\n"} {
+		_, _, blocks := ask.Pack(items, 2500, must(time.Parse(time.DateOnly, today)))
+		if b := blocks[tk.Key]; !strings.Contains(b, "Assigned to Rina · priority urgent · "+want) {
+			t.Errorf("today %s:\n%s", today, b)
+		}
 	}
 }
 
@@ -177,7 +196,7 @@ func TestPackKeepsTheBestItemsWhole(t *testing.T) {
 		tsrc := must(indexer.Load(context.Background(), w.q, tk.ID))
 		items = append(items, ask.Evidence{Ticket: &tsrc})
 	}
-	text, keys, blocks := ask.Pack(items, 700)
+	text, keys, blocks := ask.Pack(items, 700, time.Time{})
 	if keys[0] != note.Key || len(keys) == len(items) || !strings.Contains(text, "Rahmat: kirim contoh file transfer Mandiri") || blocks[note.Key] == "" {
 		t.Fatalf("packed %v:\n%s", keys, text)
 	}

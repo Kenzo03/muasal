@@ -187,7 +187,9 @@ func (e *Engine) Ask(ctx context.Context, r Request, sink Sink) (Result, error) 
 		sources = append(sources, ev)
 	}
 	// The conversation counts inside the context budget (§11.9).
-	text, packed, blocks := Pack(sources, s.ContextTokens-int(float64(len([]rune(fu.conversation)))/3.5))
+	local := start.In(tz)
+	today := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC)
+	text, packed, blocks := Pack(sources, s.ContextTokens-int(float64(len([]rune(fu.conversation)))/3.5), today)
 	evidence := make([]Item, 0, len(packed))
 	for _, ev := range sources {
 		if slices.Contains(packed, ev.Key()) {
