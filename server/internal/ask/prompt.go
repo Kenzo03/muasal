@@ -16,6 +16,7 @@ func System(language string) string {
 	return strings.Join([]string{
 		"You answer questions about a software team's tickets.",
 		"Answer only from EVIDENCE. Every claim cites one or more evidence keys, such as HRIS-231.",
+		"Cite a key only if its text states that claim. When a value changed, cite the record that set the new value for the new value, and the older record only for the old one.",
 		"If the evidence does not answer the question, return an empty claims list. Never write claims about what the evidence lacks, with one exception:",
 		"when the question asks why, only a reason the evidence states for that exact point is a reason. If none is stated, never infer one from other facts and never write \"because\" or \"karena\" for it; say what the evidence records, then add one claim that the reason is not recorded, citing the same keys.",
 		"For \"how does it work now\", prefer decisions that are not superseded; mention superseded ones only as history.",

@@ -1,6 +1,7 @@
 package ask
 
 import (
+	"regexp"
 	"slices"
 	"strings"
 )
@@ -8,7 +9,7 @@ import (
 // Dropped records what validation removed and why, for the Ask log (§10.8).
 type Dropped struct {
 	Claim   Claim    `json:"claim"`
-	Reason  string   `json:"reason"`            // no_citation, outside_key, empty
+	Reason  string   `json:"reason"`            // no_citation, outside_key, empty, citation_removed, citation_unsupported
 	Removed []string `json:"removed,omitempty"` // citations outside the evidence
 }
 
@@ -46,4 +47,70 @@ func Validate(c Claim, evidence []string) (Claim, *Dropped) {
 		return out, &Dropped{Claim: c, Reason: "citation_removed", Removed: removed}
 	}
 	return out, nil
+}
+
+var (
+	// figureRe finds the figures a text states: days, amounts, times, shares.
+	figureRe = regexp.MustCompile(`\d+`)
+	// citeKeyRe finds citation keys in a claim's text, whose digits are no figures:
+	// HRIS-231, HRIS-DN7, HRIS-DOC1/7.4, and FSD menu IDs such as PAY-PR-03.
+	citeKeyRe = regexp.MustCompile(`(?i)\b[a-z][a-z0-9]{1,9}-(?:doc\d+/[\w.]+|dn\d+|[a-z]{1,5}-\d+|\d+)\b`)
+)
+
+// figures lists a text's numbers without leading zeros, so 09 and 9 match.
+func figures(s string) map[string]bool {
+	out := map[string]bool{}
+	for _, n := range figureRe.FindAllString(s, -1) {
+		if t := strings.TrimLeft(n, "0"); t != "" {
+			out[t] = true
+		} else {
+			out["0"] = true
+		}
+	}
+	return out
+}
+
+// Recite checks the figures a claim states against what it cites (§11.5).
+// A model can cite the item a topic comes from rather than the one stating
+// the figure, such as the note that set the old payroll period for a claim
+// about the new one. A cited item holding none of the claim's figures loses
+// the citation; a claim left without any moves to the packed items holding
+// all of its figures (the first two, by rank), and keeps what the model cited
+// when none does. Claims without figures pass as they are.
+func Recite(c Claim, blocks map[string]string, order []string) (Claim, *Dropped) {
+	want := figures(citeKeyRe.ReplaceAllString(c.Text, ""))
+	if len(want) == 0 {
+		return c, nil
+	}
+	stated := func(key string) int { // how many of the claim's figures the item holds
+		have, n := figures(blocks[key]), 0
+		for f := range want {
+			if have[f] {
+				n++
+			}
+		}
+		return n
+	}
+	var kept, removed []string
+	for _, k := range c.Cites {
+		if stated(k) > 0 {
+			kept = append(kept, k)
+		} else {
+			removed = append(removed, k)
+		}
+	}
+	if len(removed) == 0 {
+		return c, nil
+	}
+	if len(kept) == 0 {
+		for _, k := range order {
+			if len(kept) < 2 && stated(k) == len(want) {
+				kept = append(kept, k)
+			}
+		}
+	}
+	if len(kept) == 0 {
+		return c, nil
+	}
+	return Claim{Text: c.Text, Cites: kept}, &Dropped{Claim: c, Reason: "citation_unsupported", Removed: removed}
 }

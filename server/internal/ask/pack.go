@@ -28,13 +28,20 @@ func (e Evidence) Key() string {
 	return e.Ticket.Ticket.Key
 }
 
+// wholeItems is how many of the best-ranked items keep all their details
+// while lower-ranked items give way.
+// ponytail: a fixed three; tune it if long tickets crowd out breadth.
+const wholeItems = 3
+
 // Pack writes the evidence the model sees, one block per item with its most
 // useful facts first (§11.4), within budget tokens, estimated as characters ÷
-// 3.5. Over budget, items lose their comments, description and note body
-// first, lowest ranked first; if that is not enough, the lowest-ranked items
-// go whole. It returns the text and the keys packed, in order; only those keys
-// may be cited.
-func Pack(items []Evidence, budgetTokens int) (string, []string) {
+// 3.5. Over budget, the items below the best three lose their comments,
+// description and note body first, lowest ranked first, then go whole; only
+// then do the best three lose theirs. So the item that answers keeps all of
+// it, such as a meeting note's follow-ups at the end of its body. It returns
+// the text, the keys packed in order (only those may be cited) and each
+// packed key's block.
+func Pack(items []Evidence, budgetTokens int) (string, []string, map[string]string) {
 	budget := int(float64(budgetTokens) * 3.5)
 	full := make([]string, len(items))
 	core := make([]string, len(items))
@@ -55,14 +62,22 @@ func Pack(items []Evidence, budgetTokens int) (string, []string) {
 		}
 		return n
 	}
-	for i := len(use) - 1; i >= 0 && size() > budget; i-- {
+	best := min(wholeItems, len(use))
+	for i := len(use) - 1; i >= best && size() > budget; i-- {
 		use[i] = core[i]
 	}
-	for i := len(use) - 1; i > 0 && size() > budget; i-- {
+	for i := len(use) - 1; i >= best && size() > budget; i-- {
+		use[i] = ""
+	}
+	for i := best - 1; i >= 0 && size() > budget; i-- {
+		use[i] = core[i]
+	}
+	for i := best - 1; i > 0 && size() > budget; i-- {
 		use[i] = ""
 	}
 	var text strings.Builder
 	var keys []string
+	blocks := map[string]string{}
 	for i, b := range use {
 		if b == "" {
 			continue
@@ -70,8 +85,9 @@ func Pack(items []Evidence, budgetTokens int) (string, []string) {
 		text.WriteString(b)
 		text.WriteString("\n\n")
 		keys = append(keys, items[i].Key())
+		blocks[items[i].Key()] = b
 	}
-	return strings.TrimSpace(text.String()), keys
+	return strings.TrimSpace(text.String()), keys, blocks
 }
 
 // block is one ticket's evidence; with details, its description and newest

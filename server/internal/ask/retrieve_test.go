@@ -2,6 +2,7 @@ package ask_test
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -127,13 +128,33 @@ func TestPackKeepsTheBudget(t *testing.T) {
 		src := must(indexer.Load(context.Background(), w.q, tk.ID))
 		items = append(items, ask.Evidence{Ticket: &src})
 	}
-	text, keys := ask.Pack(items, 10000)
+	text, keys, _ := ask.Pack(items, 10000)
 	if len(keys) != 3 || !strings.Contains(text, "[HRIS-1] Change request · Client A · closed 2026-05-01 as Done · requested by Hana\nTitle: Overtime approval by HR\nMenus: HR › Attendance › Overtime Approval\nReason: Supervisors are on leave.\nDecision (implemented): HR approves overtime.") ||
 		strings.Count(text, "Comment ") != 3 {
 		t.Fatalf("roomy budget:\n%s", text)
 	}
-	text, keys = ask.Pack(items, 180) // room for two tickets without comments
+	text, keys, _ = ask.Pack(items, 180) // room for two tickets without comments
 	if !slices.Equal(keys, []string{"HRIS-1", "HRIS-2"}) || strings.Count(text, "Comment ") != 0 {
 		t.Fatalf("tight budget: %v\n%s", keys, text)
+	}
+}
+
+// §11.4: over budget, lower-ranked items give way before the best-ranked
+// one is trimmed, so a meeting note keeps the follow-ups at the end of its body.
+func TestPackKeepsTheBestItemsWhole(t *testing.T) {
+	w := newWorld(t)
+	body := "## Keputusan\n\n" + strings.Repeat("Periode payroll berjalan tanggal 21 sampai tanggal 20 bulan berjalan.\n", 10) +
+		"\n## Tindak lanjut\n\n- Rahmat: kirim contoh file transfer Mandiri, paling lambat 3 Okt."
+	note := w.note("Kickoff Payroll", &w.a, w.ot, "2026-09-29", body)
+	src := must(indexer.LoadNote(context.Background(), w.q, note.ID))
+	items := []ask.Evidence{{Note: &src}}
+	for i := range 12 {
+		tk := w.ticket(fmt.Sprintf("Overtime rule %d", i), &w.a, w.ot, "Supervisors are on leave.", "2026-05-01", "HR approves overtime.")
+		tsrc := must(indexer.Load(context.Background(), w.q, tk.ID))
+		items = append(items, ask.Evidence{Ticket: &tsrc})
+	}
+	text, keys, blocks := ask.Pack(items, 700)
+	if keys[0] != note.Key || len(keys) == len(items) || !strings.Contains(text, "Rahmat: kirim contoh file transfer Mandiri") || blocks[note.Key] == "" {
+		t.Fatalf("packed %v:\n%s", keys, text)
 	}
 }

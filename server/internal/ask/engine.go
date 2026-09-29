@@ -187,7 +187,7 @@ func (e *Engine) Ask(ctx context.Context, r Request, sink Sink) (Result, error) 
 		sources = append(sources, ev)
 	}
 	// The conversation counts inside the context budget (§11.9).
-	text, packed := Pack(sources, s.ContextTokens-int(float64(len([]rune(fu.conversation)))/3.5))
+	text, packed, blocks := Pack(sources, s.ContextTokens-int(float64(len([]rune(fu.conversation)))/3.5))
 	evidence := make([]Item, 0, len(packed))
 	for _, ev := range sources {
 		if slices.Contains(packed, ev.Key()) {
@@ -222,6 +222,10 @@ func (e *Engine) Ask(ctx context.Context, r Request, sink Sink) (Result, error) 
 			}
 			if valid.Text == "" || len(res.Claims) >= 6 {
 				return
+			}
+			if recited, moved := Recite(valid, blocks, packed); moved != nil {
+				valid = recited
+				logRow.dropped = append(logRow.dropped, *moved)
 			}
 			if len(res.Claims) == 0 {
 				logRow.firstClaim = e.now().Sub(start)
