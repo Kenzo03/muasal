@@ -5,6 +5,7 @@ import { ClientChip, StatusDot, showsClients } from "@/components/Chips";
 import Icon from "@/components/Icon";
 import Markdown from "@/components/Markdown";
 import { itemHref } from "@/lib/ask";
+import { asTables } from "@/lib/convert";
 import { dateIn, day, dayOf } from "@/lib/format";
 import type { Client, TimelineEntry, TimelineNote, TimelineSection } from "@/lib/problem";
 import { button, chip, cx, field } from "@/lib/ui";
@@ -266,7 +267,7 @@ export default async function Timeline({ items, notes, sections, failed, more, l
                         <Link href={itemHref(s.key)} className="text-[15px] font-extrabold text-ink no-underline hover:text-ink hover:underline">
                           <span className="font-bold text-muted">{s.key.slice(d.document_key.length + 1)}</span> {s.title}
                         </Link>
-                        {s.excerpt && <Markdown text={s.excerpt} className="line-clamp-3 text-ink-soft" />}
+                        {s.excerpt && <Markdown text={asTables(s.excerpt)} className="line-clamp-3 text-ink-soft" />}
                       </div>
                     ))}
                   </article>

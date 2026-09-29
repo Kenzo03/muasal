@@ -45,6 +45,35 @@ func TestLinkedNodesAreArchivedNotDeleted(t *testing.T) {
 	}
 }
 
+// §7.7, §9.4: a node a tree draft linked to its document section can still be
+// deleted, the link going with it and the section staying; a node a decision
+// note cites is history, like a ticket's, and is archived instead.
+func TestDeletingNodesLinkedToSectionsOrNotes(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	admin, _ := e.signedIn("admin@example.com", true)
+	e.uploadDoc(admin, map[string]string{"title": "HRIS FSD", "markdown": hrisFSD}, "fsd.md", hrisFSD)
+	drafted := e.seedNode(w.p, &w.hr, "menu", "Drafted by mistake")
+	e.exec(`INSERT INTO document_section_nodes (section_id, node_id) SELECT min(id), $1 FROM document_sections`, drafted.ID)
+	if code := e.call(admin, http.MethodDelete, fmt.Sprintf("/nodes/%d", drafted.ID), nil, nil); code != http.StatusNoContent {
+		t.Fatalf("delete a drafted node: %d", code)
+	}
+	var links, sections int
+	if err := e.d.Pool.QueryRow(t.Context(), `SELECT (SELECT count(*) FROM document_section_nodes), (SELECT count(*) FROM document_sections)`).
+		Scan(&links, &sections); err != nil || links != 0 || sections == 0 {
+		t.Fatalf("after delete: %v links %d, sections %d", err, links, sections)
+	}
+
+	cited := e.seedNode(w.p, &w.hr, "menu", "Cited by a note")
+	if code := e.call(admin, http.MethodPost, "/projects/HRIS/notes", noteBody("A decision", "2026-09-29", nil, []int64{cited.ID}), nil); code != http.StatusCreated {
+		t.Fatalf("note: %d", code)
+	}
+	var p httpapi.Problem
+	if code := e.call(admin, http.MethodDelete, fmt.Sprintf("/nodes/%d", cited.ID), nil, &p); code != http.StatusConflict || p.Code != "node_linked" {
+		t.Fatalf("delete a node a note cites: %d %+v", code, p)
+	}
+}
+
 func TestArchiveRules(t *testing.T) {
 	e := newEnv(t)
 	w := newHRIS(e)

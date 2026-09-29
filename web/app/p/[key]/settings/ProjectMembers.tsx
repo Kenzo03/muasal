@@ -12,18 +12,27 @@ type Row = { email: string; name: string; role: ProjectRole; all_clients: boolea
 const toRow = (m: Member): Row => ({ email: m.email, name: m.name, role: m.role, all_clients: m.all_clients, client_ids: m.client_ids });
 
 // Edits the whole member list locally and saves it in one request (FSD §15.2: one by one or in bulk).
+// A save the server refuses marks the rows it names, such as an email no user has.
 export default function ProjectMembers({ projectKey, members, clients }: { projectKey: string; members: Member[]; clients: Client[] }) {
   const t = useTranslations("settings");
   const problemText = useProblemText();
   const [rows, setRows] = useState<Row[]>(() => members.map(toRow));
   const [status, setStatus] = useState("");
+  const [rowErrors, setRowErrors] = useState<Record<number, { text: string; unknownUser: boolean }>>({}); // by row, from the last save
 
-  const update = (i: number, patch: Partial<Row>) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  // Any edit moves or changes rows, so the last save's row errors no longer apply.
+  const edit = (next: (rs: Row[]) => Row[]) => {
+    setRows(next);
+    setRowErrors({});
+  };
+  const update = (i: number, patch: Partial<Row>) => edit((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
 
   function add(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const email = String(new FormData(e.currentTarget).get("email")).trim();
-    setRows((rs) => [...rs, { email, name: email, role: "member", all_clients: true, client_ids: [] }]);
+    if (rows.some((r) => r.email.toLowerCase() === email.toLowerCase())) return setStatus(t("alreadyListed"));
+    edit((rs) => [...rs, { email, name: email, role: "member", all_clients: true, client_ids: [] }]);
+    setStatus("");
     e.currentTarget.reset();
   }
 
@@ -35,8 +44,16 @@ export default function ProjectMembers({ projectKey, members, clients }: { proje
       }),
     };
     const { data, error } = await api.PUT("/projects/{key}/members", { params: { path: { key: projectKey } }, body });
-    if (error) return setStatus(problemText(error));
-    setRows(data.items.map(toRow));
+    if (error) {
+      const byRow: typeof rowErrors = {};
+      for (const f of error.errors ?? []) {
+        const at = /^members\[(\d+)\]\./.exec(f.field);
+        if (at) byRow[Number(at[1])] = { text: problemText({ ...error, errors: [f] }), unknownUser: f.code === "unknown_user" };
+      }
+      setRowErrors(byRow);
+      return setStatus(problemText(error));
+    }
+    edit(() => data.items.map(toRow));
     setStatus(t("saved"));
   }
 
@@ -65,6 +82,12 @@ export default function ProjectMembers({ projectKey, members, clients }: { proje
                       <span>
                         {r.name}
                         <span className="block text-xs text-muted">{r.email}</span>
+                        {rowErrors[i] && (
+                          <span role="alert" className="block max-w-80 text-xs text-danger">
+                            {rowErrors[i].text}
+                            {rowErrors[i].unknownUser && <span className="block text-muted">{t("unknownUserHint")}</span>}
+                          </span>
+                        )}
                       </span>
                     </span>
                   </td>
@@ -110,7 +133,7 @@ export default function ProjectMembers({ projectKey, members, clients }: { proje
                     )}
                   </td>
                   <td className={cx(table.td, "text-right")}>
-                    <button type="button" className={button.quiet} onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}>
+                    <button type="button" className={button.quiet} onClick={() => edit((rs) => rs.filter((_, j) => j !== i))}>
                       {t("remove")}
                     </button>
                   </td>

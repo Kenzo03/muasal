@@ -217,7 +217,9 @@
     "email": "Email",
     "addMember": "Add member",
     "saveMembers": "Save members",
-    "noMembers": "No members yet."
+    "noMembers": "No members yet.",
+    "unknownUserHint": "Ask a system admin to create the account in Admin › Users, then add it again.",
+    "alreadyListed": "This email is already listed."
   },
   "clients": {
     "title": "Clients",

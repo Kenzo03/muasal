@@ -217,7 +217,9 @@
     "email": "Email",
     "addMember": "Tambah anggota",
     "saveMembers": "Simpan anggota",
-    "noMembers": "Belum ada anggota."
+    "noMembers": "Belum ada anggota.",
+    "unknownUserHint": "Minta admin sistem membuat akunnya di Admin › Pengguna, lalu tambahkan lagi.",
+    "alreadyListed": "Email ini sudah ada di daftar."
   },
   "clients": {
     "title": "Klien",

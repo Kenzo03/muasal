@@ -29,6 +29,7 @@ export default function NewProjectForm({ templates }: { templates: { key: string
     });
     if (error) return setProblem(error);
     router.push(`/p/${data.key}/settings`); // next: link clients and add members
+    router.refresh(); // the sidebar lists projects from the layout, which a push keeps
   }
 
   return (

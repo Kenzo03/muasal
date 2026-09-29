@@ -377,6 +377,8 @@ func nodeConflict(w http.ResponseWriter, err error) bool {
 			FieldError{Field: "client_ids", Code: "client_not_linked", Message: "Link this client to the project first"})
 	case "ticket_nodes_node_fk":
 		writeProblem(w, http.StatusConflict, "node_linked", "Tickets link to this item; archive it instead")
+	case "decision_note_nodes_node_id_fkey": // notes are history too (§9.4)
+		writeProblem(w, http.StatusConflict, "node_linked", "Decision notes link to this item; archive it instead")
 	case "nodes_parent_fk":
 		writeProblem(w, http.StatusConflict, "node_has_children", "Delete or move its sub-items first")
 	default:
