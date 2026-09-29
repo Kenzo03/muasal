@@ -302,6 +302,9 @@ func (s *Server) summaryInputs(ctx context.Context, items []summaryItem, client 
 		inputs[i] = draft.Item{Key: it.api.Key, Kind: string(it.api.Kind), Title: it.api.Title, Menu: it.api.Menu,
 			Client: deref(it.api.Client), RequestedBy: deref(it.api.RequestedBy), Date: it.api.Date.Time,
 			Cancelled: deref(it.api.Cancelled), Text: b.String()}
+		if d := it.decision; d != nil && d.State != nil {
+			inputs[i].Change, inputs[i].Why, inputs[i].ReversedBy = deref(d.WhatChanged), deref(d.Why), deref(d.SupersededByKey)
+		}
 	}
 	return inputs, outItems, nil
 }
