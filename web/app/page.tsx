@@ -188,11 +188,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
                   {items.map((it) => {
                     const overdue = Boolean(it.due_date && it.due_date < today);
                     return (
-                      <li key={it.key} className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl px-3 py-3 hover:bg-paper md:flex-nowrap">
+                      <li key={it.key} className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl px-3 py-3 hover:bg-paper">
                         <span className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-well">
                           <TypeIcon type={it.type} label={tTypes(it.type)} className="size-4" />
                         </span>
-                        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        {/* MSL-23: the title keeps 16rem; client, status and due wrap below it on a narrow column. */}
+                        <div className="flex min-w-0 flex-[1_1_16rem] flex-col gap-0.5">
                           <Link href={`/t/${it.key}`} className="truncate text-[14.5px] font-bold text-ink no-underline hover:text-ink hover:underline">{it.title}</Link>
                           <span className="flex flex-wrap items-center gap-x-1.5 text-[12.5px] text-muted">
                             <Link href={`/t/${it.key}`} className="font-bold text-muted no-underline hover:text-ink">{it.key}</Link>

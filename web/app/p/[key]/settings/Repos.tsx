@@ -93,8 +93,10 @@ export default function Repos({ projectKey, repos }: { projectKey: string; repos
                   <td className={table.td}>{t(`providers.${r.provider}`)}</td>
                   <td className={cx(table.td, "break-all font-mono text-xs")}>{r.webhook_url}</td>
                   <td className={cx(table.td, "whitespace-nowrap")}>
-                    <button type="button" onClick={() => newSecret(r)} className={button.quiet}>{t("newSecret")}</button>
-                    <button type="button" onClick={() => remove(r)} className={cx(button.quiet, "text-danger")}>{t("remove")}</button>
+                    <span className="inline-flex gap-3">
+                      <button type="button" onClick={() => newSecret(r)} className={button.quiet}>{t("newSecret")}</button>
+                      <button type="button" onClick={() => remove(r)} className={cx(button.quiet, "text-danger")}>{t("remove")}</button>
+                    </span>
                   </td>
                 </tr>
               ))}

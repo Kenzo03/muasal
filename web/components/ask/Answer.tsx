@@ -173,7 +173,8 @@ function ItemList({ title, items }: { title?: string; items: AskItem[] }) {
         {items.map((it) => (
           <li key={it.key} className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 px-3.5 py-2.5">
             <Link href={itemHref(it.key)} className="text-xs font-bold">{it.key}</Link>
-            <span className="min-w-0 flex-1 font-semibold">{it.title}</span>
+            {/* MSL-23: a real basis, so the details wrap below instead of squeezing the title to a word per line. */}
+            <span className="min-w-0 flex-[1_1_16rem] font-semibold">{it.title}</span>
             <span className="text-muted">{it.client ?? t("core")}</span>
             <span className="text-muted">{it.requested_by}</span>
             <span className="text-muted">{itemDay(it, locale, timeZone)}</span>

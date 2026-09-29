@@ -69,7 +69,7 @@ export default async function TicketsPage({
                 <tr>
                   <th className={cx(table.th, "pl-5")}>{tp("tickets")}</th>
                   {(["status", "client", "requestedBy", "assignee", "updated", "due"] as const).filter((c) => c !== "client" || withClients).map((c) => (
-                    <th key={c} className={table.th}>{t(c)}</th>
+                    <th key={c} className={cx(table.th, c === "updated" && "hidden 2xl:table-cell")}>{t(c)}</th>
                   ))}
                 </tr>
               </thead>
@@ -116,7 +116,8 @@ export default async function TicketsPage({
                           <span className="text-muted">—</span>
                         )}
                       </td>
-                      <td className={cx(table.td, "whitespace-nowrap py-3 text-muted")} title={dateTime(it.updated_at, locale, timeZone)}>{dayOf(it.updated_at, locale, timeZone)}</td>
+                      {/* MSL-23: below 1536px, Updated gives way so Due shows without scrolling. */}
+                      <td className={cx(table.td, "hidden whitespace-nowrap py-3 text-muted 2xl:table-cell")} title={dateTime(it.updated_at, locale, timeZone)}>{dayOf(it.updated_at, locale, timeZone)}</td>
                       <td className={cx(table.td, "whitespace-nowrap py-3 pr-5", it.due_date && it.due_date < today ? "font-semibold text-danger" : "text-muted")}>
                         {it.due_date ? day(it.due_date, locale) : "—"}
                       </td>
