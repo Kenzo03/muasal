@@ -3,11 +3,11 @@ package testdb
 
 import (
 	"context"
-	"fmt"
+	"crypto/rand"
+	"encoding/hex"
 	"net/url"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -37,7 +37,7 @@ func New(t *testing.T) DB {
 	if err != nil {
 		t.Fatalf("connect to TEST_DATABASE_URL: %v", err)
 	}
-	name := fmt.Sprintf("muasal_test_%d", time.Now().UnixNano())
+	name := newName()
 	if _, err := admin.Exec(ctx, "CREATE DATABASE "+name); err != nil {
 		t.Fatal(err)
 	}
@@ -60,6 +60,15 @@ func New(t *testing.T) DB {
 		t.Fatal(err)
 	}
 	return d
+}
+
+// newName names a database, and its app role too. It is random, not a
+// timestamp: packages test in parallel against one server, and the clock can
+// repeat (microseconds on macOS).
+func newName() string {
+	var b [8]byte
+	rand.Read(b[:]) // never fails since Go 1.24
+	return "muasal_test_" + hex.EncodeToString(b[:])
 }
 
 func withDatabase(raw, name string) string {
