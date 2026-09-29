@@ -60,7 +60,7 @@ const hrisFSD = `# HRIS FSD
 
 Supervisors approve overtime before payroll.
 
-### Leave Balance
+### Leave Balance (HR-LV-01)
 
 Shows the leave each employee has left.
 
@@ -157,9 +157,10 @@ func TestDocumentTreeFromHeadings(t *testing.T) {
 		t.Fatalf("apply: %d %+v", code, applied)
 	}
 	var source, parent string
-	if err := e.d.Pool.QueryRow(t.Context(), `SELECT n.source, p.name FROM nodes n JOIN nodes p ON p.id = n.parent_id WHERE n.name = 'Leave Balances'`).
-		Scan(&source, &parent); err != nil || source != "ai_draft" || parent != "HR" {
-		t.Fatalf("created node: %v %q %q", err, source, parent)
+	var nodeCode *string
+	if err := e.d.Pool.QueryRow(t.Context(), `SELECT n.source, p.name, n.code FROM nodes n JOIN nodes p ON p.id = n.parent_id WHERE n.name = 'Leave Balances'`).
+		Scan(&source, &parent, &nodeCode); err != nil || source != "ai_draft" || parent != "HR" || nodeCode == nil || *nodeCode != "HR-LV-01" {
+		t.Fatalf("created node: %v %q %q %v", err, source, parent, nodeCode) // MSL-17: the heading's ID is its code
 	}
 	if code := e.call(lead, http.MethodPost, path+"/apply", nil, nil); code != http.StatusConflict {
 		t.Fatalf("applied twice: %d", code)

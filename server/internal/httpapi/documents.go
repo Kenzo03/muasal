@@ -510,7 +510,7 @@ func checkProposal(in []TreeDraftNode) ([]docs.Node, []FieldError) {
 		if n.Type != NodeTypeModule && n.Type != NodeTypeMenu {
 			fields = append(fields, FieldError{Field: fmt.Sprintf("proposal[%d].type", i), Code: "invalid", Message: "Choose module or menu"})
 		}
-		out[i] = docs.Node{TmpID: n.TmpId, Parent: n.Parent, Type: string(n.Type), Name: name, Aliases: orEmpty(n.Aliases),
+		out[i] = docs.Node{TmpID: n.TmpId, Parent: n.Parent, Type: string(n.Type), Name: name, Code: cutRunes(strings.TrimSpace(deref(n.Code)), 100), Aliases: orEmpty(n.Aliases),
 			Description: cutRunes(strings.TrimSpace(n.Description), 300), Sections: orEmpty(n.Sections), Keep: n.Keep, Exists: n.Exists, Duplicate: deref(n.Duplicate)}
 	}
 	for i, n := range out {
@@ -554,6 +554,17 @@ func (s *Server) ApplyTreeDraft(w http.ResponseWriter, r *http.Request, id int64
 		if err != nil {
 			return err
 		}
+		// Codes are unique in a project, archived nodes included (MSL-17).
+		coded, err := q.ListNodes(ctx, db.ListNodesParams{ProjectID: pc.project.ID, AllClients: true, ClientIds: []int64{}, IncludeArchived: true})
+		if err != nil {
+			return err
+		}
+		usedCodes := map[string]bool{}
+		for _, n := range coded {
+			if n.Code != nil {
+				usedCodes[*n.Code] = true
+			}
+		}
 		ids := map[string]int64{} // path key → node id
 		for _, e := range existing {
 			ids[key(e.Path)] = e.ID
@@ -596,8 +607,12 @@ func (s *Server) ApplyTreeDraft(w http.ResponseWriter, r *http.Request, id int64
 				pid := ids[key(path[:len(path)-1])]
 				parent = &pid
 			}
+			var code *string
+			if n.Code != "" && !usedCodes[n.Code] {
+				code, usedCodes[n.Code] = &n.Code, true
+			}
 			node, err := q.CreateNode(ctx, db.CreateNodeParams{ProjectID: pc.project.ID, ParentID: parent, Type: n.Type, Name: n.Name,
-				Aliases: orEmpty(n.Aliases), Description: n.Description})
+				Code: code, Aliases: orEmpty(n.Aliases), Description: n.Description})
 			if err != nil {
 				return err
 			}

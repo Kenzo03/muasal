@@ -2727,8 +2727,11 @@ type TreeDraft struct {
 
 // TreeDraftNode defines model for TreeDraftNode.
 type TreeDraftNode struct {
-	Aliases     []string `json:"aliases"`
-	Description string   `json:"description"`
+	Aliases []string `json:"aliases"`
+
+	// Code The ID its heading ends with, such as SO-02 from "Persetujuan Sales Order (SO-02)"; applying sets it unless another node has it.
+	Code        *string `json:"code,omitempty"`
+	Description string  `json:"description"`
 
 	// Duplicate A sibling's tmp_id whose name is nearly the same.
 	Duplicate *string `json:"duplicate,omitempty"`

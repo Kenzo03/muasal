@@ -32,15 +32,16 @@ func TestLinkSection(t *testing.T) {
 		{Number: "1.2", Title: "Persetujuan Sales Order (SO-02)", Level: 3},
 	}
 	for _, c := range []struct {
-		path        []string
-		model, want string
+		path              []string
+		model, want, code string
 	}{
-		{[]string{"Penjualan", "Persetujuan  sales order"}, "s1", "1.2"},
-		{[]string{"Penjualan"}, "s1", "1"},
-		{[]string{"Penjualan", "Konsinyasi"}, "1.1", "1.1"},
+		{[]string{"Penjualan", "Persetujuan  sales order"}, "s1", "1.2", "SO-02"},
+		{[]string{"Penjualan", "Sales Order (SO-01)"}, "s1", "1.1", "SO-01"},
+		{[]string{"Penjualan"}, "s1", "1", ""},
+		{[]string{"Penjualan", "Konsinyasi"}, "1.1", "1.1", ""},
 	} {
-		if got := linkSection(part, c.path, c.model); got != c.want {
-			t.Errorf("%v: %q, want %q", c.path, got, c.want)
+		if got, code := linkSection(part, c.path, c.model); got != c.want || code != c.code {
+			t.Errorf("%v: %q %q, want %q %q", c.path, got, code, c.want, c.code)
 		}
 	}
 }

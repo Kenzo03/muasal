@@ -2454,6 +2454,7 @@ components:
         parent: { type: string, description: Another node's tmp_id, or empty at the top. }
         type: { $ref: "#/components/schemas/NodeType" }
         name: { type: string, minLength: 1, maxLength: 200 }
+        code: { type: string, maxLength: 100, description: "The ID its heading ends with, such as SO-02 from \"Persetujuan Sales Order (SO-02)\"; applying sets it unless another node has it." }
         aliases: { type: array, maxItems: 3, items: { type: string } }
         description: { type: string, maxLength: 300 }
         sections: { type: array, items: { type: string }, description: Source section numbers. }

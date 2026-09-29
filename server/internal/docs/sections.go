@@ -78,16 +78,17 @@ func HeadingName(title string) (name, id string) {
 	return strings.TrimSpace(title), ""
 }
 
-// SectionFor returns the number of the section whose heading names name,
-// ignoring case, spacing and a trailing ID; "" when none does.
-func SectionFor(sections []Section, name string) string {
+// SectionFor returns the number and trailing ID of the section whose heading
+// names name, ignoring case, spacing and IDs on either side; "" when none does.
+func SectionFor(sections []Section, name string) (number, id string) {
+	name, _ = HeadingName(name)
 	name = strings.Join(strings.Fields(name), " ")
 	for _, s := range sections {
-		if n, _ := HeadingName(s.Title); strings.EqualFold(strings.Join(strings.Fields(n), " "), name) {
-			return s.Number
+		if n, id := HeadingName(s.Title); strings.EqualFold(strings.Join(strings.Fields(n), " "), name) {
+			return s.Number, id
 		}
 	}
-	return ""
+	return "", ""
 }
 
 // Parts groups sections, in order, into parts of at most budget characters

@@ -2053,6 +2053,8 @@ export interface components {
             parent: string;
             type: components["schemas"]["NodeType"];
             name: string;
+            /** @description The ID its heading ends with, such as SO-02 from "Persetujuan Sales Order (SO-02)"; applying sets it unless another node has it. */
+            code?: string;
             aliases: string[];
             description: string;
             /** @description Source section numbers. */

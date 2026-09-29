@@ -176,6 +176,7 @@ export default function Review({ initial, projectKey, sections }: { initial: Dra
           ) : (
             <span className="text-xs text-muted">{t(n.type)}</span>
           )}
+          {n.code && <span className="font-mono text-xs text-muted">{n.code}</span>}
           {n.exists && (
             <span className={cx(chip, "bg-ok-soft text-ok")}>
               <Icon name="check" className="size-3.5" />

@@ -16,6 +16,7 @@ type Node struct {
 	Parent      string   `json:"parent"`
 	Type        string   `json:"type"` // module or menu
 	Name        string   `json:"name"`
+	Code        string   `json:"code,omitempty"`
 	Aliases     []string `json:"aliases"`
 	Description string   `json:"description"`
 	Sections    []string `json:"sections"`
@@ -31,6 +32,7 @@ type Candidate struct {
 	Aliases     []string
 	Description string
 	Section     string
+	Code        string // a heading's trailing ID, such as SO-02 (MSL-17)
 }
 
 // FromHeadings proposes a tree without a model (R-MR-11): the shallowest two
@@ -57,10 +59,12 @@ func FromHeadings(sections []Section) []Candidate {
 		switch {
 		case s.Number == "0":
 		case s.Level == top:
-			module = s.Title
-			out = append(out, Candidate{Path: []string{s.Title}, Type: "module", Section: s.Number})
+			name, id := HeadingName(s.Title)
+			module = name
+			out = append(out, Candidate{Path: []string{name}, Type: "module", Section: s.Number, Code: id})
 		case len(levels) > 1 && s.Level == levels[1] && module != "":
-			out = append(out, Candidate{Path: []string{module, s.Title}, Type: "menu", Section: s.Number})
+			name, id := HeadingName(s.Title)
+			out = append(out, Candidate{Path: []string{module, name}, Type: "menu", Section: s.Number, Code: id})
 		}
 	}
 	return out
@@ -128,6 +132,9 @@ func Merge(cands []Candidate, existing []Existing) []Node {
 		}
 		if n.Description == "" {
 			n.Description = cut(strings.TrimSpace(c.Description), 300)
+		}
+		if n.Code == "" {
+			n.Code = cut(strings.TrimSpace(c.Code), 100)
 		}
 		if c.Section != "" && !slices.Contains(n.Sections, c.Section) {
 			n.Sections = append(n.Sections, c.Section)
