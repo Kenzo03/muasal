@@ -68,14 +68,14 @@ var (
 	citeKeyRe = regexp.MustCompile(`(?i)\b[a-z][a-z0-9]{1,9}-(?:doc\d+/[\w.]+|dn\d+|[a-z]{1,5}-\d+|\d+)\b`)
 )
 
-// figures lists a text's numbers without leading zeros, so 09 and 9 match.
+// figures lists a text's numbers of two digits or more, without leading
+// zeros, so 09 and 9 match. One digit is no evidence: dates, versions and
+// keys all hold one, as does the 1 of "H+1" (MSL-5).
 func figures(s string) map[string]bool {
 	out := map[string]bool{}
 	for _, n := range figureRe.FindAllString(s, -1) {
-		if t := strings.TrimLeft(n, "0"); t != "" {
+		if t := strings.TrimLeft(n, "0"); len(t) > 1 {
 			out[t] = true
-		} else {
-			out["0"] = true
 		}
 	}
 	return out
