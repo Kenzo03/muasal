@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import PageBar from "@/components/PageBar";
-import { getMe } from "@/lib/server-api";
+import { getMe, getProjects } from "@/lib/server-api";
 import { panel } from "@/lib/ui";
 import NewProjectForm from "./NewProjectForm";
 
@@ -9,6 +9,7 @@ export default async function NewProjectPage() {
   const me = await getMe();
   if (!me) redirect("/login");
   const t = await getTranslations("newProject");
+  const projects = me.is_admin ? await getProjects() : [];
   return (
     <>
       <PageBar>
@@ -16,8 +17,8 @@ export default async function NewProjectPage() {
       </PageBar>
       <main className="p-4 md:p-5">
         {me.is_admin ? (
-          <div className={`${panel} mx-auto max-w-xl p-5`}>
-            <NewProjectForm />
+          <div className={`${panel} max-w-xl p-5`}>
+            <NewProjectForm templates={projects.map((p) => ({ key: p.key, name: p.name }))} />
           </div>
         ) : (
           <p className="text-muted">{t("adminsOnly")}</p>

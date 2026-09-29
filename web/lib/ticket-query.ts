@@ -12,15 +12,26 @@ export function one(sp: SearchParams): Record<string, string> {
   return out;
 }
 
-/** Maps the filter bar's URL (client=core|id, assignee=me, ...) onto the ticket list API. */
+const id = (v?: string) => (v && /^\d+$/.test(v) ? Number(v) : undefined);
+
+/**
+ * Maps the filter bar's URL onto the ticket list API: client=core|id,
+ * assignee=me|none|id, status=open|id, due=overdue|week, stale=days, ...
+ */
 export function ticketQuery(v: Record<string, string>) {
+  const stale = id(v.stale);
   return {
     q: v.q,
     client_id: v.client && v.client !== "core" ? Number(v.client) : undefined,
     core: v.client === "core" ? true : undefined,
     type: v.type as TicketType | undefined,
     mine: v.assignee === "me" ? true : undefined,
-    status_id: v.status ? Number(v.status) : undefined,
+    unassigned: v.assignee === "none" ? true : undefined,
+    assignee_id: id(v.assignee),
+    status_id: id(v.status),
+    open: v.status === "open" ? true : undefined,
+    due: (["overdue", "week"] as const).find((d) => d === v.due),
+    stale_days: stale && stale <= 365 ? stale : undefined,
     missing: v.missing as "reason" | "menus" | undefined,
     sort: v.sort as "updated" | "created" | "key" | "priority" | "due" | undefined,
     cursor: v.cursor,

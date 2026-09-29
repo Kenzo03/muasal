@@ -19,6 +19,32 @@ func (q *Queries) ClearDefaultStatus(ctx context.Context, projectID int64) error
 	return err
 }
 
+const copyStatuses = `-- name: CopyStatuses :exec
+INSERT INTO statuses (project_id, name, category, position, color, is_default)
+SELECT $1::bigint, name, category, position, color, is_default
+FROM statuses WHERE project_id = $2::bigint
+`
+
+type CopyStatusesParams struct {
+	ProjectID  int64
+	TemplateID int64
+}
+
+func (q *Queries) CopyStatuses(ctx context.Context, arg CopyStatusesParams) error {
+	_, err := q.db.Exec(ctx, copyStatuses, arg.ProjectID, arg.TemplateID)
+	return err
+}
+
+const deleteProjectStatuses = `-- name: DeleteProjectStatuses :exec
+DELETE FROM statuses WHERE project_id = $1
+`
+
+// Clears a new project's default statuses before it copies a template's; it has no tickets yet.
+func (q *Queries) DeleteProjectStatuses(ctx context.Context, projectID int64) error {
+	_, err := q.db.Exec(ctx, deleteProjectStatuses, projectID)
+	return err
+}
+
 const deleteStatusesExcept = `-- name: DeleteStatusesExcept :exec
 DELETE FROM statuses
 WHERE project_id = $1 AND NOT (id = ANY ($2::bigint[]))

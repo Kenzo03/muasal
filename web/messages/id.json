@@ -159,6 +159,9 @@
     "keyHint": "2–10 huruf atau angka, dimulai dengan huruf, tanpa spasi atau tanda hubung (mis. HRIS). Kunci tiket diawali dengan ini.",
     "name": "Nama",
     "description": "Deskripsi",
+    "template": "Salin dari proyek",
+    "templateNone": "Tidak ada (mulai kosong)",
+    "templateHint": "Menyalin status dan pohon modul proyek itu. Menu khusus klien menjadi menu bersama, karena proyek baru belum punya klien.",
     "create": "Buat proyek",
     "adminsOnly": "Hanya admin sistem yang dapat membuat proyek."
   },
@@ -170,7 +173,20 @@
     "tickets": "Tiket",
     "notes": "Notulen",
     "summaries": "Ringkasan",
-    "documents": "Dokumen"
+    "documents": "Dokumen",
+    "workload": "Beban kerja"
+  },
+  "workload": {
+    "intro": "Tiket terbuka per orang di proyek ini. Setiap angka membuka daftar tiket yang tersaring; tidak bergerak berarti tanpa perubahan {days} hari atau lebih.",
+    "person": "Orang",
+    "open": "Terbuka",
+    "inProgress": "Sedang dikerjakan",
+    "overdue": "Terlambat",
+    "dueWeek": "7 hari ke depan",
+    "stale": "Tidak bergerak {days}+ hari",
+    "high": "Prioritas tinggi",
+    "unassigned": "Belum ditugaskan",
+    "none": "Belum ada anggota yang dapat menangani tiket."
   },
   "settings": {
     "adminsOnly": "Hanya admin proyek yang dapat mengubah pengaturan.",
@@ -403,7 +419,9 @@
       "status_id": "Status",
       "web_url": "URL web",
       "question": "Pertanyaan",
-      "requester_contact_id": "Kontak"
+      "requester_contact_id": "Kontak",
+      "template_key": "Salin dari proyek",
+      "weekday": "Hari"
     },
     "cannot_change_self": "Anda tidak dapat menonaktifkan diri sendiri atau mencabut peran admin Anda",
     "forbidden": "Anda tidak memiliki akses untuk ini.",
@@ -469,8 +487,17 @@
     "assignee": "Penanggung jawab",
     "anyone": "Siapa saja",
     "mine": "Hanya milik saya",
+    "unassigned": "Belum ditugaskan",
     "status": "Status",
     "anyStatus": "Semua status",
+    "openStatuses": "Semua yang terbuka",
+    "due": "Tenggat",
+    "anyDue": "Kapan saja",
+    "overdue": "Terlambat",
+    "dueWeek": "7 hari ke depan",
+    "stale": "Tidak bergerak",
+    "anyActivity": "—",
+    "staleDays": "{days}+ hari",
     "missing": "Belum diisi",
     "nothingMissing": "—",
     "missingReason": "Tanpa alasan",
@@ -1218,7 +1245,18 @@
     "printNow": "Cetak atau simpan sebagai PDF",
     "markdown": "Markdown",
     "previewLabel": "Pratinjau",
-    "meta": "{audience} · {items} item · {model}. Menyunting tidak mengubah tiket."
+    "meta": "{audience} · {items} item · {model}. Menyunting tidak mengubah tiket.",
+    "weekly": "Ringkasan mingguan",
+    "weeklyHint": "Setiap minggu pada hari yang dipilih (mulai pukul 00.00 UTC, 07.00 WIB), ringkasan tujuh hari terakhir masuk ke daftar ini dan lonceng pembuat jadwal. Minggu tanpa perubahan tidak menghasilkan ringkasan. Bila AI mati, ringkasan mencantumkan setiap perubahan dari catatan keputusannya.",
+    "weeklyNone": "Belum ada ringkasan mingguan.",
+    "weeklyAdd": "Jadwalkan ringkasan mingguan",
+    "every": "Setiap {day}",
+    "lastRun": "terakhir {date}",
+    "notRunYet": "belum berjalan",
+    "day": "Hari",
+    "schedule": "Jadwalkan",
+    "stop": "Hentikan",
+    "stopConfirm": "Hentikan ringkasan mingguan ini? Ringkasan yang sudah dibuat tetap ada."
   },
   "documents": {
     "heading": "Dokumen",

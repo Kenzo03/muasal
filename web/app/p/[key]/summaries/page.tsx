@@ -5,6 +5,7 @@ import PageBar from "@/components/PageBar";
 import { utc } from "@/lib/format";
 import { getProject, serverApi } from "@/lib/server-api";
 import { button, cx, table } from "@/lib/ui";
+import Schedules from "./Schedules";
 
 // Change summaries (FSD §12.1): the caller's own, and every one for project admins.
 export default async function SummariesPage({ params }: { params: Promise<{ key: string }> }) {
@@ -14,7 +15,13 @@ export default async function SummariesPage({ params }: { params: Promise<{ key:
   const t = await getTranslations("summaries");
   const locale = await getLocale();
   const api = await serverApi();
-  const { data } = await api.GET("/summaries", { params: { query: { project: key } } });
+  const admin = project.role === "admin";
+  const path = { params: { path: { key } } };
+  const [{ data }, schedules, clients] = await Promise.all([
+    api.GET("/summaries", { params: { query: { project: key } } }),
+    admin ? api.GET("/projects/{key}/summary-schedules", path) : undefined,
+    admin ? api.GET("/projects/{key}/clients", path) : undefined,
+  ]);
   const items = data?.items ?? [];
   return (
     <>
@@ -27,6 +34,7 @@ export default async function SummariesPage({ params }: { params: Promise<{ key:
       </PageBar>
       <main className="flex flex-col gap-3 px-4 py-4 md:px-5">
         <p className="text-[13px] text-muted">{t("intro")}</p>
+        {admin && <Schedules projectKey={key} clients={clients?.data?.items ?? []} schedules={schedules?.data?.items ?? []} />}
         {items.length === 0 ? (
           <p className="text-muted">{t("none")}</p>
         ) : (

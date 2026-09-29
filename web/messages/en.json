@@ -159,6 +159,9 @@
     "keyHint": "2–10 letters or digits, starting with a letter, with no spaces or hyphens (e.g. HRIS). Ticket keys start with it.",
     "name": "Name",
     "description": "Description",
+    "template": "Copy from project",
+    "templateNone": "None (start empty)",
+    "templateHint": "Copies that project's statuses and module tree. Client-specific menus become shared, since the new project has no clients yet.",
     "create": "Create project",
     "adminsOnly": "Only system admins can create projects."
   },
@@ -170,7 +173,20 @@
     "tickets": "Tickets",
     "notes": "Notes",
     "summaries": "Summaries",
-    "documents": "Documents"
+    "documents": "Documents",
+    "workload": "Workload"
+  },
+  "workload": {
+    "intro": "Open tickets per person in this project. Each number opens the filtered ticket list; no activity means no change for {days} days or more.",
+    "person": "Person",
+    "open": "Open",
+    "inProgress": "In progress",
+    "overdue": "Overdue",
+    "dueWeek": "Next 7 days",
+    "stale": "No activity {days}+ days",
+    "high": "High priority",
+    "unassigned": "Unassigned",
+    "none": "Nobody can own tickets in this project yet."
   },
   "settings": {
     "adminsOnly": "Only project admins can change settings.",
@@ -403,7 +419,9 @@
       "status_id": "Status",
       "web_url": "Web URL",
       "question": "Question",
-      "requester_contact_id": "Contact"
+      "requester_contact_id": "Contact",
+      "template_key": "Copy from project",
+      "weekday": "Day"
     },
     "cannot_change_self": "You cannot disable yourself or remove your own admin role",
     "forbidden": "You do not have access to this.",
@@ -469,8 +487,17 @@
     "assignee": "Assignee",
     "anyone": "Anyone",
     "mine": "Only mine",
+    "unassigned": "Unassigned",
     "status": "Status",
     "anyStatus": "Any status",
+    "openStatuses": "All open",
+    "due": "Due",
+    "anyDue": "Any time",
+    "overdue": "Overdue",
+    "dueWeek": "Next 7 days",
+    "stale": "No activity",
+    "anyActivity": "—",
+    "staleDays": "{days}+ days",
     "missing": "Missing",
     "nothingMissing": "—",
     "missingReason": "No reason",
@@ -1218,7 +1245,18 @@
     "printNow": "Print or save as PDF",
     "markdown": "Markdown",
     "previewLabel": "Preview",
-    "meta": "{audience} · {items} items · {model}. Editing never changes tickets."
+    "meta": "{audience} · {items} items · {model}. Editing never changes tickets.",
+    "weekly": "Weekly summaries",
+    "weeklyHint": "Every week on the chosen day (from 00:00 UTC), a summary of the past seven days joins this list and rings the scheduler's bell. A week without changes writes none. With AI off, it lists each change from its decision record.",
+    "weeklyNone": "No weekly summaries yet.",
+    "weeklyAdd": "Schedule a weekly summary",
+    "every": "Every {day}",
+    "lastRun": "last {date}",
+    "notRunYet": "not run yet",
+    "day": "Day",
+    "schedule": "Schedule",
+    "stop": "Stop",
+    "stopConfirm": "Stop this weekly summary? Summaries already written stay."
   },
   "documents": {
     "heading": "Documents",

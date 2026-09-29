@@ -370,6 +370,18 @@ type Summary struct {
 	UpdatedAt time.Time
 }
 
+type SummarySchedule struct {
+	ID        int64
+	ProjectID int64
+	ClientID  *int64
+	Language  string
+	Audience  string
+	Weekday   int16
+	CreatedBy int64
+	CreatedAt time.Time
+	LastRunOn *time.Time
+}
+
 type Ticket struct {
 	ID                 int64
 	ProjectID          int64

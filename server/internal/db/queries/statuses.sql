@@ -28,5 +28,14 @@ WHERE project_id = sqlc.arg('project_id') AND status_id = sqlc.arg('from_id');
 DELETE FROM statuses
 WHERE project_id = sqlc.arg('project_id') AND NOT (id = ANY (sqlc.arg('keep_ids')::bigint[]));
 
+-- name: DeleteProjectStatuses :exec
+-- Clears a new project's default statuses before it copies a template's; it has no tickets yet.
+DELETE FROM statuses WHERE project_id = $1;
+
+-- name: CopyStatuses :exec
+INSERT INTO statuses (project_id, name, category, position, color, is_default)
+SELECT sqlc.arg('project_id')::bigint, name, category, position, color, is_default
+FROM statuses WHERE project_id = sqlc.arg('template_id')::bigint;
+
 -- name: ListStatusIDsInUse :many
 SELECT DISTINCT status_id FROM tickets WHERE project_id = $1;

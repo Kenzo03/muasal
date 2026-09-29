@@ -58,6 +58,7 @@ export default function Sidebar({ me, projects, project, recent, rail, drawer, o
     ? [
         [`/p/${project.key}/board`, "board", tp("board")],
         [`/p/${project.key}/tickets`, "list", tp("tickets")],
+        [`/p/${project.key}/workload`, "users", tp("workload")],
         [`/p/${project.key}/modules`, "tree", tp("modules")],
         [`/p/${project.key}/notes`, "notes", tp("notes")],
         [`/p/${project.key}/documents`, "file", tp("documents")],

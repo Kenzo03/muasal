@@ -1,19 +1,20 @@
 import { getTranslations } from "next-intl/server";
 import { showsClients } from "@/components/Chips";
 import Icon from "@/components/Icon";
-import type { Client, Status } from "@/lib/problem";
+import type { Client, Ref, Status } from "@/lib/problem";
 import { button } from "@/lib/ui";
 
 type Props = {
   action: string;
   values: Record<string, string>;
   clients: Client[];
+  assignees: Ref[]; // who can own tickets, so a lead can look at one person's work
   statuses?: Status[]; // the list filters by status; the board shows every status anyway
 };
 
 // The filter bar of the board and the list (FSD §8.4, §8.5). It is a GET form,
 // so every view is a URL people can share.
-export default async function TicketFilters({ action, values, clients, statuses }: Props) {
+export default async function TicketFilters({ action, values, clients, assignees, statuses }: Props) {
   const t = await getTranslations("ticketFilters");
   const tTypes = await getTranslations("ticketTypes");
   // Each filter is a chip: its name, then a borderless select.
@@ -51,6 +52,10 @@ export default async function TicketFilters({ action, values, clients, statuses 
         <select name="assignee" defaultValue={values.assignee ?? ""} className={select}>
           <option value="">{t("anyone")}</option>
           <option value="me">{t("mine")}</option>
+          <option value="none">{t("unassigned")}</option>
+          {assignees.map((a) => (
+            <option key={a.id} value={a.id}>{a.name}</option>
+          ))}
         </select>
       </label>
       {statuses && (
@@ -59,9 +64,30 @@ export default async function TicketFilters({ action, values, clients, statuses 
             {t("status")}
             <select name="status" defaultValue={values.status ?? ""} className={select}>
               <option value="">{t("anyStatus")}</option>
+              <option value="open">{t("openStatuses")}</option>
               {statuses.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
+            </select>
+          </label>
+          <label className={pick}>
+            {t("due")}
+            <select name="due" defaultValue={values.due ?? ""} className={select}>
+              <option value="">{t("anyDue")}</option>
+              <option value="overdue">{t("overdue")}</option>
+              <option value="week">{t("dueWeek")}</option>
+            </select>
+          </label>
+          <label className={pick}>
+            {t("stale")}
+            <select name="stale" defaultValue={values.stale ?? ""} className={select}>
+              <option value="">{t("anyActivity")}</option>
+              {/* A link from the workload page may carry another number of days. */}
+              {[...new Set([7, 14, 30, ...(/^\d+$/.test(values.stale ?? "") ? [Number(values.stale)] : [])])]
+                .sort((a, b) => a - b)
+                .map((d) => (
+                  <option key={d} value={d}>{t("staleDays", { days: d })}</option>
+                ))}
             </select>
           </label>
           <label className={pick}>

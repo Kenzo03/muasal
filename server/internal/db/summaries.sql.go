@@ -52,6 +52,54 @@ func (q *Queries) CreateSummary(ctx context.Context, arg CreateSummaryParams) (S
 	return i, err
 }
 
+const createSummarySchedule = `-- name: CreateSummarySchedule :one
+INSERT INTO summary_schedules (project_id, client_id, language, audience, weekday, created_by)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, project_id, client_id, language, audience, weekday, created_by, created_at, last_run_on
+`
+
+type CreateSummaryScheduleParams struct {
+	ProjectID int64
+	ClientID  *int64
+	Language  string
+	Audience  string
+	Weekday   int16
+	CreatedBy int64
+}
+
+func (q *Queries) CreateSummarySchedule(ctx context.Context, arg CreateSummaryScheduleParams) (SummarySchedule, error) {
+	row := q.db.QueryRow(ctx, createSummarySchedule,
+		arg.ProjectID,
+		arg.ClientID,
+		arg.Language,
+		arg.Audience,
+		arg.Weekday,
+		arg.CreatedBy,
+	)
+	var i SummarySchedule
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.ClientID,
+		&i.Language,
+		&i.Audience,
+		&i.Weekday,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.LastRunOn,
+	)
+	return i, err
+}
+
+const deleteSummarySchedule = `-- name: DeleteSummarySchedule :exec
+DELETE FROM summary_schedules WHERE id = $1
+`
+
+func (q *Queries) DeleteSummarySchedule(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, deleteSummarySchedule, id)
+	return err
+}
+
 const getSummary = `-- name: GetSummary :one
 SELECT s.id, s.project_id, s.created_by, s.title, s.params, s.items, s.markdown, s.model, s.created_at, s.updated_at, u.name AS creator_name, p.key AS project_key
 FROM summaries s
@@ -82,6 +130,27 @@ func (q *Queries) GetSummary(ctx context.Context, id int64) (GetSummaryRow, erro
 		&i.Summary.UpdatedAt,
 		&i.CreatorName,
 		&i.ProjectKey,
+	)
+	return i, err
+}
+
+const getSummarySchedule = `-- name: GetSummarySchedule :one
+SELECT id, project_id, client_id, language, audience, weekday, created_by, created_at, last_run_on FROM summary_schedules WHERE id = $1
+`
+
+func (q *Queries) GetSummarySchedule(ctx context.Context, id int64) (SummarySchedule, error) {
+	row := q.db.QueryRow(ctx, getSummarySchedule, id)
+	var i SummarySchedule
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.ClientID,
+		&i.Language,
+		&i.Audience,
+		&i.Weekday,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.LastRunOn,
 	)
 	return i, err
 }
@@ -154,6 +223,48 @@ func (q *Queries) ListDraftComments(ctx context.Context, ticketID int64) ([]List
 	for rows.Next() {
 		var i ListDraftCommentsRow
 		if err := rows.Scan(&i.Body, &i.CreatedAt, &i.AuthorName); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDueSummarySchedules = `-- name: ListDueSummarySchedules :many
+SELECT id, project_id, client_id, language, audience, weekday, created_by, created_at, last_run_on FROM summary_schedules
+WHERE weekday = $1::smallint AND (last_run_on IS NULL OR last_run_on < $2::date)
+ORDER BY id
+`
+
+type ListDueSummarySchedulesParams struct {
+	Weekday int16
+	Today   time.Time
+}
+
+// The weekly summaries due on this weekday that have not run today.
+func (q *Queries) ListDueSummarySchedules(ctx context.Context, arg ListDueSummarySchedulesParams) ([]SummarySchedule, error) {
+	rows, err := q.db.Query(ctx, listDueSummarySchedules, arg.Weekday, arg.Today)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SummarySchedule
+	for rows.Next() {
+		var i SummarySchedule
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.ClientID,
+			&i.Language,
+			&i.Audience,
+			&i.Weekday,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.LastRunOn,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -265,6 +376,67 @@ func (q *Queries) ListSummaries(ctx context.Context, arg ListSummariesParams) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const listSummarySchedules = `-- name: ListSummarySchedules :many
+SELECT ss.id, ss.project_id, ss.client_id, ss.language, ss.audience, ss.weekday, ss.created_by, ss.created_at, ss.last_run_on, c.name AS client_name, u.name AS creator_name
+FROM summary_schedules ss
+LEFT JOIN clients c ON c.id = ss.client_id
+JOIN users u ON u.id = ss.created_by
+WHERE ss.project_id = $1
+ORDER BY ss.weekday, lower(coalesce(c.name, '')), ss.id
+`
+
+type ListSummarySchedulesRow struct {
+	SummarySchedule SummarySchedule
+	ClientName      *string
+	CreatorName     string
+}
+
+func (q *Queries) ListSummarySchedules(ctx context.Context, projectID int64) ([]ListSummarySchedulesRow, error) {
+	rows, err := q.db.Query(ctx, listSummarySchedules, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSummarySchedulesRow
+	for rows.Next() {
+		var i ListSummarySchedulesRow
+		if err := rows.Scan(
+			&i.SummarySchedule.ID,
+			&i.SummarySchedule.ProjectID,
+			&i.SummarySchedule.ClientID,
+			&i.SummarySchedule.Language,
+			&i.SummarySchedule.Audience,
+			&i.SummarySchedule.Weekday,
+			&i.SummarySchedule.CreatedBy,
+			&i.SummarySchedule.CreatedAt,
+			&i.SummarySchedule.LastRunOn,
+			&i.ClientName,
+			&i.CreatorName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markSummaryScheduleRun = `-- name: MarkSummaryScheduleRun :exec
+UPDATE summary_schedules SET last_run_on = $1::date WHERE id = $2
+`
+
+type MarkSummaryScheduleRunParams struct {
+	Today time.Time
+	ID    int64
+}
+
+func (q *Queries) MarkSummaryScheduleRun(ctx context.Context, arg MarkSummaryScheduleRunParams) error {
+	_, err := q.db.Exec(ctx, markSummaryScheduleRun, arg.Today, arg.ID)
+	return err
 }
 
 const updateSummary = `-- name: UpdateSummary :one

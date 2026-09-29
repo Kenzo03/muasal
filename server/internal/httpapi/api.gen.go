@@ -867,6 +867,24 @@ func (e CreateImportMultipartBodyPreset) Valid() bool {
 	}
 }
 
+// Defines values for ListTicketsParamsDue.
+const (
+	ListTicketsParamsDueOverdue ListTicketsParamsDue = "overdue"
+	ListTicketsParamsDueWeek    ListTicketsParamsDue = "week"
+)
+
+// Valid indicates whether the value is a known member of the ListTicketsParamsDue enum.
+func (e ListTicketsParamsDue) Valid() bool {
+	switch e {
+	case ListTicketsParamsDueOverdue:
+		return true
+	case ListTicketsParamsDueWeek:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListTicketsParamsMissing.
 const (
 	ListTicketsParamsMissingMenus  ListTicketsParamsMissing = "menus"
@@ -2138,6 +2156,9 @@ type ProjectCreate struct {
 	// Key 2–10 capital letters or digits, starting with a letter; lower case is accepted
 	Key  string `json:"key"`
 	Name string `json:"name"`
+
+	// TemplateKey A project whose statuses and live module tree the new project copies. Client-specific menus arrive as shared ones, since the new project links no clients yet.
+	TemplateKey *string `json:"template_key,omitempty"`
 }
 
 // ProjectList defines model for ProjectList.
@@ -2361,7 +2382,7 @@ type SummaryCreate struct {
 	Keys             []string           `json:"keys"`
 	Language         SummaryLanguage    `json:"language"`
 
-	// NodeId The node
+	// NodeId The node, with its sub-nodes; 0 in a weekly summary, which covers the whole project.
 	NodeId     int64              `json:"node_id"`
 	ProjectKey string             `json:"project_key"`
 	To         openapi_types.Date `json:"to"`
@@ -2411,6 +2432,36 @@ type SummaryPreview struct {
 	Model string `json:"model"`
 }
 
+// SummarySchedule defines model for SummarySchedule.
+type SummarySchedule struct {
+	Audience  SummaryAudience `json:"audience"`
+	Client    *Ref            `json:"client,omitempty"`
+	CreatedBy Ref             `json:"created_by"`
+	Id        int64           `json:"id"`
+	Language  SummaryLanguage `json:"language"`
+
+	// LastRunOn The day it last ran; omitted before its first run.
+	LastRunOn *openapi_types.Date `json:"last_run_on,omitempty"`
+
+	// Weekday ISO weekday: 1 is Monday.
+	Weekday int `json:"weekday"`
+}
+
+// SummaryScheduleCreate defines model for SummaryScheduleCreate.
+type SummaryScheduleCreate struct {
+	Audience SummaryAudience `json:"audience"`
+
+	// ClientId One client
+	ClientId *int64          `json:"client_id,omitempty"`
+	Language SummaryLanguage `json:"language"`
+	Weekday  int             `json:"weekday"`
+}
+
+// SummaryScheduleList defines model for SummaryScheduleList.
+type SummaryScheduleList struct {
+	Items []SummarySchedule `json:"items"`
+}
+
 // SummaryScope defines model for SummaryScope.
 type SummaryScope struct {
 	Audience SummaryAudience `json:"audience"`
@@ -2421,7 +2472,7 @@ type SummaryScope struct {
 	IncludeCancelled *bool              `json:"include_cancelled,omitempty"`
 	Language         SummaryLanguage    `json:"language"`
 
-	// NodeId The node
+	// NodeId The node, with its sub-nodes; 0 in a weekly summary, which covers the whole project.
 	NodeId     int64              `json:"node_id"`
 	ProjectKey string             `json:"project_key"`
 	To         openapi_types.Date `json:"to"`
@@ -2712,6 +2763,32 @@ type UserUpdate struct {
 	Timezone *string `json:"timezone,omitempty"`
 }
 
+// Workload defines model for Workload.
+type Workload struct {
+	// Rows People by name; a row without assignee counts unassigned tickets.
+	Rows      []WorkloadRow `json:"rows"`
+	StaleDays int           `json:"stale_days"`
+}
+
+// WorkloadRow defines model for WorkloadRow.
+type WorkloadRow struct {
+	Assignee *Ref `json:"assignee,omitempty"`
+
+	// DueWeek Due from today through 7 days ahead.
+	DueWeek int `json:"due_week"`
+
+	// High Urgent or high priority.
+	High       int `json:"high"`
+	InProgress int `json:"in_progress"`
+
+	// Open To do and In progress.
+	Open    int `json:"open"`
+	Overdue int `json:"overdue"`
+
+	// Stale Unchanged for stale_days or more.
+	Stale int `json:"stale"`
+}
+
 // ListAskLogParams defines parameters for ListAskLog.
 type ListAskLogParams struct {
 	Status *ListAskLogParamsStatus `form:"status,omitempty" json:"status,omitempty"`
@@ -2860,6 +2937,15 @@ type ListTicketsParams struct {
 	// Mine Only tickets assigned to the caller.
 	Mine *bool `form:"mine,omitempty" json:"mine,omitempty"`
 
+	// Unassigned Only tickets nobody owns.
+	Unassigned *bool `form:"unassigned,omitempty" json:"unassigned,omitempty"`
+
+	// Due Open tickets past their due date (overdue), or due from today through 7 days ahead (week), as Home counts them.
+	Due *ListTicketsParamsDue `form:"due,omitempty" json:"due,omitempty"`
+
+	// StaleDays Open tickets unchanged for at least this many days; comments, files and decision records count as changes.
+	StaleDays *int32 `form:"stale_days,omitempty" json:"stale_days,omitempty"`
+
 	// NodeId Tickets on this node or its sub-nodes.
 	NodeId *int64 `form:"node_id,omitempty" json:"node_id,omitempty"`
 
@@ -2874,6 +2960,9 @@ type ListTicketsParams struct {
 	Format *ListTicketsParamsFormat `form:"format,omitempty" json:"format,omitempty"`
 }
 
+// ListTicketsParamsDue defines parameters for ListTickets.
+type ListTicketsParamsDue string
+
 // ListTicketsParamsMissing defines parameters for ListTickets.
 type ListTicketsParamsMissing string
 
@@ -2887,6 +2976,12 @@ type ListTicketsParamsFormat string
 type CreateTicketParams struct {
 	// IdempotencyKey A retry with the same key within 24 hours returns the ticket the first request created (200, with Idempotent-Replayed true) instead of a second ticket (FSD §17.1).
 	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
+}
+
+// GetWorkloadParams defines parameters for GetWorkload.
+type GetWorkloadParams struct {
+	// StaleDays What counts as stale; 7 by default.
+	StaleDays *int32 `form:"stale_days,omitempty" json:"stale_days,omitempty"`
 }
 
 // SearchParams defines parameters for Search.
@@ -3020,6 +3115,9 @@ type CreateRepoJSONRequestBody = RepoInput
 
 // SetStatusesJSONRequestBody defines body for SetStatuses for application/json ContentType.
 type SetStatusesJSONRequestBody = StatusesUpdate
+
+// CreateSummaryScheduleJSONRequestBody defines body for CreateSummarySchedule for application/json ContentType.
+type CreateSummaryScheduleJSONRequestBody = SummaryScheduleCreate
 
 // CreateTicketJSONRequestBody defines body for CreateTicket for application/json ContentType.
 type CreateTicketJSONRequestBody = TicketCreate
@@ -3309,11 +3407,20 @@ type ServerInterface interface {
 	// (PUT /projects/{key}/statuses)
 	SetStatuses(w http.ResponseWriter, r *http.Request, key string)
 
+	// (GET /projects/{key}/summary-schedules)
+	ListSummarySchedules(w http.ResponseWriter, r *http.Request, key string)
+
+	// (POST /projects/{key}/summary-schedules)
+	CreateSummarySchedule(w http.ResponseWriter, r *http.Request, key string)
+
 	// (GET /projects/{key}/tickets)
 	ListTickets(w http.ResponseWriter, r *http.Request, key string, params ListTicketsParams)
 
 	// (POST /projects/{key}/tickets)
 	CreateTicket(w http.ResponseWriter, r *http.Request, key string, params CreateTicketParams)
+
+	// (GET /projects/{key}/workload)
+	GetWorkload(w http.ResponseWriter, r *http.Request, key string, params GetWorkloadParams)
 
 	// (DELETE /repos/{id})
 	DeleteRepo(w http.ResponseWriter, r *http.Request, id int64)
@@ -3338,6 +3445,9 @@ type ServerInterface interface {
 
 	// (PATCH /summaries/{id})
 	UpdateSummary(w http.ResponseWriter, r *http.Request, id int64)
+
+	// (DELETE /summary-schedules/{id})
+	DeleteSummarySchedule(w http.ResponseWriter, r *http.Request, id int64)
 
 	// (GET /tickets/{key})
 	GetTicket(w http.ResponseWriter, r *http.Request, key string)
@@ -5600,6 +5710,58 @@ func (siw *ServerInterfaceWrapper) SetStatuses(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// ListSummarySchedules operation middleware
+func (siw *ServerInterfaceWrapper) ListSummarySchedules(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSummarySchedules(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateSummarySchedule operation middleware
+func (siw *ServerInterfaceWrapper) CreateSummarySchedule(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateSummarySchedule(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListTickets operation middleware
 func (siw *ServerInterfaceWrapper) ListTickets(w http.ResponseWriter, r *http.Request) {
 
@@ -5731,6 +5893,45 @@ func (siw *ServerInterfaceWrapper) ListTickets(w http.ResponseWriter, r *http.Re
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "mine"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "mine", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "unassigned" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "unassigned", r.URL.Query(), &params.Unassigned, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "unassigned"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "unassigned", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "due" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "due", r.URL.Query(), &params.Due, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "due"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "due", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "stale_days" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "stale_days", r.URL.Query(), &params.StaleDays, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "stale_days"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "stale_days", Err: err})
 		}
 		return
 	}
@@ -5878,6 +6079,48 @@ func (siw *ServerInterfaceWrapper) CreateTicket(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateTicket(w, r, key, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetWorkload operation middleware
+func (siw *ServerInterfaceWrapper) GetWorkload(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetWorkloadParams
+
+	// ------------- Optional query parameter "stale_days" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "stale_days", r.URL.Query(), &params.StaleDays, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "stale_days"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "stale_days", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetWorkload(w, r, key, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -6076,6 +6319,32 @@ func (siw *ServerInterfaceWrapper) UpdateSummary(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateSummary(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteSummarySchedule operation middleware
+func (siw *ServerInterfaceWrapper) DeleteSummarySchedule(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteSummarySchedule(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -6666,6 +6935,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/statuses", wrapper.GetStatuses)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/projects/{key}/statuses", wrapper.SetStatuses)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/assignees", wrapper.ListAssignees)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/workload", wrapper.GetWorkload)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/summary-schedules", wrapper.ListSummarySchedules)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/summary-schedules", wrapper.CreateSummarySchedule)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/summary-schedules/{id}", wrapper.DeleteSummarySchedule)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/tickets", wrapper.ListTickets)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/tickets", wrapper.CreateTicket)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/tickets/{key}", wrapper.GetTicket)

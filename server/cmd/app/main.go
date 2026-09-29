@@ -103,6 +103,12 @@ func serve(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 			river.AddWorker(ws, &ticketimport.Worker{Pool: pool})
 			river.AddWorker(ws, &gitlink.Worker{Pool: pool})
 			river.AddWorker(ws, &draft.TreeWorker{Pool: pool, AI: api.AI()})
+			river.AddWorker(ws, &httpapi.SummaryScheduleWorker{Server: api})
+		},
+		// Weekly change summaries: each hour writes the ones due today that have not run.
+		Periodic: []*river.PeriodicJob{
+			river.NewPeriodicJob(river.PeriodicInterval(time.Hour),
+				func() (river.JobArgs, *river.InsertOpts) { return httpapi.SummaryScheduleTick{}, nil }, &river.PeriodicJobOpts{RunOnStart: true}),
 		},
 	})
 	if err != nil {
