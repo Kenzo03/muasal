@@ -235,24 +235,25 @@ WHERE t.project_id = $1
   AND (NOT $10::boolean OR t.client_id IS NULL)
   AND ($11::bigint IS NULL OR t.assignee_id = $11::bigint)
   AND (NOT $12::boolean OR t.assignee_id IS NULL)
-  -- due and stale_days count open tickets only, as Home and the workload page do.
+  -- due and stale_days count open tickets only, as Home and the workload page do;
+  -- due counts from today on the caller's calendar.
   AND ($13::text IS NULL OR (s.category IN ('todo', 'in_progress') AND (
-        ($13::text = 'overdue' AND t.due_date < current_date)
-        OR ($13::text = 'week' AND t.due_date BETWEEN current_date AND current_date + 7))))
-  AND ($14::int IS NULL OR (s.category IN ('todo', 'in_progress')
-        AND t.updated_at < now() - make_interval(days => $14::int)))
-  AND ($15::bigint[] IS NULL OR EXISTS (
-        SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id AND tn.node_id = ANY ($15::bigint[])))
-  AND (NOT $16::boolean OR t.reason = '')
-  AND (NOT $17::boolean OR NOT EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id))
-  AND ($18::text = '' OR t.title ILIKE '%' || $18::text || '%' OR t.key = upper($18::text))
+        ($13::text = 'overdue' AND t.due_date < $14::date)
+        OR ($13::text = 'week' AND t.due_date BETWEEN $14::date AND $14::date + 7))))
+  AND ($15::int IS NULL OR (s.category IN ('todo', 'in_progress')
+        AND t.updated_at < now() - make_interval(days => $15::int)))
+  AND ($16::bigint[] IS NULL OR EXISTS (
+        SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id AND tn.node_id = ANY ($16::bigint[])))
+  AND (NOT $17::boolean OR t.reason = '')
+  AND (NOT $18::boolean OR NOT EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id))
+  AND ($19::text = '' OR t.title ILIKE '%' || $19::text || '%' OR t.key = upper($19::text))
 ORDER BY
-  CASE WHEN $19::text = 'priority' THEN array_position(ARRAY['urgent', 'high', 'medium', 'low'], t.priority) END,
-  CASE WHEN $19::text IN ('priority', 'due') THEN t.due_date END NULLS LAST,
-  CASE WHEN $19::text = 'updated' THEN t.updated_at END DESC,
-  CASE WHEN $19::text = 'created' THEN t.number END DESC,
+  CASE WHEN $20::text = 'priority' THEN array_position(ARRAY['urgent', 'high', 'medium', 'low'], t.priority) END,
+  CASE WHEN $20::text IN ('priority', 'due') THEN t.due_date END NULLS LAST,
+  CASE WHEN $20::text = 'updated' THEN t.updated_at END DESC,
+  CASE WHEN $20::text = 'created' THEN t.number END DESC,
   t.number
-LIMIT $21 OFFSET $20
+LIMIT $22 OFFSET $21
 `
 
 type ListTicketsParams struct {
@@ -269,6 +270,7 @@ type ListTicketsParams struct {
 	AssigneeID    *int64
 	Unassigned    bool
 	Due           *string
+	Today         time.Time
 	StaleDays     *int32
 	NodeIds       []int64
 	MissingReason bool
@@ -314,6 +316,7 @@ func (q *Queries) ListTickets(ctx context.Context, arg ListTicketsParams) ([]Lis
 		arg.AssigneeID,
 		arg.Unassigned,
 		arg.Due,
+		arg.Today,
 		arg.StaleDays,
 		arg.NodeIds,
 		arg.MissingReason,

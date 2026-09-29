@@ -787,7 +787,7 @@ paths:
         - name: due
           in: query
           schema: { type: string, enum: [overdue, week] }
-          description: Open tickets past their due date (overdue), or due from today through 7 days ahead (week), as Home counts them.
+          description: Open tickets past their due date (overdue), or due from today through 7 days ahead (week), as Home counts them. Today is the date in the caller's timezone.
         - name: stale_days
           in: query
           schema: { type: integer, format: int32, minimum: 1, maximum: 365 }
@@ -2551,7 +2551,7 @@ components:
         assignee: { $ref: "#/components/schemas/Ref" }
         open: { type: integer, description: To do and In progress. }
         in_progress: { type: integer }
-        overdue: { type: integer }
+        overdue: { type: integer, description: "Due before today, the date in the caller's timezone." }
         due_week: { type: integer, description: Due from today through 7 days ahead. }
         stale: { type: integer, description: Unchanged for stale_days or more. }
         high: { type: integer, description: Urgent or high priority. }
@@ -2997,6 +2997,7 @@ components:
     MyTicketsView:
       type: string
       enum: [all, overdue, week, incomplete]
+      description: overdue is due before today and week due from today through 7 days ahead, today being the date in the user's timezone; incomplete lacks a reason or a menu.
     MyTicket:
       type: object
       required: [key, title, type, priority, status, missing_reason, missing_menus]

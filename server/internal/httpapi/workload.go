@@ -26,6 +26,7 @@ func (s *Server) GetWorkload(w http.ResponseWriter, r *http.Request, key string,
 	ctx := r.Context()
 	counts, err := s.q.ProjectWorkload(ctx, db.ProjectWorkloadParams{
 		ProjectID: pc.project.ID, AllClients: pc.scope.AllClients, ClientIds: orEmpty(pc.scope.ClientIDs), StaleDays: staleDays,
+		Today: s.today(pc.user),
 	})
 	if err != nil {
 		s.fail(w, r, err)

@@ -74,6 +74,22 @@ func (s *Server) Close() { s.stop() }
 // one settings cache and one generation gate (§11.7).
 func (s *Server) AI() *ai.Runtime { return s.ai }
 
+// userTZ is the user's profile timezone, or UTC for one this server lacks.
+func userTZ(u *db.User) *time.Location {
+	tz, err := time.LoadLocation(u.Timezone)
+	if err != nil {
+		return time.UTC
+	}
+	return tz
+}
+
+// today is the date on the user's calendar, which overdue and "due this week"
+// count from: Home, the ticket filters and the workload page.
+func (s *Server) today(u *db.User) time.Time {
+	y, m, d := s.now().In(userTZ(u)).Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
+}
+
 // Handler serves the API under /api/v1 plus unauthenticated health checks.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()

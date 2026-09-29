@@ -7,26 +7,28 @@ package db
 
 import (
 	"context"
+	"time"
 )
 
 const projectWorkload = `-- name: ProjectWorkload :many
 SELECT t.assignee_id, a.name AS assignee_name,
        count(*) AS open,
        count(*) FILTER (WHERE s.category = 'in_progress') AS in_progress,
-       count(*) FILTER (WHERE t.due_date < current_date) AS overdue,
-       count(*) FILTER (WHERE t.due_date BETWEEN current_date AND current_date + 7) AS due_week,
-       count(*) FILTER (WHERE t.updated_at < now() - make_interval(days => $1::int)) AS stale,
+       count(*) FILTER (WHERE t.due_date < $1::date) AS overdue,
+       count(*) FILTER (WHERE t.due_date BETWEEN $1::date AND $1::date + 7) AS due_week,
+       count(*) FILTER (WHERE t.updated_at < now() - make_interval(days => $2::int)) AS stale,
        count(*) FILTER (WHERE t.priority IN ('urgent', 'high')) AS high
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
 LEFT JOIN users a ON a.id = t.assignee_id
-WHERE t.project_id = $2
+WHERE t.project_id = $3
   AND s.category IN ('todo', 'in_progress')
-  AND ($3::boolean OR t.client_id IS NULL OR t.client_id = ANY ($4::bigint[]))
+  AND ($4::boolean OR t.client_id IS NULL OR t.client_id = ANY ($5::bigint[]))
 GROUP BY t.assignee_id, a.name
 `
 
 type ProjectWorkloadParams struct {
+	Today      time.Time
 	StaleDays  int32
 	ProjectID  int64
 	AllClients bool
@@ -45,10 +47,12 @@ type ProjectWorkloadRow struct {
 }
 
 // Open tickets per assignee (NULL: nobody) that the scope may see (R-AC-2,
-// R-AC-3), counted as Home counts them. Comments, files and decision records
-// touch updated_at (00006), so stale means no change of any kind.
+// R-AC-3), counted as Home counts them, from today on the caller's calendar.
+// Comments, files and decision records touch updated_at (00006), so stale
+// means no change of any kind.
 func (q *Queries) ProjectWorkload(ctx context.Context, arg ProjectWorkloadParams) ([]ProjectWorkloadRow, error) {
 	rows, err := q.db.Query(ctx, projectWorkload,
+		arg.Today,
 		arg.StaleDays,
 		arg.ProjectID,
 		arg.AllClients,

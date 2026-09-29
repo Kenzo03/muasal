@@ -50,10 +50,7 @@ func (s *Server) Ask(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	tz, err := time.LoadLocation(u.Timezone)
-	if err != nil {
-		tz = time.UTC
-	}
+	tz := userTZ(u)
 	req := ask.Request{
 		Asker:    ask.Asker{UserID: u.ID, IsAdmin: u.IsAdmin, Locale: u.Locale, TZ: tz},
 		Question: question, Explicit: scopeFrom(in.Scope), ThreadID: in.ThreadId,

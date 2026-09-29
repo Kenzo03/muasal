@@ -73,6 +73,51 @@ func TestTicketListFiltersByOwnerDueDateAndStaleness(t *testing.T) {
 	}
 }
 
+// Overdue and "this week" count from the day on the user's own calendar.
+// Kiritimati (UTC+14) is always a day or two ahead of Pago Pago (UTC-11), so a
+// ticket due today in Pago Pago is already overdue in Kiritimati, whatever the
+// hour on the server.
+func TestDueDatesCountFromTheUsersDay(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	pago, err := time.LoadLocation("Pacific/Pago_Pago")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tk := e.seedTicket(w.p, w.pmUser, "Due today in Pago Pago", &w.a, w.ot)
+	e.exec("UPDATE tickets SET assignee_id = $2, due_date = $3::date, reason = 'Payroll closes that day.' WHERE id = $1",
+		tk.ID, w.pmUser.ID, time.Now().In(pago).Format(time.DateOnly))
+	for _, c := range []struct {
+		tz            string
+		overdue, week int
+	}{{"Pacific/Kiritimati", 1, 0}, {"Pacific/Pago_Pago", 0, 1}} {
+		e.exec("UPDATE users SET timezone = $2 WHERE id = $1", w.pmUser.ID, c.tz)
+		var home httpapi.MyTicketsPage
+		var list httpapi.TicketPage
+		var wl httpapi.Workload
+		for path, out := range map[string]any{"/me/tickets": &home, "/projects/HRIS/tickets?due=overdue": &list, "/projects/HRIS/workload": &wl} {
+			if code := e.call(w.pm, http.MethodGet, path, nil, out); code != http.StatusOK {
+				t.Fatalf("%s %s: %d", c.tz, path, code)
+			}
+		}
+		listed := 0
+		if slices.Contains(sortedKeys(list), tk.Key) {
+			listed = 1
+		}
+		var pm httpapi.WorkloadRow
+		for _, r := range wl.Rows {
+			if r.Assignee != nil && r.Assignee.Name == w.pmUser.Name {
+				pm = r
+			}
+		}
+		got := fmt.Sprintf("home overdue=%d week=%d, list overdue=%d, workload overdue=%d week=%d", home.Counts.Overdue, home.Counts.Week, listed, pm.Overdue, pm.DueWeek)
+		want := fmt.Sprintf("home overdue=%d week=%d, list overdue=%d, workload overdue=%d week=%d", c.overdue, c.week, c.overdue, c.overdue, c.week)
+		if got != want {
+			t.Errorf("%s: %s, want %s", c.tz, got, want)
+		}
+	}
+}
+
 // The workload page counts each person's open tickets the caller may see:
 // a member without tickets still has a row, viewers have none, and
 // unassigned work comes last.

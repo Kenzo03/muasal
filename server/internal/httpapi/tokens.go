@@ -52,10 +52,7 @@ func (s *Server) CreateToken(w http.ResponseWriter, r *http.Request) {
 	var expires *time.Time
 	if in.ExpiresOn != nil {
 		// The token works through the whole of its last day, in the owner's timezone.
-		tz, err := time.LoadLocation(u.Timezone)
-		if err != nil {
-			tz = time.UTC
-		}
+		tz := userTZ(u)
 		d := in.ExpiresOn.Time
 		end := time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, tz).AddDate(0, 0, 1)
 		if !end.After(s.now()) {

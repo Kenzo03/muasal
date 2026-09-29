@@ -2176,6 +2176,7 @@ export interface components {
             /** @description To do and In progress. */
             open: number;
             in_progress: number;
+            /** @description Due before today, the date in the caller's timezone. */
             overdue: number;
             /** @description Due from today through 7 days ahead. */
             due_week: number;
@@ -2574,7 +2575,10 @@ export interface components {
             /** Format: date */
             decided_on: string;
         };
-        /** @enum {string} */
+        /**
+         * @description overdue is due before today and week due from today through 7 days ahead, today being the date in the user's timezone; incomplete lacks a reason or a menu.
+         * @enum {string}
+         */
         MyTicketsView: "all" | "overdue" | "week" | "incomplete";
         MyTicket: {
             key: string;
@@ -4214,7 +4218,7 @@ export interface operations {
                 mine?: boolean;
                 /** @description Only tickets nobody owns. */
                 unassigned?: boolean;
-                /** @description Open tickets past their due date (overdue), or due from today through 7 days ahead (week), as Home counts them. */
+                /** @description Open tickets past their due date (overdue), or due from today through 7 days ahead (week), as Home counts them. Today is the date in the caller's timezone. */
                 due?: "overdue" | "week";
                 /** @description Open tickets unchanged for at least this many days; comments, files and decision records count as changes. */
                 stale_days?: number;

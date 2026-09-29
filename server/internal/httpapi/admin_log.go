@@ -178,10 +178,7 @@ func (s *Server) ExportAudit(w http.ResponseWriter, r *http.Request, params Expo
 
 // auditFilter turns the query's whole days, in the admin's timezone, into bounds.
 func auditFilter(u *db.User, actor *int64, entity, action *string, from, to *openapi_types.Date) db.ListAuditParams {
-	tz, err := time.LoadLocation(u.Timezone)
-	if err != nil {
-		tz = time.UTC
-	}
+	tz := userTZ(u)
 	p := db.ListAuditParams{ActorID: actor, Entity: entity, Action: action}
 	if from != nil {
 		p.Since = ptr(time.Date(from.Year(), from.Month(), from.Day(), 0, 0, 0, 0, tz))

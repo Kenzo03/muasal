@@ -1867,7 +1867,7 @@ type MyTicketsPage struct {
 	Projects []ProjectCount `json:"projects"`
 }
 
-// MyTicketsView defines model for MyTicketsView.
+// MyTicketsView overdue is due before today and week due from today through 7 days ahead, today being the date in the user's timezone; incomplete lacks a reason or a menu.
 type MyTicketsView string
 
 // Node defines model for Node.
@@ -2782,7 +2782,9 @@ type WorkloadRow struct {
 	InProgress int `json:"in_progress"`
 
 	// Open To do and In progress.
-	Open    int `json:"open"`
+	Open int `json:"open"`
+
+	// Overdue Due before today, the date in the caller's timezone.
 	Overdue int `json:"overdue"`
 
 	// Stale Unchanged for stale_days or more.
@@ -2940,7 +2942,7 @@ type ListTicketsParams struct {
 	// Unassigned Only tickets nobody owns.
 	Unassigned *bool `form:"unassigned,omitempty" json:"unassigned,omitempty"`
 
-	// Due Open tickets past their due date (overdue), or due from today through 7 days ahead (week), as Home counts them.
+	// Due Open tickets past their due date (overdue), or due from today through 7 days ahead (week), as Home counts them. Today is the date in the caller's timezone.
 	Due *ListTicketsParamsDue `form:"due,omitempty" json:"due,omitempty"`
 
 	// StaleDays Open tickets unchanged for at least this many days; comments, files and decision records count as changes.

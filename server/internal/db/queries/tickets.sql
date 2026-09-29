@@ -82,10 +82,11 @@ WHERE t.project_id = sqlc.arg('project_id')
   AND (NOT sqlc.arg('core_only')::boolean OR t.client_id IS NULL)
   AND (sqlc.narg('assignee_id')::bigint IS NULL OR t.assignee_id = sqlc.narg('assignee_id')::bigint)
   AND (NOT sqlc.arg('unassigned')::boolean OR t.assignee_id IS NULL)
-  -- due and stale_days count open tickets only, as Home and the workload page do.
+  -- due and stale_days count open tickets only, as Home and the workload page do;
+  -- due counts from today on the caller's calendar.
   AND (sqlc.narg('due')::text IS NULL OR (s.category IN ('todo', 'in_progress') AND (
-        (sqlc.narg('due')::text = 'overdue' AND t.due_date < current_date)
-        OR (sqlc.narg('due')::text = 'week' AND t.due_date BETWEEN current_date AND current_date + 7))))
+        (sqlc.narg('due')::text = 'overdue' AND t.due_date < sqlc.arg('today')::date)
+        OR (sqlc.narg('due')::text = 'week' AND t.due_date BETWEEN sqlc.arg('today')::date AND sqlc.arg('today')::date + 7))))
   AND (sqlc.narg('stale_days')::int IS NULL OR (s.category IN ('todo', 'in_progress')
         AND t.updated_at < now() - make_interval(days => sqlc.narg('stale_days')::int)))
   AND (sqlc.narg('node_ids')::bigint[] IS NULL OR EXISTS (

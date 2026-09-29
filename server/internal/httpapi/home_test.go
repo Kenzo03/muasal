@@ -10,12 +10,12 @@ import (
 	"github.com/kenzo03/muasal/server/internal/httpapi"
 )
 
-// assign gives a ticket to a user, due in dueIn days from today (nil: no due
-// date), with this reason.
+// assign gives a ticket to a user, due in dueIn days from today on the test
+// users' calendar, Asia/Jakarta (nil: no due date), with this reason.
 func (e *env) assign(tk db.Ticket, to db.User, dueIn *int, reason string) {
 	e.t.Helper()
 	_, err := e.d.Pool.Exec(context.Background(),
-		"UPDATE tickets SET assignee_id = $2, due_date = current_date + $3::int, reason = $4 WHERE id = $1", tk.ID, to.ID, dueIn, reason)
+		"UPDATE tickets SET assignee_id = $2, due_date = (now() AT TIME ZONE 'Asia/Jakarta')::date + $3::int, reason = $4 WHERE id = $1", tk.ID, to.ID, dueIn, reason)
 	if err != nil {
 		e.t.Fatal(err)
 	}
