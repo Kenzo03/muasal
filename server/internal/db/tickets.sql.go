@@ -245,11 +245,9 @@ WHERE t.project_id = $1
   AND ($16::bigint[] IS NULL OR EXISTS (
         SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id AND tn.node_id = ANY ($16::bigint[])))
   AND (NOT $17::boolean OR t.reason = '')
-  -- The ticket form's weak-reason hint (web/lib/weak.ts, R-DC-8), for tickets
-  -- filed through the API or an import, which never show it (MSL-12).
-  AND (NOT $18::boolean OR (btrim(t.reason) <> '' AND char_length(btrim(regexp_replace(
-        regexp_replace(lower(t.reason), '\m(per request|as requested|client request|sesuai permintaan|permintaan klien|permintaan client|request user|ok|done)\M', '', 'g'),
-        '\s+', ' ', 'g'))) < 20))
+  -- Tickets filed through the API or an import never show the form's
+  -- weak-reason hint, so the list finds them (MSL-12, 00017).
+  AND (NOT $18::boolean OR weak_reason(t.reason))
   AND (NOT $19::boolean OR NOT EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id))
   AND ($20::text = '' OR t.title ILIKE '%' || $20::text || '%' OR t.key = upper($20::text))
 ORDER BY

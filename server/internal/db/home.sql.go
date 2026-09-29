@@ -159,6 +159,77 @@ func (q *Queries) LatestTicketChanges(ctx context.Context, ticketIds []int64) ([
 	return items, nil
 }
 
+const listAttention = `-- name: ListAttention :many
+SELECT p.key, p.name,
+       count(*) FILTER (WHERE t.due_date < $1::date) AS overdue,
+       count(*) FILTER (WHERE t.due_date BETWEEN $1::date AND $1::date + 7) AS week,
+       count(*) FILTER (WHERE t.assignee_id IS NULL) AS unassigned,
+       count(*) FILTER (WHERE t.reason = '') AS no_reason,
+       count(*) FILTER (WHERE weak_reason(t.reason)) AS weak_reason,
+       count(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id)) AS no_menu,
+       count(*) FILTER (WHERE t.updated_at < now() - interval '7 days') AS stale
+FROM tickets t
+JOIN statuses s ON s.id = t.status_id
+JOIN projects p ON p.id = t.project_id
+WHERE s.category IN ('todo', 'in_progress')
+  AND ($2::boolean OR EXISTS (
+        SELECT 1 FROM memberships m
+        WHERE m.user_id = $3::bigint AND m.project_id = t.project_id AND m.role = 'admin'))
+GROUP BY p.id, p.key, p.name
+ORDER BY p.key
+`
+
+type ListAttentionParams struct {
+	Today   time.Time
+	IsAdmin bool
+	UserID  int64
+}
+
+type ListAttentionRow struct {
+	Key        string
+	Name       string
+	Overdue    int64
+	Week       int64
+	Unassigned int64
+	NoReason   int64
+	WeakReason int64
+	NoMenu     int64
+	Stale      int64
+}
+
+// Home's Needs attention (MSL-9): for each project the user runs as project
+// admin (every project for a system admin), the open tickets that need a
+// lead's eye, counted as Workload counts them. Project admins see all clients.
+func (q *Queries) ListAttention(ctx context.Context, arg ListAttentionParams) ([]ListAttentionRow, error) {
+	rows, err := q.db.Query(ctx, listAttention, arg.Today, arg.IsAdmin, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAttentionRow
+	for rows.Next() {
+		var i ListAttentionRow
+		if err := rows.Scan(
+			&i.Key,
+			&i.Name,
+			&i.Overdue,
+			&i.Week,
+			&i.Unassigned,
+			&i.NoReason,
+			&i.WeakReason,
+			&i.NoMenu,
+			&i.Stale,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listMyTickets = `-- name: ListMyTickets :many
 SELECT t.id, t.key, t.title, t.type, t.priority, t.due_date, t.client_id, c.name AS client_name, s.id, s.project_id, s.name, s.category, s.position, s.color, s.is_default,
        t.reason = '' AS missing_reason,

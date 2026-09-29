@@ -1385,6 +1385,11 @@ type Attachment struct {
 	Uploader    Ref       `json:"uploader"`
 }
 
+// AttentionList defines model for AttentionList.
+type AttentionList struct {
+	Items []ProjectAttention `json:"items"`
+}
+
 // AuditEvent defines model for AuditEvent.
 type AuditEvent struct {
 	Action     string                 `json:"action"`
@@ -2145,6 +2150,23 @@ type Project struct {
 	Key  string      `json:"key"`
 	Name string      `json:"name"`
 	Role ProjectRole `json:"role"`
+}
+
+// ProjectAttention defines model for ProjectAttention.
+type ProjectAttention struct {
+	Key      string `json:"key"`
+	Name     string `json:"name"`
+	NoMenu   int    `json:"no_menu"`
+	NoReason int    `json:"no_reason"`
+	Overdue  int    `json:"overdue"`
+
+	// Stale Unchanged for 7 days or more.
+	Stale      int `json:"stale"`
+	Unassigned int `json:"unassigned"`
+	WeakReason int `json:"weak_reason"`
+
+	// Week Due today or within the next 7 days.
+	Week int `json:"week"`
 }
 
 // ProjectClientsUpdate defines model for ProjectClientsUpdate.
@@ -3340,6 +3362,9 @@ type ServerInterface interface {
 
 	// (PATCH /me)
 	UpdateMe(w http.ResponseWriter, r *http.Request)
+
+	// (GET /me/attention)
+	ListMyAttention(w http.ResponseWriter, r *http.Request)
 
 	// (GET /me/tickets)
 	ListMyTickets(w http.ResponseWriter, r *http.Request, params ListMyTicketsParams)
@@ -4718,6 +4743,20 @@ func (siw *ServerInterfaceWrapper) UpdateMe(w http.ResponseWriter, r *http.Reque
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateMe(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMyAttention operation middleware
+func (siw *ServerInterfaceWrapper) ListMyAttention(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMyAttention(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -6968,6 +7007,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/me", wrapper.UpdateMe)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/tickets", wrapper.ListMyTickets)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/updates", wrapper.ListMyUpdates)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/attention", wrapper.ListMyAttention)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/tokens", wrapper.ListTokens)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/me/tokens", wrapper.CreateToken)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/me/tokens/{id}", wrapper.RevokeToken)

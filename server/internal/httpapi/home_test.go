@@ -149,3 +149,28 @@ func orBlank(p *string) string {
 	}
 	return *p
 }
+
+// MSL-9: a project admin with nothing assigned still sees what is late,
+// unowned or incomplete in their projects; a member does not.
+func TestHomeNeedsAttentionForProjectAdmins(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	lead, leadUser := e.signedIn("lead@example.com", false)
+	e.seedMember(leadUser, w.p, "admin")
+	late := e.seedTicket(w.p, w.pmUser, "Delivery note prints the wrong warehouse", &w.a, w.ot)
+	e.assign(late, w.pmUser, days(-3), "Drivers went to the wrong warehouse twice.")
+	unowned := e.seedTicket(w.p, w.pmUser, "Invoice terms of 45 days", nil, w.ot)
+	if _, err := e.d.Pool.Exec(context.Background(), "UPDATE tickets SET reason = 'Permintaan klien.' WHERE id = $1", unowned.ID); err != nil {
+		t.Fatal(err)
+	}
+	var got httpapi.AttentionList
+	if code := e.call(lead, http.MethodGet, "/me/attention", nil, &got); code != http.StatusOK || len(got.Items) != 1 {
+		t.Fatalf("lead: %d %+v", code, got)
+	}
+	if a := got.Items[0]; a.Key != "HRIS" || a.Overdue != 1 || a.Unassigned != 1 || a.WeakReason != 1 || a.NoReason != 0 || a.NoMenu != 0 || a.Stale != 0 {
+		t.Fatalf("counts: %+v", a)
+	}
+	if code := e.call(w.pm, http.MethodGet, "/me/attention", nil, &got); code != http.StatusOK || len(got.Items) != 0 {
+		t.Fatalf("a member: %d %+v", code, got)
+	}
+}

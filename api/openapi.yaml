@@ -106,6 +106,21 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/RecentTicketList" }
         default: { $ref: "#/components/responses/Problem" }
+  /me/attention:
+    get:
+      operationId: listMyAttention
+      tags: [me]
+      description: >-
+        Home's Needs attention (MSL-9): per project the caller runs as project admin (every project for a system
+        admin), the open tickets that are overdue, due within 7 days, unassigned, missing a reason or menu, with a
+        weak reason, or unchanged for 7 days. Projects with none are left out.
+      responses:
+        "200":
+          description: The projects that need attention.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AttentionList" }
+        default: { $ref: "#/components/responses/Problem" }
   /me/tokens:
     get:
       operationId: listTokens
@@ -3064,6 +3079,24 @@ components:
         overdue: { type: integer }
         week: { type: integer }
         incomplete: { type: integer }
+    AttentionList:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/ProjectAttention" } }
+    ProjectAttention:
+      type: object
+      required: [key, name, overdue, week, unassigned, no_reason, weak_reason, no_menu, stale]
+      properties:
+        key: { type: string }
+        name: { type: string }
+        overdue: { type: integer }
+        week: { type: integer, description: Due today or within the next 7 days. }
+        unassigned: { type: integer }
+        no_reason: { type: integer }
+        weak_reason: { type: integer }
+        no_menu: { type: integer }
+        stale: { type: integer, description: Unchanged for 7 days or more. }
     ProjectCount:
       type: object
       required: [key, open]

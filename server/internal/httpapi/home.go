@@ -80,6 +80,30 @@ func (s *Server) ListMyTickets(w http.ResponseWriter, r *http.Request, params Li
 	writeJSON(w, http.StatusOK, out)
 }
 
+// ListMyAttention serves Home's Needs attention (MSL-9): a project admin with
+// nothing assigned still sees what in their projects is late, unowned or
+// incomplete, counted from today on their calendar.
+func (s *Server) ListMyAttention(w http.ResponseWriter, r *http.Request) {
+	u := s.requireUser(w, r)
+	if u == nil {
+		return
+	}
+	rows, err := s.q.ListAttention(r.Context(), db.ListAttentionParams{IsAdmin: u.IsAdmin, UserID: u.ID, Today: s.today(u)})
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	out := AttentionList{Items: []ProjectAttention{}}
+	for _, p := range rows {
+		a := ProjectAttention{Key: p.Key, Name: p.Name, Overdue: int(p.Overdue), Week: int(p.Week), Unassigned: int(p.Unassigned),
+			NoReason: int(p.NoReason), WeakReason: int(p.WeakReason), NoMenu: int(p.NoMenu), Stale: int(p.Stale)}
+		if a.Overdue+a.Week+a.Unassigned+a.NoReason+a.WeakReason+a.NoMenu+a.Stale > 0 {
+			out.Items = append(out.Items, a)
+		}
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
 // ListMyUpdates serves Home's Recently updated (FSD §6.4): the tickets the
 // caller may see that changed last, each with its latest change. A comment
 // change names its author but carries no text.

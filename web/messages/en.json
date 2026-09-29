@@ -115,7 +115,18 @@
     "projects": "My projects",
     "yourTickets": "{count, plural, =0 {No tickets for you} one {# ticket for you} other {# tickets for you}}",
     "greeting": "{part, select, morning {Good morning} midday {Good afternoon} afternoon {Good afternoon} other {Good evening}}, {name}",
-    "openCount": "{count, plural, =0 {No open tickets for you.} one {# open ticket for you.} other {# open tickets for you.}}"
+    "openCount": "{count, plural, =0 {No open tickets for you.} one {# open ticket for you.} other {# open tickets for you.}}",
+    "attention": "Needs attention",
+    "attentionHint": "Open tickets in the projects you run",
+    "attentionCount": {
+      "overdue": "{count} overdue",
+      "week": "{count} due within 7 days",
+      "unassigned": "{count} unassigned",
+      "noReason": "{count, plural, one {# without a reason} other {# without a reason}}",
+      "weakReason": "{count, plural, one {# weak reason} other {# weak reasons}}",
+      "noMenu": "{count, plural, one {# without a menu} other {# without a menu}}",
+      "stale": "{count} unchanged for 7+ days"
+    }
   },
   "profile": {
     "title": "Profile",

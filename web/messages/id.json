@@ -115,7 +115,18 @@
     "projects": "Proyek saya",
     "yourTickets": "{count, plural, =0 {belum ada tiket Anda} other {# tiket Anda}}",
     "greeting": "{part, select, morning {Selamat pagi} midday {Selamat siang} afternoon {Selamat sore} other {Selamat malam}}, {name}",
-    "openCount": "{count, plural, =0 {Tidak ada tiket terbuka untuk Anda.} other {# tiket terbuka untuk Anda.}}"
+    "openCount": "{count, plural, =0 {Tidak ada tiket terbuka untuk Anda.} other {# tiket terbuka untuk Anda.}}",
+    "attention": "Perlu perhatian",
+    "attentionHint": "Tiket terbuka di proyek yang Anda kelola",
+    "attentionCount": {
+      "overdue": "{count} terlambat",
+      "week": "{count} jatuh tempo 7 hari",
+      "unassigned": "{count} belum ditugaskan",
+      "noReason": "{count} tanpa alasan",
+      "weakReason": "{count} alasan lemah",
+      "noMenu": "{count} tanpa menu",
+      "stale": "{count} tidak bergerak 7+ hari"
+    }
   },
   "profile": {
     "title": "Profil",

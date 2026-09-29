@@ -102,6 +102,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/attention": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Home's Needs attention (MSL-9): per project the caller runs as project admin (every project for a system admin), the open tickets that are overdue, due within 7 days, unassigned, missing a reason or menu, with a weak reason, or unchanged for 7 days. Projects with none are left out. */
+        get: operations["listMyAttention"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/tokens": {
         parameters: {
             query?: never;
@@ -2626,6 +2643,22 @@ export interface components {
             week: number;
             incomplete: number;
         };
+        AttentionList: {
+            items: components["schemas"]["ProjectAttention"][];
+        };
+        ProjectAttention: {
+            key: string;
+            name: string;
+            overdue: number;
+            /** @description Due today or within the next 7 days. */
+            week: number;
+            unassigned: number;
+            no_reason: number;
+            weak_reason: number;
+            no_menu: number;
+            /** @description Unchanged for 7 days or more. */
+            stale: number;
+        };
         ProjectCount: {
             key: string;
             open: number;
@@ -3182,6 +3215,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecentTicketList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listMyAttention: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The projects that need attention. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttentionList"];
                 };
             };
             default: components["responses"]["Problem"];

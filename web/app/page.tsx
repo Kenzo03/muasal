@@ -29,10 +29,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const timeZone = await getTimeZone();
   const projects = await getProjects();
   const api = await serverApi();
-  const [mine, updates] = await Promise.all([
+  const [mine, updates, attention] = await Promise.all([
     api.GET("/me/tickets", { params: { query: { view, cursor: values.cursor } } }),
     api.GET("/me/updates"),
+    api.GET("/me/attention"),
   ]);
+  const watch = attention.data?.items ?? [];
   const items = mine.data?.items ?? [];
   const counts = mine.data?.counts ?? { all: 0, overdue: 0, week: 0, incomplete: 0 };
   const perProject = new Map((mine.data?.projects ?? []).map((p) => [p.key, p.open]));
@@ -103,6 +105,43 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
               />
               <button type="submit" className={button.primary}>{tk("send")}</button>
             </form>
+            {/* MSL-9: a lead with nothing assigned still sees what is late, unowned or incomplete. */}
+            {watch.length > 0 && (
+              <section aria-labelledby="attention-title" className={cx(panel, "min-w-0 px-5 py-4")}>
+                <div className="flex flex-col gap-0.5">
+                  <h2 id="attention-title" className="text-base font-extrabold">{t("attention")}</h2>
+                  <span className="text-[13px] text-muted">{t("attentionHint")}</span>
+                </div>
+                <ul className="mt-3 flex flex-col gap-2.5">
+                  {watch.map((p) => (
+                    <li key={p.key} className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                      <Link href={`/p/${p.key}/board`} className="min-w-0 truncate text-[13.5px] font-bold text-ink no-underline hover:underline">{p.name}</Link>
+                      {(
+                        [
+                          ["overdue", p.overdue, "due=overdue", "bg-danger-soft text-danger"],
+                          ["week", p.week, "due=week", "bg-well text-ink-soft"],
+                          ["unassigned", p.unassigned, "assignee=none", "bg-well text-ink-soft"],
+                          ["noReason", p.no_reason, "missing=reason", "bg-warn-soft text-warn"],
+                          ["weakReason", p.weak_reason, "missing=weak_reason", "bg-warn-soft text-warn"],
+                          ["noMenu", p.no_menu, "missing=menus", "bg-warn-soft text-warn"],
+                          ["stale", p.stale, "stale=7", "bg-well text-ink-soft"],
+                        ] as const
+                      )
+                        .filter(([, n]) => n > 0)
+                        .map(([name, n, query, tone]) => (
+                          <Link
+                            key={name}
+                            href={`/p/${p.key}/tickets?status=open&${query}`}
+                            className={cx("rounded-full px-2.5 text-xs font-semibold leading-6 no-underline hover:underline", tone)}
+                          >
+                            {t(`attentionCount.${name}`, { count: n })}
+                          </Link>
+                        ))}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
             <section aria-labelledby="mine-title" className={cx(panel, "min-w-0 overflow-hidden")}>
               <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4">
                 <div className="flex flex-col gap-0.5">
