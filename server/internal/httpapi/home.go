@@ -33,12 +33,13 @@ func (s *Server) ListMyTickets(w http.ResponseWriter, r *http.Request, params Li
 		return
 	}
 	ctx := r.Context()
-	rows, err := s.q.ListMyTickets(ctx, db.ListMyTicketsParams{IsAdmin: u.IsAdmin, UserID: u.ID, View: string(view), Lim: int32(limit + 1), Off: int32(offset)})
+	today := s.today(u)
+	rows, err := s.q.ListMyTickets(ctx, db.ListMyTicketsParams{IsAdmin: u.IsAdmin, UserID: u.ID, View: string(view), Today: today, Lim: int32(limit + 1), Off: int32(offset)})
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
-	counts, err := s.q.CountMyTickets(ctx, db.CountMyTicketsParams{IsAdmin: u.IsAdmin, UserID: u.ID})
+	counts, err := s.q.CountMyTickets(ctx, db.CountMyTicketsParams{IsAdmin: u.IsAdmin, UserID: u.ID, Today: today})
 	if err != nil {
 		s.fail(w, r, err)
 		return

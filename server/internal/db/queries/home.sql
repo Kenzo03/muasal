@@ -2,8 +2,9 @@
 -- Home's My tickets (FSD §6.4): the open tickets assigned to the user that
 -- they may see in any project (R-AC-2, R-AC-3), by due date (none last), then
 -- priority and key. view narrows them: overdue, week (due today through 7 days
--- ahead) or incomplete (no reason or no menu). menu is the first menu's parent
--- and name, or '' without one.
+-- ahead) or incomplete (no reason or no menu). today is the date on the user's
+-- calendar, in their profile's timezone. menu is the first menu's parent and
+-- name, or '' without one.
 SELECT t.id, t.key, t.title, t.type, t.priority, t.due_date, t.client_id, c.name AS client_name, sqlc.embed(s),
        t.reason = '' AS missing_reason,
        NOT EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id) AS missing_menus,
@@ -22,17 +23,18 @@ WHERE t.assignee_id = sqlc.arg('user_id')::bigint
                 SELECT 1 FROM membership_clients mc
                 WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = t.client_id))))
   AND (sqlc.arg('view')::text = 'all'
-       OR (sqlc.arg('view')::text = 'overdue' AND t.due_date < current_date)
-       OR (sqlc.arg('view')::text = 'week' AND t.due_date BETWEEN current_date AND current_date + 7)
+       OR (sqlc.arg('view')::text = 'overdue' AND t.due_date < sqlc.arg('today')::date)
+       OR (sqlc.arg('view')::text = 'week' AND t.due_date BETWEEN sqlc.arg('today')::date AND sqlc.arg('today')::date + 7)
        OR (sqlc.arg('view')::text = 'incomplete' AND (t.reason = '' OR NOT EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id))))
 ORDER BY t.due_date NULLS LAST, array_position(ARRAY['urgent', 'high', 'medium', 'low'], t.priority), t.project_id, t.number
 LIMIT sqlc.arg('lim') OFFSET sqlc.arg('off');
 
 -- name: CountMyTickets :one
--- The counts of Home's tabs, over all of the user's open tickets.
+-- The counts of Home's tabs, over all of the user's open tickets, with the
+-- same today as ListMyTickets.
 SELECT count(*) AS all_open,
-       count(*) FILTER (WHERE t.due_date < current_date) AS overdue,
-       count(*) FILTER (WHERE t.due_date BETWEEN current_date AND current_date + 7) AS week,
+       count(*) FILTER (WHERE t.due_date < sqlc.arg('today')::date) AS overdue,
+       count(*) FILTER (WHERE t.due_date BETWEEN sqlc.arg('today')::date AND sqlc.arg('today')::date + 7) AS week,
        count(*) FILTER (WHERE t.reason = '' OR NOT EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id)) AS incomplete
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id

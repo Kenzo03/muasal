@@ -12,22 +12,23 @@ import (
 
 const countMyTickets = `-- name: CountMyTickets :one
 SELECT count(*) AS all_open,
-       count(*) FILTER (WHERE t.due_date < current_date) AS overdue,
-       count(*) FILTER (WHERE t.due_date BETWEEN current_date AND current_date + 7) AS week,
+       count(*) FILTER (WHERE t.due_date < $1::date) AS overdue,
+       count(*) FILTER (WHERE t.due_date BETWEEN $1::date AND $1::date + 7) AS week,
        count(*) FILTER (WHERE t.reason = '' OR NOT EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id)) AS incomplete
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
-WHERE t.assignee_id = $1::bigint
+WHERE t.assignee_id = $2::bigint
   AND s.category IN ('todo', 'in_progress')
-  AND ($2::boolean OR EXISTS (
+  AND ($3::boolean OR EXISTS (
         SELECT 1 FROM memberships m
-        WHERE m.user_id = $1::bigint AND m.project_id = t.project_id
+        WHERE m.user_id = $2::bigint AND m.project_id = t.project_id
           AND (m.all_clients OR t.client_id IS NULL OR EXISTS (
                 SELECT 1 FROM membership_clients mc
                 WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = t.client_id))))
 `
 
 type CountMyTicketsParams struct {
+	Today   time.Time
 	UserID  int64
 	IsAdmin bool
 }
@@ -39,9 +40,10 @@ type CountMyTicketsRow struct {
 	Incomplete int64
 }
 
-// The counts of Home's tabs, over all of the user's open tickets.
+// The counts of Home's tabs, over all of the user's open tickets, with the
+// same today as ListMyTickets.
 func (q *Queries) CountMyTickets(ctx context.Context, arg CountMyTicketsParams) (CountMyTicketsRow, error) {
-	row := q.db.QueryRow(ctx, countMyTickets, arg.UserID, arg.IsAdmin)
+	row := q.db.QueryRow(ctx, countMyTickets, arg.Today, arg.UserID, arg.IsAdmin)
 	var i CountMyTicketsRow
 	err := row.Scan(
 		&i.AllOpen,
@@ -176,17 +178,18 @@ WHERE t.assignee_id = $1::bigint
                 SELECT 1 FROM membership_clients mc
                 WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = t.client_id))))
   AND ($3::text = 'all'
-       OR ($3::text = 'overdue' AND t.due_date < current_date)
-       OR ($3::text = 'week' AND t.due_date BETWEEN current_date AND current_date + 7)
+       OR ($3::text = 'overdue' AND t.due_date < $4::date)
+       OR ($3::text = 'week' AND t.due_date BETWEEN $4::date AND $4::date + 7)
        OR ($3::text = 'incomplete' AND (t.reason = '' OR NOT EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id))))
 ORDER BY t.due_date NULLS LAST, array_position(ARRAY['urgent', 'high', 'medium', 'low'], t.priority), t.project_id, t.number
-LIMIT $5 OFFSET $4
+LIMIT $6 OFFSET $5
 `
 
 type ListMyTicketsParams struct {
 	UserID  int64
 	IsAdmin bool
 	View    string
+	Today   time.Time
 	Off     int32
 	Lim     int32
 }
@@ -209,13 +212,15 @@ type ListMyTicketsRow struct {
 // Home's My tickets (FSD §6.4): the open tickets assigned to the user that
 // they may see in any project (R-AC-2, R-AC-3), by due date (none last), then
 // priority and key. view narrows them: overdue, week (due today through 7 days
-// ahead) or incomplete (no reason or no menu). menu is the first menu's parent
-// and name, or ” without one.
+// ahead) or incomplete (no reason or no menu). today is the date on the user's
+// calendar, in their profile's timezone. menu is the first menu's parent and
+// name, or ” without one.
 func (q *Queries) ListMyTickets(ctx context.Context, arg ListMyTicketsParams) ([]ListMyTicketsRow, error) {
 	rows, err := q.db.Query(ctx, listMyTickets,
 		arg.UserID,
 		arg.IsAdmin,
 		arg.View,
+		arg.Today,
 		arg.Off,
 		arg.Lim,
 	)
