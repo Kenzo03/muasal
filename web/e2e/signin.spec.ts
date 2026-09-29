@@ -19,6 +19,14 @@ test("an admin creates a user who sets a password and signs in", async ({ page, 
   const link = await page.getByTestId("setup-link").textContent();
   expect(link).toContain("/setup/");
 
+  // Signed in, the sign-in page sends the admin home, and Budi's setup link
+  // opens on its own, without the admin's sidebar.
+  await page.goto("/login");
+  await expect(page).toHaveURL(/\/$/);
+  await page.goto(link!);
+  await expect(page.getByLabel("Kata sandi baru")).toBeVisible();
+  await expect(page.getByLabel("Akun E2E Admin")).toBeHidden();
+
   const budi = await (await browser.newContext()).newPage();
   await setPassword(budi, link!, userPassword);
   await signIn(budi, email, userPassword);

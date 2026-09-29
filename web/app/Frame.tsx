@@ -77,6 +77,10 @@ export default function Frame({ me, projects, rail: railCookie, recent: recentCo
     setRail(!rail);
   }
 
+  // Sign-in and setup (the pages proxy.ts opens without a session) stand alone
+  // even when a session is open, as when an admin opens someone's setup link.
+  if (/^\/(login|setup)(\/|$)/.test(path)) return children;
+
   return (
     <div className="flex min-h-screen">
       {drawer && (
