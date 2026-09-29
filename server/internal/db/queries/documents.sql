@@ -9,6 +9,10 @@ RETURNING *;
 -- name: SupersedeDocument :exec
 UPDATE documents SET superseded_by = sqlc.arg('by') WHERE id = sqlc.arg('id') AND superseded_by IS NULL;
 
+-- name: SetDocumentSupersededBy :exec
+-- Marks a document replaced after its upload, or current again with NULL (§7.7).
+UPDATE documents SET superseded_by = sqlc.narg('by') WHERE id = sqlc.arg('id');
+
 -- name: CreateSection :one
 INSERT INTO document_sections (document_id, number, title, level, position, body)
 VALUES ($1, $2, $3, $4, $5, $6)
@@ -135,3 +139,24 @@ WHERE s.id = ANY (sqlc.arg('ids')::bigint[]) AND d.archived_at IS NULL
           AND (m.all_clients OR d.client_id IS NULL OR EXISTS (
                 SELECT 1 FROM membership_clients mc
                 WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = d.client_id))));
+
+-- name: ListNodeSections :many
+-- The visible document sections these nodes came from, for a node page's
+-- timeline (§7.7): where a menu's history starts. Archived documents never;
+-- replaced ones come after current ones and say so. from_date and to_date
+-- filter on the upload day, like a note's decision day.
+SELECT s.number, s.title, s.body, d.key AS document_key, d.title AS document_title, d.client_id, c.name AS client_name,
+       d.created_at AS uploaded_at, sk.key AS superseded_by_key
+FROM document_sections s
+JOIN documents d ON d.id = s.document_id
+LEFT JOIN clients c ON c.id = d.client_id
+LEFT JOIN documents sk ON sk.id = d.superseded_by
+WHERE d.project_id = sqlc.arg('project_id') AND d.archived_at IS NULL
+  AND EXISTS (SELECT 1 FROM document_section_nodes sn WHERE sn.section_id = s.id AND sn.node_id = ANY (sqlc.arg('node_ids')::bigint[]))
+  AND (sqlc.arg('all_clients')::boolean OR d.client_id IS NULL OR d.client_id = ANY (sqlc.arg('client_ids')::bigint[]))
+  AND (sqlc.narg('client_id')::bigint IS NULL OR d.client_id = sqlc.narg('client_id')::bigint)
+  AND (NOT sqlc.arg('core_only')::boolean OR d.client_id IS NULL)
+  AND (sqlc.narg('from_date')::date IS NULL OR d.created_at >= sqlc.narg('from_date')::date)
+  AND (sqlc.narg('to_date')::date IS NULL OR d.created_at < sqlc.narg('to_date')::date + 1)
+ORDER BY d.superseded_by IS NOT NULL, d.created_at DESC, d.id DESC, s.position
+LIMIT 100;

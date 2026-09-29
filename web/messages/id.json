@@ -386,7 +386,9 @@
     "ask": "Tanya",
     "note": "Notulen keputusan",
     "attendees": "Bersama {names}",
-    "supersededBy": "Digantikan oleh {key}"
+    "supersededBy": "Digantikan oleh {key}",
+    "spec": "Spesifikasi",
+    "specTitle": "Asal di dokumen"
   },
   "errors": {
     "generic": "Terjadi kesalahan. Coba lagi.",
@@ -795,12 +797,12 @@
     "searching": "Mencari bukti…",
     "answering": "Menyusun jawaban…",
     "waiting": "Menunggu server AI, {count} pertanyaan di depan",
-    "answeredFrom": "Dijawab dari {count} tiket",
-    "notEnough": "Informasi dalam tiket yang dapat Anda akses belum cukup untuk menjawab ini.",
+    "answeredFrom": "Dijawab dari {count} sumber",
+    "notEnough": "Informasi yang dapat Anda akses belum cukup untuk menjawab ini.",
     "suggestions": "Coba perlebar rentang tanggal, hapus chip klien, atau periksa nama menu.",
-    "closest": "Tiket terdekat",
+    "closest": "Sumber terdekat",
     "results": "Hasil pencarian kata kunci",
-    "noResults": "Tidak ada tiket yang cocok.",
+    "noResults": "Tidak ada yang cocok.",
     "aiOff": "AI dimatikan.",
     "aiOffHint": "Ini hasil pencarian kata kunci dengan cakupan yang sama.",
     "sources": "Sumber",
@@ -845,7 +847,7 @@
       "why": "Apa yang salah?",
       "reasons": {
         "wrong": "Salah",
-        "missing_tickets": "Tiket kurang",
+        "missing_tickets": "Sumber kurang",
         "wrong_citation": "Kutipan salah",
         "too_vague": "Terlalu umum"
       },
@@ -1292,7 +1294,13 @@
       "discarded": "Dibuang",
       "failed": "Gagal"
     },
-    "reviewHint": "Menerapkan membuat node yang dicentang dan belum ada di pohon, serta menautkan setiap node ke bagiannya agar Tanya dapat mengutipnya."
+    "reviewHint": "Menerapkan membuat node yang dicentang dan belum ada di pohon, serta menautkan setiap node ke bagiannya agar Tanya dapat mengutipnya.",
+    "version": "Versi",
+    "replaceHint": "Tandai dokumen ini digantikan oleh versi yang lebih baru. Tanya lalu memakainya hanya sebagai riwayat.",
+    "replace": "Tandai digantikan",
+    "makeCurrent": "Jadikan terkini lagi",
+    "noNewer": "Belum ada dokumen lain yang terkini di proyek ini.",
+    "replacedBy": "Digantikan oleh"
   },
   "treeDraft": {
     "heading": "Draf pohon",

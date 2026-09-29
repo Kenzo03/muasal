@@ -9,6 +9,7 @@ import { dateTime, dayOf } from "@/lib/format";
 import { getProject, serverApi } from "@/lib/server-api";
 import { button, chip, cx, panel, sectionTitle } from "@/lib/ui";
 import DraftButton from "./DraftButton";
+import Replace from "./Replace";
 
 // A document page (R-MR-15): the Markdown by section, each with an anchor so
 // citation chips such as HRIS-DOC1/7.4 open at the right place, the nodes each
@@ -18,9 +19,10 @@ export default async function DocumentPage({ params }: { params: Promise<{ docKe
   const api = await serverApi();
   const { data: doc } = await api.GET("/documents/{key}", { params: { path: { key: docKey } } });
   if (!doc) notFound();
-  const [project, clients] = await Promise.all([
+  const [project, clients, docs] = await Promise.all([
     getProject(doc.project_key),
     api.GET("/projects/{key}/clients", { params: { path: { key: doc.project_key } } }),
+    api.GET("/projects/{key}/documents", { params: { path: { key: doc.project_key } } }),
   ]);
   const t = await getTranslations("documents");
   const tt = await getTranslations("ticket");
@@ -97,6 +99,13 @@ export default async function DocumentPage({ params }: { params: Promise<{ docKe
           </article>
         </div>
         <aside className="flex flex-col gap-4 lg:sticky lg:top-4">
+          {admin && (
+            <Replace
+              docKey={doc.key}
+              supersededBy={doc.superseded_by}
+              candidates={(docs.data?.items ?? []).filter((d) => d.key !== doc.key && !d.superseded_by)}
+            />
+          )}
           {admin && doc.drafts.length > 0 && (
             <section aria-labelledby="drafts-title" className={cx(panel, "flex flex-col gap-0.5 p-2")}>
               <h2 id="drafts-title" className={cx(sectionTitle, "px-2.5 pb-1 pt-1.5")}>{t("drafts")}</h2>

@@ -81,7 +81,7 @@ func (s *Server) GetNodeTimeline(w http.ResponseWriter, r *http.Request, id int6
 	}
 	// Decision notes sit on the timeline by decision date (§9.4, AC-DC-8). The
 	// first page carries them all; the page places them among closed tickets.
-	out.Notes = []TimelineNote{}
+	out.Notes, out.Sections = []TimelineNote{}, []TimelineSection{}
 	if offset == 0 && params.Type == nil {
 		notes, err := s.q.ListNodeNotes(ctx, db.ListNodeNotesParams{
 			ProjectID: pc.project.ID, NodeIds: ids, AllClients: pc.scope.AllClients, ClientIds: orEmpty(pc.scope.ClientIDs),
@@ -98,6 +98,23 @@ func (s *Server) GetNodeTimeline(w http.ResponseWriter, r *http.Request, id int6
 				tn.Client = &Ref{Id: *n.ClientID, Name: deref(n.ClientName)}
 			}
 			out.Notes = append(out.Notes, tn)
+		}
+		// The sections the nodes came from: where their history starts (§7.7).
+		sections, err := s.q.ListNodeSections(ctx, db.ListNodeSectionsParams{
+			ProjectID: pc.project.ID, NodeIds: ids, AllClients: pc.scope.AllClients, ClientIds: orEmpty(pc.scope.ClientIDs),
+			ClientID: params.ClientId, CoreOnly: deref(params.Core), FromDate: filter.FromDate, ToDate: filter.ToDate,
+		})
+		if err != nil {
+			s.fail(w, r, err)
+			return
+		}
+		for _, sec := range sections {
+			ts := TimelineSection{Key: sec.DocumentKey + "/" + sec.Number, DocumentKey: sec.DocumentKey, DocumentTitle: sec.DocumentTitle,
+				Title: sec.Title, Excerpt: cutRunes(sec.Body, 280), UploadedAt: sec.UploadedAt, SupersededBy: sec.SupersededByKey}
+			if sec.ClientID != nil {
+				ts.Client = &Ref{Id: *sec.ClientID, Name: deref(sec.ClientName)}
+			}
+			out.Sections = append(out.Sections, ts)
 		}
 	}
 	writeJSON(w, http.StatusOK, out)

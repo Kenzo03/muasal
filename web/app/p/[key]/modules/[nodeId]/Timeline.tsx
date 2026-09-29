@@ -3,8 +3,10 @@ import Link from "next/link";
 import { getLocale, getTimeZone, getTranslations } from "next-intl/server";
 import { ClientChip, StatusDot, showsClients } from "@/components/Chips";
 import Icon from "@/components/Icon";
+import Markdown from "@/components/Markdown";
+import { itemHref } from "@/lib/ask";
 import { dateIn, day, dayOf } from "@/lib/format";
-import type { Client, TimelineEntry, TimelineNote } from "@/lib/problem";
+import type { Client, TimelineEntry, TimelineNote, TimelineSection } from "@/lib/problem";
 import { button, chip, cx, field } from "@/lib/ui";
 
 const types = ["bug", "change_request", "feature"] as const;
@@ -25,11 +27,14 @@ function Rail({ color, open }: { color: string; open?: boolean }) {
 // The Timeline tab (FSD §7.4, story 1): open tickets pinned under "In progress",
 // then closed ones newest first by close date, each with what changed and why.
 // Decision notes sit among them by decision date (§9.4); while more tickets
-// wait to load, notes older than the last loaded one wait too.
+// wait to load, notes older than the last loaded one wait too. Once all have
+// loaded, the document sections the menu came from close the list (§7.7):
+// where its history starts.
 // The filters are a plain GET form, so the URL holds them.
-export default async function Timeline({ items, notes, failed, more, limit, clients, values }: {
+export default async function Timeline({ items, notes, sections, failed, more, limit, clients, values }: {
   items: TimelineEntry[];
   notes: TimelineNote[];
+  sections: TimelineSection[];
   failed: boolean;
   more: boolean;
   limit: number;
@@ -164,7 +169,7 @@ export default async function Timeline({ items, notes, failed, more, limit, clie
                           <Link href={`/notes/${n.key}`} className="text-base font-extrabold text-ink no-underline hover:text-ink hover:underline">
                             {n.title}
                           </Link>
-                          <p className="line-clamp-3 whitespace-pre-wrap text-sm leading-relaxed">{n.body}</p>
+                          <Markdown text={n.body} className="line-clamp-4" />
                         </article>
                       </li>
                       </Fragment>
@@ -235,6 +240,41 @@ export default async function Timeline({ items, notes, failed, more, limit, clie
             </Link>
           )}
         </>
+      )}
+      {!failed && !more && sections.length > 0 && (
+        <section aria-labelledby="spec-title" className="flex flex-col gap-2.5">
+          <h2 id="spec-title" className="text-[13px] font-extrabold text-ink-soft">{t("specTitle")}</h2>
+          <ol className="flex flex-col">
+            {Object.values(Object.groupBy(sections, (s) => s.document_key)).map((doc) => {
+              const d = doc![0];
+              return (
+                <li key={d.document_key} className={grid}>
+                  <div className="flex flex-col items-end gap-0.5 pt-4">
+                    <span className="text-sm font-extrabold">{dayOf(d.uploaded_at, locale, timeZone)}</span>
+                    <span className="text-xs text-muted">{t("spec")}</span>
+                  </div>
+                  <Rail color="#8A7F76" />
+                  <article aria-label={d.document_title} className="mb-3 flex flex-col gap-3 rounded-2xl border border-dashed border-field bg-paper px-5 py-4">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+                      <Link href={`/documents/${d.document_key}`} className="text-[13px] font-bold no-underline">{d.document_key}</Link>
+                      <span>{d.document_title}</span>
+                      {d.superseded_by && <span className={cx(chip, "rounded-full bg-warn-soft text-warn")}>{t("supersededBy", { key: d.superseded_by })}</span>}
+                      {withClients && <ClientChip client={d.client} coreLabel={t("core")} />}
+                    </div>
+                    {doc!.map((s) => (
+                      <div key={s.key} className="flex flex-col gap-1">
+                        <Link href={itemHref(s.key)} className="text-[15px] font-extrabold text-ink no-underline hover:text-ink hover:underline">
+                          <span className="font-bold text-muted">{s.key.slice(d.document_key.length + 1)}</span> {s.title}
+                        </Link>
+                        {s.excerpt && <Markdown text={s.excerpt} className="line-clamp-3 text-ink-soft" />}
+                      </div>
+                    ))}
+                  </article>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
       )}
     </>
   );

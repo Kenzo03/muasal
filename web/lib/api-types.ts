@@ -736,7 +736,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** @description Project admins. Marks the document replaced by a newer document of the project, for when the upload did not say so, or current again with null (FSD §7.7). Only a current document can replace another. Ask then treats the replaced document's sections as history. */
+        patch: operations["updateDocument"];
         trace?: never;
     };
     "/documents/{key}/file": {
@@ -1763,7 +1764,26 @@ export interface components {
             items: components["schemas"]["TimelineEntry"][];
             /** @description Decision notes on the node, newest decision first (FSD §9.4). Only the first page carries them, all of them; later pages, and a ticket type filter, leave the list empty. */
             notes: components["schemas"]["TimelineNote"][];
+            /** @description The document sections the node and its sub-nodes came from (FSD §7.7): where their history starts. Current documents first, newest upload first. Carried like notes: the first page only, and none with a ticket type filter. */
+            sections: components["schemas"]["TimelineSection"][];
             next_cursor: string | null;
+        };
+        TimelineSection: {
+            /**
+             * @description The section's citation
+             * @example HRIS-DOC1/7.4
+             */
+            key: string;
+            document_key: string;
+            document_title: string;
+            title: string;
+            /** @description The start of the section's Markdown. */
+            excerpt: string;
+            /** Format: date-time */
+            uploaded_at: string;
+            client?: components["schemas"]["Ref"];
+            /** @description The key of the document that replaced this one. */
+            superseded_by?: string;
         };
         TimelineNote: {
             /** @example HRIS-DN7 */
@@ -2000,6 +2020,10 @@ export interface components {
             body: string;
             /** @description The nodes this section produced. */
             nodes: components["schemas"]["Ref"][];
+        };
+        DocumentUpdate: {
+            /** @description A newer document's key */
+            superseded_by: string | null;
         };
         Document: {
             key: string;
@@ -4433,6 +4457,33 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description The document. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Document"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentUpdate"];
+            };
+        };
         responses: {
             /** @description The document. */
             200: {

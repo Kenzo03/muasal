@@ -49,6 +49,7 @@ export type LinkType = components["schemas"]["LinkType"];
 export type Note = components["schemas"]["Note"];
 export type NoteSummary = components["schemas"]["NoteSummary"];
 export type TimelineNote = components["schemas"]["TimelineNote"];
+export type TimelineSection = components["schemas"]["TimelineSection"];
 export type AskFeedback = components["schemas"]["AskFeedback"];
 export type TimelineEntry = components["schemas"]["TimelineEntry"];
 export type Behavior = components["schemas"]["Behavior"];

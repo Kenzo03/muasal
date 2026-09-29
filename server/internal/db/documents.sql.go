@@ -452,6 +452,90 @@ func (q *Queries) ListDocumentSectionIDs(ctx context.Context, documentID int64) 
 	return items, nil
 }
 
+const listNodeSections = `-- name: ListNodeSections :many
+SELECT s.number, s.title, s.body, d.key AS document_key, d.title AS document_title, d.client_id, c.name AS client_name,
+       d.created_at AS uploaded_at, sk.key AS superseded_by_key
+FROM document_sections s
+JOIN documents d ON d.id = s.document_id
+LEFT JOIN clients c ON c.id = d.client_id
+LEFT JOIN documents sk ON sk.id = d.superseded_by
+WHERE d.project_id = $1 AND d.archived_at IS NULL
+  AND EXISTS (SELECT 1 FROM document_section_nodes sn WHERE sn.section_id = s.id AND sn.node_id = ANY ($2::bigint[]))
+  AND ($3::boolean OR d.client_id IS NULL OR d.client_id = ANY ($4::bigint[]))
+  AND ($5::bigint IS NULL OR d.client_id = $5::bigint)
+  AND (NOT $6::boolean OR d.client_id IS NULL)
+  AND ($7::date IS NULL OR d.created_at >= $7::date)
+  AND ($8::date IS NULL OR d.created_at < $8::date + 1)
+ORDER BY d.superseded_by IS NOT NULL, d.created_at DESC, d.id DESC, s.position
+LIMIT 100
+`
+
+type ListNodeSectionsParams struct {
+	ProjectID  int64
+	NodeIds    []int64
+	AllClients bool
+	ClientIds  []int64
+	ClientID   *int64
+	CoreOnly   bool
+	FromDate   *time.Time
+	ToDate     *time.Time
+}
+
+type ListNodeSectionsRow struct {
+	Number          string
+	Title           string
+	Body            string
+	DocumentKey     string
+	DocumentTitle   string
+	ClientID        *int64
+	ClientName      *string
+	UploadedAt      time.Time
+	SupersededByKey *string
+}
+
+// The visible document sections these nodes came from, for a node page's
+// timeline (§7.7): where a menu's history starts. Archived documents never;
+// replaced ones come after current ones and say so. from_date and to_date
+// filter on the upload day, like a note's decision day.
+func (q *Queries) ListNodeSections(ctx context.Context, arg ListNodeSectionsParams) ([]ListNodeSectionsRow, error) {
+	rows, err := q.db.Query(ctx, listNodeSections,
+		arg.ProjectID,
+		arg.NodeIds,
+		arg.AllClients,
+		arg.ClientIds,
+		arg.ClientID,
+		arg.CoreOnly,
+		arg.FromDate,
+		arg.ToDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListNodeSectionsRow
+	for rows.Next() {
+		var i ListNodeSectionsRow
+		if err := rows.Scan(
+			&i.Number,
+			&i.Title,
+			&i.Body,
+			&i.DocumentKey,
+			&i.DocumentTitle,
+			&i.ClientID,
+			&i.ClientName,
+			&i.UploadedAt,
+			&i.SupersededByKey,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPendingSectionChunks = `-- name: ListPendingSectionChunks :many
 SELECT id, content, content_hash FROM chunks
 WHERE section_id = $1::bigint AND (embedding IS NULL OR embed_model IS DISTINCT FROM $2::text)
@@ -676,6 +760,21 @@ type SaveTreeDraftParams struct {
 
 func (q *Queries) SaveTreeDraft(ctx context.Context, arg SaveTreeDraftParams) error {
 	_, err := q.db.Exec(ctx, saveTreeDraft, arg.ID, arg.Proposal)
+	return err
+}
+
+const setDocumentSupersededBy = `-- name: SetDocumentSupersededBy :exec
+UPDATE documents SET superseded_by = $1 WHERE id = $2
+`
+
+type SetDocumentSupersededByParams struct {
+	By *int64
+	ID int64
+}
+
+// Marks a document replaced after its upload, or current again with NULL (§7.7).
+func (q *Queries) SetDocumentSupersededBy(ctx context.Context, arg SetDocumentSupersededByParams) error {
+	_, err := q.db.Exec(ctx, setDocumentSupersededBy, arg.By, arg.ID)
 	return err
 }
 
