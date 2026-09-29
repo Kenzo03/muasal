@@ -8,8 +8,10 @@ export default async function Shell({ children }: { children: React.ReactNode })
   const me = await getMe();
   if (!me) return children;
   const [projects, store] = await Promise.all([getProjects(), cookies()]);
+  // The projects opened last, most recent first, as Frame keeps them in the `recent` cookie.
+  const recent = (store.get("recent")?.value ?? "").split(",").filter(Boolean);
   return (
-    <Frame me={me} projects={projects} rail={store.get("nav")?.value === "rail"}>
+    <Frame me={me} projects={projects} rail={store.get("nav")?.value === "rail"} recent={recent}>
       {children}
     </Frame>
   );

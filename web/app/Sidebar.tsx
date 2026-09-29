@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -8,6 +9,7 @@ import Icon, { type IconName } from "@/components/Icon";
 import Menu from "@/components/Menu";
 import { api } from "@/lib/api";
 import type { Project, User } from "@/lib/problem";
+import { matchProjects, recentFirst } from "@/lib/projects";
 import { cx } from "@/lib/ui";
 import SignOutButton from "./SignOutButton";
 
@@ -15,6 +17,7 @@ type Props = {
   me: User;
   projects: Project[];
   project?: Project;
+  recent: string[]; // keys of the projects opened last, most recent first
   rail: boolean; // icons only, from md up
   drawer: boolean; // open over the page on a phone
   onNavigate: () => void;
@@ -25,15 +28,23 @@ type Page = [href: string, icon: IconName, label: string];
 
 const menuItem = "block px-3.5 py-2 text-sm text-ink no-underline hover:bg-paper hover:text-ink";
 
+// A list longer than this stays in the switcher: outside a project the sidebar
+// shows the projects opened last instead.
+const shortList = 5;
+
 // The sidebar (FSD §6.1): Home and Ask, then the pages of the project in view.
-// Outside a project it lists the user's projects and, for system admins, the
-// admin pages. The switcher on top shows a long project name on two lines; its
-// menu shows the name whole.
-export default function Sidebar({ me, projects, project, rail, drawer, onNavigate, onToggleRail }: Props) {
+// Outside a project it lists the user's projects when there are a few, else the
+// ones opened last, and for system admins the admin pages. The switcher on top
+// finds any project; it shows a long name on two lines, and its menu shows it whole.
+export default function Sidebar({ me, projects, project, recent, rail, drawer, onNavigate, onToggleRail }: Props) {
   const t = useTranslations("nav");
   const tp = useTranslations("project");
   const path = usePathname();
   const router = useRouter();
+  const [find, setFind] = useState("");
+  const found = matchProjects(recentFirst(projects, recent), find);
+  const few = projects.length <= shortList;
+  const listed = few ? projects : recent.flatMap((k) => projects.filter((p) => p.key === k));
 
   async function setLocale(locale: "id" | "en") {
     if (locale === me.locale) return;
@@ -147,8 +158,21 @@ export default function Sidebar({ me, projects, project, rail, drawer, onNavigat
             <p className="mt-1 text-sm font-bold leading-snug">{project.name}</p>
           </div>
         )}
+        {projects.length > 8 && (
+          <label className="mx-2.5 mb-1 mt-1.5 flex h-9 items-center gap-2 rounded-[10px] border border-line bg-paper px-2.5 text-muted focus-within:border-field focus-within:bg-white">
+            <Icon name="search" />
+            <input
+              value={find}
+              onChange={(e) => setFind(e.target.value)}
+              aria-label={t("findProject")}
+              placeholder={t("findProject")}
+              className="min-w-0 flex-1 bg-transparent text-[13.5px] text-ink outline-none placeholder:text-muted"
+            />
+          </label>
+        )}
         <ul className="max-h-80 overflow-y-auto py-1">
-          {projects.map((p) => (
+          {found.length === 0 && <li className="px-3.5 py-2 text-[13px] text-muted">{t("noProjectFound")}</li>}
+          {found.map((p) => (
             <li key={p.id}>
               <Link href={`/p/${p.key}/board`} className="flex items-center gap-2.5 px-3 py-2 text-ink no-underline hover:bg-paper hover:text-ink">
                 {tile(p.name, "size-7 text-[10.5px]")}
@@ -160,7 +184,7 @@ export default function Sidebar({ me, projects, project, rail, drawer, onNavigat
             </li>
           ))}
         </ul>
-        <Link href="/" className="block border-t border-line-soft px-3.5 pb-1 pt-2.5 text-[13px] font-semibold no-underline">
+        <Link href="/projects" className="block border-t border-line-soft px-3.5 pb-1 pt-2.5 text-[13px] font-semibold no-underline">
           {t("allProjects")}
         </Link>
       </Menu>
@@ -175,9 +199,8 @@ export default function Sidebar({ me, projects, project, rail, drawer, onNavigat
         ) : (
           <>
             {projects.length > 0 &&
-              group(
-                t("projects"),
-                projects.map((p) => (
+              group(few ? t("projects") : t("recent"), [
+                ...listed.map((p) => (
                   <li key={p.id}>
                     <Link href={`/p/${p.key}/board`} title={rail ? p.name : undefined} className={itemClass(false)}>
                       {tile(p.name, "size-5 rounded-md text-[9px]")}
@@ -185,7 +208,9 @@ export default function Sidebar({ me, projects, project, rail, drawer, onNavigat
                     </Link>
                   </li>
                 )),
-              )}
+                // Past the short list, every project is one click away.
+                ...(few ? [] : [item(["/projects", "list", t("allProjectsCount", { count: projects.length })], path === "/projects")]),
+              ])}
             {me.is_admin && group(t("admin"), adminPages.map((page) => item(page, isActive(page[0]))))}
           </>
         )}

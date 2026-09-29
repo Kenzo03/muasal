@@ -10,18 +10,20 @@ import Bell from "@/components/Bell";
 import Icon from "@/components/Icon";
 import Menu from "@/components/Menu";
 import type { Project, User } from "@/lib/problem";
+import { matchProjects, recentFirst } from "@/lib/projects";
 import { button } from "@/lib/ui";
 
-type Props = { me: User; projects: Project[]; project?: Project; drawer: boolean; onMenu: () => void };
+type Props = { me: User; projects: Project[]; project?: Project; recent: string[]; drawer: boolean; onMenu: () => void };
 
 // The light bar over every page: the sidebar's button on phones, search, Ask,
 // New ticket and the bell.
-export default function TopBar({ me, projects, project, drawer, onMenu }: Props) {
+export default function TopBar({ me, projects, project, recent, drawer, onMenu }: Props) {
   const t = useTranslations("nav");
   const router = useRouter();
   const search = useRef<HTMLInputElement>(null);
-  // Off a project page, New ticket asks which project (FSD §6.1).
-  const creatable = projects.filter((p) => p.role !== "viewer");
+  const [find, setFind] = useState("");
+  // Off a project page, New ticket asks which project (FSD §6.1), those opened last first.
+  const creatable = recentFirst(projects.filter((p) => p.role !== "viewer"), recent);
   const newTicketKey = project ? (project.role !== "viewer" ? project.key : undefined) : creatable.length === 1 ? creatable[0].key : undefined;
 
   // `c` opens New ticket from anywhere (§6.1, §8.3) and `/` jumps to search,
@@ -40,7 +42,7 @@ export default function TopBar({ me, projects, project, drawer, onMenu }: Props)
       const menu = document.getElementById("new-ticket-menu") as HTMLDetailsElement | null;
       if (menu) {
         menu.open = true;
-        menu.querySelector<HTMLAnchorElement>("a")?.focus();
+        menu.querySelector<HTMLElement>("input, a")?.focus(); // the search box, when the list is long
       }
     };
     document.addEventListener("keydown", onKey);
@@ -101,12 +103,26 @@ export default function TopBar({ me, projects, project, drawer, onMenu }: Props)
               }
             >
               <p className="px-3.5 pb-1 pt-1 text-xs font-semibold text-muted">{t("chooseProject")}</p>
-              {creatable.map((p) => (
-                <Link key={p.id} href={`/p/${p.key}/tickets/new`} className="flex items-baseline gap-2 px-3.5 py-2 text-sm text-ink no-underline hover:bg-paper hover:text-ink">
-                  <span className="shrink-0 text-xs font-bold text-muted">{p.key}</span>
-                  <span className="line-clamp-2">{p.name}</span>
-                </Link>
-              ))}
+              {creatable.length > 8 && (
+                <label className="mx-2.5 mb-1 flex h-9 items-center gap-2 rounded-[10px] border border-line bg-paper px-2.5 text-muted focus-within:border-field focus-within:bg-white">
+                  <Icon name="search" />
+                  <input
+                    value={find}
+                    onChange={(e) => setFind(e.target.value)}
+                    aria-label={t("findProject")}
+                    placeholder={t("findProject")}
+                    className="min-w-0 flex-1 bg-transparent text-[13.5px] text-ink outline-none placeholder:text-muted"
+                  />
+                </label>
+              )}
+              <div className="max-h-80 overflow-y-auto">
+                {matchProjects(creatable, find).map((p) => (
+                  <Link key={p.id} href={`/p/${p.key}/tickets/new`} className="flex items-baseline gap-2 px-3.5 py-2 text-sm text-ink no-underline hover:bg-paper hover:text-ink">
+                    <span className="shrink-0 text-xs font-bold text-muted">{p.key}</span>
+                    <span className="line-clamp-2">{p.name}</span>
+                  </Link>
+                ))}
+              </div>
             </Menu>
           )
         )}

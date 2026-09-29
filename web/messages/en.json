@@ -28,6 +28,10 @@
     "switchProject": "Switch project",
     "projects": "Projects",
     "allProjects": "All projects",
+    "recent": "Recent",
+    "allProjectsCount": "All projects ({count})",
+    "findProject": "Find a project",
+    "noProjectFound": "No project matches.",
     "newTicket": "New ticket",
     "chooseProject": "New ticket in",
     "search": "Search tickets or menus",
@@ -68,6 +72,7 @@
   "home": {
     "title": "Home",
     "newProject": "New project",
+    "allProjects": "All projects ({count})",
     "noProjects": "You are not in any project yet. Ask your admin to add you.",
     "noProjectsAdmin": "No projects yet. Create the first one.",
     "mine": "My tickets",
@@ -141,6 +146,12 @@
     "resetPassword": "Reset password",
     "adminsOnly": "Only admins can manage users.",
     "back": "Back"
+  },
+  "projectList": {
+    "heading": "All projects",
+    "count": "{count, plural, one {# project} other {# projects}}",
+    "find": "Find a project by name or key",
+    "none": "No project matches."
   },
   "newProject": {
     "title": "New project",
