@@ -44,16 +44,19 @@ export default function AskPanel({ project }: { project?: Project }) {
         onClick={(e) => {
           if (e.target === e.currentTarget) ref.current?.close(); // the backdrop
         }}
-        className="ml-auto mr-0 h-dvh max-h-dvh w-[min(560px,100vw)] max-w-none overflow-y-auto bg-ground p-0 text-ink shadow-2xl backdrop:bg-ink/40"
+        className="ml-auto mr-0 h-dvh max-h-dvh w-[min(560px,100vw)] max-w-none overflow-hidden bg-ground p-0 text-ink shadow-2xl backdrop:bg-ink/40"
       >
-        <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-line bg-white px-4 py-3">
-          <h2 id="ask-panel-title" className="text-base font-semibold">{t("panelTitle")}</h2>
-          <Link href="/ask" onClick={() => ref.current?.close()} className="ml-auto text-[13px]">{t("openPage")}</Link>
-          <button type="button" onClick={() => ref.current?.close()} aria-label={t("close")} className="rounded p-1 text-muted hover:bg-paper hover:text-ink">
-            <Icon name="x" className="size-4" />
-          </button>
+        {/* The header on top, the Ask box at the bottom; only the thread between them scrolls. */}
+        <div className="flex h-full flex-col">
+          <div className="flex shrink-0 items-center gap-2 border-b border-line bg-white px-4 py-3">
+            <h2 id="ask-panel-title" className="text-base font-semibold">{t("panelTitle")}</h2>
+            <Link href="/ask" onClick={() => ref.current?.close()} className="ml-auto text-[13px]">{t("openPage")}</Link>
+            <button type="button" onClick={() => ref.current?.close()} aria-label={t("close")} className="rounded p-1 text-muted hover:bg-paper hover:text-ink">
+              <Icon name="x" className="size-4" />
+            </button>
+          </div>
+          <div className="min-h-0 flex-1">{chips && <AskView key={session} chips={chips} compact />}</div>
         </div>
-        <div className="p-4">{chips && <AskView key={session} chips={chips} compact />}</div>
       </dialog>
     </>
   );
