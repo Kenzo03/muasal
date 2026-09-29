@@ -32,6 +32,7 @@ type Source struct {
 	Commits  []db.ListTicketCommitsRow       // linked by Git webhooks (§14.1)
 	MRs      []db.ListTicketMergeRequestsRow //
 	Coders   []int64                         // users whose email matches a commit author: the Person filter finds them
+	Links    []db.ListTicketLinksRow         // Ask evidence only: which change reverses or extends which (MSL-6)
 }
 
 var typeLabels = map[string]string{"bug": "Bug", "change_request": "Change request", "feature": "Feature"}

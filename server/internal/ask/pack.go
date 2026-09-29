@@ -119,6 +119,14 @@ func block(it indexer.Source, details bool) string {
 	if s := strings.TrimSpace(t.Reason); s != "" {
 		b.WriteString("Reason: " + s + "\n")
 	}
+	// Links tell the model which change came first (MSL-6); only those to
+	// tickets every reader of this one may see: the same client, or core.
+	for _, l := range it.Links {
+		if l.OtherProjectID != t.ProjectID || (l.OtherClientID != nil && (t.ClientID == nil || *l.OtherClientID != *t.ClientID)) {
+			continue
+		}
+		fmt.Fprintf(&b, "%s %s: %s\n", linkLabel(l.Type, l.Outgoing), l.OtherKey, l.OtherTitle)
+	}
 	if d := it.Decision; d != nil {
 		r := d.DecisionRecord
 		fmt.Fprintf(&b, "Decision (%s): %s\nWhy: %s\n", r.Outcome, r.WhatChanged, r.Why)
@@ -142,6 +150,20 @@ func block(it indexer.Source, details bool) string {
 		}
 	}
 	return strings.TrimSpace(b.String())
+}
+
+func linkLabel(kind string, outgoing bool) string {
+	switch {
+	case kind == "reverses" && outgoing:
+		return "Reverses"
+	case kind == "reverses":
+		return "Reversed later by"
+	case kind == "extends" && outgoing:
+		return "Extends"
+	case kind == "extends":
+		return "Extended later by"
+	}
+	return "Related to"
 }
 
 // noteBlock is one decision note's evidence; with details, its body too.

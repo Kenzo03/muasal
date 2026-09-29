@@ -139,6 +139,30 @@ func TestPackKeepsTheBudget(t *testing.T) {
 	}
 }
 
+// MSL-6: a ticket's block says which change it reverses and which reversed
+// it, so the model can tell a change's reason from its reversal's. A link to
+// another client's ticket stays out: a reader of this one may not see it.
+func TestPackNamesReversals(t *testing.T) {
+	w := newWorld(t)
+	ctx := context.Background()
+	old := w.ticket("Lower the approval threshold to Rp 25 juta", &w.a, w.ot, "An audit found unreviewed orders.", "2026-09-01", "Threshold lowered.")
+	undo := w.ticket("Restore the approval threshold to Rp 50 juta", &w.a, w.ot, "Supervisors were overwhelmed.", "2026-09-20", "Threshold restored.")
+	other := w.ticket("Client B's own threshold", &w.b, w.ot, "Client B asked.", "", "")
+	for _, l := range []db.CreateLinkParams{{FromID: undo.ID, ToID: old.ID, Type: "reverses", CreatedBy: w.admin.ID}, {FromID: undo.ID, ToID: other.ID, Type: "related_to", CreatedBy: w.admin.ID}} {
+		must(w.q.CreateLink(ctx, l))
+	}
+	var items []ask.Evidence
+	for _, tk := range []db.Ticket{undo, old} {
+		src := must(indexer.Load(ctx, w.q, tk.ID))
+		items = append(items, ask.Evidence{Ticket: &src})
+	}
+	_, _, blocks := ask.Pack(items, 2500)
+	if !strings.Contains(blocks[undo.Key], "Reverses "+old.Key+": Lower the approval threshold") ||
+		!strings.Contains(blocks[old.Key], "Reversed later by "+undo.Key) || strings.Contains(blocks[undo.Key], other.Key) {
+		t.Fatalf("blocks:\n%s\n\n%s", blocks[undo.Key], blocks[old.Key])
+	}
+}
+
 // §11.4: over budget, lower-ranked items give way before the best-ranked
 // one is trimmed, so a meeting note keeps the follow-ups at the end of its body.
 func TestPackKeepsTheBestItemsWhole(t *testing.T) {
