@@ -28,6 +28,10 @@
     "switchProject": "Ganti proyek",
     "projects": "Proyek",
     "allProjects": "Semua proyek",
+    "recent": "Terakhir dibuka",
+    "allProjectsCount": "Semua proyek ({count})",
+    "findProject": "Cari proyek",
+    "noProjectFound": "Tidak ada proyek yang cocok.",
     "newTicket": "Tiket baru",
     "chooseProject": "Tiket baru di",
     "search": "Cari tiket atau menu",
@@ -40,7 +44,16 @@
     "backups": "Cadangan",
     "system": "Status sistem",
     "tokens": "Token API",
-    "imports": "Impor"
+    "imports": "Impor",
+    "home": "Beranda",
+    "ask": "Tanya",
+    "admin": "Admin sistem",
+    "pickProject": "Pilih proyek",
+    "currentProject": "Proyek aktif",
+    "collapse": "Ringkas navigasi",
+    "expand": "Lebarkan navigasi",
+    "openMenu": "Buka navigasi",
+    "closeMenu": "Tutup navigasi"
   },
   "search": {
     "heading": "Pencarian",
@@ -58,8 +71,8 @@
   },
   "home": {
     "title": "Beranda",
-    "signedInAs": "Masuk sebagai {name}",
     "newProject": "Proyek baru",
+    "allProjects": "Semua proyek ({count})",
     "noProjects": "Anda belum tergabung dalam proyek. Minta admin menambahkan Anda.",
     "noProjectsAdmin": "Belum ada proyek. Buat proyek pertama.",
     "mine": "Tiket saya",
@@ -100,7 +113,9 @@
       "days": "{n} hari lalu"
     },
     "projects": "Proyek saya",
-    "yourTickets": "{count, plural, =0 {belum ada tiket Anda} other {# tiket Anda}}"
+    "yourTickets": "{count, plural, =0 {belum ada tiket Anda} other {# tiket Anda}}",
+    "greeting": "{part, select, morning {Selamat pagi} midday {Selamat siang} afternoon {Selamat sore} other {Selamat malam}}, {name}",
+    "openCount": "{count, plural, =0 {Tidak ada tiket terbuka untuk Anda.} other {# tiket terbuka untuk Anda.}}"
   },
   "profile": {
     "title": "Profil",
@@ -132,10 +147,16 @@
     "adminsOnly": "Hanya admin yang dapat mengelola pengguna.",
     "back": "Kembali"
   },
+  "projectList": {
+    "heading": "Semua proyek",
+    "count": "{count} proyek",
+    "find": "Cari proyek menurut nama atau kunci",
+    "none": "Tidak ada proyek yang cocok."
+  },
   "newProject": {
     "title": "Proyek baru",
     "key": "Kunci",
-    "keyHint": "2–10 huruf kapital atau angka, mis. HRIS. Kunci tiket diawali dengan ini.",
+    "keyHint": "2–10 huruf atau angka, dimulai dengan huruf, tanpa spasi atau tanda hubung (mis. HRIS). Kunci tiket diawali dengan ini.",
     "name": "Nama",
     "description": "Deskripsi",
     "create": "Buat proyek",
@@ -360,6 +381,30 @@
     "email_taken": "Pengguna dengan email ini sudah ada",
     "invalid": "Periksa isian ini",
     "required": "Isian ini wajib diisi",
+    "invalidField": "Periksa isian {field}",
+    "requiredField": "{field} wajib diisi",
+    "fields": {
+      "key": "Kunci",
+      "name": "Nama",
+      "email": "Email",
+      "title": "Judul",
+      "description": "Deskripsi",
+      "reason": "Alasan",
+      "code": "Kode",
+      "client_id": "Klien",
+      "client_ids": "Klien",
+      "node_ids": "Menu",
+      "type": "Jenis",
+      "body": "Isi",
+      "phone": "Telepon",
+      "timezone": "Zona waktu",
+      "locale": "Bahasa",
+      "priority": "Prioritas",
+      "status_id": "Status",
+      "web_url": "URL web",
+      "question": "Pertanyaan",
+      "requester_contact_id": "Kontak"
+    },
     "cannot_change_self": "Anda tidak dapat menonaktifkan diri sendiri atau mencabut peran admin Anda",
     "forbidden": "Anda tidak memiliki akses untuk ini.",
     "not_found": "Tidak ditemukan.",
@@ -1194,17 +1239,20 @@
     "uploading": "Mengunggah…",
     "unreadable": "Muasal tidak dapat membaca teks dari berkas ini.",
     "uploadHint": "Berkas dibaca di peramban Anda; judul-judulnya menjadi bagian. PDF hasil pindai tanpa teks tidak dapat dibaca.",
+    "uploadTitle": "Unggah dokumen",
+    "drop": "Tarik berkas ke sini, atau klik untuk memilih",
+    "fileTypes": "PDF, DOCX, atau Markdown, maks. 20 MB",
     "download": "Unduh {name}",
     "uploadedBy": "Diunggah oleh {name}, {date}",
     "outline": "Daftar isi",
     "drafts": "Draf pohon",
     "draftTree": "Susun draf pohon modul",
     "status": {
-      "running": "berjalan",
-      "ready": "siap ditinjau",
-      "applied": "diterapkan",
-      "discarded": "dibuang",
-      "failed": "gagal"
+      "running": "Berjalan",
+      "ready": "Siap ditinjau",
+      "applied": "Diterapkan",
+      "discarded": "Dibuang",
+      "failed": "Gagal"
     },
     "reviewHint": "Menerapkan membuat node yang dicentang dan belum ada di pohon, serta menautkan setiap node ke bagiannya agar Tanya dapat mengutipnya."
   },

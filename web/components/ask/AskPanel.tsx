@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import Icon from "@/components/Icon";
 import { api } from "@/lib/api";
 import type { Project } from "@/lib/problem";
+import { button } from "@/lib/ui";
 import type { Chip } from "./Answer";
 import AskView from "./AskView";
 
@@ -33,13 +34,9 @@ export default function AskPanel({ project }: { project?: Project }) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={open}
-        className="flex h-8 cursor-pointer items-center gap-1.5 rounded border border-bar-line bg-bar-raised px-2.5 text-[13px] font-medium text-white hover:border-bar-accent"
-      >
-        <Icon name="search" className="size-3.5 text-bar-muted" />
-        {t("openPanel")}
+      <button type="button" onClick={open} className={button.secondary}>
+        <Icon name="sparkle" className="size-4 text-accent" />
+        <span className="sr-only sm:not-sr-only">{t("openPanel")}</span>
       </button>
       <dialog
         ref={ref}

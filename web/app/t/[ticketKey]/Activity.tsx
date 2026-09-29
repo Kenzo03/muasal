@@ -73,8 +73,8 @@ export default function Activity({ ticketKey, items, meId, canComment }: {
     // Updates, closes and decision records list their old and new values.
     if (it.action === "update" || it.action?.startsWith("decision_") || (it.action === "transition" && Object.keys(c).length > 1)) {
       return (
-        <details className="mt-1 pl-6">
-          <summary className="cursor-pointer text-xs text-link">{t("details")}</summary>
+        <details className="mt-1 pl-11">
+          <summary className="cursor-pointer text-xs font-semibold text-link">{t("details")}</summary>
           <ul className="mt-1 flex flex-col gap-0.5 text-xs">
             {Object.entries(c).map(([k, v]) => (
               <li key={k}>{field_(k)}: {shown(v.old)} → {shown(v.new)}</li>
@@ -85,8 +85,8 @@ export default function Activity({ ticketKey, items, meId, canComment }: {
     }
     if (it.action === "comment_edit") {
       return (
-        <details className="mt-1 pl-6">
-          <summary className="cursor-pointer text-xs text-link">{t("earlier")}</summary>
+        <details className="mt-1 pl-11">
+          <summary className="cursor-pointer text-xs font-semibold text-link">{t("earlier")}</summary>
           <p className="mt-1 whitespace-pre-wrap text-xs">{shown(c.body?.old)}</p>
         </details>
       );
@@ -102,20 +102,19 @@ export default function Activity({ ticketKey, items, meId, canComment }: {
     : "edit";
 
   return (
-    <section aria-labelledby="activity-title" className={cx(panel, "flex flex-col gap-3.5 px-4 py-3.5")}>
-      <div className="flex items-center gap-3">
-        <h2 id="activity-title" className="text-sm font-semibold">{t("title")}</h2>
-        <div className="flex overflow-hidden rounded border border-line text-xs">
-          {(["all", "comments", "history"] as const).map((f, i) => (
+    <section aria-labelledby="activity-title" className={cx(panel, "flex flex-col gap-4 px-5 py-4")}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 id="activity-title" className="text-base font-extrabold">{t("title")}</h2>
+        <div className="flex gap-0.5 rounded-[11px] bg-well p-[3px] text-[13px]">
+          {(["all", "comments", "history"] as const).map((f) => (
             <button
               key={f}
               type="button"
               aria-pressed={filter === f}
               onClick={() => setFilter(f)}
               className={cx(
-                "h-[26px] cursor-pointer px-2.5",
-                i > 0 && "border-l border-line",
-                filter === f ? "bg-accent-soft font-semibold text-accent-strong" : "bg-white text-muted hover:text-ink",
+                "h-[30px] cursor-pointer rounded-lg px-3",
+                filter === f ? "bg-white font-bold text-ink shadow-[0_1px_2px_rgba(43,36,32,0.1)]" : "font-semibold text-ink-soft hover:text-ink",
               )}
             >
               {t(f)}
@@ -124,21 +123,21 @@ export default function Activity({ ticketKey, items, meId, canComment }: {
         </div>
       </div>
       {error && <p role="alert" className={field.error}>{error}</p>}
-      <ol className="flex flex-col gap-3">
+      <ol className="flex flex-col gap-3.5">
         {visible.map((it, i) =>
           it.kind === "comment" ? (
             <li key={`c${it.comment_id}`} className="flex gap-2.5">
-              <Avatar name={it.actor?.name ?? "?"} className="size-7 bg-well text-ink" />
-              <div className={cx("flex min-w-0 flex-1 flex-col gap-1 rounded border border-line px-3 py-2.5", it.internal && "bg-paper")}>
+              <Avatar name={it.actor?.name ?? "?"} className="size-8 bg-accent-soft text-[11px] font-bold text-accent-strong" />
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5 rounded-[4px_16px_16px_16px] border border-line bg-white px-4 py-3">
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-                  <span className="text-[13px] font-semibold text-ink">{it.actor?.name}</span>
+                  <span className="text-[13.5px] font-bold text-ink">{it.actor?.name}</span>
                   {it.internal ? (
-                    <span className={cx(chip, "bg-ink text-white")}>
+                    <span className={cx(chip, "bg-warn-soft text-warn")}>
                       <Icon name="lock" className="size-3" />
                       {t("internal")}
                     </span>
                   ) : (
-                    <span className={cx(chip, "bg-[#DDEEE9] text-[#145B4E]")}>{t("clientSafe")}</span>
+                    <span className={cx(chip, "bg-ok-soft text-ok")}>{t("clientSafe")}</span>
                   )}
                   <span className="ml-auto">{utc(it.at, locale)}{it.edited ? ` · ${t("edited")}` : ""}</span>
                 </div>
@@ -164,11 +163,15 @@ export default function Activity({ ticketKey, items, meId, canComment }: {
               </div>
             </li>
           ) : (
-            <li key={`e${i}`} className="text-[13px] text-muted">
-              <div className="flex items-start gap-2">
-                <Icon name={eventIcon(it)} className="mt-0.5 size-4" />
+            <li key={`e${i}`} className="text-[13px] text-ink-soft">
+              <div className="flex items-center gap-3">
+                <span className="flex w-8 shrink-0 justify-center">
+                  <span className={cx("flex size-6 items-center justify-center rounded-full", it.action === "decision_confirm" ? "bg-ok-soft text-ok" : "bg-well text-muted")}>
+                    <Icon name={eventIcon(it)} className="size-3.5" />
+                  </span>
+                </span>
                 <span className="min-w-0 flex-1">{describeChange(t, it)}</span>
-                <span className="shrink-0 text-xs">{utc(it.at, locale)}</span>
+                <span className="shrink-0 text-xs text-muted">{utc(it.at, locale)}</span>
               </div>
               {details(it)}
             </li>
@@ -176,11 +179,11 @@ export default function Activity({ ticketKey, items, meId, canComment }: {
         )}
       </ol>
       {canComment && (
-        <form onSubmit={send} className="flex flex-col gap-2 border-t border-line-soft pt-3.5">
+        <form onSubmit={send} className="flex flex-col gap-2.5 border-t border-line-soft pt-4">
           <MentionBox ticketKey={ticketKey} name="body" required maxLength={20000} rows={3} aria-label={t("placeholder")} placeholder={t("placeholder")} onPaste={paste} />
           <p className={field.hint}>{t("markdownHint")} {t("mentionHint")}</p>
           <div className="flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-2 text-[13px]">
+            <label className="flex items-center gap-2 text-[13px] font-semibold">
               <input type="checkbox" name="internal" defaultChecked className="size-4 accent-accent" />
               {t("internalToggle")}
             </label>

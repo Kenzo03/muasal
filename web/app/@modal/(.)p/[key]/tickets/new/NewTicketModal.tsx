@@ -36,12 +36,17 @@ export default function NewTicketModal({ title, closeLabel, ...form }: Props) {
       onClick={(e) => {
         if (e.target === e.currentTarget) router.back(); // the backdrop
       }}
-      className="m-auto max-h-[92vh] w-[min(820px,96vw)] overflow-y-auto rounded border border-line bg-white p-0 text-ink shadow-xl backdrop:bg-ink/40"
+      className="m-auto max-h-[92vh] w-[min(820px,calc(100vw-2rem))] overflow-y-auto rounded-2xl bg-white p-0 text-ink shadow-[0_24px_64px_rgba(43,36,32,0.22)] backdrop:bg-ink/35 backdrop:backdrop-blur-[2px]"
     >
-      <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-line bg-white px-5 py-3">
-        <h2 id="new-ticket-title" className="text-base font-semibold">{title}</h2>
-        <button type="button" onClick={() => router.back()} aria-label={closeLabel} className="ml-auto rounded p-1 text-muted hover:bg-paper hover:text-ink">
-          <Icon name="x" className="size-4" />
+      <div className="sticky top-0 z-20 flex items-center gap-2 border-b border-line-soft bg-white px-5 py-3.5 md:px-6">
+        <h2 id="new-ticket-title" className="text-[17px] font-extrabold tracking-[-0.01em]">{title}</h2>
+        <button
+          type="button"
+          onClick={() => router.back()}
+          aria-label={closeLabel}
+          className="-mr-1.5 ml-auto inline-flex size-8 cursor-pointer items-center justify-center rounded-lg text-muted hover:bg-well hover:text-ink"
+        >
+          <Icon name="x" />
         </button>
       </div>
       <TicketForm {...form} onCancel={() => router.back()} />

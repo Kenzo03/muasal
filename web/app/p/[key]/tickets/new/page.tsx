@@ -21,22 +21,24 @@ export default async function NewTicketPage({
   const { project, clients, nodes, assignees } = data;
   const t = await getTranslations("ticketForm");
   const tp = await getTranslations("project");
+  const tt = await getTranslations("ticket");
   return (
     <>
       <PageBar>
-        <nav className="flex items-center gap-1.5 text-[13px] text-muted">
-          <Link href={`/p/${key}/board`}>{key}</Link>
-          <Icon name="chevronRight" className="size-3.5" />
-          <Link href={`/p/${key}/tickets`}>{tp("tickets")}</Link>
-          <Icon name="chevronRight" className="size-3.5" />
-          <h1 className="text-[13px] font-semibold text-ink">{t("newTitle")}</h1>
-        </nav>
+        <div className="flex flex-col gap-1">
+          <nav aria-label={tt("path")} className="flex items-center gap-1.5 text-[13px] text-muted">
+            <Link href={`/p/${key}/board`}>{key}</Link>
+            <Icon name="chevronRight" className="size-3.5" />
+            <Link href={`/p/${key}/tickets`}>{tp("tickets")}</Link>
+          </nav>
+          <h1>{t("newTitle")}</h1>
+        </div>
       </PageBar>
-      <main className="p-4 md:p-5">
+      <main className="px-4 py-4 md:px-5">
         {project.role === "viewer" ? (
           <p className="text-muted">{t("viewersCannot")}</p>
         ) : (
-          <div className={`${panel} mx-auto max-w-[820px]`}>
+          <div className={`${panel} max-w-[820px]`}>
             <TicketForm
               projectKey={key}
               clients={clients}

@@ -25,13 +25,13 @@ export default async function Behaviors({ items }: { items: Behavior[] }) {
           <h2 className={sectionTitle}>{g.name}</h2>
           <ul className={cx(panel, "divide-y divide-line-soft")}>
             {g.items.map((b) => (
-              <li key={b.key} className="flex flex-col gap-1.5 px-4 py-3">
+              <li key={b.key} className="flex flex-col gap-1.5 px-5 py-4">
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-                  <Link href={`/t/${b.key}`} className="font-mono text-[13px] font-semibold">{b.key}</Link>
-                  <span className="text-[13px] font-semibold text-ink">{b.title}</span>
+                  <Link href={`/t/${b.key}`} className="text-[13px] font-bold no-underline">{b.key}</Link>
+                  <span className="text-sm font-bold text-ink">{b.title}</span>
                   {b.closed_at && <span className="ml-auto">{day(b.closed_at, locale)}</span>}
                 </div>
-                <p className="whitespace-pre-wrap text-sm">{b.what_changed}</p>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed">{b.what_changed}</p>
                 <p className="whitespace-pre-wrap text-[13px] text-muted">{t("because", { why: b.why })}</p>
               </li>
             ))}

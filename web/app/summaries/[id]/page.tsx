@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import { ProjectOf } from "@/app/Frame";
 import PageBar from "@/components/PageBar";
 import { serverApi } from "@/lib/server-api";
 import Editor from "./Editor";
@@ -12,6 +13,7 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
   const t = await getTranslations("summaries");
   return (
     <>
+      <ProjectOf projectKey={data.project_key} />
       <PageBar>
         <h1 className="text-base font-semibold">{t("summary")}</h1>
         <span className="font-mono text-[13px] text-muted">{data.project_key}</span>

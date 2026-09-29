@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import Icon from "@/components/Icon";
 import { api } from "@/lib/api";
 import type { components } from "@/lib/api-types";
 import { useProblemText } from "@/lib/problem";
@@ -95,116 +96,192 @@ export default function Review({ initial, projectKey }: { initial: Draft; projec
     const { error } = await api.POST("/tree-drafts/{id}/discard", { params: { path: { id: draft.id } } });
     if (error) return setError(problemText(error));
     setDraft((d) => ({ ...d, status: "discarded" }));
+    router.refresh();
   }
 
   if (draft.status === "running") {
     const pct = draft.total_parts ? Math.round((100 * draft.done_parts) / draft.total_parts) : 0;
     return (
-      <div className={cx(panel, "mx-auto flex max-w-xl flex-col gap-2 p-4")} role="status">
-        <p className="text-sm">{t("running", { done: draft.done_parts, total: draft.total_parts })}</p>
-        <div className="h-2 overflow-hidden rounded bg-well" aria-hidden>
-          <div className="h-full bg-accent" style={{ width: `${pct}%` }} />
+      <div className={cx(panel, "flex max-w-xl flex-col gap-3 p-6")} role="status">
+        <div className="flex items-center gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
+            <Icon name="sparkle" className="size-5" />
+          </span>
+          <p className="text-sm font-semibold">{t("running", { done: draft.done_parts, total: draft.total_parts })}</p>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-well" aria-hidden>
+          <div className="h-full rounded-full bg-accent transition-[width] duration-500" style={{ width: `${pct}%` }} />
         </div>
         <p className="text-xs text-muted">{t("runningHint")}</p>
       </div>
     );
   }
   if (draft.status === "failed") {
-    return <p role="alert" className={cx(panel, "mx-auto max-w-xl p-4 text-sm text-danger")}>{t("failed", { code: draft.error ?? "" })}</p>;
+    return (
+      <p role="alert" className="flex max-w-xl items-start gap-2 rounded-xl border border-danger-line bg-danger-soft px-4 py-3 text-sm font-medium text-danger">
+        <Icon name="warning" className="mt-0.5 size-4 shrink-0" />
+        {t("failed", { code: draft.error ?? "" })}
+      </p>
+    );
   }
 
   const editable = draft.status === "ready";
   const kept = nodes.filter((n) => n.keep && !n.exists).length;
-  const row = (n: TNode, depth: number): React.ReactNode => (
-    <li key={n.tmp_id} className="flex flex-col gap-1">
-      <div className="flex flex-wrap items-center gap-2 text-[13px]" style={{ paddingLeft: depth * 20 }}>
-        <input
-          type="checkbox"
-          aria-label={t("keep", { name: n.name })}
-          checked={n.keep || n.exists}
-          disabled={!editable || n.exists}
-          onChange={(e) => setKeep(n.tmp_id, e.target.checked)}
-        />
-        {editable && !n.exists ? (
-          <input value={n.name} aria-label={t("name")} maxLength={200} onChange={(e) => update(n.tmp_id, { name: e.target.value })} className={cx(field.compact, "w-56")} />
-        ) : (
-          <span className="font-medium">{n.name}</span>
-        )}
-        {editable && !n.exists ? (
-          <select value={n.type} aria-label={t("type")} onChange={(e) => update(n.tmp_id, { type: e.target.value as TNode["type"] })} className={field.compact}>
-            <option value="module">{t("module")}</option>
-            <option value="menu">{t("menu")}</option>
-          </select>
-        ) : (
-          <span className="text-xs text-muted">{t(n.type)}</span>
-        )}
-        {n.exists && <span className={cx(chip, "bg-well text-[#4A423C]")}>{t("exists")}</span>}
-        {n.duplicate && byId.get(n.duplicate) && (
-          <span className={cx(chip, "bg-warn-soft text-warn")}>{t("duplicate", { name: byId.get(n.duplicate)!.name })}</span>
-        )}
-        {n.sections.map((s) => (
-          <Link key={s} href={`/documents/${draft.document_key}#s-${s}`} target="_blank" className="font-mono text-[11px] text-muted">
-            {draft.document_key}/{s}
-          </Link>
-        ))}
-      </div>
-      {(n.description || n.aliases.length > 0) && (
-        <p className="text-xs text-muted" style={{ paddingLeft: depth * 20 + 24 }}>
-          {n.description}
-          {n.aliases.length > 0 && ` · ${t("aliases")}: ${n.aliases.join(", ")}`}
-        </p>
-      )}
-      {(children.get(n.tmp_id) ?? []).length > 0 && <ul className="flex flex-col gap-1.5">{children.get(n.tmp_id)!.map((c) => row(c, depth + 1))}</ul>}
-    </li>
-  );
-
-  return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-3">
-      <p className="text-[13px] text-muted">{draft.used_ai ? t("introAI") : t("introHeadings")}</p>
-      {result && (
-        <p role="status" className="rounded border border-ok bg-ok-soft p-3 text-[13px]">
-          {t("applied", { created: result.created, linked: result.linked })}{" "}
-          {projectKey && <Link href={`/p/${projectKey}/modules`}>{t("openTree")}</Link>}
-        </p>
-      )}
-      {draft.status === "discarded" && <p role="status" className="text-sm text-muted">{t("discarded")}</p>}
-      {draft.status === "applied" && !result && <p role="status" className="text-sm text-muted">{t("alreadyApplied")}</p>}
-      {nodes.length === 0 ? (
-        <p className="text-muted">{t("empty")}</p>
-      ) : (
-        <ul aria-label={t("proposal")} className={cx(panel, "flex flex-col gap-1.5 p-4")}>{(children.get("") ?? []).map((n) => row(n, 0))}</ul>
-      )}
-      {editable && (
-        <div className="flex flex-wrap items-end gap-2">
-          <label className={field.label}>
-            {t("addUnder")}
-            <select value={newParent} onChange={(e) => setNewParent(e.target.value)} className={field.compact}>
-              <option value="">{t("top")}</option>
-              {nodes.map((n) => (
-                <option key={n.tmp_id} value={n.tmp_id}>{n.name}</option>
-              ))}
+  // Each level indents 1.5rem; notes under a row line up with its name.
+  const indent = (depth: number) => `${0.5 + depth * 1.5}rem`;
+  const row = (n: TNode, depth: number): React.ReactNode => {
+    const dropped = !n.keep && !n.exists;
+    const twin = n.duplicate ? byId.get(n.duplicate) : undefined;
+    const kids = children.get(n.tmp_id) ?? [];
+    return (
+      <li key={n.tmp_id}>
+        <div
+          className={cx("flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl py-1.5 pr-2 hover:bg-paper", dropped && "opacity-50")}
+          style={{ paddingLeft: indent(depth) }}
+        >
+          <input
+            type="checkbox"
+            aria-label={t("keep", { name: n.name })}
+            checked={n.keep || n.exists}
+            disabled={!editable || n.exists}
+            onChange={(e) => setKeep(n.tmp_id, e.target.checked)}
+            className="size-4 shrink-0 accent-accent"
+          />
+          <Icon name={n.type === "module" ? "folder" : "screen"} className="size-4 shrink-0 text-muted" />
+          {editable && !n.exists ? (
+            // Reads as text until hovered or focused, so the draft looks like a tree, not a form.
+            <input
+              value={n.name}
+              aria-label={t("name")}
+              maxLength={200}
+              onChange={(e) => update(n.tmp_id, { name: e.target.value })}
+              className={cx(
+                "h-8 min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 text-[13.5px] text-ink hover:border-line hover:bg-white focus:border-field focus:bg-white sm:w-60 sm:flex-none",
+                n.type === "module" && "font-semibold",
+              )}
+            />
+          ) : (
+            <span className={cx("px-2 text-[13.5px]", n.type === "module" && "font-semibold")}>{n.name}</span>
+          )}
+          {editable && !n.exists ? (
+            <select
+              value={n.type}
+              aria-label={t("type")}
+              onChange={(e) => update(n.tmp_id, { type: e.target.value as TNode["type"] })}
+              className="h-7 cursor-pointer rounded-lg bg-well pl-2 text-xs font-semibold text-ink-soft hover:text-ink"
+            >
+              <option value="module">{t("module")}</option>
+              <option value="menu">{t("menu")}</option>
             </select>
-          </label>
-          <button
-            type="button"
-            className={button.secondary}
-            onClick={() => {
-              setDirty(true);
-              const id = `new${Date.now()}`;
-              setNodes((ns) => [...ns, { tmp_id: id, parent: newParent, type: newParent ? "menu" : "module", name: t("newName"), aliases: [], description: "", sections: [], keep: true, exists: false }]);
-              if (newParent) setKeep(newParent, true);
-            }}
-          >
-            {t("add")}
-          </button>
-          <span className="ml-auto text-xs text-muted">{t("willCreate", { count: kept })}</span>
-          <button type="button" onClick={discard} className={button.secondary}>{t("discard")}</button>
+          ) : (
+            <span className="text-xs text-muted">{t(n.type)}</span>
+          )}
+          {n.exists && (
+            <span className={cx(chip, "bg-ok-soft text-ok")}>
+              <Icon name="check" className="size-3.5" />
+              {t("exists")}
+            </span>
+          )}
+          {twin && (
+            <span className={cx(chip, "bg-warn-soft text-warn")}>
+              <Icon name="warning" className="size-3.5" />
+              {t("duplicate", { name: twin.name })}
+            </span>
+          )}
+          {n.sections.length > 0 && (
+            <span className="ml-auto flex flex-wrap gap-1">
+              {n.sections.map((s) => (
+                <Link
+                  key={s}
+                  href={`/documents/${draft.document_key}#s-${s}`}
+                  target="_blank"
+                  title={`${draft.document_key}/${s}`}
+                  className="inline-flex items-center gap-1 rounded-md bg-well px-1.5 text-[11px] font-semibold leading-5 text-muted no-underline hover:bg-accent-soft hover:text-accent-strong"
+                >
+                  <Icon name="file" className="size-3" />
+                  {s}
+                </Link>
+              ))}
+            </span>
+          )}
+        </div>
+        {(n.description || n.aliases.length > 0) && (
+          <p className="pb-1.5 pr-2 text-xs text-muted" style={{ paddingLeft: `calc(${indent(depth)} + 3.5rem)` }}>
+            {n.description}
+            {n.description && n.aliases.length > 0 && " · "}
+            {n.aliases.length > 0 && `${t("aliases")}: ${n.aliases.join(", ")}`}
+          </p>
+        )}
+        {kids.length > 0 && <ul>{kids.map((c) => row(c, depth + 1))}</ul>}
+      </li>
+    );
+  };
+
+  const note = "flex gap-2.5 rounded-xl px-4 py-3 text-[13px]";
+  return (
+    <div className="flex max-w-4xl flex-col gap-4">
+      <p className={cx(note, "items-start bg-well text-ink-soft")}>
+        <Icon name={draft.used_ai ? "sparkle" : "list"} className="mt-0.5 size-4 shrink-0 text-accent" />
+        {draft.used_ai ? t("introAI") : t("introHeadings")}
+      </p>
+      {result && (
+        <div role="status" className={cx(note, "flex-wrap items-center border border-ok/20 bg-ok-soft font-semibold text-ok")}>
+          <Icon name="check" className="size-5 shrink-0" />
+          {t("applied", { created: result.created, linked: result.linked })}
+          {projectKey && (
+            <Link href={`/p/${projectKey}/modules`} className={cx(button.secondary, "ml-auto")}>
+              {t("openTree")}
+              <Icon name="arrowRight" className="size-3.5" />
+            </Link>
+          )}
+        </div>
+      )}
+      {draft.status === "discarded" && <p role="status" className={cx(note, "items-center bg-well text-ink-soft")}>{t("discarded")}</p>}
+      {draft.status === "applied" && !result && <p role="status" className={cx(note, "items-center bg-well text-ink-soft")}>{t("alreadyApplied")}</p>}
+      <div className={cx(panel, "flex flex-col")}>
+        {nodes.length === 0 ? (
+          <p className="px-6 py-10 text-center text-[13.5px] text-muted">{t("empty")}</p>
+        ) : (
+          <ul aria-label={t("proposal")} className="p-2">{(children.get("") ?? []).map((n) => row(n, 0))}</ul>
+        )}
+        {editable && (
+          <div className="flex flex-wrap items-center gap-2 border-t border-line-soft px-4 py-3">
+            <label className="flex items-center gap-2 text-[13px] font-semibold">
+              {t("addUnder")}
+              <select value={newParent} onChange={(e) => setNewParent(e.target.value)} className={field.compact}>
+                <option value="">{t("top")}</option>
+                {nodes.map((n) => (
+                  <option key={n.tmp_id} value={n.tmp_id}>{n.name}</option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className={button.secondary}
+              onClick={() => {
+                setDirty(true);
+                const id = `new${Date.now()}`;
+                setNodes((ns) => [...ns, { tmp_id: id, parent: newParent, type: newParent ? "menu" : "module", name: t("newName"), aliases: [], description: "", sections: [], keep: true, exists: false }]);
+                if (newParent) setKeep(newParent, true);
+              }}
+            >
+              <Icon name="plus" />
+              {t("add")}
+            </button>
+          </div>
+        )}
+      </div>
+      {error && <p role="alert" className={field.error}>{error}</p>}
+      <p className="text-xs leading-relaxed text-muted">{td("reviewHint")}</p>
+      {editable && (
+        // Floats at the bottom of the window while a long draft scrolls.
+        <div className="sticky bottom-4 z-10 flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-white/95 px-4 py-3 shadow-[0_8px_32px_rgba(43,36,32,0.14)] backdrop-blur">
+          <span className="w-full text-[13.5px] font-bold sm:w-auto">{t("willCreate", { count: kept })}</span>
+          <button type="button" onClick={discard} className={cx(button.secondary, "ml-auto")}>{t("discard")}</button>
           <button type="button" onClick={save} disabled={!dirty} className={button.secondary}>{t("save")}</button>
           <button type="button" onClick={apply} disabled={busy} className={button.primary}>{t("apply")}</button>
         </div>
       )}
-      {error && <p role="alert" className={field.error}>{error}</p>}
-      <p className="text-xs text-muted">{td("reviewHint")}</p>
     </div>
   );
 }

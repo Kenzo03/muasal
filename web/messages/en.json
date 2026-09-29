@@ -28,6 +28,10 @@
     "switchProject": "Switch project",
     "projects": "Projects",
     "allProjects": "All projects",
+    "recent": "Recent",
+    "allProjectsCount": "All projects ({count})",
+    "findProject": "Find a project",
+    "noProjectFound": "No project matches.",
     "newTicket": "New ticket",
     "chooseProject": "New ticket in",
     "search": "Search tickets or menus",
@@ -40,7 +44,16 @@
     "backups": "Backups",
     "system": "System status",
     "tokens": "API tokens",
-    "imports": "Imports"
+    "imports": "Imports",
+    "home": "Home",
+    "ask": "Ask",
+    "admin": "System admin",
+    "pickProject": "Choose a project",
+    "currentProject": "Current project",
+    "collapse": "Collapse navigation",
+    "expand": "Expand navigation",
+    "openMenu": "Open navigation",
+    "closeMenu": "Close navigation"
   },
   "search": {
     "heading": "Search",
@@ -58,8 +71,8 @@
   },
   "home": {
     "title": "Home",
-    "signedInAs": "Signed in as {name}",
     "newProject": "New project",
+    "allProjects": "All projects ({count})",
     "noProjects": "You are not in any project yet. Ask your admin to add you.",
     "noProjectsAdmin": "No projects yet. Create the first one.",
     "mine": "My tickets",
@@ -100,7 +113,9 @@
       "days": "{n} days ago"
     },
     "projects": "My projects",
-    "yourTickets": "{count, plural, =0 {No tickets for you} one {# ticket for you} other {# tickets for you}}"
+    "yourTickets": "{count, plural, =0 {No tickets for you} one {# ticket for you} other {# tickets for you}}",
+    "greeting": "{part, select, morning {Good morning} midday {Good afternoon} afternoon {Good afternoon} other {Good evening}}, {name}",
+    "openCount": "{count, plural, =0 {No open tickets for you.} one {# open ticket for you.} other {# open tickets for you.}}"
   },
   "profile": {
     "title": "Profile",
@@ -132,10 +147,16 @@
     "adminsOnly": "Only admins can manage users.",
     "back": "Back"
   },
+  "projectList": {
+    "heading": "All projects",
+    "count": "{count, plural, one {# project} other {# projects}}",
+    "find": "Find a project by name or key",
+    "none": "No project matches."
+  },
   "newProject": {
     "title": "New project",
     "key": "Key",
-    "keyHint": "2–10 capital letters or digits, e.g. HRIS. Ticket keys start with it.",
+    "keyHint": "2–10 letters or digits, starting with a letter, with no spaces or hyphens (e.g. HRIS). Ticket keys start with it.",
     "name": "Name",
     "description": "Description",
     "create": "Create project",
@@ -360,6 +381,30 @@
     "email_taken": "A user with this email already exists",
     "invalid": "Check this field",
     "required": "This field is required",
+    "invalidField": "Check the {field} field",
+    "requiredField": "{field} is required",
+    "fields": {
+      "key": "Key",
+      "name": "Name",
+      "email": "Email",
+      "title": "Title",
+      "description": "Description",
+      "reason": "Reason",
+      "code": "Code",
+      "client_id": "Client",
+      "client_ids": "Clients",
+      "node_ids": "Menus",
+      "type": "Type",
+      "body": "Text",
+      "phone": "Phone",
+      "timezone": "Time zone",
+      "locale": "Language",
+      "priority": "Priority",
+      "status_id": "Status",
+      "web_url": "Web URL",
+      "question": "Question",
+      "requester_contact_id": "Contact"
+    },
     "cannot_change_self": "You cannot disable yourself or remove your own admin role",
     "forbidden": "You do not have access to this.",
     "not_found": "Not found.",
@@ -1194,17 +1239,20 @@
     "uploading": "Uploading…",
     "unreadable": "Muasal could not read text from this file.",
     "uploadHint": "The file is read in your browser; its headings become sections. Scanned PDFs without text cannot be read.",
+    "uploadTitle": "Upload a document",
+    "drop": "Drop a file here, or click to choose",
+    "fileTypes": "PDF, DOCX or Markdown, up to 20 MB",
     "download": "Download {name}",
     "uploadedBy": "Uploaded by {name}, {date}",
     "outline": "Outline",
     "drafts": "Tree drafts",
     "draftTree": "Draft module tree",
     "status": {
-      "running": "running",
-      "ready": "ready to review",
-      "applied": "applied",
-      "discarded": "discarded",
-      "failed": "failed"
+      "running": "Running",
+      "ready": "Ready to review",
+      "applied": "Applied",
+      "discarded": "Discarded",
+      "failed": "Failed"
     },
     "reviewHint": "Applying creates the ticked nodes the tree lacks, and links every node to its sections so Ask can cite them."
   },

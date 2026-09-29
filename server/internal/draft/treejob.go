@@ -51,8 +51,10 @@ func (w *TreeWorker) Work(ctx context.Context, job *river.Job[DraftTree]) error 
 }
 
 // ContextBudget is the characters of document one call may carry, from the
-// AI settings' context tokens less room for the prompt and the answer.
-func ContextBudget(s ai.Settings) int { return max(int(float64(s.ContextTokens-1200)*3.5), 2000) }
+// AI settings' context tokens less room for the prompt, the outline and the answer.
+func ContextBudget(s ai.Settings) int {
+	return max(int(float64(s.ContextTokens-1200)*3.5)-outlineChars, 2000)
+}
 
 // TreeParts is how many model calls a document's draft takes.
 func TreeParts(s ai.Settings, sections []docs.Section) int {
@@ -85,7 +87,7 @@ func RunTreeDraft(ctx context.Context, pool *pgxpool.Pool, rt *ai.Runtime, draft
 		if err != nil {
 			return err
 		}
-		cands, err = ExtractTree(ctx, rt, docs.Parts(sections, ContextBudget(s)), func(n int) {
+		cands, err = ExtractTree(ctx, rt, d.DocumentTitle, docs.Parts(sections, ContextBudget(s)), func(n int) {
 			_ = q.SetDraftProgress(ctx, db.SetDraftProgressParams{ID: draftID, DoneParts: int32(n)})
 		})
 		if err != nil {

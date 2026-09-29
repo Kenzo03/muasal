@@ -1,32 +1,29 @@
 @import "tailwindcss";
 
-/* The Terakota design (canvas "Muasal UI design", direction B3): dense, warm,
-   4px corners, IBM Plex. Components use these tokens as bg-*, text-* and
-   border-* utilities; ticket data colors (statuses) arrive as inline styles. */
+/* The Terakota Lembut design (canvas "Muasal UI refresh"): warm and light, a
+   sidebar instead of a dark bar, soft corners, Plus Jakarta Sans. Components use
+   these tokens as bg-*, text-* and border-* utilities; ticket data colors
+   (statuses) arrive as inline styles. */
 @theme {
-  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, monospace;
 
-  --color-ink: #211c19;
-  --color-muted: #6a5f58;
-  --color-ground: #f3efea;
-  --color-well: #e9e3db;
-  --color-line: #ddd4ca;
-  --color-line-soft: #ede7df;
-  --color-field: #c9beb6;
-  --color-paper: #fbf9f6;
-
-  --color-bar: #221e1c;
-  --color-bar-raised: #2e2926;
-  --color-bar-line: #453d38;
-  --color-bar-muted: #c9beb6;
-  --color-bar-accent: #f0a184;
+  --color-ink: #2b2420;
+  --color-ink-soft: #5b5049;
+  --color-muted: #71655c;
+  --color-ground: #faf7f2;
+  --color-sidebar: #f3eee7;
+  --color-well: #f5f0ea;
+  --color-line: #ece5dc;
+  --color-line-soft: #f3ede6;
+  --color-field: #ddd3c7;
+  --color-paper: #faf7f2;
 
   --color-accent: #b5482a;
-  --color-accent-strong: #8a3417;
-  --color-accent-soft: #f7e4dc;
-  --color-link: #9a3b20;
-  --color-link-hover: #7a2e18;
+  --color-accent-strong: #9e3d22;
+  --color-accent-soft: #fbe9e1;
+  --color-link: #b5482a;
+  --color-link-hover: #9e3d22;
 
   --color-warn: #6b3f00;
   --color-warn-soft: #fbefd9;
@@ -56,6 +53,21 @@
   }
   summary::-webkit-details-marker {
     display: none;
+  }
+}
+
+/* Selects draw the app's chevron, set in from the edge, in place of the
+   browser's arrow, which hugs the border. The rule sits in the utilities layer
+   and its selector outranks a single class, so the room the chevron needs wins
+   over a select's own px-* or pr-* class. */
+@layer utilities {
+  select:not([multiple]) {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2371655c' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 6.5 8 10l3.5-3.5'/%3E%3C/svg%3E");
+    background-position: right 0.625rem center;
+    background-repeat: no-repeat;
+    background-size: 1rem;
+    padding-right: 2rem;
   }
 }
 

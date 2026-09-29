@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { IBM_Plex_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
-import Header from "./Header";
+import Shell from "./Shell";
 import "./globals.css";
 
-// next/font downloads IBM Plex once at build time and the app serves the files
+// next/font downloads the fonts once at build time and the app serves the files
 // itself, so no page loads a font from outside (FSD §18: nothing leaves).
-const sans = IBM_Plex_Sans({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-plex-sans" });
+// Plus Jakarta Sans for all text; IBM Plex Mono only for code.
+const sans = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta" });
 const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["500", "600"], variable: "--font-plex-mono" });
 
 export const metadata: Metadata = { title: "Muasal" };
@@ -20,8 +21,7 @@ export default async function RootLayout({ children, modal }: Readonly<{ childre
     <html lang={locale} className={`${sans.variable} ${mono.variable}`}>
       <body className="min-h-screen font-sans">
         <NextIntlClientProvider>
-          <Header />
-          {children}
+          <Shell>{children}</Shell>
           {modal}
         </NextIntlClientProvider>
       </body>

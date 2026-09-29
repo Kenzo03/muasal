@@ -5,7 +5,7 @@ import { DndContext, DragOverlay, PointerSensor, useDraggable, useDroppable, use
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { Avatar, ClientChip, PriorityChip, TypeIcon } from "@/components/Chips";
+import { Avatar, ClientChip, PriorityChip, StatusDot, TypeIcon } from "@/components/Chips";
 import CloseDialog from "@/components/CloseDialog";
 import Icon from "@/components/Icon";
 import { api } from "@/lib/api";
@@ -19,6 +19,7 @@ type Props = {
   tickets: TicketSummary[];
   nodes: Node[];
   canEdit: boolean;
+  showClients: boolean;
   today: string;
   query: Record<string, string>; // the page's filters, kept by the "Show all" link
 };
@@ -32,7 +33,7 @@ function Column({ status, canEdit, children }: { status: Status; canEdit: boolea
     <section
       ref={setNodeRef}
       aria-label={status.name}
-      className={cx("flex w-[270px] shrink-0 flex-col gap-1.5 self-start rounded-md bg-well p-2", isOver && "outline-2 -outline-offset-2 outline-accent")}
+      className={cx("flex min-w-[220px] flex-1 basis-0 flex-col gap-2 self-start rounded-2xl bg-sidebar p-2", isOver && "outline-2 -outline-offset-2 outline-accent")}
     >
       {children}
     </section>
@@ -54,7 +55,7 @@ function Card({ id, canEdit, className, children }: { id: number; canEdit: boole
 // reach too. An open move shows at once and rolls back when the API refuses it;
 // a move into Done or Cancelled opens the close dialog, and the card stays
 // where it was until the close is confirmed (FSD §8.4, AC-TK-2).
-export default function Board({ projectKey, statuses, tickets, nodes, canEdit, today, query }: Props) {
+export default function Board({ projectKey, statuses, tickets, nodes, canEdit, showClients, today, query }: Props) {
   const t = useTranslations("board");
   const tTypes = useTranslations("ticketTypes");
   const tPri = useTranslations("priorities");
@@ -114,24 +115,22 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, t
             const droppable = canEdit;
             return (
               <Column key={s.id} status={s} canEdit={canEdit}>
-                <h2
-                  className="flex h-8 items-center gap-2 border-t-[3px] px-1 pt-1 text-xs font-semibold uppercase tracking-[0.04em]"
-                  style={{ borderTopColor: s.color }}
-                >
+                <h2 className="flex h-9 items-center gap-2 pl-2 pr-0.5 text-sm font-extrabold">
+                  <StatusDot color={s.color} className="size-2.5" />
                   <span className="truncate">{s.name}</span>
-                  <span className="rounded-[3px] bg-white px-1.5 font-mono text-[11px] leading-5 text-muted">{cards.length}</span>
+                  <span className="text-[13px] font-bold text-muted">{cards.length}</span>
                   {droppable && (
                     <Link
                       href={`/p/${projectKey}/tickets/new?status_id=${s.id}`}
                       aria-label={t("addHere", { status: s.name })}
-                      className="ml-auto inline-flex size-6 items-center justify-center rounded text-muted hover:bg-white hover:text-ink"
+                      className="ml-auto inline-flex size-7 items-center justify-center rounded-lg text-ink-soft hover:bg-white hover:text-ink"
                     >
                       <Icon name="plus" />
                     </Link>
                   )}
                 </h2>
                 {closes(s) && (
-                  <p className="flex items-center gap-2 px-1 text-xs text-muted">
+                  <p className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 pb-1 text-[13px] text-ink-soft">
                     {showAll ? t("allClosed") : t("recentClosed")}
                     <Link href={`?${new URLSearchParams(showAll ? recent : { ...query, closed: "all" })}`} className="ml-auto">
                       {showAll ? t("showRecent") : t("showAll")}
@@ -139,45 +138,51 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, t
                   </p>
                 )}
                 {cards.map((c) => (
-                  <Card key={c.id} id={c.id} canEdit={canEdit} className="flex flex-col gap-1.5 rounded border border-line bg-white px-2.5 py-2">
-                    <div className="flex items-center gap-1.5 text-xs">
+                  <Card
+                    key={c.id}
+                    id={c.id}
+                    canEdit={canEdit}
+                    className="flex flex-col gap-2 rounded-[14px] bg-white p-3.5 shadow-[0_1px_2px_rgba(43,36,32,0.06),0_0_0_1px_rgba(43,36,32,0.04)]"
+                  >
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-muted">
                       <TypeIcon type={c.type} label={tTypes(c.type)} />
-                      <span className="font-mono font-semibold">{c.key}</span>
+                      <span>{c.key}</span>
                       {(c.missing_reason || c.node_names.length === 0) && (
                         <span role="img" title={t("missing")} aria-label={t("missing")} className="size-[7px] rounded-full bg-[#D97706]" />
                       )}
-                      <span className="ml-auto">
-                        <PriorityChip priority={c.priority} label={tPri(c.priority)} />
-                      </span>
+                      {(c.priority === "high" || c.priority === "urgent") && <PriorityChip priority={c.priority} label={tPri(c.priority)} />}
+                      {c.assignee && <Avatar name={c.assignee.name} className="ml-auto size-6 bg-accent-soft text-[10px] font-bold text-accent-strong" />}
                     </div>
-                    <Link href={`/t/${c.key}`} className="text-[13px] font-medium leading-snug text-ink no-underline hover:text-ink hover:underline">
+                    <Link href={`/t/${c.key}`} className="text-sm font-bold leading-snug text-ink no-underline hover:text-ink hover:underline">
                       {c.title}
                     </Link>
                     {c.node_names.length > 0 && (
-                      <span className="truncate font-mono text-[11px] text-muted">
-                        {c.node_names[0]}
-                        {c.node_names.length > 1 ? ` +${c.node_names.length - 1}` : ""}
+                      <span className="flex min-w-0 items-center gap-1.5 text-[12.5px] text-muted">
+                        <Icon name="screen" className="size-3.5" />
+                        <span className="truncate">
+                          {c.node_names[0]}
+                          {c.node_names.length > 1 ? ` +${c.node_names.length - 1}` : ""}
+                        </span>
                       </span>
                     )}
-                    <div className="flex items-center gap-1.5 text-xs text-muted">
-                      <ClientChip client={c.client} coreLabel={t("noClient")} />
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
+                      {showClients && <ClientChip client={c.client} coreLabel={t("noClient")} />}
                       {c.due_date && (
-                        <span className={c.due_date < today ? "font-medium text-danger" : ""}>{day(c.due_date, locale, c.due_date.slice(0, 4) !== today.slice(0, 4))}</span>
+                        <span className={c.due_date < today ? "font-semibold text-danger" : ""}>{day(c.due_date, locale, c.due_date.slice(0, 4) !== today.slice(0, 4))}</span>
                       )}
-                      {c.assignee && <Avatar name={c.assignee.name} className="ml-auto size-5 bg-well text-[9px] text-ink" />}
+                      {canEdit && (
+                        <select
+                          aria-label={t("moveTo", { key: c.key })}
+                          value={c.status_id}
+                          onChange={(e) => move(c.id, Number(e.target.value))}
+                          className="ml-auto h-7 max-w-32 cursor-pointer rounded-lg bg-well pl-2 text-xs font-semibold text-ink-soft hover:text-ink"
+                        >
+                          {statuses.map((o) => (
+                            <option key={o.id} value={o.id}>{o.name}</option>
+                          ))}
+                        </select>
+                      )}
                     </div>
-                    {canEdit && (
-                      <select
-                        aria-label={t("moveTo", { key: c.key })}
-                        value={c.status_id}
-                        onChange={(e) => move(c.id, Number(e.target.value))}
-                        className="mt-0.5 h-7 w-full rounded border border-line-soft bg-paper px-1 text-xs text-muted"
-                      >
-                        {statuses.map((o) => (
-                          <option key={o.id} value={o.id}>{o.name}</option>
-                        ))}
-                      </select>
-                    )}
                   </Card>
                 ))}
               </Column>
@@ -186,9 +191,9 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, t
         </div>
         <DragOverlay dropAnimation={null}>
           {draggedCard && (
-            <div className="flex w-[254px] flex-col gap-1 rounded border border-accent bg-white px-2.5 py-2 shadow-lg">
-              <span className="font-mono text-xs font-semibold">{draggedCard.key}</span>
-              <span className="text-[13px] font-medium leading-snug">{draggedCard.title}</span>
+            <div className="flex w-[240px] rotate-1 flex-col gap-1.5 rounded-[14px] bg-white p-3.5 shadow-[0_16px_40px_rgba(43,36,32,0.18),0_2px_6px_rgba(43,36,32,0.08)]">
+              <span className="text-xs font-bold text-muted">{draggedCard.key}</span>
+              <span className="text-sm font-bold leading-snug">{draggedCard.title}</span>
             </div>
           )}
         </DragOverlay>

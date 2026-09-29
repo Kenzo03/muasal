@@ -68,11 +68,16 @@ export default function Answer({ turn, onRemoveChip }: { turn: Turn; onRemoveChi
   }
 
   return (
-    <article aria-label={turn.question} className="flex flex-col gap-3 border-b border-line-soft pb-4 last:border-0">
-      <h3 className="text-[15px] font-semibold leading-snug">{turn.question}</h3>
+    <article aria-label={turn.question} className="flex flex-col gap-4 pb-2">
+      <h3 className="max-w-[85%] self-end rounded-[18px_18px_6px_18px] bg-accent-soft px-4 py-3 text-[15px] font-semibold leading-snug text-ink">{turn.question}</h3>
+      <div className="flex gap-3">
+      <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-accent text-white">
+        <Icon name="logo" className="size-[18px]" />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-3 pt-1">
       {status}
       {turn.claims.length > 0 && (
-        <ul className="flex flex-col gap-2 text-sm leading-relaxed">
+        <ul className="flex flex-col gap-2.5 text-[15px] leading-relaxed">
           {turn.claims.map((c, i) => (
             <li key={i} className="flex flex-wrap items-baseline gap-x-1.5">
               <span>{c.text}</span>
@@ -103,13 +108,15 @@ export default function Answer({ turn, onRemoveChip }: { turn: Turn; onRemoveChi
           {turn.scope?.map((c) => (
             <ChipView key={`${c.kind}:${c.id ?? c.from}`} chip={c} onRemove={c.detected ? onRemoveChip : undefined} />
           ))}
-          {turn.model && <span className={cx(chip, "ml-auto bg-well text-[#4A423C]")}>{turn.model}</span>}
+          {turn.model && <span className={cx(chip, "ml-auto rounded-full bg-well text-ink-soft")}>{turn.model}</span>}
           {turn.claims.length > 0 && <CopyButton question={turn.question} claims={turn.claims} />}
         </div>
       )}
       {!turn.streaming && turn.queryId && (turn.status === "answered" || turn.status === "not_enough_info") && (
         <Feedback queryId={turn.queryId} initial={turn.feedback} />
       )}
+      </div>
+      </div>
     </article>
   );
 }
@@ -125,7 +132,7 @@ function Cite({ itemKey, item }: { itemKey: string; item?: AskItem }) {
         href={itemHref(itemKey)}
         target="_blank"
         rel="noopener noreferrer"
-        className={cx(chip, "bg-accent-soft font-mono text-accent-strong no-underline hover:underline")}
+        className={cx(chip, "bg-accent-soft font-bold text-accent-strong no-underline hover:underline")}
         aria-describedby={item ? `cite-${itemKey}` : undefined}
       >
         {itemKey}
@@ -134,7 +141,7 @@ function Cite({ itemKey, item }: { itemKey: string; item?: AskItem }) {
         <span
           id={`cite-${itemKey}`}
           role="tooltip"
-          className="pointer-events-none invisible absolute bottom-full left-0 z-20 mb-1 w-64 rounded border border-line bg-white p-2.5 text-xs leading-snug text-ink opacity-0 shadow-lg group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100"
+          className="pointer-events-none invisible absolute bottom-full left-0 z-20 mb-1.5 w-64 rounded-xl border border-line bg-white p-3 text-xs leading-snug text-ink opacity-0 shadow-[0_12px_32px_rgba(43,36,32,0.12),0_2px_6px_rgba(43,36,32,0.06)] group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100"
         >
           <span className="block font-semibold">{item.title}</span>
           <span className="block text-muted">{item.client ?? t("core")}</span>
@@ -160,11 +167,11 @@ function ItemList({ title, items }: { title?: string; items: AskItem[] }) {
   return (
     <div className="flex flex-col gap-1.5">
       {title && <h4 className={sectionTitle}>{title}</h4>}
-      <ul className="flex flex-col divide-y divide-line-soft rounded border border-line-soft text-[13px]">
+      <ul className="flex flex-col divide-y divide-line-soft overflow-hidden rounded-xl border border-line bg-white text-[13px]">
         {items.map((it) => (
-          <li key={it.key} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 px-2.5 py-1.5">
-            <Link href={itemHref(it.key)} className="font-mono text-xs font-semibold">{it.key}</Link>
-            <span className="min-w-0 flex-1 font-medium">{it.title}</span>
+          <li key={it.key} className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 px-3.5 py-2.5">
+            <Link href={itemHref(it.key)} className="text-xs font-bold">{it.key}</Link>
+            <span className="min-w-0 flex-1 font-semibold">{it.title}</span>
             <span className="text-muted">{it.client ?? t("core")}</span>
             <span className="text-muted">{it.requested_by}</span>
             <span className="text-muted">{day(it.date, locale)}</span>
@@ -239,20 +246,26 @@ function Feedback({ queryId, initial }: { queryId: number; initial?: AskFeedback
     setAsking(false);
   }
 
-  const thumb = (up: boolean) => cx(button.secondary, "h-7 px-2", rating === (up ? "up" : "down") && "border-accent bg-accent-soft");
+  const thumb = (up: boolean) => cx(button.secondary, "h-8 px-2.5 text-[13px]", rating === (up ? "up" : "down") && "border-accent bg-accent-soft");
   return (
     <div className="flex flex-col gap-2 text-xs">
       <div className="flex items-center gap-2 text-muted">
         <span>{t("question")}</span>
-        <button type="button" aria-pressed={rating === "up"} onClick={() => send({ rating: "up" })} className={thumb(true)}>👍 {t("up")}</button>
-        <button type="button" aria-pressed={rating === "down"} onClick={() => setAsking(true)} className={thumb(false)}>👎 {t("down")}</button>
+        <button type="button" aria-pressed={rating === "up"} onClick={() => send({ rating: "up" })} className={thumb(true)}>
+          <Icon name="thumbUp" className="size-3.5 text-ok" />
+          {t("up")}
+        </button>
+        <button type="button" aria-pressed={rating === "down"} onClick={() => setAsking(true)} className={thumb(false)}>
+          <Icon name="thumbUp" className="size-3.5 -scale-y-100 text-muted" />
+          {t("down")}
+        </button>
         {sent && <span role="status">{t("thanks")}</span>}
         {error && <span role="alert" className="text-danger">{t("failed")}</span>}
       </div>
       {asking && (
         <form
           aria-label={t("why")}
-          className="flex flex-col gap-2 rounded border border-line bg-paper p-2.5"
+          className="flex flex-col gap-2.5 rounded-xl border border-line bg-paper p-3.5"
           onSubmit={(e) => {
             e.preventDefault();
             const form = new FormData(e.currentTarget);

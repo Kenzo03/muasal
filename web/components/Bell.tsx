@@ -86,7 +86,7 @@ export default function Bell({ browser }: { browser: boolean }) {
     <Menu
       align="right"
       label={unread > 0 ? t("labelUnread", { count: unread }) : t("label")}
-      summaryClassName="relative flex size-8 items-center justify-center rounded border border-bar-line text-bar-muted hover:text-white"
+      summaryClassName="relative flex size-10 items-center justify-center rounded-[11px] border border-line bg-white text-ink-soft hover:text-ink"
       summary={
         <>
           <Icon name="bell" />

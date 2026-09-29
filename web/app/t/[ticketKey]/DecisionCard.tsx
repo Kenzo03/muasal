@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -37,36 +37,34 @@ export default function DecisionCard({ ticketKey, decision, canEdit }: { ticketK
     router.refresh();
   }
 
-  const rows: [string, string][] = [
-    [whatLabel, decision.what_changed],
-    [t("why"), decision.why],
-    [t("alternatives"), decision.alternatives],
-  ];
   return (
     <section aria-labelledby="decision-title" className={cx(panel, "overflow-hidden")}>
-      <div className={cx("flex flex-wrap items-center gap-2.5 border-b px-4 py-2.5", confirmed ? "border-[#D3E4D8] bg-[#EEF5F0]" : "border-line-soft bg-paper")}>
-        <Icon name={confirmed ? "check" : "edit"} className={confirmed ? "size-4 text-ok" : "size-4 text-muted"} />
-        <h2 id="decision-title" className="text-sm font-semibold">{t("title")}</h2>
-        <span className={cx(chip, implemented ? "bg-ok-soft text-ok" : "bg-well text-[#4A423C]")}>{implemented ? t("implemented") : t("rejected")}</span>
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 px-5 pb-1 pt-4">
+        <span className={cx("flex size-7 items-center justify-center rounded-full", confirmed ? "bg-ok-soft text-ok" : "bg-well text-muted")}>
+          <Icon name={confirmed ? "check" : "edit"} />
+        </span>
+        <h2 id="decision-title" className="text-[15px] font-extrabold">{t("title")}</h2>
+        <span className={cx(chip, "rounded-full", implemented ? "bg-ok-soft text-ok" : "bg-well text-ink-soft")}>{implemented ? t("implemented") : t("rejected")}</span>
         <span className="text-xs text-muted">
           {confirmed && decision.confirmed_by && decision.confirmed_at
             ? t("confirmedBy", { name: decision.confirmed_by.name, at: utc(decision.confirmed_at, locale) })
             : t("draft")}
         </span>
         {confirmed && canEdit && !editing && (
-          <button type="button" onClick={() => setEditing(true)} className={cx(button.secondary, "ml-auto h-7")}>
+          <button type="button" onClick={() => setEditing(true)} className={cx(button.quiet, "ml-auto")}>
+            <Icon name="edit" className="size-3.5" />
             {t("edit")}
           </button>
         )}
       </div>
       {decision.superseded_by && (
-        <p className="flex items-center gap-2 border-b border-warn-line bg-warn-soft px-4 py-2 text-[13px] text-warn">
+        <p className="mx-5 mt-3 flex items-center gap-2 rounded-xl border border-warn-line bg-warn-soft px-3.5 py-2.5 text-[13px] font-medium text-warn">
           <Icon name="warning" />
-          {t.rich("supersededBy", { key: decision.superseded_by, link: (chunks) => <Link href={`/t/${decision.superseded_by}`} className="font-mono font-semibold">{chunks}</Link> })}
+          {t.rich("supersededBy", { key: decision.superseded_by, link: (chunks) => <Link href={`/t/${decision.superseded_by}`} className="font-bold">{chunks}</Link> })}
         </p>
       )}
       {editing ? (
-        <form onSubmit={save} aria-label={t("editTitle")} className="flex flex-col gap-3 p-4">
+        <form onSubmit={save} aria-label={t("editTitle")} className="flex flex-col gap-3 px-5 pb-5 pt-3">
           <label className={field.label}>
             {whatLabel}
             <textarea name="what_changed" defaultValue={decision.what_changed} required minLength={10} maxLength={1000} rows={2} className={field.textarea} />
@@ -86,13 +84,26 @@ export default function DecisionCard({ ticketKey, decision, canEdit }: { ticketK
           </div>
         </form>
       ) : (
-        <dl className="grid gap-x-4 gap-y-3 px-4 py-3.5 text-sm leading-normal md:grid-cols-[190px_minmax(0,1fr)]">
-          {rows.map(([label, value]) => (
-            <Fragment key={label}>
-              <dt className="text-muted">{label}</dt>
-              <dd className="whitespace-pre-wrap">{value || "—"}</dd>
-            </Fragment>
-          ))}
+        // What changed leads; why and the rejected alternatives sit side by side under it.
+        <dl className="grid gap-3 px-5 pb-5 pt-3 md:grid-cols-2">
+          <div className="flex flex-col gap-1.5 pb-1 md:col-span-2">
+            <dt className="text-[12.5px] font-bold text-muted">{whatLabel}</dt>
+            <dd className="whitespace-pre-wrap text-base font-semibold leading-relaxed [text-wrap:pretty]">{decision.what_changed || "—"}</dd>
+          </div>
+          <div className="flex flex-col gap-1.5 rounded-xl bg-paper px-4 py-3.5">
+            <dt className="flex items-center gap-1.5 text-[12.5px] font-bold text-ink-soft">
+              <Icon name="help" className="size-3.5 text-ok" />
+              {t("why")}
+            </dt>
+            <dd className="whitespace-pre-wrap text-sm leading-relaxed">{decision.why || "—"}</dd>
+          </div>
+          <div className="flex flex-col gap-1.5 rounded-xl bg-paper px-4 py-3.5">
+            <dt className="flex items-center gap-1.5 text-[12.5px] font-bold text-ink-soft">
+              <Icon name="xCircle" className="size-3.5 text-muted" />
+              {t("alternatives")}
+            </dt>
+            <dd className="whitespace-pre-wrap text-sm leading-relaxed">{decision.alternatives || "—"}</dd>
+          </div>
         </dl>
       )}
     </section>

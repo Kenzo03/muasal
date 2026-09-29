@@ -39,11 +39,13 @@ export function htmlToMarkdown(root: Element): string {
   return out.join("\n").replace(/\n{3,}/g, "\n\n").trim() + "\n";
 }
 
-type Line = { text: string; size: number };
+// cells holds the line's parts when wide gaps split it into columns.
+type Line = { text: string; size: number; cells?: string[] };
 
 // PDF has no headings, only text in fonts of some size. A line is a heading
 // when it is short and either set larger than the body text, or numbered like
-// "7.4 Node page"; its number's depth sets its level.
+// "7.4 Node page"; its number's depth sets its level. A gap wider than two
+// characters splits a line into cells, so table rows stay rows.
 async function pdfToMarkdown(data: ArrayBuffer): Promise<string> {
   const pdfjs = await import("pdfjs-dist");
   if (!pdfjs.GlobalWorkerOptions.workerPort) {
@@ -54,21 +56,28 @@ async function pdfToMarkdown(data: ArrayBuffer): Promise<string> {
   for (let p = 1; p <= doc.numPages; p++) {
     const page = await doc.getPage(p);
     const content = await page.getTextContent();
-    let text = "";
+    let cells: string[] = [];
     let size = 0;
     let y: number | undefined;
+    let end: number | undefined; // where the last visible item ends
     const flush = () => {
-      if (text.trim()) lines.push({ text: text.replace(/\s+/g, " ").trim(), size });
-      text = "";
+      const parts = cells.map((c) => c.replace(/\s+/g, " ").trim()).filter(Boolean);
+      if (parts.length > 0) lines.push({ text: parts.join(" "), size, cells: parts });
+      cells = [];
       size = 0;
+      end = undefined;
     };
     for (const item of content.items) {
       if (!("str" in item)) continue;
-      const iy = item.transform[5];
+      const [, , , scale, x, iy] = item.transform;
       if (y !== undefined && Math.abs(iy - y) > 2) flush();
       y = iy;
-      text += item.str;
-      size = Math.max(size, Math.abs(item.transform[3]) || item.height);
+      const fontSize = Math.abs(scale) || item.height;
+      const visible = item.str.trim() !== "";
+      if (visible && (end === undefined || x - end > fontSize * 2)) cells.push(item.str);
+      else if (cells.length > 0) cells[cells.length - 1] += item.str;
+      if (visible) end = x + item.width;
+      size = Math.max(size, fontSize);
       if (item.hasEOL) flush();
     }
     flush();
@@ -82,6 +91,13 @@ export function linesToMarkdown(lines: Line[]): string {
   const body = [...weight].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 0;
   const out: string[] = [];
   for (const l of lines) {
+    // Three cells, or two that are not a section number and its title ("1.<tab>Scope",
+    // "3.2<tab>Appendix"), make a table row, never a heading. A lone "3" is a No column.
+    const cells = l.cells ?? [l.text];
+    if (cells.length > 2 || (cells.length === 2 && !/^\d+(?:\.\d+)*\.$|^\d+(?:\.\d+)+$/.test(cells[0]))) {
+      out.push(`| ${cells.join(" | ")} |`);
+      continue;
+    }
     const short = l.text.length <= 100 && !/[.,;:]$/.test(l.text);
     const numbered = /^(\d+(?:\.\d+)*)\.?\s+\p{Lu}/u.exec(l.text);
     const larger = body > 0 && l.size >= body * 1.15;

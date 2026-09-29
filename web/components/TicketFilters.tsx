@@ -1,7 +1,8 @@
 import { getTranslations } from "next-intl/server";
+import { showsClients } from "@/components/Chips";
 import Icon from "@/components/Icon";
 import type { Client, Status } from "@/lib/problem";
-import { button, field } from "@/lib/ui";
+import { button } from "@/lib/ui";
 
 type Props = {
   action: string;
@@ -15,26 +16,30 @@ type Props = {
 export default async function TicketFilters({ action, values, clients, statuses }: Props) {
   const t = await getTranslations("ticketFilters");
   const tTypes = await getTranslations("ticketTypes");
-  const pick = "flex items-center gap-1.5 text-[13px] text-muted";
+  // Each filter is a chip: its name, then a borderless select.
+  const pick = "flex h-9 items-center gap-1 rounded-[10px] border border-line bg-white pl-3 text-[13.5px] font-semibold text-ink focus-within:border-accent";
+  const select = "h-full cursor-pointer rounded-[10px] bg-transparent text-[13.5px] font-medium text-muted outline-none";
   return (
     <form method="get" action={action} aria-label={t("label")} className="flex flex-wrap items-center gap-2">
-      <label className="flex h-8 items-center gap-1.5 rounded border border-line bg-white px-2 text-muted focus-within:outline-2 focus-within:outline-accent">
+      <label className="flex h-9 items-center gap-2 rounded-[10px] border border-line bg-white px-3 text-muted focus-within:border-accent">
         <Icon name="search" />
-        <input name="q" defaultValue={values.q} aria-label={t("q")} placeholder={t("qPlaceholder")} className="w-40 bg-transparent text-[13px] text-ink outline-none placeholder:text-muted" />
+        <input name="q" defaultValue={values.q} aria-label={t("q")} placeholder={t("qPlaceholder")} className="w-40 bg-transparent text-[13.5px] text-ink outline-none placeholder:text-muted" />
       </label>
-      <label className={pick}>
-        {t("client")}
-        <select name="client" defaultValue={values.client ?? ""} className={field.compact}>
-          <option value="">{t("allClients")}</option>
-          <option value="core">{t("core")}</option>
-          {clients.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-      </label>
+      {showsClients(clients) && (
+        <label className={pick}>
+          {t("client")}
+          <select name="client" defaultValue={values.client ?? ""} className={select}>
+            <option value="">{t("allClients")}</option>
+            <option value="core">{t("core")}</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </label>
+      )}
       <label className={pick}>
         {t("type")}
-        <select name="type" defaultValue={values.type ?? ""} className={field.compact}>
+        <select name="type" defaultValue={values.type ?? ""} className={select}>
           <option value="">{t("anyType")}</option>
           {(["bug", "change_request", "feature"] as const).map((ty) => (
             <option key={ty} value={ty}>{tTypes(ty)}</option>
@@ -43,7 +48,7 @@ export default async function TicketFilters({ action, values, clients, statuses 
       </label>
       <label className={pick}>
         {t("assignee")}
-        <select name="assignee" defaultValue={values.assignee ?? ""} className={field.compact}>
+        <select name="assignee" defaultValue={values.assignee ?? ""} className={select}>
           <option value="">{t("anyone")}</option>
           <option value="me">{t("mine")}</option>
         </select>
@@ -52,7 +57,7 @@ export default async function TicketFilters({ action, values, clients, statuses 
         <>
           <label className={pick}>
             {t("status")}
-            <select name="status" defaultValue={values.status ?? ""} className={field.compact}>
+            <select name="status" defaultValue={values.status ?? ""} className={select}>
               <option value="">{t("anyStatus")}</option>
               {statuses.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
@@ -61,7 +66,7 @@ export default async function TicketFilters({ action, values, clients, statuses 
           </label>
           <label className={pick}>
             {t("missing")}
-            <select name="missing" defaultValue={values.missing ?? ""} className={field.compact}>
+            <select name="missing" defaultValue={values.missing ?? ""} className={select}>
               <option value="">{t("nothingMissing")}</option>
               <option value="reason">{t("missingReason")}</option>
               <option value="menus">{t("missingMenus")}</option>
@@ -69,7 +74,7 @@ export default async function TicketFilters({ action, values, clients, statuses 
           </label>
           <label className={pick}>
             {t("sort")}
-            <select name="sort" defaultValue={values.sort ?? "updated"} className={field.compact}>
+            <select name="sort" defaultValue={values.sort ?? "updated"} className={select}>
               <option value="updated">{t("sortUpdated")}</option>
               <option value="created">{t("sortCreated")}</option>
               <option value="key">{t("sortKey")}</option>

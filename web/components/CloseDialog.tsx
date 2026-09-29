@@ -8,7 +8,7 @@ import NodePicker from "./NodePicker";
 import { api } from "@/lib/api";
 import { nodePaths } from "@/lib/nodes";
 import { useProblemText, type Node, type Problem, type Status, type Ticket } from "@/lib/problem";
-import { button, chip, cx, field } from "@/lib/ui";
+import { button, cx, field } from "@/lib/ui";
 import { isWeak } from "@/lib/weak";
 
 type Props = {
@@ -121,31 +121,31 @@ export default function CloseDialog({ ticket, status, nodes, onDone, onCancel }:
         e.preventDefault();
         onCancel();
       }}
-      className="m-auto w-[min(620px,calc(100vw-2rem))] rounded-md bg-white p-0 text-ink shadow-2xl backdrop:bg-ink/55"
+      className="m-auto w-[min(620px,calc(100vw-2rem))] rounded-2xl bg-white p-0 text-ink shadow-[0_24px_64px_rgba(43,36,32,0.22)] backdrop:bg-ink/35 backdrop:backdrop-blur-[2px]"
     >
       <form onSubmit={submit} aria-label={t("form")} className="flex max-h-[calc(100vh-4rem)] flex-col">
-        <div className="flex flex-col gap-1 border-b border-line px-[22px] pb-3.5 pt-[18px]">
+        <div className="flex flex-col gap-1.5 border-b border-line-soft px-6 pb-4 pt-5">
           <div className="flex items-center gap-2.5">
             <StatusDot color={status.color} className="size-2.5" />
-            <h2 id="close-title" className="text-lg font-semibold">{t("title", { key: ticket.key, status: status.name })}</h2>
+            <h2 id="close-title" className="text-[17px] font-extrabold tracking-[-0.01em]">{t("title", { key: ticket.key, status: status.name })}</h2>
             <button
               type="button"
               onClick={onCancel}
               aria-label={t("dismiss")}
-              className="ml-auto inline-flex size-8 cursor-pointer items-center justify-center rounded text-muted hover:bg-paper"
+              className="-mr-1.5 ml-auto inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted hover:bg-well hover:text-ink"
             >
               <Icon name="x" />
             </button>
           </div>
           <p className="text-[13px] text-muted">{context.join(" · ")}</p>
         </div>
-        <div className="flex flex-col gap-3.5 overflow-y-auto px-[22px] py-4">
+        <div className="flex flex-col gap-4 overflow-y-auto px-6 py-5">
           {needsReason && (
             <Area id="close-reason" label={t("reason")} value={reason} onChange={setReason} max={2000} rows={2} weak error={serverError("reason")} />
           )}
           {needsMenus && (
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[13px] font-semibold">{t("menus")}</span>
+            <div className="flex flex-col gap-2">
+              <span className="text-[13px] font-bold">{t("menus")}</span>
               <NodePicker nodes={nodes} selected={menus} onToggle={toggleMenu} legend={t("menus")} />
               <p className={cx("text-xs", menus.size === 0 || serverError("node_ids") ? "text-danger" : "text-muted")}>
                 {serverError("node_ids") ?? (menus.size === 0 ? t("menusRequired") : t("menusChosen", { count: menus.size }))}
@@ -187,10 +187,14 @@ export default function CloseDialog({ ticket, status, nodes, onDone, onCancel }:
           {drafted && <p role="status" className="text-xs text-muted">{t("drafted", { model: drafted.model })}</p>}
           {problem && !problem.errors?.length && <p role="alert" className={field.error}>{problemText(problem)}</p>}
         </div>
-        <div className="flex items-center gap-2 rounded-b-md border-t border-line bg-paper px-[22px] py-3">
-          <span className="text-xs text-muted">{t("outcome")}</span>
-          <span className={cx(chip, done ? "bg-ok-soft text-ok" : "bg-well text-[#4A423C]")}>{done ? t("implemented") : t("rejected")}</span>
+        <div className="flex flex-wrap items-center gap-2 rounded-b-2xl border-t border-line-soft bg-paper px-6 py-3.5">
+          <span className="text-xs font-semibold text-muted">{t("outcome")}</span>
+          <span className={cx("inline-flex items-center gap-1 rounded-full pl-1.5 pr-2.5 text-[11.5px] font-semibold leading-[22px]", done ? "bg-ok-soft text-ok" : "bg-well text-ink-soft")}>
+            <Icon name={done ? "check" : "xCircle"} className="size-3.5" />
+            {done ? t("implemented") : t("rejected")}
+          </span>
           <button type="button" onClick={draftWithAI} disabled={drafting} className={cx(button.secondary, "ml-auto")}>
+            <Icon name="sparkle" className="size-4 text-accent" />
             {drafting ? t("drafting") : t("draftWithAI")}
           </button>
           <button type="button" onClick={onCancel} className={button.secondary}>{t("cancel")}</button>
@@ -222,10 +226,10 @@ function Area({ id, label, value, onChange, max, rows, hint, weak, optional, err
   const soft = weak === true && isWeak(value);
   const note = error ?? (highlight ? hint : missing ? t("required") : soft ? tf("weakReason") : hint);
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-2">
       <div className="flex items-baseline gap-2">
-        <label htmlFor={id} className="text-[13px] font-semibold">{label}</label>
-        <span className="ml-auto font-mono text-[11px] text-muted">{optional ? t("optional") : t("counter", { count: value.length, max })}</span>
+        <label htmlFor={id} className="text-[13px] font-bold">{label}</label>
+        <span className="ml-auto text-[11.5px] font-medium tabular-nums text-muted">{optional ? t("optional") : t("counter", { count: value.length, max })}</span>
       </div>
       <textarea
         id={id}

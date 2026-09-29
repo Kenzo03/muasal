@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import { showsClients } from "@/components/Chips";
 import PageBar from "@/components/PageBar";
 import TicketFilters from "@/components/TicketFilters";
 import { getProject, serverApi } from "@/lib/server-api";
@@ -46,6 +47,7 @@ export default async function BoardPage({
           tickets={page.data?.items ?? []}
           nodes={nodes.data?.items ?? []}
           canEdit={project.role !== "viewer"}
+          showClients={showsClients(clients.data?.items ?? [])}
           today={new Date().toISOString().slice(0, 10)}
           query={values}
         />

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { askStream, type AskIgnore, type AskRequest, type AskScope, type AskScopeEvent } from "@/lib/ask";
+import Icon from "@/components/Icon";
 import { button, cx, field } from "@/lib/ui";
 import Answer, { ChipView, type Chip, type Turn } from "./Answer";
 
@@ -98,7 +99,7 @@ export default function AskView({ chips: preset = [], threadId: initialThread, q
           setQuestion("");
           run(q);
         }}
-        className="flex flex-col gap-2 rounded border border-line bg-white p-3"
+        className="flex flex-col gap-2.5 rounded-2xl border border-field bg-white p-3.5 shadow-[0_1px_2px_rgba(43,36,32,0.04),0_8px_24px_rgba(43,36,32,0.06)] focus-within:border-accent"
       >
         {chips.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
@@ -120,12 +121,15 @@ export default function AskView({ chips: preset = [], threadId: initialThread, q
           placeholder={t("placeholder")}
           maxLength={1000}
           rows={compact ? 2 : 3}
-          className={cx(field.textarea, "resize-y")}
+          className="w-full resize-y bg-transparent px-1 py-1 text-[15px] leading-relaxed text-ink outline-none placeholder:text-muted"
         />
         <div className="flex flex-wrap items-center gap-2">
           <details className="relative">
-            <summary className={cx(button.secondary, "list-none")}>{t("addDates")}</summary>
-            <div className="absolute left-0 z-10 mt-1 flex flex-col gap-2 rounded border border-line bg-white p-3 shadow-lg">
+            <summary className={cx(button.secondary, "h-8 list-none px-3 text-[13px]")}>
+              <Icon name="calendar" className="size-3.5 text-muted" />
+              {t("addDates")}
+            </summary>
+            <div className="absolute left-0 z-10 mt-1.5 flex flex-col gap-2.5 rounded-xl border border-line bg-white p-3.5 shadow-[0_12px_32px_rgba(43,36,32,0.12),0_2px_6px_rgba(43,36,32,0.06)]">
               <label className={field.label}>
                 {t("from")}
                 <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={field.compact} />
@@ -146,9 +150,9 @@ export default function AskView({ chips: preset = [], threadId: initialThread, q
               </button>
             </div>
           </details>
-          <label className="flex items-center gap-1.5 text-xs text-muted">
+          <label className="flex h-8 items-center gap-1 rounded-[9px] border border-line bg-paper pl-3 text-[13px] font-semibold text-ink focus-within:border-accent">
             {t("language")}
-            <select value={language} onChange={(e) => setLanguage(e.target.value as typeof language)} className={field.compact}>
+            <select value={language} onChange={(e) => setLanguage(e.target.value as typeof language)} className="h-full cursor-pointer bg-transparent font-medium text-muted outline-none">
               <option value="auto">{t("langAuto")}</option>
               <option value="id">Bahasa Indonesia</option>
               <option value="en">English</option>

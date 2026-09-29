@@ -8,7 +8,7 @@ import { StatusDot } from "@/components/Chips";
 import Icon from "@/components/Icon";
 import { api } from "@/lib/api";
 import { useProblemText, type LinkType, type TicketLink } from "@/lib/problem";
-import { button, cx, field, panel, sectionTitle } from "@/lib/ui";
+import { button, cx, field, panel } from "@/lib/ui";
 
 const types: LinkType[] = ["reverses", "extends", "related_to"];
 
@@ -42,9 +42,9 @@ export default function Links({ ticketKey, links, canEdit }: { ticketKey: string
   }
 
   return (
-    <section aria-labelledby="links-title" className={cx(panel, "flex flex-col gap-2.5 px-4 py-3.5")}>
+    <section aria-labelledby="links-title" className={cx(panel, "flex flex-col gap-2.5 px-5 py-4")}>
       <div className="flex items-center gap-2">
-        <h2 id="links-title" className={sectionTitle}>{t("title")}</h2>
+        <h2 id="links-title" className="text-sm font-extrabold">{t("title")}</h2>
         {canEdit && !adding && (
           <button type="button" onClick={() => setAdding(true)} className={cx(button.quiet, "ml-auto")}>
             <Icon name="plus" className="size-3.5" />
@@ -59,7 +59,7 @@ export default function Links({ ticketKey, links, canEdit }: { ticketKey: string
             <li key={l.id} className="flex flex-wrap items-center gap-2 text-[13px]">
               <span className="text-muted">{t(`${l.type}.${l.outgoing ? "out" : "in"}`)}</span>
               <StatusDot color={l.ticket.status.color} />
-              <Link href={`/t/${l.ticket.key}`} className="font-mono font-semibold">{l.ticket.key}</Link>
+              <Link href={`/t/${l.ticket.key}`} className="font-bold">{l.ticket.key}</Link>
               <span className="min-w-0 truncate">{l.ticket.title}</span>
               {canEdit && (
                 <button type="button" onClick={() => remove(l.id)} aria-label={t("remove", { key: l.ticket.key })} className={cx(button.quiet, "ml-auto text-muted")}>
@@ -82,7 +82,7 @@ export default function Links({ ticketKey, links, canEdit }: { ticketKey: string
           </label>
           <label className={field.label}>
             {t("key")}
-            <input name="key" required placeholder="HRIS-88" className={cx(field.compact, "w-32 font-mono")} />
+            <input name="key" required placeholder="HRIS-88" className={cx(field.compact, "w-32")} />
           </label>
           <button className={button.primary}>{t("save")}</button>
           <button type="button" onClick={() => { setAdding(false); setError(""); }} className={button.secondary}>{t("cancel")}</button>

@@ -8,7 +8,8 @@ const userPassword = "e2e-budi-passphrase-2";
 test("an admin creates a user who sets a password and signs in", async ({ page, browser }) => {
   await setPassword(page, process.env.E2E_ADMIN_LINK!, adminPassword);
   await signIn(page, process.env.E2E_ADMIN_EMAIL!, adminPassword);
-  await expect(page.getByText("Masuk sebagai E2E Admin")).toBeVisible();
+  // Home greets the user; the sidebar's account menu names them in full.
+  await expect(page.getByLabel("Akun E2E Admin")).toBeVisible();
 
   await page.getByRole("link", { name: "Pengguna" }).click();
   const email = `budi-${Date.now()}@example.com`;
@@ -21,5 +22,5 @@ test("an admin creates a user who sets a password and signs in", async ({ page, 
   const budi = await (await browser.newContext()).newPage();
   await setPassword(budi, link!, userPassword);
   await signIn(budi, email, userPassword);
-  await expect(budi.getByText("Masuk sebagai Budi")).toBeVisible();
+  await expect(budi.getByLabel(/^Akun Budi/)).toBeVisible();
 });

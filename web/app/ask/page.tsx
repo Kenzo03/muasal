@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import type { Chip, Turn } from "@/components/ask/Answer";
+import Icon from "@/components/Icon";
 import PageBar from "@/components/PageBar";
 import { getMe, getProject, serverApi } from "@/lib/server-api";
 import { button, cx } from "@/lib/ui";
@@ -59,18 +60,26 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
         <h1 className="text-base font-semibold">{t("title")}</h1>
       </PageBar>
       <div className="flex flex-col gap-4 p-4 md:flex-row md:p-5">
-        <aside aria-label={t("threads")} className="flex w-full shrink-0 flex-col gap-2 md:w-64">
-          <Link href="/ask" className={cx(button.secondary, "justify-start")}>{t("newThread")}</Link>
+        <aside aria-label={t("threads")} className="flex w-full shrink-0 flex-col gap-3 md:w-64">
+          <Link href="/ask" className={button.secondary}>
+            <Icon name="plus" className="size-4 text-accent" />
+            {t("newThread")}
+          </Link>
           {(threads.data?.items ?? []).length === 0 ? (
             <p className="text-[13px] text-muted">{t("noThreads")}</p>
           ) : (
-            <ul className="flex flex-col text-[13px]">
+            <ul className="flex flex-col gap-0.5 text-[13.5px]">
               {threads.data?.items.map((th) => (
                 <li key={th.id}>
                   <Link
                     href={`/ask?thread=${th.id}`}
                     aria-current={th.id === threadId ? "page" : undefined}
-                    className={cx("block truncate rounded px-2 py-1.5 no-underline hover:bg-paper", th.id === threadId ? "bg-accent-soft font-semibold text-ink" : "text-ink")}
+                    className={cx(
+                      "block truncate rounded-xl px-3 py-2.5 no-underline",
+                      th.id === threadId
+                        ? "bg-white font-bold text-ink shadow-[0_1px_2px_rgba(43,36,32,0.08),0_0_0_1px_rgba(43,36,32,0.05)] hover:text-ink"
+                        : "font-medium text-ink-soft hover:bg-white/70 hover:text-ink",
+                    )}
                   >
                     {th.title}
                   </Link>
