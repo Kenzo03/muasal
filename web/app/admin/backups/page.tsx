@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getLocale, getTimeZone, getTranslations } from "next-intl/server";
 import PageBar from "@/components/PageBar";
-import { fileSize, utc } from "@/lib/format";
+import { dateTime, fileSize } from "@/lib/format";
 import { getMe, serverApi } from "@/lib/server-api";
 import { cx, panel, sectionTitle, table } from "@/lib/ui";
 import RunBackup from "./RunBackup";
@@ -13,6 +13,7 @@ export default async function BackupsPage() {
   if (!me) redirect("/login");
   const t = await getTranslations("backups");
   const locale = await getLocale();
+  const timeZone = await getTimeZone();
   const { data } = me.is_admin ? await (await serverApi()).GET("/admin/backups") : { data: undefined };
   const last = data?.items[0];
   return (
@@ -29,7 +30,7 @@ export default async function BackupsPage() {
             <section className={cx(panel, "grid gap-4 p-4 sm:grid-cols-3")}>
               <div>
                 <h2 className={sectionTitle}>{t("last")}</h2>
-                <p className="text-[13px] font-semibold">{last ? utc(last.created_at, locale) : t("none")}</p>
+                <p className="text-[13px] font-semibold">{last ? dateTime(last.created_at, locale, timeZone) : t("none")}</p>
               </div>
               <div>
                 <h2 className={sectionTitle}>{t("size")}</h2>
@@ -54,7 +55,7 @@ export default async function BackupsPage() {
                     {data.items.map((b) => (
                       <tr key={b.file} className={table.row}>
                         <td className={cx(table.td, "font-mono text-xs")}>{b.file}</td>
-                        <td className={table.td}>{utc(b.created_at, locale)}</td>
+                        <td className={table.td}>{dateTime(b.created_at, locale, timeZone)}</td>
                         <td className={table.td}>{fileSize(b.size_bytes)}</td>
                       </tr>
                     ))}

@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale, useTimeZone, useTranslations } from "next-intl";
 import { Avatar } from "@/components/Chips";
 import { api } from "@/lib/api";
-import { utc } from "@/lib/format";
+import { dateTime } from "@/lib/format";
 import { problemKey, type Problem, type User } from "@/lib/problem";
 import { button, chip, cx, field, panel, table } from "@/lib/ui";
 
@@ -13,6 +13,7 @@ export default function UsersAdmin({ users, meId }: { users: User[]; meId: numbe
   const t = useTranslations("users");
   const tErr = useTranslations("errors");
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const router = useRouter();
   const [link, setLink] = useState<{ name: string; url: string } | null>(null);
   const [error, setError] = useState("");
@@ -99,7 +100,7 @@ export default function UsersAdmin({ users, meId }: { users: User[]; meId: numbe
                 <td className={table.td}>
                   <span className={cx(chip, u.disabled ? "bg-well text-muted" : "bg-ok-soft text-ok")}>{u.disabled ? t("disabled") : t("active")}</span>
                 </td>
-                <td className={cx(table.td, "whitespace-nowrap text-muted")}>{u.last_login_at ? utc(u.last_login_at, locale) : t("never")}</td>
+                <td className={cx(table.td, "whitespace-nowrap text-muted")}>{u.last_login_at ? dateTime(u.last_login_at, locale, timeZone) : t("never")}</td>
                 <td className={cx(table.td, "whitespace-nowrap text-right")}>
                   {u.id !== meId && (
                     <span className="inline-flex gap-3">

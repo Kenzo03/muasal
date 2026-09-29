@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale, useTimeZone, useTranslations } from "next-intl";
 import Icon from "@/components/Icon";
 import { api } from "@/lib/api";
 import { answerMarkdown, itemHref, type AskClaim, type AskFeedback, type AskItem, type AskStatus } from "@/lib/ask";
-import { day } from "@/lib/format";
+import { day, dayOf, itemDay } from "@/lib/format";
 import { button, chip, cx, field, sectionTitle } from "@/lib/ui";
 
 export type Chip = {
@@ -126,6 +126,7 @@ export default function Answer({ turn, onRemoveChip }: { turn: Turn; onRemoveChi
 function Cite({ itemKey, item }: { itemKey: string; item?: AskItem }) {
   const t = useTranslations("ask");
   const locale = useLocale();
+  const timeZone = useTimeZone();
   return (
     <span className="group relative inline-flex">
       <Link
@@ -146,13 +147,13 @@ function Cite({ itemKey, item }: { itemKey: string; item?: AskItem }) {
           <span className="block font-semibold">{item.title}</span>
           <span className="block text-muted">{item.client ?? t("core")}</span>
           {item.kind === "document" ? (
-            <span className="block text-muted">{t("docUploaded", { date: day(item.date, locale) })}</span>
+            <span className="block text-muted">{t("docUploaded", { date: dayOf(item.date, locale, timeZone) })}</span>
           ) : item.kind === "note" ? (
             <span className="block text-muted">{t("noteBy", { name: item.requested_by, date: day(item.date, locale) })}</span>
           ) : (
             <>
               <span className="block text-muted">{t("requestedBy", { name: item.requested_by })}</span>
-              <span className="block text-muted">{t(item.closed ? "closedOn" : "createdOn", { date: day(item.date, locale) })}</span>
+              <span className="block text-muted">{t(item.closed ? "closedOn" : "createdOn", { date: dayOf(item.date, locale, timeZone) })}</span>
             </>
           )}
         </span>
@@ -164,6 +165,7 @@ function Cite({ itemKey, item }: { itemKey: string; item?: AskItem }) {
 function ItemList({ title, items }: { title?: string; items: AskItem[] }) {
   const t = useTranslations("ask");
   const locale = useLocale();
+  const timeZone = useTimeZone();
   return (
     <div className="flex flex-col gap-1.5">
       {title && <h4 className={sectionTitle}>{title}</h4>}
@@ -174,7 +176,7 @@ function ItemList({ title, items }: { title?: string; items: AskItem[] }) {
             <span className="min-w-0 flex-1 font-semibold">{it.title}</span>
             <span className="text-muted">{it.client ?? t("core")}</span>
             <span className="text-muted">{it.requested_by}</span>
-            <span className="text-muted">{day(it.date, locale)}</span>
+            <span className="text-muted">{itemDay(it, locale, timeZone)}</span>
             <span className="text-muted">{it.kind === "note" ? t("noteKind") : it.kind === "document" ? t("docKind") : it.status}</span>
           </li>
         ))}

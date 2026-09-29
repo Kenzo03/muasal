@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getLocale, getTimeZone, getTranslations } from "next-intl/server";
 import PageBar from "@/components/PageBar";
-import { utc } from "@/lib/format";
+import { dateTime } from "@/lib/format";
 import { getMe, getProjects, serverApi } from "@/lib/server-api";
 import { cx, table } from "@/lib/ui";
 import NewImport from "./NewImport";
@@ -13,6 +13,7 @@ export default async function ImportsPage() {
   if (!me) redirect("/login");
   const t = await getTranslations("imports");
   const locale = await getLocale();
+  const timeZone = await getTimeZone();
   const { data } = me.is_admin ? await (await serverApi()).GET("/imports") : { data: undefined };
   const projects = me.is_admin ? await getProjects() : [];
   return (
@@ -45,7 +46,7 @@ export default async function ImportsPage() {
                         <td className={table.td}>{t(`statuses.${r.status}`)}</td>
                         <td className={table.td}>{r.stats.rows}</td>
                         <td className={table.td}>{r.created_by}</td>
-                        <td className={cx(table.td, "whitespace-nowrap")}>{utc(r.created_at, locale)}</td>
+                        <td className={cx(table.td, "whitespace-nowrap")}>{dateTime(r.created_at, locale, timeZone)}</td>
                       </tr>
                     ))}
                   </tbody>

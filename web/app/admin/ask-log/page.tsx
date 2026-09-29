@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getLocale, getTimeZone, getTranslations } from "next-intl/server";
 import PageBar from "@/components/PageBar";
-import { utc } from "@/lib/format";
+import { dateTime } from "@/lib/format";
 import { getMe, serverApi } from "@/lib/server-api";
 import { one } from "@/lib/ticket-query";
 import { button, cx, field, table } from "@/lib/ui";
@@ -17,6 +17,7 @@ export default async function AskLogPage({ searchParams }: { searchParams: Promi
   if (!me) redirect("/login");
   const t = await getTranslations("askLog");
   const locale = await getLocale();
+  const timeZone = await getTimeZone();
   const v = one(await searchParams);
   const status = statuses.includes(v.status as Status) ? (v.status as Status) : undefined;
   const slow = v.slow === "true";
@@ -86,7 +87,7 @@ export default async function AskLogPage({ searchParams }: { searchParams: Promi
                   <tbody>
                     {data.items.map((q) => (
                       <tr key={q.id} className={table.row}>
-                        <td className={cx(table.td, "whitespace-nowrap text-muted")}>{utc(q.created_at, locale)}</td>
+                        <td className={cx(table.td, "whitespace-nowrap text-muted")}>{dateTime(q.created_at, locale, timeZone)}</td>
                         <td className={table.td}>{q.user.name}</td>
                         <td className={table.td}>
                           <Link href={`/admin/ask-log/${q.id}`}>{q.question}</Link>

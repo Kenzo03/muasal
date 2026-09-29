@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { getLocale, getTranslations } from "next-intl/server";
-import { day } from "@/lib/format";
+import { getLocale, getTimeZone, getTranslations } from "next-intl/server";
+import { dayOf } from "@/lib/format";
 import type { Behavior } from "@/lib/problem";
 import { cx, panel, sectionTitle } from "@/lib/ui";
 
@@ -10,6 +10,7 @@ import { cx, panel, sectionTitle } from "@/lib/ui";
 export default async function Behaviors({ items }: { items: Behavior[] }) {
   const t = await getTranslations("nodePage");
   const locale = await getLocale();
+  const timeZone = await getTimeZone();
   if (items.length === 0) return <p className="text-muted">{t("noBehaviors")}</p>;
   const groups: { name: string; items: Behavior[] }[] = [];
   for (const b of items) {
@@ -29,7 +30,7 @@ export default async function Behaviors({ items }: { items: Behavior[] }) {
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
                   <Link href={`/t/${b.key}`} className="text-[13px] font-bold no-underline">{b.key}</Link>
                   <span className="text-sm font-bold text-ink">{b.title}</span>
-                  {b.closed_at && <span className="ml-auto">{day(b.closed_at, locale)}</span>}
+                  {b.closed_at && <span className="ml-auto">{dayOf(b.closed_at, locale, timeZone)}</span>}
                 </div>
                 <p className="whitespace-pre-wrap text-sm leading-relaxed">{b.what_changed}</p>
                 <p className="whitespace-pre-wrap text-[13px] text-muted">{t("because", { why: b.why })}</p>

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale, useTimeZone, useTranslations } from "next-intl";
 import { Avatar, ClientChip, PriorityChip, StatusDot, TypeIcon, showsClients } from "@/components/Chips";
 import CloseDialog from "@/components/CloseDialog";
 import Icon from "@/components/Icon";
@@ -11,7 +11,7 @@ import Markdown from "@/components/Markdown";
 import PageBar from "@/components/PageBar";
 import TicketForm from "@/components/TicketForm";
 import { api } from "@/lib/api";
-import { day, utc } from "@/lib/format";
+import { dateTime, day } from "@/lib/format";
 import { nodePaths } from "@/lib/nodes";
 import { useProblemText, type Client, type Node, type Ref, type Status, type Ticket } from "@/lib/problem";
 import { button, cx, field, panel, sectionTitle } from "@/lib/ui";
@@ -41,6 +41,7 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
   const tPri = useTranslations("priorities");
   const tf = useTranslations("ticketForm");
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const problemText = useProblemText();
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -223,16 +224,16 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
                     </>
                   )}
                   <dt className="text-muted">{t("created")}</dt>
-                  <dd>{utc(ticket.created_at, locale)}</dd>
+                  <dd>{dateTime(ticket.created_at, locale, timeZone)}</dd>
                   {ticket.closed_at && (
                     <>
                       <dt className="text-muted">{t("closed")}</dt>
-                      <dd>{utc(ticket.closed_at, locale)}</dd>
+                      <dd>{dateTime(ticket.closed_at, locale, timeZone)}</dd>
                     </>
                   )}
                 </dl>
                 <p className="border-t border-line-soft pt-3 text-xs text-muted">
-                  {t("updated")} {utc(ticket.updated_at, locale)}
+                  {t("updated")} {dateTime(ticket.updated_at, locale, timeZone)}
                 </p>
               </section>
               {attachments}

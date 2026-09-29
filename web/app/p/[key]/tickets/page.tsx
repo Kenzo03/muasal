@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getLocale, getTimeZone, getTranslations } from "next-intl/server";
 import { Avatar, ClientChip, PriorityChip, StatusDot, TypeIcon, showsClients } from "@/components/Chips";
 import Icon from "@/components/Icon";
 import PageBar from "@/components/PageBar";
 import TicketFilters from "@/components/TicketFilters";
-import { day, utc } from "@/lib/format";
+import { dateIn, dateTime, day, dayOf } from "@/lib/format";
 import { getProject, serverApi } from "@/lib/server-api";
 import { one, ticketQuery } from "@/lib/ticket-query";
 import { button, cx, table } from "@/lib/ui";
@@ -23,6 +23,7 @@ export default async function TicketsPage({
   const project = await getProject(key);
   if (!project) notFound();
   const locale = await getLocale();
+  const timeZone = await getTimeZone();
   const t = await getTranslations("tickets");
   const tp = await getTranslations("project");
   const tTypes = await getTranslations("ticketTypes");
@@ -40,7 +41,7 @@ export default async function TicketsPage({
   const items = page.data?.items ?? [];
   const next = page.data?.next_cursor;
   const { cursor: _, ...kept } = values;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dateIn(new Date(), timeZone);
   return (
     <>
       <PageBar>
@@ -115,7 +116,7 @@ export default async function TicketsPage({
                           <span className="text-muted">—</span>
                         )}
                       </td>
-                      <td className={cx(table.td, "whitespace-nowrap py-3 text-muted")} title={utc(it.updated_at, locale)}>{day(it.updated_at, locale)}</td>
+                      <td className={cx(table.td, "whitespace-nowrap py-3 text-muted")} title={dateTime(it.updated_at, locale, timeZone)}>{dayOf(it.updated_at, locale, timeZone)}</td>
                       <td className={cx(table.td, "whitespace-nowrap py-3 pr-5", it.due_date && it.due_date < today ? "font-semibold text-danger" : "text-muted")}>
                         {it.due_date ? day(it.due_date, locale) : "—"}
                       </td>

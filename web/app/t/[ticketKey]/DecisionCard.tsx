@@ -3,10 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale, useTimeZone, useTranslations } from "next-intl";
 import Icon from "@/components/Icon";
 import { api } from "@/lib/api";
-import { utc } from "@/lib/format";
+import { dateTime } from "@/lib/format";
 import { useProblemText, type DecisionRecord } from "@/lib/problem";
 import { button, chip, cx, field, panel } from "@/lib/ui";
 
@@ -16,6 +16,7 @@ import { button, chip, cx, field, panel } from "@/lib/ui";
 export default function DecisionCard({ ticketKey, decision, canEdit }: { ticketKey: string; decision: DecisionRecord; canEdit: boolean }) {
   const t = useTranslations("decision");
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const router = useRouter();
   const problemText = useProblemText();
   const [editing, setEditing] = useState(false);
@@ -47,7 +48,7 @@ export default function DecisionCard({ ticketKey, decision, canEdit }: { ticketK
         <span className={cx(chip, "rounded-full", implemented ? "bg-ok-soft text-ok" : "bg-well text-ink-soft")}>{implemented ? t("implemented") : t("rejected")}</span>
         <span className="text-xs text-muted">
           {confirmed && decision.confirmed_by && decision.confirmed_at
-            ? t("confirmedBy", { name: decision.confirmed_by.name, at: utc(decision.confirmed_at, locale) })
+            ? t("confirmedBy", { name: decision.confirmed_by.name, at: dateTime(decision.confirmed_at, locale, timeZone) })
             : t("draft")}
         </span>
         {confirmed && canEdit && !editing && (

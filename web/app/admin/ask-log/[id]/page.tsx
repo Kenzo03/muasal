@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { itemHref } from "@/lib/ask";
 import { notFound, redirect } from "next/navigation";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getLocale, getTimeZone, getTranslations } from "next-intl/server";
 import PageBar from "@/components/PageBar";
-import { day, utc } from "@/lib/format";
+import { dateTime, itemDay } from "@/lib/format";
 import { getMe, serverApi } from "@/lib/server-api";
 import { chip, cx, panel, sectionTitle, table } from "@/lib/ui";
 
@@ -18,9 +18,10 @@ export default async function AskLogEntryPage({ params }: { params: Promise<{ id
   if (!q) notFound();
   const t = await getTranslations("askLog");
   const locale = await getLocale();
+  const timeZone = await getTimeZone();
   const facts: [string, React.ReactNode][] = [
     [t("user"), q.user.name],
-    [t("when"), utc(q.created_at, locale)],
+    [t("when"), dateTime(q.created_at, locale, timeZone)],
     [t("status"), t(`statuses.${q.status}`)],
     [t("feedback"), q.feedback ? `${q.feedback.rating === "up" ? "👍" : "👎"} ${(q.feedback.reasons ?? []).map((r) => t(`reasons.${r}`)).join(", ")}${q.feedback.comment ? ` · “${q.feedback.comment}”` : ""}` : "—"],
     [t("llmCalled"), q.llm_called ? t("yes") : t("no")],
@@ -87,7 +88,7 @@ export default async function AskLogEntryPage({ params }: { params: Promise<{ id
                       </td>
                       <td className={table.td}>{e.title}</td>
                       <td className={table.td}>{e.client ?? "—"}</td>
-                      <td className={cx(table.td, "whitespace-nowrap")}>{day(e.date, locale)}</td>
+                      <td className={cx(table.td, "whitespace-nowrap")}>{itemDay(e, locale, timeZone)}</td>
                       <td className={cx(table.td, "font-mono text-xs")}>{e.score != null ? e.score.toFixed(4) : "—"}</td>
                     </tr>
                   ))}

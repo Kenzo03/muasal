@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale, useTimeZone, useTranslations } from "next-intl";
 import { Avatar } from "@/components/Chips";
 import Icon from "@/components/Icon";
 import Markdown from "@/components/Markdown";
 import MentionBox from "@/components/MentionBox";
 import { api } from "@/lib/api";
 import { describeChange, shown, type Change } from "@/lib/activity";
-import { utc } from "@/lib/format";
+import { dateTime } from "@/lib/format";
 import { pasteImages } from "@/lib/paste";
 import { useProblemText, type ActivityItem } from "@/lib/problem";
 import { button, chip, cx, field, panel } from "@/lib/ui";
@@ -25,6 +25,7 @@ export default function Activity({ ticketKey, items, meId, canComment }: {
 }) {
   const t = useTranslations("activity");
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const problemText = useProblemText();
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>("all");
@@ -139,7 +140,7 @@ export default function Activity({ ticketKey, items, meId, canComment }: {
                   ) : (
                     <span className={cx(chip, "bg-ok-soft text-ok")}>{t("clientSafe")}</span>
                   )}
-                  <span className="ml-auto">{utc(it.at, locale)}{it.edited ? ` · ${t("edited")}` : ""}</span>
+                  <span className="ml-auto">{dateTime(it.at, locale, timeZone)}{it.edited ? ` · ${t("edited")}` : ""}</span>
                 </div>
                 {it.deleted ? (
                   <p className="text-sm italic text-muted">{t("deleted")}{it.body ? `: ${it.body}` : ""}</p>
@@ -171,7 +172,7 @@ export default function Activity({ ticketKey, items, meId, canComment }: {
                   </span>
                 </span>
                 <span className="min-w-0 flex-1">{describeChange(t, it)}</span>
-                <span className="shrink-0 text-xs text-muted">{utc(it.at, locale)}</span>
+                <span className="shrink-0 text-xs text-muted">{dateTime(it.at, locale, timeZone)}</span>
               </div>
               {details(it)}
             </li>

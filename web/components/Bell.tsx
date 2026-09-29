@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale, useTimeZone, useTranslations } from "next-intl";
 import Icon from "./Icon";
 import Menu from "./Menu";
 import { api } from "@/lib/api";
 import type { components } from "@/lib/api-types";
-import { utc } from "@/lib/format";
+import { dateTime } from "@/lib/format";
 import { button, cx } from "@/lib/ui";
 
 type Notification = components["schemas"]["Notification"];
@@ -18,6 +18,7 @@ type Notification = components["schemas"]["Notification"];
 export default function Bell({ browser }: { browser: boolean }) {
   const t = useTranslations("bell");
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const router = useRouter();
   const [items, setItems] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
@@ -117,7 +118,7 @@ export default function Bell({ browser }: { browser: boolean }) {
               >
                 <span className={cx(!n.read && "font-semibold")}>{text(n)}</span>
                 {n.type === "comment" || n.type === "mention" ? <span className="line-clamp-2 text-xs text-muted">{String(n.payload.excerpt ?? "")}</span> : null}
-                <span className="text-xs text-muted">{utc(n.created_at, locale)}</span>
+                <span className="text-xs text-muted">{dateTime(n.created_at, locale, timeZone)}</span>
               </button>
             </li>
           ))}

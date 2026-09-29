@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getLocale, getTimeZone, getTranslations } from "next-intl/server";
 import { ClientChip } from "@/components/Chips";
 import Icon from "@/components/Icon";
 import Markdown from "@/components/Markdown";
 import NoteForm from "@/components/NoteForm";
 import PageBar from "@/components/PageBar";
-import { day, utc } from "@/lib/format";
+import { dateTime, day } from "@/lib/format";
 import { serverApi } from "@/lib/server-api";
 import { button, cx, panel, sectionTitle } from "@/lib/ui";
 
@@ -23,6 +23,7 @@ export default async function NotePage({ params, searchParams }: {
   if (!note) notFound();
   const t = await getTranslations("notes");
   const locale = await getLocale();
+  const timeZone = await getTimeZone();
   const editing = edit === "1" && note.can_edit;
   let form: React.ReactNode = null;
   if (editing) {
@@ -88,7 +89,7 @@ export default async function NotePage({ params, searchParams }: {
                     </ul>
                   )}
                 </div>
-                <p className="text-xs text-muted">{t("byline", { name: note.author.name, at: utc(note.updated_at, locale) })}</p>
+                <p className="text-xs text-muted">{t("byline", { name: note.author.name, at: dateTime(note.updated_at, locale, timeZone) })}</p>
               </aside>
             </div>
           </>
