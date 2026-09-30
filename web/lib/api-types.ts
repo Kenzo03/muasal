@@ -2803,6 +2803,11 @@ export interface components {
             ok: boolean;
             latency_ms: number;
             error?: string;
+            /**
+             * @description The failure's likely cause, which the page says in plain words above the raw error (MSL-31).
+             * @enum {string}
+             */
+            reason?: "unknown_host" | "refused" | "timeout" | "tls" | "unauthorized" | "not_found" | "no_model";
             models?: string[];
             /** @description The embedding's dimension. */
             dim?: number;

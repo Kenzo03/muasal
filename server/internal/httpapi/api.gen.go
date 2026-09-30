@@ -36,6 +36,39 @@ func (e AIMode) Valid() bool {
 	}
 }
 
+// Defines values for AIProbeReason.
+const (
+	AIProbeReasonNoModel      AIProbeReason = "no_model"
+	AIProbeReasonNotFound     AIProbeReason = "not_found"
+	AIProbeReasonRefused      AIProbeReason = "refused"
+	AIProbeReasonTimeout      AIProbeReason = "timeout"
+	AIProbeReasonTls          AIProbeReason = "tls"
+	AIProbeReasonUnauthorized AIProbeReason = "unauthorized"
+	AIProbeReasonUnknownHost  AIProbeReason = "unknown_host"
+)
+
+// Valid indicates whether the value is a known member of the AIProbeReason enum.
+func (e AIProbeReason) Valid() bool {
+	switch e {
+	case AIProbeReasonNoModel:
+		return true
+	case AIProbeReasonNotFound:
+		return true
+	case AIProbeReasonRefused:
+		return true
+	case AIProbeReasonTimeout:
+		return true
+	case AIProbeReasonTls:
+		return true
+	case AIProbeReasonUnauthorized:
+		return true
+	case AIProbeReasonUnknownHost:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityItemKind.
 const (
 	ActivityItemKindComment ActivityItemKind = "comment"
@@ -981,7 +1014,13 @@ type AIProbe struct {
 	LatencyMs int       `json:"latency_ms"`
 	Models    *[]string `json:"models,omitempty"`
 	Ok        bool      `json:"ok"`
+
+	// Reason The failure's likely cause, which the page says in plain words above the raw error (MSL-31).
+	Reason *AIProbeReason `json:"reason,omitempty"`
 }
+
+// AIProbeReason The failure's likely cause, which the page says in plain words above the raw error (MSL-31).
+type AIProbeReason string
 
 // AISettings defines model for AISettings.
 type AISettings struct {

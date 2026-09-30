@@ -311,6 +311,15 @@
     "failed": "Failed",
     "models": "Models",
     "dimension": "{dim} dimensions",
+    "reasons": {
+      "unknown_host": "The server name can't be found. Check the host name in the URL.",
+      "refused": "Nothing answers at that address. Check the port, and that the model server is running.",
+      "timeout": "The server didn't answer in time. It may be out of reach from this server, or still loading the model.",
+      "tls": "The server's certificate isn't trusted.",
+      "unauthorized": "The server refused the API key. Check the key.",
+      "not_found": "The server has nothing at this URL. OpenAI-compatible addresses usually end in /v1.",
+      "no_model": "The server doesn't have this model. Check the name, or pull the model on the server first."
+    },
     "reindexConfirm": "A new embedding model re-embeds all {chunks} chunks. Ask uses keyword search and the chunks already done until it finishes. Continue?",
     "indexStatus": "Index status",
     "reindexAll": "Re-index all",

@@ -3276,6 +3276,10 @@ components:
         ok: { type: boolean }
         latency_ms: { type: integer }
         error: { type: string }
+        reason:
+          type: string
+          enum: [unknown_host, refused, timeout, tls, unauthorized, not_found, no_model]
+          description: The failure's likely cause, which the page says in plain words above the raw error (MSL-31).
         models:
           type: array
           items: { type: string }

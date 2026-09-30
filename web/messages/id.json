@@ -311,6 +311,15 @@
     "failed": "Gagal",
     "models": "Model",
     "dimension": "{dim} dimensi",
+    "reasons": {
+      "unknown_host": "Nama server tidak ditemukan. Periksa nama host di URL.",
+      "refused": "Tidak ada yang menjawab di alamat itu. Periksa port-nya, dan pastikan server model berjalan.",
+      "timeout": "Server tidak menjawab tepat waktu. Mungkin tidak terjangkau dari server ini, atau masih memuat model.",
+      "tls": "Sertifikat server tidak dipercaya.",
+      "unauthorized": "Server menolak API key. Periksa key-nya.",
+      "not_found": "Tidak ada apa pun di URL ini. Alamat yang kompatibel dengan OpenAI biasanya diakhiri /v1.",
+      "no_model": "Server tidak memiliki model ini. Periksa namanya, atau pull model tersebut di server terlebih dahulu."
+    },
     "reindexConfirm": "Model embedding baru akan meng-embed ulang {chunks} potongan. Sampai selesai, Ask memakai pencarian kata kunci dan potongan yang sudah selesai. Lanjutkan?",
     "indexStatus": "Status indeks",
     "reindexAll": "Indeks ulang semua",
