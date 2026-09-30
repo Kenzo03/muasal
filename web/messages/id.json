@@ -174,7 +174,8 @@
     "newLink": "Tautan baru",
     "copy": "Salin",
     "copied": "Tersalin",
-    "dismiss": "Tutup"
+    "dismiss": "Tutup",
+    "emailedTo": "Juga dikirim ke {email}."
   },
   "projectList": {
     "heading": "Semua proyek",

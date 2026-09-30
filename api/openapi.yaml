@@ -1978,6 +1978,7 @@ components:
       properties:
         url: { type: string }
         expires_at: { type: string, format: date-time }
+        emailed_to: { type: string, description: With email set up, where the link is being sent (MSL-50). }
     CreatedUser:
       type: object
       required: [user, setup_link]

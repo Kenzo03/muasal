@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
@@ -141,4 +142,16 @@ func deref(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+// Invite writes the email carrying a new user's setup link (MSL-50).
+func Invite(locale, name, inviter, url string, expires time.Time) (subject, body string) {
+	if f := strings.Fields(name); len(f) > 0 {
+		name = f[0]
+	}
+	until := expires.Format("2 Jan 2006 15:04 MST")
+	if locale == "id" {
+		return "Undangan ke Muasal", fmt.Sprintf("Halo %s,\n\n%s mengundang Anda ke Muasal. Atur kata sandi Anda lewat tautan ini, berlaku sampai %s:\n\n  %s\n\nJika tautannya sudah tidak berlaku, minta tautan baru kepada %s.\n", name, inviter, until, url, inviter)
+	}
+	return "You're invited to Muasal", fmt.Sprintf("Hi %s,\n\n%s invited you to Muasal. Set your password with this link, valid until %s:\n\n  %s\n\nIf the link has expired, ask %s for a new one.\n", name, inviter, until, url, inviter)
 }

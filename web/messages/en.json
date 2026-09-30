@@ -174,7 +174,8 @@
     "newLink": "New link",
     "copy": "Copy",
     "copied": "Copied",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "emailedTo": "Also emailed to {email}."
   },
   "projectList": {
     "heading": "All projects",

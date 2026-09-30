@@ -21,6 +21,7 @@ import (
 	"github.com/kenzo03/muasal/server/internal/auth"
 	"github.com/kenzo03/muasal/server/internal/config"
 	"github.com/kenzo03/muasal/server/internal/db"
+	"github.com/kenzo03/muasal/server/internal/mail"
 )
 
 // Server implements the generated ServerInterface.
@@ -37,9 +38,13 @@ type Server struct {
 	askRate *auth.Limiter
 	tokRate *auth.Limiter
 	hub     hub
-	bg      context.Context    // lives until Close: the notification listener runs in it
-	stop    context.CancelFunc //
+	bg      context.Context                                     // lives until Close: the notification listener runs in it
+	stop    context.CancelFunc                                  //
+	send    func(c mail.Config, to, subject, body string) error // mail.Send unless a test swaps it
 }
+
+// SetSendMail replaces how email leaves the server; tests use it.
+func (s *Server) SetSendMail(f func(c mail.Config, to, subject, body string) error) { s.send = f }
 
 // New wires a Server; it opens no connections of its own.
 func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) *Server {
@@ -55,6 +60,7 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) *Server {
 		ipLimit: auth.NewLimiter(20, time.Minute), // FSD §15.1: 20 sign-in attempts per IP per minute
 		log:     log,
 		now:     time.Now,
+		send:    mail.Send,
 		jobs:    jobs,
 		ai:      &ai.Runtime{Store: ai.NewStore(q), Gate: ai.NewGate(), SecretKey: cfg.SecretKey, HTTP: &http.Client{}},
 		askRate: auth.NewLimiter(10, time.Minute), // FSD §17.1: Ask 10 a minute per user
