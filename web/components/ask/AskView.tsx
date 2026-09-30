@@ -13,12 +13,13 @@ type Props = {
   question?: string; // asked at once, e.g. from the Home Ask box
   onThread?: (id: number) => void;
   compact?: boolean;
+  examples?: string[]; // offered while the thread is empty, one click to ask (MSL-37)
 };
 
 // The Ask box and the answers of one thread (FSD §10). The page's chips stay
 // for the whole thread until the user removes one; each question streams its
 // answer claim by claim.
-export default function AskView({ chips: preset = [], threadId: initialThread, question: initial, onThread, compact }: Props) {
+export default function AskView({ chips: preset = [], threadId: initialThread, question: initial, onThread, compact, examples = [] }: Props) {
   const t = useTranslations("ask");
   const [chips, setChips] = useState<Chip[]>(preset);
   const [language, setLanguage] = useState<"auto" | "id" | "en">("auto");
@@ -178,6 +179,20 @@ export default function AskView({ chips: preset = [], threadId: initialThread, q
           </button>
         </div>
       </form>
+      {examples.length > 0 && turns.length === 0 && (
+        <section aria-label={t("examples")} className="flex flex-col gap-2">
+          <h2 className="text-[13px] font-semibold text-muted">{t("examples")}</h2>
+          <ul className="flex flex-wrap gap-2">
+            {examples.map((q) => (
+              <li key={q}>
+                <button type="button" onClick={() => run(q)} className={cx(button.secondary, "h-auto py-1.5 text-left text-[13px]")}>
+                  {q}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }
