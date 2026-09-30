@@ -101,7 +101,34 @@ func ExtractTree(ctx context.Context, rt *ai.Runtime, title string, parts [][]do
 			done(i + 1)
 		}
 	}
-	return out, nil
+	return unwrap(out, all), nil
+}
+
+// unwrap drops a first level every node shares when no heading names it: a
+// small model tends to put the whole tree under the product's name, such as
+// "HRIS › Absensi › Clock In" (MSL-45). A top module the document names stays.
+func unwrap(cands []docs.Candidate, sections []docs.Section) []docs.Candidate {
+	if len(cands) == 0 || len(cands[0].Path) == 0 {
+		return cands
+	}
+	root, nested := strings.TrimSpace(cands[0].Path[0]), false
+	for _, c := range cands {
+		if len(c.Path) == 0 || !strings.EqualFold(strings.TrimSpace(c.Path[0]), root) {
+			return cands
+		}
+		nested = nested || len(c.Path) > 1
+	}
+	if n, _ := docs.SectionFor(sections, root); !nested || n != "" {
+		return cands
+	}
+	out := cands[:0:0]
+	for _, c := range cands {
+		if len(c.Path) > 1 {
+			c.Path = c.Path[1:]
+			out = append(out, c)
+		}
+	}
+	return out
 }
 
 // linkSection picks a node's section: the heading that names it, else the
