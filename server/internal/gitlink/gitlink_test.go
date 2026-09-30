@@ -43,11 +43,11 @@ func TestKeys(t *testing.T) {
 // MSL-29: only a key after fixes, closes or resolves counts.
 func TestFixes(t *testing.T) {
 	for msg, want := range map[string]string{
-		"Fixes DMS-2":                          "[DMS-2]",
+		"Fixes DMS-2":                         "[DMS-2]",
 		"fix: DMS-2, DMS-3 and PAY-1 (see X)": "[DMS-2 DMS-3 PAY-1]",
-		"Resolved HRIS-9. Refs DMS-4":          "[HRIS-9]",
-		"DMS-5: fix the rounding":              "[]",
-		"prefix DMS-1 and closes #12":          "[]",
+		"Resolved HRIS-9. Refs DMS-4":         "[HRIS-9]",
+		"DMS-5: fix the rounding":             "[]",
+		"prefix DMS-1 and closes #12":         "[]",
 	} {
 		if got := fmt.Sprint(Fixes(msg)); got != want {
 			t.Errorf("%q: %s, want %s", msg, got, want)
