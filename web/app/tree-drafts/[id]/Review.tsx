@@ -41,6 +41,16 @@ export default function Review({ initial, projectKey, sections }: { initial: Dra
     return () => clearInterval(timer);
   }, [draft.status, draft.id]);
 
+  // MSL-51: a running draft shows it's alive: elapsed time and a moving bar.
+  // The clock starts after mount, so the server's render matches.
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    if (draft.status !== "running") return;
+    setNow(Date.now());
+    const tick = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(tick);
+  }, [draft.status]);
+
   const children = useMemo(() => {
     const m = new Map<string, TNode[]>();
     for (const n of nodes) m.set(n.parent, [...(m.get(n.parent) ?? []), n]);
@@ -104,13 +114,20 @@ export default function Review({ initial, projectKey, sections }: { initial: Dra
     return (
       <div className={cx(panel, "flex max-w-xl flex-col gap-3 p-6")} role="status">
         <div className="flex items-center gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
+          <span className="flex size-10 shrink-0 animate-pulse items-center justify-center rounded-full bg-accent-soft text-accent">
             <Icon name="sparkle" className="size-5" />
           </span>
-          <p className="text-sm font-semibold">{t("running", { done: draft.done_parts, total: draft.total_parts })}</p>
+          <p className="text-sm font-semibold">
+            {t("running", { done: draft.done_parts, total: draft.total_parts })}
+            {now > 0 && (
+              <span className="ml-1.5 font-normal text-muted">
+                {t("elapsed", { seconds: Math.max(0, Math.round((now - Date.parse(draft.created_at)) / 1000)) })}
+              </span>
+            )}
+          </p>
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-well" aria-hidden>
-          <div className="h-full rounded-full bg-accent transition-[width] duration-500" style={{ width: `${pct}%` }} />
+          <div className="h-full animate-pulse rounded-full bg-accent transition-[width] duration-500" style={{ width: `${Math.max(pct, 8)}%` }} />
         </div>
         <p className="text-xs text-muted">{t("runningHint")}</p>
       </div>
