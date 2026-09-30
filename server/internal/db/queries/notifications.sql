@@ -127,3 +127,16 @@ WITH ins AS (
   RETURNING id, user_id
 )
 SELECT ins.id, ins.user_id, pg_notify('muasal_notifications', ins.user_id || ':' || ins.id)::text AS sent FROM ins;
+
+-- name: FollowTicket :exec
+INSERT INTO ticket_followers (ticket_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING;
+
+-- name: UnfollowTicket :exec
+DELETE FROM ticket_followers WHERE ticket_id = $1 AND user_id = $2;
+
+-- name: ListFollowers :many
+-- MSL-57: who follows a ticket; notify still checks each can see it.
+SELECT user_id FROM ticket_followers WHERE ticket_id = $1;
+
+-- name: IsFollowing :one
+SELECT EXISTS (SELECT 1 FROM ticket_followers WHERE ticket_id = $1 AND user_id = $2);

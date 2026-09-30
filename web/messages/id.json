@@ -707,7 +707,9 @@
     "closed": "Ditutup",
     "estimate": "Estimasi",
     "hours": "{hours} jam",
-    "labels": "Label"
+    "labels": "Label",
+    "follow": "Ikuti",
+    "following": "Diikuti"
   },
   "close": {
     "title": "Tutup {key} sebagai {status}",

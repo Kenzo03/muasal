@@ -1035,6 +1035,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tickets/{key}/follow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description The caller follows the ticket and hears its comments and status changes (MSL-57). */
+        post: operations["followTicket"];
+        delete: operations["unfollowTicket"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tickets/{key}/links": {
         parameters: {
             query?: never;
@@ -2053,6 +2072,8 @@ export interface components {
             estimate_hours?: number | null;
             /** @description Free-text labels, lowercased (MSL-56). */
             labels?: string[];
+            /** @description The caller follows the ticket (MSL-57). */
+            following?: boolean;
             nodes: components["schemas"]["NodeRef"][];
             attachments: components["schemas"]["Attachment"][];
             /** Format: int32 */
@@ -5212,6 +5233,48 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["DecisionRecord"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    followTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Following. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    unfollowTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No longer following. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

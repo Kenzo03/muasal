@@ -21,6 +21,36 @@ func (q *Queries) CountUnread(ctx context.Context, userID int64) (int64, error) 
 	return count, err
 }
 
+const followTicket = `-- name: FollowTicket :exec
+INSERT INTO ticket_followers (ticket_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING
+`
+
+type FollowTicketParams struct {
+	TicketID int64
+	UserID   int64
+}
+
+func (q *Queries) FollowTicket(ctx context.Context, arg FollowTicketParams) error {
+	_, err := q.db.Exec(ctx, followTicket, arg.TicketID, arg.UserID)
+	return err
+}
+
+const isFollowing = `-- name: IsFollowing :one
+SELECT EXISTS (SELECT 1 FROM ticket_followers WHERE ticket_id = $1 AND user_id = $2)
+`
+
+type IsFollowingParams struct {
+	TicketID int64
+	UserID   int64
+}
+
+func (q *Queries) IsFollowing(ctx context.Context, arg IsFollowingParams) (bool, error) {
+	row := q.db.QueryRow(ctx, isFollowing, arg.TicketID, arg.UserID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const listCommenters = `-- name: ListCommenters :many
 SELECT DISTINCT author_id::bigint FROM comments WHERE ticket_id = $1 AND author_id IS NOT NULL AND deleted_at IS NULL
 `
@@ -38,6 +68,31 @@ func (q *Queries) ListCommenters(ctx context.Context, ticketID int64) ([]int64, 
 			return nil, err
 		}
 		items = append(items, author_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listFollowers = `-- name: ListFollowers :many
+SELECT user_id FROM ticket_followers WHERE ticket_id = $1
+`
+
+// MSL-57: who follows a ticket; notify still checks each can see it.
+func (q *Queries) ListFollowers(ctx context.Context, ticketID int64) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listFollowers, ticketID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var user_id int64
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -423,4 +478,18 @@ func (q *Queries) SetNotifyPrefs(ctx context.Context, arg SetNotifyPrefsParams) 
 		&i.NotifyPrefs,
 	)
 	return i, err
+}
+
+const unfollowTicket = `-- name: UnfollowTicket :exec
+DELETE FROM ticket_followers WHERE ticket_id = $1 AND user_id = $2
+`
+
+type UnfollowTicketParams struct {
+	TicketID int64
+	UserID   int64
+}
+
+func (q *Queries) UnfollowTicket(ctx context.Context, arg UnfollowTicketParams) error {
+	_, err := q.db.Exec(ctx, unfollowTicket, arg.TicketID, arg.UserID)
+	return err
 }

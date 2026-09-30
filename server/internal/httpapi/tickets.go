@@ -389,7 +389,11 @@ func (s *Server) TransitionTicket(w http.ResponseWriter, r *http.Request, key st
 		if err := audit(ctx, q, m, &pc.user.ID, "ticket", row.Ticket.ID, "transition", changed(ticketAudit(before), ticketAudit(out))); err != nil {
 			return err
 		}
-		if err := notify(ctx, q, "status", row.Ticket.ID, &pc.user.ID, []int64{row.Ticket.ReporterID, deref(row.Ticket.AssigneeID)},
+		followers, err := q.ListFollowers(ctx, row.Ticket.ID) // MSL-57
+		if err != nil {
+			return err
+		}
+		if err := notify(ctx, q, "status", row.Ticket.ID, &pc.user.ID, append([]int64{row.Ticket.ReporterID, deref(row.Ticket.AssigneeID)}, followers...),
 			map[string]any{"status": st.Name, "from": row.Status.Name}); err != nil {
 			return err
 		}
@@ -591,6 +595,10 @@ func readTicket(ctx context.Context, q *db.Queries, key string, u *db.User) (Tic
 
 func ticketFromRow(ctx context.Context, q *db.Queries, row db.GetTicketByKeyRow, u *db.User) (Ticket, error) {
 	t := row.Ticket
+	following, err := q.IsFollowing(ctx, db.IsFollowingParams{TicketID: t.ID, UserID: u.ID})
+	if err != nil {
+		return Ticket{}, err
+	}
 	nodes, err := q.ListTicketNodes(ctx, t.ID)
 	if err != nil {
 		return Ticket{}, err
@@ -617,7 +625,7 @@ func ticketFromRow(ctx context.Context, q *db.Queries, row db.GetTicketByKeyRow,
 		Status: toAPIStatus(row.Status), Reporter: Ref{Id: t.ReporterID, Name: row.ReporterName},
 		CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt, ClosedAt: t.ClosedAt, Decision: decision, Links: links, Code: code,
 		Nodes: make([]NodeRef, len(nodes)), Attachments: make([]Attachment, len(files)), EstimateHours: t.EstimateHours,
-		Labels: &t.Labels,
+		Labels: &t.Labels, Following: &following,
 	}
 	if t.ClientID != nil {
 		out.Client = &Ref{Id: *t.ClientID, Name: deref(row.ClientName)}
