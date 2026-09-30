@@ -632,6 +632,7 @@
       "clearDue": "Hapus tenggat",
       "status": "Status",
       "apply": "Terapkan ke {count}",
+      "closeOut": "Tutup {count}…",
       "progress": "Memperbarui {done} dari {total}…",
       "failed": "Tidak berubah:",
       "select": "Pilih {key}",
@@ -1403,6 +1404,26 @@
     "confirm": "Arsipkan {name}? Tidak ada yang dapat mengubahnya sampai admin proyek memulihkannya.",
     "restore": "Pulihkan proyek",
     "banner": "Proyek ini diarsipkan: hanya-baca dan tidak muncul di pilihan proyek dan Beranda sampai admin proyek memulihkannya."
+  },
+  "closeout": {
+    "heading": "Penutupan",
+    "intro": "Tutup beberapa tiket sekaligus, masing-masing dengan catatan keputusannya. Catatan disusun AI satu per satu di latar belakang; buka tiap tiket untuk mengonfirmasi atau mengubahnya, dan setelah satu ditutup, tiket berikutnya terbuka.",
+    "empty": "Belum ada tiket yang dipilih. Centang di daftar tiket, lalu pilih Penutupan.",
+    "viewers": "Viewer tidak dapat menutup tiket.",
+    "closeAs": "Tutup sebagai",
+    "start": "Tinjau dan tutup {count}",
+    "progress": "{closed} dari {total} ditutup",
+    "review": "Tinjau dan tutup",
+    "state": {
+      "loading": "Memuat…",
+      "missing": "Tidak ditemukan",
+      "closed": "Ditutup",
+      "waiting": "Menunggu draf",
+      "drafting": "Menyusun draf…",
+      "drafted": "Draf siap",
+      "off": "AI nonaktif: diisi dari judul dan alasan",
+      "failed": "Tanpa draf: diisi dari judul dan alasan"
+    }
   },
   "summaries": {
     "heading": "Ringkasan perubahan",
