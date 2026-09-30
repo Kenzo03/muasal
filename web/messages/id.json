@@ -547,7 +547,7 @@
   "ticketFilters": {
     "release": "Rilis",
     "anyRelease": "Semua",
-    "accepted": "Klien",
+    "accepted": "Penerimaan",
     "anyAcceptance": "Semua",
     "acceptedYes": "Sudah diterima",
     "acceptedNo": "Belum diterima",
