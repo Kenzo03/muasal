@@ -662,7 +662,6 @@
     "weakReason": "Jelaskan mengapa klien membutuhkannya, misalnya kebijakan mereka atau masalah yang diselesaikan",
     "type": "Jenis",
     "description": "Deskripsi",
-    "more": "Lainnya",
     "assignee": "Penanggung jawab",
     "nobody": "Belum ada",
     "priority": "Prioritas",
