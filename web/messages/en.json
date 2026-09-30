@@ -1001,6 +1001,8 @@
     "adminsOnly": "Only system admins can manage backups.",
     "runNow": "Run backup now",
     "requested": "Requested; the backup starts within 30 seconds.",
+    "finished": "Backup done: {file}",
+    "slow": "No new backup yet. If this lasts, check that the backup service is running on the server.",
     "last": "Last backup",
     "none": "None yet",
     "size": "Size",

@@ -1001,6 +1001,8 @@
     "adminsOnly": "Hanya admin sistem yang dapat mengelola cadangan.",
     "runNow": "Cadangkan sekarang",
     "requested": "Diminta; pencadangan dimulai dalam 30 detik.",
+    "finished": "Pencadangan selesai: {file}",
+    "slow": "Belum ada cadangan baru. Jika berlanjut, periksa apakah layanan pencadangan berjalan di server.",
     "last": "Cadangan terakhir",
     "none": "Belum ada",
     "size": "Ukuran",
