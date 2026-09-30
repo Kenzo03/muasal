@@ -1429,6 +1429,9 @@ type BackupList struct {
 
 	// Requested A "Run backup now" is waiting for the backup service.
 	Requested bool `json:"requested"`
+
+	// SameDisk The backups sit on the same disk as the attachments (on a default install, also the database), so one disk failure loses both (MSL-40).
+	SameDisk bool `json:"same_disk"`
 }
 
 // Behavior defines model for Behavior.

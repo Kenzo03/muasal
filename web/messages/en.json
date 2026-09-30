@@ -1014,7 +1014,8 @@
     "restore1": "Sign in to the server and go to the Muasal install folder.",
     "restore2": "Run",
     "restore3": "The script stops the app, restores the database and the attachments, starts it again and re-indexes.",
-    "offsite": "Copying the backups folder off the server (NAS or tape) is up to you."
+    "offsite": "Copying the backups folder off the server (NAS or tape) is up to you.",
+    "sameDisk": "The backups are on the same disk as the data, so one disk failure would lose both. Copy them off the server regularly: the operations guide (docs/operations.md, “Backups and restore”) shows how."
   },
   "notes": {
     "heading": "Decision notes",

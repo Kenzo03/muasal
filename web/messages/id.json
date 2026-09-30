@@ -1014,7 +1014,8 @@
     "restore1": "Masuk ke server, ke folder instalasi Muasal.",
     "restore2": "Jalankan",
     "restore3": "Skrip menghentikan aplikasi, memulihkan basis data dan lampiran, menyalakannya lagi, lalu mengindeks ulang.",
-    "offsite": "Menyalin folder cadangan ke luar server (NAS atau pita) adalah tanggung jawab Anda."
+    "offsite": "Menyalin folder cadangan ke luar server (NAS atau pita) adalah tanggung jawab Anda.",
+    "sameDisk": "Cadangan berada di disk yang sama dengan data, jadi satu kerusakan disk akan menghilangkan keduanya. Salin cadangan ke luar server secara rutin: panduan operasional (docs/operations.md, “Backups and restore”) menjelaskan caranya."
   },
   "notes": {
     "heading": "Notulen keputusan",

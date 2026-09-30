@@ -3067,6 +3067,8 @@ export interface components {
         BackupList: {
             /** @description Where the backups live on the server. */
             location: string;
+            /** @description The backups sit on the same disk as the attachments (on a default install, also the database), so one disk failure loses both (MSL-40). */
+            same_disk: boolean;
             /** @description A "Run backup now" is waiting for the backup service. */
             requested: boolean;
             items: components["schemas"]["Backup"][];

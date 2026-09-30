@@ -93,7 +93,7 @@ The dumps leave out the embedding vectors, since they can be rebuilt. Set `BACKU
 
 Admin → Backups shows the last backup's time, size and location, and has a "Run backup now" button; the backup starts within 30 seconds.
 
-Copying the backups volume off the server is up to you. For example, mount a NAS share at the volume's path, or copy `docker run --rm -v muasal_backups:/b alpine tar -C /b -c .` to tape.
+Copying the backups volume off the server is up to you. For example, mount a NAS share at the volume's path, or copy `docker run --rm -v muasal_backups:/b alpine tar -C /b -c .` to tape. Until the backups volume sits on another disk than the attachments volume, Admin → Backups warns that one disk failure would lose both.
 
 **Restore:**
 

@@ -3520,9 +3520,12 @@ components:
         created_at: { type: string, format: date-time }
     BackupList:
       type: object
-      required: [location, requested, items]
+      required: [location, requested, same_disk, items]
       properties:
         location: { type: string, description: Where the backups live on the server. }
+        same_disk:
+          type: boolean
+          description: The backups sit on the same disk as the attachments (on a default install, also the database), so one disk failure loses both (MSL-40).
         requested: { type: boolean, description: A "Run backup now" is waiting for the backup service. }
         items: { type: array, items: { $ref: "#/components/schemas/Backup" } }
     SystemStatus:

@@ -27,6 +27,11 @@ export default async function BackupsPage() {
           <p className="text-muted">{t("adminsOnly")}</p>
         ) : (
           <>
+            {data.same_disk && (
+              <p role="alert" className="rounded border border-warn-line bg-warn-soft p-3 text-[13px] text-warn">
+                {t("sameDisk")}
+              </p>
+            )}
             <section className={cx(panel, "grid gap-4 p-4 sm:grid-cols-3")}>
               <div>
                 <h2 className={sectionTitle}>{t("last")}</h2>
