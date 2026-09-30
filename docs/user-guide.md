@@ -56,7 +56,7 @@ Review the draft: rename, retype, untick or add nodes. Every node shows the sect
 
 ## Code
 
-Project admins connect GitHub, GitLab or Gitea repositories in project settings. Commits and merge requests that mention a ticket key such as `HRIS-231` then show in the ticket's **Code** section, and Ask uses them as evidence.
+Project admins connect GitHub, GitLab or Gitea repositories in project settings. Commits and merge requests that mention a ticket key such as `HRIS-231` then show in the ticket's **Code** section, and Ask uses them as evidence. A pushed commit that says `Fixes HRIS-231` (or closes, resolves) moves the open ticket to In review, the project's last working status; closing it stays with you, since it needs the decision record.
 
 ## Notifications
 

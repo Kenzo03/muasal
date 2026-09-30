@@ -2,6 +2,7 @@ package gitlink
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/jackc/pgx/v5"
@@ -91,6 +92,9 @@ func Process(ctx context.Context, pool *pgxpool.Pool, deliveryID int64, index fu
 				}
 				touched = append(touched, id)
 			}
+			if err := moveFixed(ctx, q, c); err != nil {
+				return err
+			}
 		}
 		if mr != nil && mr.Number > 0 {
 			ids, err := q.TicketIDsByKeys(ctx, Keys(mr.Title, mr.Body, mr.Branch))
@@ -119,4 +123,28 @@ func Process(ctx context.Context, pool *pgxpool.Pool, deliveryID int64, index fu
 		}
 		return q.DeleteDelivery(ctx, d.ID)
 	})
+}
+
+// moveFixed moves the tickets a commit says it fixes to review (MSL-29), with
+// an audit event, so the ticket's history says the commit did it.
+func moveFixed(ctx context.Context, q *db.Queries, c Commit) error {
+	keys := Fixes(c.Message)
+	if len(keys) == 0 {
+		return nil
+	}
+	moved, err := q.MoveFixedTickets(ctx, keys)
+	if err != nil {
+		return err
+	}
+	for _, m := range moved {
+		changes, err := json.Marshal(map[string]any{"status": map[string]string{"old": m.OldStatus, "new": m.NewStatus}, "commit": c.SHA})
+		if err != nil {
+			return err
+		}
+		if err := q.InsertAuditEvent(ctx, db.InsertAuditEventParams{Via: "webhook", Entity: "ticket", EntityID: m.ID, ProjectID: &m.ProjectID,
+			Action: "transition", Changes: changes}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
