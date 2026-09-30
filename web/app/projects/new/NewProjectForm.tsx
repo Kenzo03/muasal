@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { useProblemText, type Problem } from "@/lib/problem";
+import { suggestKey } from "@/lib/projects";
 import { button, cx, field } from "@/lib/ui";
 
 // templates are the projects a new one can copy its statuses and module tree from.
@@ -13,6 +14,8 @@ export default function NewProjectForm({ templates }: { templates: { key: string
   const problemText = useProblemText();
   const router = useRouter();
   const [problem, setProblem] = useState<Problem>();
+  const [key, setKey] = useState("");
+  const typed = useRef(false); // MSL-36: the key follows the name until the user types one
   // The fields the server rejected get a red border.
   const bad = (name: string) => problem?.errors?.some((e) => e.field === name) || undefined;
 
@@ -40,6 +43,11 @@ export default function NewProjectForm({ templates }: { templates: { key: string
           {/* The browser checks the server's rule first and points at this field. */}
           <input
             name="key"
+            value={key}
+            onChange={(e) => {
+              typed.current = e.target.value !== "";
+              setKey(e.target.value);
+            }}
             required
             maxLength={10}
             pattern="[A-Za-z][A-Za-z0-9]{1,9}"
@@ -51,7 +59,14 @@ export default function NewProjectForm({ templates }: { templates: { key: string
         </label>
         <label className={field.label}>
           {t("name")}
-          <input name="name" required maxLength={200} aria-invalid={bad("name")} className={field.input} />
+          <input
+            name="name"
+            required
+            maxLength={200}
+            onChange={(e) => !typed.current && setKey(suggestKey(e.target.value))}
+            aria-invalid={bad("name")}
+            className={field.input}
+          />
         </label>
       </div>
       <p id="key-hint" className={cx(field.hint, "-mt-2")}>{t("keyHint")}</p>

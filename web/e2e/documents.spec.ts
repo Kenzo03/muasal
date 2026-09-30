@@ -64,7 +64,8 @@ test("an admin drafts the module tree from a PDF", async ({ page }) => {
       { text: "Overtime is paid at one and a half times the hourly rate.", size: 11 },
     ]),
   });
-  await expect(page.getByLabel("Judul", { exact: true })).toHaveValue("payroll-fsd");
+  // MSL-36: the file name first, then the document's first heading.
+  await expect(page.getByLabel("Judul", { exact: true })).toHaveValue("Payroll FSD");
   await page.getByRole("button", { name: "Unggah" }).click();
 
   await page.waitForURL(/\/documents\/F[A-Z0-9]+-DOC1$/);

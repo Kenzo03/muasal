@@ -15,3 +15,16 @@ export function matchProjects<T extends { key: string; name: string }>(projects:
   const s = q.trim().toLowerCase();
   return s ? projects.filter((p) => p.name.toLowerCase().includes(s) || p.key.toLowerCase().includes(s)) : projects;
 }
+
+/**
+ * A key for a new project's name, suggested while the key is untouched
+ * (MSL-36): an acronym in the name ("Arunika DMS" → DMS), else the words'
+ * initials, else the one word's first four letters; "" when none fits.
+ */
+export function suggestKey(name: string): string {
+  const words = name.normalize("NFD").replace(/[^A-Za-z0-9]+/g, " ").trim().split(" ").filter(Boolean);
+  const acronym = words.filter((w) => /^[A-Z][A-Z0-9]{2,9}$/.test(w)).pop();
+  const key = (acronym ?? (words.length > 1 ? words.map((w) => w[0]).join("") : (words[0] ?? "").slice(0, 4))).toUpperCase();
+  const k = key.replace(/^[0-9]+/, "").slice(0, 10);
+  return k.length >= 2 ? k : "";
+}
