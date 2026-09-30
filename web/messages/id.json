@@ -1146,6 +1146,9 @@
     "byline": "Oleh {name} · diperbarui {at}",
     "actionItems": "Tindak lanjut",
     "createTicket": "Buat tiket",
+    "createAll": "Buat semua {count} tiket",
+    "creating": "Membuat {done} dari {total}…",
+    "createFailed": "Tidak dibuat:",
     "actionReason": "Tindak lanjut dari notulen {key}: {title}",
     "bodyHint": "Tulis tindak lanjut sebagai daftar, mis. \"- Bayu: rancang penanda, paling lambat 10 Okt\". Tiap butir bisa dijadikan tiket dari halaman notulen."
   },
