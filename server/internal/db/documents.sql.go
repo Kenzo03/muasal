@@ -763,6 +763,71 @@ func (q *Queries) SaveTreeDraft(ctx context.Context, arg SaveTreeDraftParams) er
 	return err
 }
 
+const searchSections = `-- name: SearchSections :many
+SELECT d.key AS document_key, d.title AS document_title, p.key AS project_key, s.number, s.title, s.body,
+       (d.superseded_by IS NOT NULL)::boolean AS superseded
+FROM document_sections s
+JOIN documents d ON d.id = s.document_id
+JOIN projects p ON p.id = d.project_id
+WHERE d.archived_at IS NULL
+  AND ($1::boolean OR EXISTS (
+        SELECT 1 FROM memberships m
+        WHERE m.user_id = $2::bigint AND m.project_id = d.project_id
+          AND (m.all_clients OR d.client_id IS NULL OR EXISTS (
+                SELECT 1 FROM membership_clients mc
+                WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = d.client_id))))
+  AND (s.title ILIKE '%' || $3::text || '%'
+       OR to_tsvector('simple', s.title || ' ' || s.body) @@ websearch_to_tsquery('simple', $3::text))
+ORDER BY d.superseded_by IS NOT NULL, d.id DESC, s.position
+LIMIT 20
+`
+
+type SearchSectionsParams struct {
+	IsAdmin bool
+	UserID  int64
+	Q       string
+}
+
+type SearchSectionsRow struct {
+	DocumentKey   string
+	DocumentTitle string
+	ProjectKey    string
+	Number        string
+	Title         string
+	Body          string
+	Superseded    bool
+}
+
+// Document sections the user may see (R-AC-2, R-AC-3), by words in their
+// heading or text (MSL-15): current documents first, then newest.
+func (q *Queries) SearchSections(ctx context.Context, arg SearchSectionsParams) ([]SearchSectionsRow, error) {
+	rows, err := q.db.Query(ctx, searchSections, arg.IsAdmin, arg.UserID, arg.Q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SearchSectionsRow
+	for rows.Next() {
+		var i SearchSectionsRow
+		if err := rows.Scan(
+			&i.DocumentKey,
+			&i.DocumentTitle,
+			&i.ProjectKey,
+			&i.Number,
+			&i.Title,
+			&i.Body,
+			&i.Superseded,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const setDocumentSupersededBy = `-- name: SetDocumentSupersededBy :exec
 UPDATE documents SET superseded_by = $1 WHERE id = $2
 `

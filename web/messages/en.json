@@ -68,7 +68,9 @@
     "short": "Type at least 2 characters.",
     "aliases": "Also called: {aliases}",
     "core": "Core",
-    "notes": "Decision notes"
+    "notes": "Decision notes",
+    "documents": "Documents",
+    "superseded": "older version"
   },
   "home": {
     "title": "Home",

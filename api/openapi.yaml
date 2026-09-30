@@ -3036,8 +3036,12 @@ components:
         url: { type: string, nullable: true }
     SearchResults:
       type: object
-      required: [tickets, nodes, notes]
+      required: [tickets, nodes, notes, sections]
       properties:
+        sections:
+          type: array
+          description: Document sections by words in their heading or text (MSL-15).
+          items: { $ref: "#/components/schemas/SearchSection" }
         tickets:
           type: array
           items: { $ref: "#/components/schemas/SearchTicket" }
@@ -3047,6 +3051,17 @@ components:
         nodes:
           type: array
           items: { $ref: "#/components/schemas/SearchNode" }
+    SearchSection:
+      type: object
+      required: [document_key, document_title, project_key, number, title, excerpt, superseded]
+      properties:
+        document_key: { type: string }
+        document_title: { type: string }
+        project_key: { type: string }
+        number: { type: string, example: "3.2" }
+        title: { type: string }
+        excerpt: { type: string, description: Plain text around the first match. }
+        superseded: { type: boolean, description: A newer document replaced this one. }
     SearchNote:
       type: object
       required: [key, title, project_key, decided_on]

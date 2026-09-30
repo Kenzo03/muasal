@@ -332,3 +332,26 @@ func TestDocumentTreeFromTheModelAndAskCitesIt(t *testing.T) {
 		t.Fatalf("Ask did not cite the section: %+v %v", claim, events)
 	}
 }
+
+// MSL-15: search finds words that only a document's text holds, with an
+// excerpt, and never shows a member another client's document.
+func TestSearchFindsDocumentText(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e) // the PM sees Client A only
+	lead, leadUser := e.signedIn("lead@example.com", false)
+	e.seedMember(leadUser, w.p, "admin")
+	e.uploadDoc(lead, map[string]string{"title": "HRIS FSD", "markdown": hrisFSD, "client_id": strconv.FormatInt(w.a.ID, 10)}, "fsd.md", hrisFSD)
+	var found httpapi.SearchResults
+	if code := e.call(w.pm, http.MethodGet, "/search?q=leave+each+employee", nil, &found); code != http.StatusOK || len(found.Sections) != 1 ||
+		found.Sections[0].DocumentKey != "HRIS-DOC1" || !strings.Contains(found.Sections[0].Excerpt, "leave each employee") {
+		t.Fatalf("search: %d %+v", code, found.Sections)
+	}
+	e.uploadDoc(lead, map[string]string{"title": "Client B manual", "markdown": "# Manual\n\n## Exports\n\nThe zebra export runs nightly.", "client_id": strconv.FormatInt(w.b.ID, 10)}, "b.md",
+		"# Manual\n\n## Exports\n\nThe zebra export runs nightly.")
+	if e.call(w.pm, http.MethodGet, "/search?q=zebra", nil, &found); len(found.Sections) != 0 {
+		t.Fatalf("a Client A member sees Client B's document: %+v", found.Sections)
+	}
+	if e.call(lead, http.MethodGet, "/search?q=zebra", nil, &found); len(found.Sections) != 1 {
+		t.Fatalf("the lead: %+v", found.Sections)
+	}
+}

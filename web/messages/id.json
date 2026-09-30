@@ -68,7 +68,9 @@
     "short": "Ketik minimal 2 karakter.",
     "aliases": "Alias: {aliases}",
     "core": "Inti",
-    "notes": "Notulen keputusan"
+    "notes": "Notulen keputusan",
+    "documents": "Dokumen",
+    "superseded": "versi lama"
   },
   "home": {
     "title": "Beranda",

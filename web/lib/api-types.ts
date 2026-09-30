@@ -2607,9 +2607,23 @@ export interface components {
             url?: string | null;
         };
         SearchResults: {
+            /** @description Document sections by words in their heading or text (MSL-15). */
+            sections: components["schemas"]["SearchSection"][];
             tickets: components["schemas"]["SearchTicket"][];
             notes: components["schemas"]["SearchNote"][];
             nodes: components["schemas"]["SearchNode"][];
+        };
+        SearchSection: {
+            document_key: string;
+            document_title: string;
+            project_key: string;
+            /** @example 3.2 */
+            number: string;
+            title: string;
+            /** @description Plain text around the first match. */
+            excerpt: string;
+            /** @description A newer document replaced this one. */
+            superseded: boolean;
         };
         SearchNote: {
             key: string;

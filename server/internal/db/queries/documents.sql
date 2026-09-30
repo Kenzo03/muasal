@@ -160,3 +160,23 @@ WHERE d.project_id = sqlc.arg('project_id') AND d.archived_at IS NULL
   AND (sqlc.narg('to_date')::date IS NULL OR d.created_at < sqlc.narg('to_date')::date + 1)
 ORDER BY d.superseded_by IS NOT NULL, d.created_at DESC, d.id DESC, s.position
 LIMIT 100;
+
+-- name: SearchSections :many
+-- Document sections the user may see (R-AC-2, R-AC-3), by words in their
+-- heading or text (MSL-15): current documents first, then newest.
+SELECT d.key AS document_key, d.title AS document_title, p.key AS project_key, s.number, s.title, s.body,
+       (d.superseded_by IS NOT NULL)::boolean AS superseded
+FROM document_sections s
+JOIN documents d ON d.id = s.document_id
+JOIN projects p ON p.id = d.project_id
+WHERE d.archived_at IS NULL
+  AND (sqlc.arg('is_admin')::boolean OR EXISTS (
+        SELECT 1 FROM memberships m
+        WHERE m.user_id = sqlc.arg('user_id')::bigint AND m.project_id = d.project_id
+          AND (m.all_clients OR d.client_id IS NULL OR EXISTS (
+                SELECT 1 FROM membership_clients mc
+                WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = d.client_id))))
+  AND (s.title ILIKE '%' || sqlc.arg('q')::text || '%'
+       OR to_tsvector('simple', s.title || ' ' || s.body) @@ websearch_to_tsquery('simple', sqlc.arg('q')::text))
+ORDER BY d.superseded_by IS NOT NULL, d.id DESC, s.position
+LIMIT 20;

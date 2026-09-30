@@ -2311,9 +2311,29 @@ type SearchNote struct {
 
 // SearchResults defines model for SearchResults.
 type SearchResults struct {
-	Nodes   []SearchNode   `json:"nodes"`
-	Notes   []SearchNote   `json:"notes"`
-	Tickets []SearchTicket `json:"tickets"`
+	Nodes []SearchNode `json:"nodes"`
+	Notes []SearchNote `json:"notes"`
+
+	// Sections Document sections by words in their heading or text (MSL-15).
+	Sections []SearchSection `json:"sections"`
+	Tickets  []SearchTicket  `json:"tickets"`
+}
+
+// SearchSection defines model for SearchSection.
+type SearchSection struct {
+	DocumentKey   string `json:"document_key"`
+	DocumentTitle string `json:"document_title"`
+
+	// Excerpt Plain text around the first match.
+	Excerpt string `json:"excerpt"`
+
+	// Number Example: 3.2
+	Number     string `json:"number"`
+	ProjectKey string `json:"project_key"`
+
+	// Superseded A newer document replaced this one.
+	Superseded bool   `json:"superseded"`
+	Title      string `json:"title"`
 }
 
 // SearchTicket defines model for SearchTicket.

@@ -36,16 +36,18 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const tickets = res?.tickets ?? [];
   const nodes = res?.nodes ?? [];
   const notes = res?.notes ?? [];
+  const sections = res?.sections ?? []; // MSL-15: words in documents too
   if (notes[0]?.key === query.toUpperCase() && tickets[0]?.key !== query.toUpperCase()) redirect(`/notes/${notes[0].key}`);
   if (tickets[0]?.key === query.toUpperCase()) redirect(`/t/${tickets[0].key}`);
-  const showNodes = kind !== "tickets" && kind !== "notes";
-  const showTickets = kind !== "nodes" && kind !== "notes";
-  const showNotes = kind !== "nodes" && kind !== "tickets";
+  const shows = (k: string) => !kind || kind === k;
+  const [showNodes, showTickets, showNotes, showSections] = [shows("nodes"), shows("tickets"), shows("notes"), shows("documents")];
+  const total = nodes.length + tickets.length + notes.length + sections.length;
   const kinds: [string | undefined, string, number][] = [
-    [undefined, t("all"), nodes.length + tickets.length + notes.length],
+    [undefined, t("all"), total],
     ["nodes", t("nodes"), nodes.length],
     ["tickets", t("tickets"), tickets.length],
     ["notes", t("notes"), notes.length],
+    ["documents", t("documents"), sections.length],
   ];
 
   // Each result is a row of a list card; the tile on its left says what it is.
@@ -61,7 +63,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         </div>
       </PageBar>
       <main className="flex max-w-[1040px] flex-col gap-5 px-4 py-4 md:px-5">
-        {query.length < 2 || nodes.length + tickets.length + notes.length === 0 ? (
+        {query.length < 2 || total === 0 ? (
           <div className={cx(panel, "flex flex-col items-center gap-2.5 px-6 py-12 text-center")}>
             <span className="flex size-11 items-center justify-center rounded-full bg-well text-muted">
               <Icon name="search" className="size-5" />
@@ -152,6 +154,33 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                           </span>
                         </span>
                         <span className={project}>{n.project_key}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+            {showSections && sections.length > 0 && (
+              <section aria-labelledby="documents-title" className="flex flex-col gap-2">
+                <h2 id="documents-title" className={sectionTitle}>{t("documents")}</h2>
+                <ul className={cx(panel, "flex flex-col gap-0.5 p-1.5")}>
+                  {sections.map((sec) => (
+                    <li key={`${sec.document_key}/${sec.number}`}>
+                      <Link href={`/documents/${sec.document_key}#s-${sec.number}`} className={row}>
+                        <span className={tile}>
+                          <Icon name="file" />
+                        </span>
+                        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <span className="text-sm font-semibold">
+                            <Highlight text={sec.number.startsWith("s") ? sec.title : `${sec.number} ${sec.title}`} q={query} />
+                          </span>
+                          <span className="text-xs text-muted">
+                            <span className="font-bold">{sec.document_key}</span> · {sec.document_title}
+                            {sec.superseded && <> · {t("superseded")}</>}
+                          </span>
+                          <span className="text-xs text-ink-soft"><Highlight text={sec.excerpt} q={query} /></span>
+                        </span>
+                        <span className={project}>{sec.project_key}</span>
                       </Link>
                     </li>
                   ))}
