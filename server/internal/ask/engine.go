@@ -213,7 +213,7 @@ func (e *Engine) Ask(ctx context.Context, r Request, sink Sink) (Result, error) 
 	logRow.llmCalled = true
 	genCtx, cancel := context.WithTimeout(ctx, time.Duration(s.TimeoutSeconds)*time.Second)
 	body, err := chat.ChatStream(genCtx, llm.ChatRequest{
-		System: System(res.Language), User: User(r.Question, text, fu.conversation), Schema: Schema(packed),
+		System: System(res.Language), User: User(r.Question, text, fu.conversation, today), Schema: Schema(packed),
 		Temperature: s.Temperature, MaxTokens: 600, Seed: e.Seed,
 	})
 	if err == nil {
