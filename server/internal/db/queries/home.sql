@@ -118,3 +118,11 @@ WHERE s.category IN ('todo', 'in_progress')
         WHERE m.user_id = sqlc.arg('user_id')::bigint AND m.project_id = t.project_id AND m.role = 'admin'))
 GROUP BY p.id, p.key, p.name
 ORDER BY p.key;
+
+-- name: SetupStatus :one
+-- How far a new server is set up, for Home's checklist (MSL-18).
+SELECT (SELECT count(*) FROM users WHERE disabled_at IS NULL) > 1 AS invited,
+       EXISTS (SELECT 1 FROM projects) AS project,
+       EXISTS (SELECT 1 FROM nodes) AS tree,
+       EXISTS (SELECT 1 FROM tickets) AS history,
+       coalesce((SELECT key FROM projects ORDER BY id LIMIT 1), '')::text AS first_project;

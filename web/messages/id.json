@@ -130,6 +130,15 @@
       "weakReason": "{count} alasan lemah",
       "noMenu": "{count} tanpa menu",
       "stale": "{count} tidak bergerak 7+ hari"
+    },
+    "setup": {
+      "title": "Siapkan Muasal",
+      "hint": "Lima langkah sebelum tim mulai memakai Muasal setiap hari.",
+      "ai": "Pilih mode AI dan uji koneksinya",
+      "invited": "Undang tim dan bagikan tautan pengaturannya",
+      "project": "Buat proyek pertama",
+      "tree": "Susun pohon modul dari dokumen spesifikasi, CSV, atau manual",
+      "history": "Masukkan riwayat tiket: impor Jira atau CSV, atau catat 20–50 permintaan terakhir"
     }
   },
   "profile": {
@@ -369,7 +378,9 @@
       "end": "{name} diletakkan di {target}.",
       "cancel": "Pemindahan dibatalkan."
     },
-    "importCsv": "Impor CSV"
+    "importCsv": "Impor CSV",
+    "emptyFromDocument": "Susun draf dari dokumen spesifikasi",
+    "emptyFromCSV": "Impor CSV"
   },
   "nodePage": {
     "path": "Jejak",

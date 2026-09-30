@@ -119,6 +119,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description System admins only. How far this server is set up, for Home's first-run checklist (MSL-18): AI chosen, a second user, a project, a module tree and some tickets. */
+        get: operations["getSetupStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/attention": {
         parameters: {
             query?: never;
@@ -3285,6 +3302,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecentTicketList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getSetupStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The steps and whether each is done. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ai: boolean;
+                        invited: boolean;
+                        project: boolean;
+                        tree: boolean;
+                        history: boolean;
+                        /** @description The oldest project's key */
+                        first_project: string;
+                    };
                 };
             };
             default: components["responses"]["Problem"];

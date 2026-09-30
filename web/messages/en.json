@@ -130,6 +130,15 @@
       "weakReason": "{count, plural, one {# weak reason} other {# weak reasons}}",
       "noMenu": "{count, plural, one {# without a menu} other {# without a menu}}",
       "stale": "{count} unchanged for 7+ days"
+    },
+    "setup": {
+      "title": "Set up Muasal",
+      "hint": "Five steps before the team uses Muasal every day.",
+      "ai": "Choose an AI mode and test it",
+      "invited": "Invite the team and share their setup links",
+      "project": "Create the first project",
+      "tree": "Build the module tree from a spec, a CSV or by hand",
+      "history": "Bring in ticket history: import from Jira or CSV, or log the last 20–50 requests"
     }
   },
   "profile": {
@@ -369,7 +378,9 @@
       "end": "Dropped {name} at {target}.",
       "cancel": "Move cancelled."
     },
-    "importCsv": "Import CSV"
+    "importCsv": "Import CSV",
+    "emptyFromDocument": "Draft it from a specification",
+    "emptyFromCSV": "Import a CSV"
   },
   "nodePage": {
     "path": "Path",

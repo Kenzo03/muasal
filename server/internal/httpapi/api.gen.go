@@ -3304,6 +3304,9 @@ type ServerInterface interface {
 	// (PUT /admin/settings/ai)
 	UpdateAISettings(w http.ResponseWriter, r *http.Request)
 
+	// (GET /admin/setup)
+	GetSetupStatus(w http.ResponseWriter, r *http.Request)
+
 	// (GET /admin/system/status)
 	GetSystemStatus(w http.ResponseWriter, r *http.Request)
 
@@ -4029,6 +4032,20 @@ func (siw *ServerInterfaceWrapper) UpdateAISettings(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateAISettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSetupStatus operation middleware
+func (siw *ServerInterfaceWrapper) GetSetupStatus(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSetupStatus(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -7087,6 +7104,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/me", wrapper.UpdateMe)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/tickets", wrapper.ListMyTickets)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/updates", wrapper.ListMyUpdates)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/setup", wrapper.GetSetupStatus)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/attention", wrapper.ListMyAttention)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/tokens", wrapper.ListTokens)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/me/tokens", wrapper.CreateToken)

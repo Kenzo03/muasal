@@ -134,6 +134,29 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/RecentTicketList" }
         default: { $ref: "#/components/responses/Problem" }
+  /admin/setup:
+    get:
+      operationId: getSetupStatus
+      tags: [admin]
+      description: >-
+        System admins only. How far this server is set up, for Home's first-run checklist (MSL-18): AI chosen, a
+        second user, a project, a module tree and some tickets.
+      responses:
+        "200":
+          description: The steps and whether each is done.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ai, invited, project, tree, history, first_project]
+                properties:
+                  ai: { type: boolean }
+                  invited: { type: boolean }
+                  project: { type: boolean }
+                  tree: { type: boolean }
+                  history: { type: boolean }
+                  first_project: { type: string, description: The oldest project's key, or empty. }
+        default: { $ref: "#/components/responses/Problem" }
   /me/attention:
     get:
       operationId: listMyAttention

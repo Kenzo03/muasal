@@ -174,3 +174,30 @@ func TestHomeNeedsAttentionForProjectAdmins(t *testing.T) {
 		t.Fatalf("a member: %d %+v", code, got)
 	}
 }
+
+// MSL-18: a fresh server's checklist starts empty and ticks off as the admin
+// chooses AI, invites someone, and makes a project, its tree and tickets.
+func TestSetupChecklist(t *testing.T) {
+	e := newEnv(t)
+	admin, au := e.signedIn("admin@example.com", true)
+	type status struct {
+		AI, Invited, Project, Tree, History bool
+		FirstProject                        string `json:"first_project"`
+	}
+	var st status
+	if code := e.call(admin, http.MethodGet, "/admin/setup", nil, &st); code != http.StatusOK || st != (status{}) {
+		t.Fatalf("fresh: %d %+v", code, st)
+	}
+	p := e.seedProject("HRIS")
+	node := e.seedNode(p, nil, "module", "HR")
+	e.seedTicket(p, au, "First request", nil, node)
+	member, mu := e.signedIn("budi@example.com", false)
+	e.seedMember(mu, p, "member")
+	e.localAI(admin)
+	if e.call(admin, http.MethodGet, "/admin/setup", nil, &st); st != (status{true, true, true, true, true, "HRIS"}) {
+		t.Fatalf("set up: %+v", st)
+	}
+	if code := e.call(member, http.MethodGet, "/admin/setup", nil, nil); code != http.StatusForbidden {
+		t.Fatalf("a member: %d", code)
+	}
+}

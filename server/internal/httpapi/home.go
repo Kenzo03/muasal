@@ -7,6 +7,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/kenzo03/muasal/server/internal/ai"
 	"github.com/kenzo03/muasal/server/internal/db"
 )
 
@@ -102,6 +103,32 @@ func (s *Server) ListMyAttention(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+// GetSetupStatus tells a system admin how far the server is set up, for
+// Home's first-run checklist (MSL-18).
+func (s *Server) GetSetupStatus(w http.ResponseWriter, r *http.Request) {
+	u := s.requireUser(w, r)
+	if u == nil {
+		return
+	}
+	if !u.IsAdmin {
+		writeProblem(w, http.StatusForbidden, "forbidden", "Only system admins see this")
+		return
+	}
+	ctx := r.Context()
+	st, err := s.q.SetupStatus(ctx)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	settings, err := s.ai.Store.Get(ctx)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ai": settings.Mode != ai.ModeOff, "invited": st.Invited, "project": st.Project,
+		"tree": st.Tree, "history": st.History, "first_project": st.FirstProject})
 }
 
 // ListMyUpdates serves Home's Recently updated (FSD §6.4): the tickets the

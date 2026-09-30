@@ -35,6 +35,35 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
     api.GET("/me/attention"),
   ]);
   const watch = attention.data?.items ?? [];
+  // MSL-18: a new server's checklist, for system admins until every step is done.
+  const setup = me.is_admin ? (await api.GET("/admin/setup")).data : undefined;
+  const steps = setup
+    ? ([
+        ["ai", setup.ai, "/admin/ai"],
+        ["invited", setup.invited, "/admin/users"],
+        ["project", setup.project, "/projects/new"],
+        ["tree", setup.tree, setup.first_project ? `/p/${setup.first_project}/documents` : "/projects/new"],
+        ["history", setup.history, "/admin/imports"],
+      ] as const)
+    : [];
+  const checklist = steps.some(([, done]) => !done) && (
+    <section aria-labelledby="setup-title" className={cx(panel, "mx-4 mb-2 flex flex-col gap-3 px-5 py-4 md:mx-5")}>
+      <div className="flex flex-col gap-0.5">
+        <h2 id="setup-title" className="text-base font-extrabold">{t("setup.title")}</h2>
+        <span className="text-[13px] text-muted">{t("setup.hint")}</span>
+      </div>
+      <ol className="flex flex-col gap-1.5">
+        {steps.map(([name, done, href]) => (
+          <li key={name} className="flex items-center gap-2.5 text-[13.5px]">
+            <span className={cx("flex size-5 shrink-0 items-center justify-center rounded-full", done ? "bg-ok-soft text-ok" : "bg-well text-muted")}>
+              {done && <Icon name="check" className="size-3.5" />}
+            </span>
+            {done ? <span className="text-muted line-through">{t(`setup.${name}`)}</span> : <Link href={href}>{t(`setup.${name}`)}</Link>}
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
   const items = mine.data?.items ?? [];
   const counts = mine.data?.counts ?? { all: 0, overdue: 0, week: 0, incomplete: 0 };
   const perProject = new Map((mine.data?.projects ?? []).map((p) => [p.key, p.open]));
@@ -83,6 +112,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
           </Link>
         )}
       </div>
+      {checklist}
       {projects.length === 0 ? (
         <main className="p-4 md:p-5">
           <p className="text-muted">{me.is_admin ? t("noProjectsAdmin") : t("noProjects")}</p>

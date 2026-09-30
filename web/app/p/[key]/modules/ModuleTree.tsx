@@ -435,7 +435,16 @@ export default function ModuleTree({ projectKey, nodes, clients, canEdit, showAr
         </div>
         <div className="py-2 text-[13.5px]">
           {nodes.length === 0 ? (
-            <p className="px-4 py-6 text-center text-muted">{canEdit ? t("emptyAdmin") : t("empty")}</p>
+            <div className="flex flex-col items-center gap-2 px-4 py-6 text-center text-muted">
+              <p>{canEdit ? t("emptyAdmin") : t("empty")}</p>
+              {/* MSL-18: the faster ways in, not only adding by hand. */}
+              {canEdit && (
+                <p className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-[13px]">
+                  <Link href={`/p/${projectKey}/documents`}>{t("emptyFromDocument")}</Link>
+                  <Link href={`/p/${projectKey}/modules/import`}>{t("emptyFromCSV")}</Link>
+                </p>
+              )}
+            </div>
           ) : (
             <DndContext
               sensors={sensors}

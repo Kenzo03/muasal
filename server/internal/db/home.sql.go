@@ -394,3 +394,33 @@ func (q *Queries) ListRecentTickets(ctx context.Context, arg ListRecentTicketsPa
 	}
 	return items, nil
 }
+
+const setupStatus = `-- name: SetupStatus :one
+SELECT (SELECT count(*) FROM users WHERE disabled_at IS NULL) > 1 AS invited,
+       EXISTS (SELECT 1 FROM projects) AS project,
+       EXISTS (SELECT 1 FROM nodes) AS tree,
+       EXISTS (SELECT 1 FROM tickets) AS history,
+       coalesce((SELECT key FROM projects ORDER BY id LIMIT 1), '')::text AS first_project
+`
+
+type SetupStatusRow struct {
+	Invited      bool
+	Project      bool
+	Tree         bool
+	History      bool
+	FirstProject string
+}
+
+// How far a new server is set up, for Home's checklist (MSL-18).
+func (q *Queries) SetupStatus(ctx context.Context) (SetupStatusRow, error) {
+	row := q.db.QueryRow(ctx, setupStatus)
+	var i SetupStatusRow
+	err := row.Scan(
+		&i.Invited,
+		&i.Project,
+		&i.Tree,
+		&i.History,
+		&i.FirstProject,
+	)
+	return i, err
+}
