@@ -98,3 +98,26 @@ func TestHeadingName(t *testing.T) {
 		}
 	}
 }
+
+// MSL-46: a capitals-only ID is a module's code when other IDs start with it,
+// both from headings and when matching the model's names; "(PDF)" is not.
+func TestNameInAndModuleCodes(t *testing.T) {
+	sections := []Section{
+		{Number: "1", Level: 2, Title: "Absensi (ATT)"},
+		{Number: "1.1", Level: 3, Title: "Clock In dan Clock Out (ATT-01)"},
+		{Number: "1.2", Level: 3, Title: "Upload Foto (PDF)"},
+	}
+	prefixes := Prefixes(sections)
+	for title, want := range map[string][2]string{"Absensi (ATT)": {"Absensi", "ATT"}, "Upload Foto (PDF)": {"Upload Foto (PDF)", ""}} {
+		if n, id := NameIn(title, prefixes); n != want[0] || id != want[1] {
+			t.Errorf("%q: %q %q", title, n, id)
+		}
+	}
+	if n, id := SectionFor(sections, "Absensi"); n != "1" || id != "ATT" {
+		t.Errorf("SectionFor: %q %q", n, id)
+	}
+	got := FromHeadings(sections)
+	if len(got) != 3 || got[0].Path[0] != "Absensi" || got[0].Code != "ATT" || got[1].Code != "ATT-01" || got[2].Path[1] != "Upload Foto (PDF)" {
+		t.Fatalf("from headings: %+v", got)
+	}
+}
