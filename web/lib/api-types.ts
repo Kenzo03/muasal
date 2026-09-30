@@ -423,6 +423,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{key}/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description Project admins only. How far the project is set up, for the checklist on its board (MSL-48). */
+        get: operations["getProjectSetup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{key}/member-candidates": {
         parameters: {
             query?: never;
@@ -1706,6 +1725,20 @@ export interface components {
             role: components["schemas"]["ProjectRole"];
             all_clients: boolean;
             client_ids: number[];
+        };
+        ProjectSetup: {
+            /** @description A client is linked. */
+            clients: boolean;
+            /** @description Someone besides the creator is a member. */
+            team: boolean;
+            /** @description A specification is uploaded. */
+            documents: boolean;
+            /** @description The module tree has a node. */
+            tree: boolean;
+            /** @description There is a ticket. */
+            tickets: boolean;
+            /** @description A repository is connected (optional). */
+            repos: boolean;
         };
         Person: {
             /** Format: int64 */
@@ -3923,6 +3956,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MemberList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getProjectSetup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Each step and whether it is done. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectSetup"];
                 };
             };
             default: components["responses"]["Problem"];

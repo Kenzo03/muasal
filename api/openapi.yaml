@@ -496,6 +496,20 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/MemberList" }
         default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/setup:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getProjectSetup
+      tags: [projects]
+      description: Project admins only. How far the project is set up, for the checklist on its board (MSL-48).
+      responses:
+        "200":
+          description: Each step and whether it is done.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProjectSetup" }
+        default: { $ref: "#/components/responses/Problem" }
   /projects/{key}/member-candidates:
     parameters:
       - { name: key, in: path, required: true, schema: { type: string } }
@@ -2084,6 +2098,16 @@ components:
         client_ids:
           type: array
           items: { type: integer, format: int64 }
+    ProjectSetup:
+      type: object
+      required: [clients, team, documents, tree, tickets, repos]
+      properties:
+        clients: { type: boolean, description: A client is linked. }
+        team: { type: boolean, description: Someone besides the creator is a member. }
+        documents: { type: boolean, description: A specification is uploaded. }
+        tree: { type: boolean, description: The module tree has a node. }
+        tickets: { type: boolean, description: There is a ticket. }
+        repos: { type: boolean, description: A repository is connected (optional). }
     Person:
       type: object
       required: [id, name, email]
