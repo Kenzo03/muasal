@@ -41,7 +41,8 @@ func (s *Server) ListTickets(w http.ResponseWriter, r *http.Request, key string,
 		MissingMenus:  params.Missing != nil && *params.Missing == ListTicketsParamsMissingMenus,
 		WeakReason:    params.Missing != nil && *params.Missing == ListTicketsParamsMissingWeakReason,
 		ClosedDays:    params.ClosedDays, StaleDays: params.StaleDays, Today: s.today(pc.user),
-		Lim: int32(limit + 1), Off: int32(offset),
+		Label: lowerPtr(params.Label),
+		Lim:   int32(limit + 1), Off: int32(offset),
 	}
 	if params.Category != nil {
 		filter.Category = ptr(string(*params.Category))
@@ -142,7 +143,7 @@ func toTicketSummary(t db.ListTicketsRow) TicketSummary {
 	out := TicketSummary{
 		Id: t.ID, Key: t.Key, Title: t.Title, Type: TicketType(t.Type), Priority: Priority(t.Priority),
 		StatusId: t.StatusID, RequesterName: t.RequesterName, NodeNames: orEmpty(t.NodeNames),
-		MissingReason: t.MissingReason, UpdatedAt: t.UpdatedAt,
+		MissingReason: t.MissingReason, UpdatedAt: t.UpdatedAt, Labels: &t.Labels,
 	}
 	if t.ChecklistTotal > 0 {
 		out.Checklist = &struct {
@@ -203,4 +204,36 @@ func csvSafe(v string) string {
 		return "'" + v
 	}
 	return v
+}
+
+// ListProjectLabels lists the labels a project's tickets use, most used first (MSL-56).
+func (s *Server) ListProjectLabels(w http.ResponseWriter, r *http.Request, key string) {
+	pc, ok := s.projectFor(w, r, key, access.Viewer)
+	if !ok {
+		return
+	}
+	rows, err := s.q.ListProjectLabels(r.Context(), pc.project.ID)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	type item struct {
+		Label string `json:"label"`
+		Uses  int    `json:"uses"`
+	}
+	out := struct {
+		Items []item `json:"items"`
+	}{Items: make([]item, len(rows))}
+	for i, r := range rows {
+		out.Items[i] = item{r.Label, int(r.Uses)}
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+func lowerPtr(s *string) *string {
+	if s == nil || strings.TrimSpace(*s) == "" {
+		return nil
+	}
+	l := strings.ToLower(strings.Join(strings.Fields(*s), " "))
+	return &l
 }

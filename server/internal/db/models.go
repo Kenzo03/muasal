@@ -409,6 +409,7 @@ type Ticket struct {
 	ExternalRef        *string
 	ExternalMeta       []byte
 	EstimateHours      *float64
+	Labels             []string
 }
 
 type TicketCommit struct {

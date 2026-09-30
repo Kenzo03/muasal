@@ -345,3 +345,38 @@ func TestChecklistProgressInTheList(t *testing.T) {
 	}
 	t.Fatalf("ticket not listed: %+v", page.Items)
 }
+
+// MSL-56: labels are normalised, filter the list, and the project lists them.
+func TestLabelsGroupTickets(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	file := func(title string, labels []string) (int, httpapi.Ticket) {
+		var tk httpapi.Ticket
+		code := e.call(w.pm, http.MethodPost, "/projects/HRIS/tickets", map[string]any{
+			"type": "feature", "title": title, "client_id": w.a.ID, "node_ids": []int64{w.ot.ID}, "labels": labels,
+		}, &tk)
+		return code, tk
+	}
+	if code, tk := file("Pilot accounts for 10 stores", []string{" Pilot ", "UAT", "pilot"}); code != http.StatusCreated ||
+		tk.Labels == nil || strings.Join(*tk.Labels, ",") != "pilot,uat" {
+		t.Fatalf("create: %d %+v", code, tk.Labels)
+	}
+	file("Migrate leave balances", []string{"migration", "pilot"})
+	file("Holiday calendar", nil)
+	if code, _ := file("Too many labels", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"}); code != http.StatusUnprocessableEntity {
+		t.Fatalf("eleven labels: %d", code)
+	}
+	var page httpapi.TicketPage
+	if e.call(w.pm, http.MethodGet, "/projects/HRIS/tickets?label=PILOT", nil, &page); len(page.Items) != 2 {
+		t.Fatalf("filter by label: %+v", page.Items)
+	}
+	var labels struct {
+		Items []struct {
+			Label string
+			Uses  int
+		}
+	}
+	if e.call(w.pm, http.MethodGet, "/projects/HRIS/labels", nil, &labels); len(labels.Items) != 3 || labels.Items[0].Label != "pilot" || labels.Items[0].Uses != 2 {
+		t.Fatalf("labels: %+v", labels.Items)
+	}
+}

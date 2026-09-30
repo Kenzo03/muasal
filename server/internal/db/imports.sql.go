@@ -71,7 +71,7 @@ VALUES ($1, $2, $3, $4, $5, $6,
         $7, $8, $9, $10, $11,
         $12, $13, $14, 'import', $15, $16,
         $17, $17, $18)
-RETURNING id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at, source, external_ref, external_meta, estimate_hours
+RETURNING id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at, source, external_ref, external_meta, estimate_hours, labels
 `
 
 type CreateImportedTicketParams struct {
@@ -143,6 +143,7 @@ func (q *Queries) CreateImportedTicket(ctx context.Context, arg CreateImportedTi
 		&i.ExternalRef,
 		&i.ExternalMeta,
 		&i.EstimateHours,
+		&i.Labels,
 	)
 	return i, err
 }
@@ -205,7 +206,7 @@ func (q *Queries) GetImportRun(ctx context.Context, id int64) (GetImportRunRow, 
 }
 
 const getTicketByExternalRef = `-- name: GetTicketByExternalRef :one
-SELECT id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at, source, external_ref, external_meta, estimate_hours FROM tickets WHERE project_id = $1 AND upper(external_ref) = upper($2)
+SELECT id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at, source, external_ref, external_meta, estimate_hours, labels FROM tickets WHERE project_id = $1 AND upper(external_ref) = upper($2)
 `
 
 type GetTicketByExternalRefParams struct {
@@ -241,6 +242,7 @@ func (q *Queries) GetTicketByExternalRef(ctx context.Context, arg GetTicketByExt
 		&i.ExternalRef,
 		&i.ExternalMeta,
 		&i.EstimateHours,
+		&i.Labels,
 	)
 	return i, err
 }
@@ -410,7 +412,7 @@ UPDATE tickets SET type = $1, title = $2, description = $3,
   status_id = $4, priority = $5, assignee_id = $6,
   external_meta = $7, closed_at = $8, version = version + 1, updated_at = now()
 WHERE id = $9
-RETURNING id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at, source, external_ref, external_meta, estimate_hours
+RETURNING id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at, source, external_ref, external_meta, estimate_hours, labels
 `
 
 type UpdateImportedTicketParams struct {
@@ -465,6 +467,7 @@ func (q *Queries) UpdateImportedTicket(ctx context.Context, arg UpdateImportedTi
 		&i.ExternalRef,
 		&i.ExternalMeta,
 		&i.EstimateHours,
+		&i.Labels,
 	)
 	return i, err
 }

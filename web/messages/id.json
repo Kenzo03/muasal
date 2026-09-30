@@ -543,7 +543,7 @@
     "urgent": "Mendesak"
   },
   "ticketFilters": {
-    "label": "Saring tiket",
+    "label": "Label",
     "filters": "Filter",
     "filtersSet": "Filter ({count})",
     "q": "Cari",
@@ -579,7 +579,8 @@
     "sortPriority": "Prioritas",
     "sortDue": "Tenggat",
     "apply": "Terapkan",
-    "reset": "Atur ulang"
+    "reset": "Atur ulang",
+    "anyLabel": "Label apa saja"
   },
   "board": {
     "newTicket": "Tiket baru",
@@ -679,7 +680,9 @@
     "bugBehaviors": "Bug, atau memang perilaku yang sudah disepakati? Lihat perilaku",
     "newIn": "Tiket baru di {project}",
     "close": "Tutup",
-    "estimate": "Estimasi (jam)"
+    "estimate": "Estimasi (jam)",
+    "labels": "Label",
+    "labelsHint": "Pisahkan dengan koma, mis. pilot, uat"
   },
   "ticket": {
     "edit": "Ubah",
@@ -703,7 +706,8 @@
     "path": "Jejak",
     "closed": "Ditutup",
     "estimate": "Estimasi",
-    "hours": "{hours} jam"
+    "hours": "{hours} jam",
+    "labels": "Label"
   },
   "close": {
     "title": "Tutup {key} sebagai {status}",

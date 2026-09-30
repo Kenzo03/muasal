@@ -36,7 +36,8 @@ type ticketInput struct {
 	AssigneeID  *int64
 	Priority    *Priority
 	DueDate     *openapi_types.Date
-	Estimate    *float64 // hours (MSL-54)
+	Estimate    *float64  // hours (MSL-54)
+	Labels      *[]string // MSL-56
 }
 
 func (s *Server) CreateTicket(w http.ResponseWriter, r *http.Request, key string, params CreateTicketParams) {
@@ -57,7 +58,7 @@ func (s *Server) CreateTicket(w http.ResponseWriter, r *http.Request, key string
 	draft, nodeIDs, fields, err := s.checkTicket(ctx, pc, ticketInput{
 		Type: in.Type, Title: in.Title, ClientID: in.ClientId, ContactID: in.RequesterContactId, UserID: in.RequesterUserId,
 		NodeIDs: in.NodeIds, Reason: in.Reason, Description: in.Description, AssigneeID: in.AssigneeId,
-		Priority: in.Priority, DueDate: in.DueDate, Estimate: in.EstimateHours,
+		Priority: in.Priority, DueDate: in.DueDate, Estimate: in.EstimateHours, Labels: in.Labels,
 	})
 	if err != nil {
 		s.fail(w, r, err)
@@ -193,7 +194,7 @@ func (s *Server) UpdateTicket(w http.ResponseWriter, r *http.Request, key string
 	draft, nodeIDs, fields, err := s.checkTicket(ctx, pc, ticketInput{
 		Type: in.Type, Title: in.Title, ClientID: in.ClientId, ContactID: in.RequesterContactId, UserID: in.RequesterUserId,
 		NodeIDs: in.NodeIds, Reason: in.Reason, Description: in.Description, AssigneeID: in.AssigneeId,
-		Priority: in.Priority, DueDate: in.DueDate, Estimate: in.EstimateHours,
+		Priority: in.Priority, DueDate: in.DueDate, Estimate: in.EstimateHours, Labels: in.Labels,
 	})
 	if err != nil {
 		s.fail(w, r, err)
@@ -220,7 +221,7 @@ func (s *Server) UpdateTicket(w http.ResponseWriter, r *http.Request, key string
 			ID: row.Ticket.ID, Version: version, Type: draft.Type, Title: draft.Title, Description: draft.Description,
 			Reason: draft.Reason, ClientID: draft.ClientID, RequesterContactID: draft.RequesterContactID,
 			RequesterUserID: draft.RequesterUserID, AssigneeID: draft.AssigneeID, Priority: draft.Priority, DueDate: draft.DueDate,
-			EstimateHours: draft.EstimateHours,
+			EstimateHours: draft.EstimateHours, Labels: draft.Labels,
 		})
 		if errors.Is(err, pgx.ErrNoRows) {
 			return errStale
@@ -477,6 +478,13 @@ func (s *Server) checkTicket(ctx context.Context, pc projectCtx, in ticketInput)
 	if in.DueDate != nil {
 		t.DueDate = &in.DueDate.Time
 	}
+	if in.Labels != nil {
+		labels, ok := normalLabels(*in.Labels)
+		if !ok {
+			f = append(f, FieldError{Field: "labels", Code: "invalid", Message: "Use up to 10 labels of 1 to 30 characters"})
+		}
+		t.Labels = labels
+	}
 	if in.Estimate != nil {
 		if *in.Estimate < 0 || *in.Estimate > 9999 {
 			f = append(f, FieldError{Field: "estimate_hours", Code: "invalid", Message: "Use 0 to 9,999 hours"})
@@ -609,6 +617,7 @@ func ticketFromRow(ctx context.Context, q *db.Queries, row db.GetTicketByKeyRow,
 		Status: toAPIStatus(row.Status), Reporter: Ref{Id: t.ReporterID, Name: row.ReporterName},
 		CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt, ClosedAt: t.ClosedAt, Decision: decision, Links: links, Code: code,
 		Nodes: make([]NodeRef, len(nodes)), Attachments: make([]Attachment, len(files)), EstimateHours: t.EstimateHours,
+		Labels: &t.Labels,
 	}
 	if t.ClientID != nil {
 		out.Client = &Ref{Id: *t.ClientID, Name: deref(row.ClientName)}
@@ -643,7 +652,7 @@ func ticketAudit(t Ticket) map[string]any {
 	m := map[string]any{
 		"title": t.Title, "type": string(t.Type), "priority": string(t.Priority), "reason": t.Reason,
 		"description": t.Description, "status": t.Status.Name, "requester": t.Requester.Name, "menus": menus,
-		"client": nil, "assignee": nil, "due_date": nil, "estimate_hours": t.EstimateHours,
+		"client": nil, "assignee": nil, "due_date": nil, "estimate_hours": t.EstimateHours, "labels": deref(t.Labels),
 	}
 	if t.Client != nil {
 		m["client"] = t.Client.Name
@@ -678,4 +687,20 @@ func ifMatch(w http.ResponseWriter, header string) (int32, bool) {
 		return 0, false
 	}
 	return int32(v), true
+}
+
+// normalLabels trims, lowercases and de-duplicates labels, keeping their order
+// (MSL-56); false when one is empty or over 30 characters, or there are over 10.
+func normalLabels(in []string) ([]string, bool) {
+	out := []string{}
+	for _, l := range in {
+		l = strings.ToLower(strings.Join(strings.Fields(l), " "))
+		if n := utf8.RuneCountInString(l); n == 0 || n > 30 {
+			return out, false
+		}
+		if !slices.Contains(out, l) {
+			out = append(out, l)
+		}
+	}
+	return out, len(out) <= 10
 }

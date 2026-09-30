@@ -496,6 +496,31 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/MemberList" }
         default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/labels:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listProjectLabels
+      tags: [tickets]
+      description: The labels the project's tickets use, most used first (MSL-56).
+      responses:
+        "200":
+          description: Labels with how many tickets carry each.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [label, uses]
+                      properties:
+                        label: { type: string }
+                        uses: { type: integer }
+        default: { $ref: "#/components/responses/Problem" }
   /projects/{key}/setup:
     parameters:
       - { name: key, in: path, required: true, schema: { type: string } }
@@ -877,6 +902,7 @@ paths:
         - { name: open, in: query, schema: { type: boolean }, description: Only To do and In progress statuses. }
         - { name: closed_days, in: query, schema: { type: integer, format: int32, minimum: 1 }, description: Closed tickets only when closed within this many days; the board asks for 14. }
         - { name: type, in: query, schema: { $ref: "#/components/schemas/TicketType" } }
+        - { name: label, in: query, schema: { type: string, maxLength: 30 }, description: Tickets with this label (MSL-56). }
         - { name: client_id, in: query, schema: { type: integer, format: int64 } }
         - { name: core, in: query, schema: { type: boolean }, description: Only core work (no client). }
         - { name: assignee_id, in: query, schema: { type: integer, format: int64 } }
@@ -2448,6 +2474,7 @@ components:
         priority: { $ref: "#/components/schemas/Priority" }
         due_date: { type: string, format: date, nullable: true }
         estimate_hours: { type: number, format: double, nullable: true, description: The effort estimate in hours (MSL-54). }
+        labels: { type: array, items: { type: string }, description: "Free-text labels, lowercased (MSL-56)." }
         nodes:
           type: array
           items: { $ref: "#/components/schemas/NodeRef" }
@@ -2482,6 +2509,7 @@ components:
         priority: { $ref: "#/components/schemas/Priority" }
         due_date: { type: string, format: date }
         estimate_hours: { type: number, format: double, minimum: 0, maximum: 9999, description: Hours of effort; omitted means no estimate (MSL-54). }
+        labels: { type: array, maxItems: 10, items: { type: string, maxLength: 30 }, description: "Up to 10 labels of 1 to 30 characters; omitted means none (MSL-56)." }
         status_id: { type: integer, format: int64, description: An open status; omitted means the project's default. }
         note_key: { type: string, description: "A decision note of this project the caller may see, e.g. HRIS-DN7: the ticket joins its tickets, as when filed from one of its action items (MSL-11)." }
     TicketUpdate:
@@ -2503,6 +2531,7 @@ components:
         priority: { $ref: "#/components/schemas/Priority" }
         due_date: { type: string, format: date }
         estimate_hours: { type: number, format: double, minimum: 0, maximum: 9999, description: Hours of effort; omitted means no estimate (MSL-54). }
+        labels: { type: array, maxItems: 10, items: { type: string, maxLength: 30 }, description: "Up to 10 labels of 1 to 30 characters; omitted means none (MSL-56)." }
     TransitionRequest:
       type: object
       required: [status_id]
@@ -2810,6 +2839,7 @@ components:
           type: array
           items: { type: string }
         missing_reason: { type: boolean }
+        labels: { type: array, items: { type: string } }
         checklist:
           type: object
           description: The description's task list, when it has one (MSL-55).

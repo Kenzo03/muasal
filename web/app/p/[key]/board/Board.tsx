@@ -167,6 +167,9 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, s
                     )}
                     <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
                       {showClients && <ClientChip client={c.client} coreLabel={t("noClient")} />}
+                      {c.labels?.map((l) => (
+                        <span key={l} className="rounded-full bg-well px-1.5 text-[11px] font-semibold text-ink-soft">{l}</span>
+                      ))}
                       {c.checklist && (
                         <span title={t("checklist")} className={c.checklist.done === c.checklist.total ? "font-semibold text-ok" : ""}>
                           ☑ {c.checklist.done}/{c.checklist.total}

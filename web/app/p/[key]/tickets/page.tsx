@@ -31,11 +31,12 @@ export default async function TicketsPage({
   const tPri = await getTranslations("priorities");
   const api = await serverApi();
   const path = { params: { path: { key } } };
-  const [clients, statuses, assignees, page] = await Promise.all([
+  const [clients, statuses, assignees, page, labels] = await Promise.all([
     api.GET("/projects/{key}/clients", path),
     api.GET("/projects/{key}/statuses", path),
     api.GET("/projects/{key}/assignees", path),
     api.GET("/projects/{key}/tickets", { params: { path: { key }, query: ticketQuery(values) } }),
+    api.GET("/projects/{key}/labels", path),
   ]);
   const statusOf = new Map((statuses.data?.items ?? []).map((s) => [s.id, s]));
   const canEdit = project.role !== "viewer"; // MSL-53: members change tickets together
@@ -55,6 +56,7 @@ export default async function TicketsPage({
           clients={clients.data?.items ?? []}
           assignees={assignees.data?.items ?? []}
           statuses={statuses.data?.items ?? []}
+          labels={(labels.data?.items ?? []).map((l) => l.label)}
         />
         <a href={`/api/v1/projects/${key}/tickets?${new URLSearchParams({ ...exportQuery(ticketQuery(values)), format: "csv" })}`} download className={button.secondary}>
           <Icon name="download" />
@@ -112,6 +114,9 @@ export default async function TicketsPage({
                               {it.node_names[0] ?? "—"}
                               {it.node_names.length > 1 ? ` +${it.node_names.length - 1}` : ""}
                               {it.checklist && <span title={t("checklist")}> · ☑ {it.checklist.done}/{it.checklist.total}</span>}
+                              {it.labels?.map((l) => (
+                                <span key={l} className="ml-1.5 rounded-full bg-well px-1.5 text-[11px] font-semibold text-ink-soft">{l}</span>
+                              ))}
                             </span>
                           </span>
                         </span>

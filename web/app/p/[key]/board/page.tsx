@@ -27,7 +27,7 @@ export default async function BoardPage({
   const api = await serverApi();
   const path = { params: { path: { key } } };
   const showAll = values.closed === "all";
-  const [clients, statuses, assignees, nodes, page, setup] = await Promise.all([
+  const [clients, statuses, assignees, nodes, page, setup, labels] = await Promise.all([
     api.GET("/projects/{key}/clients", path),
     api.GET("/projects/{key}/statuses", path),
     api.GET("/projects/{key}/assignees", path),
@@ -38,6 +38,7 @@ export default async function BoardPage({
       params: { path: { key }, query: { ...ticketQuery(values), sort: "priority", limit: 1000, closed_days: showAll ? undefined : 14 } },
     }),
     project.role === "admin" ? api.GET("/projects/{key}/setup", path) : Promise.resolve(undefined),
+    api.GET("/projects/{key}/labels", path),
   ]);
   // MSL-48: a project admin's setup guide, until the steps the team needs are done.
   const st = setup?.data;
@@ -57,7 +58,13 @@ export default async function BoardPage({
       <PageBar>
         <h1 className="text-base font-semibold">{t("board")}</h1>
         <span className="mr-2 text-[13px] text-muted">{project.name}</span>
-        <TicketFilters action={`/p/${key}/board`} values={values} clients={clients.data?.items ?? []} assignees={assignees.data?.items ?? []} />
+        <TicketFilters
+          action={`/p/${key}/board`}
+          values={values}
+          clients={clients.data?.items ?? []}
+          assignees={assignees.data?.items ?? []}
+          labels={(labels.data?.items ?? []).map((l) => l.label)}
+        />
       </PageBar>
       <main className="px-4 py-4 md:px-5">
         {st && !(st.clients && st.team && st.tree && st.tickets) && (
