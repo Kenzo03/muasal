@@ -84,12 +84,13 @@ export default function BulkBar({ people, statuses }: { people: Ref[]; statuses:
 
   const open = statuses.filter((s) => s.category === "todo" || s.category === "in_progress");
   return (
+    // Explicit label ids: some assistive tech misses wrapping labels (MSL-62).
     <form id="bulk" aria-label={t("label")} onSubmit={apply} className={cx(panel, "flex flex-wrap items-end gap-3 p-3")}>
       <p className="basis-full text-[13px] font-semibold text-ink-soft">{count > 0 ? t("selected", { count }) : t("hint")}</p>
       <fieldset disabled={count === 0 || busy !== ""} className="contents">
-        <label className={field.label}>
+        <label htmlFor="bulk-assignee" className={field.label}>
           {t("assignee")}
-          <select name="assignee" defaultValue="keep" className={field.compact}>
+          <select id="bulk-assignee" name="assignee" defaultValue="keep" className={field.compact}>
             <option value="keep">{t("keep")}</option>
             <option value="none">{t("nobody")}</option>
             {people.map((p) => (
@@ -97,26 +98,26 @@ export default function BulkBar({ people, statuses }: { people: Ref[]; statuses:
             ))}
           </select>
         </label>
-        <label className={field.label}>
+        <label htmlFor="bulk-priority" className={field.label}>
           {t("priority")}
-          <select name="priority" defaultValue="" className={field.compact}>
+          <select id="bulk-priority" name="priority" defaultValue="" className={field.compact}>
             <option value="">{t("keep")}</option>
             {(["low", "medium", "high", "urgent"] as const).map((p) => (
               <option key={p} value={p}>{t(`priorities.${p}`)}</option>
             ))}
           </select>
         </label>
-        <label className={field.label}>
+        <label htmlFor="bulk-due" className={field.label}>
           {t("due")}
-          <input type="date" name="due" className={field.compact} />
+          <input id="bulk-due" type="date" name="due" className={field.compact} />
         </label>
-        <label className="flex items-center gap-1.5 pb-2 text-[13px]">
-          <input type="checkbox" name="clear_due" className="size-4 accent-accent" />
+        <label htmlFor="bulk-clear-due" className="flex items-center gap-1.5 pb-2 text-[13px]">
+          <input id="bulk-clear-due" type="checkbox" name="clear_due" className="size-4 accent-accent" />
           {t("clearDue")}
         </label>
-        <label className={field.label}>
+        <label htmlFor="bulk-status" className={field.label}>
           {t("status")}
-          <select name="status" defaultValue="" className={field.compact}>
+          <select id="bulk-status" name="status" defaultValue="" className={field.compact}>
             <option value="">{t("keep")}</option>
             {open.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
