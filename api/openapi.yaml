@@ -2371,6 +2371,7 @@ components:
         priority: { $ref: "#/components/schemas/Priority" }
         due_date: { type: string, format: date }
         status_id: { type: integer, format: int64, description: An open status; omitted means the project's default. }
+        note_key: { type: string, description: "A decision note of this project the caller may see, e.g. HRIS-DN7: the ticket joins its tickets, as when filed from one of its action items (MSL-11)." }
     TicketUpdate:
       type: object
       description: Replaces every editable field; send the current value of each field you keep.

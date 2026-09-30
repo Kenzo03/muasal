@@ -1021,7 +1021,11 @@
     "save": "Save",
     "cancel": "Cancel",
     "path": "Location",
-    "byline": "By {name} · updated {at}"
+    "byline": "By {name} · updated {at}",
+    "actionItems": "Action items",
+    "createTicket": "Create ticket",
+    "actionReason": "Action item of decision note {key}: {title}",
+    "bodyHint": "List action items like \"- Bayu: design the flag, by 10 Oct\". Each one can become a ticket from the note page."
   },
   "tokens": {
     "title": "API tokens",

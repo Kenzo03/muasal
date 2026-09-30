@@ -6,6 +6,7 @@ import Icon from "@/components/Icon";
 import Markdown from "@/components/Markdown";
 import NoteForm from "@/components/NoteForm";
 import PageBar from "@/components/PageBar";
+import { actionItems } from "@/lib/actions";
 import { dateTime, day } from "@/lib/format";
 import { serverApi } from "@/lib/server-api";
 import { button, cx, panel, sectionTitle } from "@/lib/ui";
@@ -25,6 +26,26 @@ export default async function NotePage({ params, searchParams }: {
   const locale = await getLocale();
   const timeZone = await getTimeZone();
   const editing = edit === "1" && note.can_edit;
+  // MSL-11: each action item can become an assigned ticket, linked back here.
+  const actions = editing ? [] : actionItems(note.body, Number(note.decided_on.slice(0, 4)));
+  const people = actions.length === 0 ? [] : ((await api.GET("/projects/{key}/assignees", {
+    params: { path: { key: note.project_key }, query: note.client ? { client_id: note.client.id } : {} },
+  })).data?.items ?? []);
+  const ownerId = (owner?: string) => {
+    const o = owner?.toLowerCase().trim();
+    const hits = o ? people.filter((p) => p.name.toLowerCase() === o || p.name.toLowerCase().split(/\s+/)[0] === o) : [];
+    return hits.length === 1 ? hits[0].id : undefined;
+  };
+  const filed = (task: string) => note.tickets.find((tk) => tk.title.toLowerCase() === task.toLowerCase());
+  const newTicket = (a: (typeof actions)[number]) => {
+    const q: Record<string, string> = { title: a.task, reason: t("actionReason", { key: note.key, title: note.title }), note: note.key };
+    const who = ownerId(a.owner);
+    if (who) q.assignee = String(who);
+    if (a.due) q.due = a.due;
+    if (note.client) q.client = String(note.client.id);
+    if (note.nodes.length > 0) q.nodes = note.nodes.map((n) => n.id).join(",");
+    return `/p/${note.project_key}/tickets/new?${new URLSearchParams(q)}`;
+  };
   let form: React.ReactNode = null;
   if (editing) {
     const path = { params: { path: { key: note.project_key } } };
@@ -79,6 +100,30 @@ export default async function NotePage({ params, searchParams }: {
                     ))}
                   </ul>
                 </div>
+                {actions.length > 0 && (
+                  <div>
+                    <h2 className={sectionTitle}>{t("actionItems")}</h2>
+                    <ul className="flex flex-col gap-2">
+                      {actions.map((a, i) => {
+                        const done = filed(a.task);
+                        return (
+                          <li key={i} className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                            <span className="min-w-0 flex-[1_1_12rem]">
+                              {a.owner && <span className="font-semibold">{a.owner}: </span>}
+                              {a.task}
+                              {a.due && <span className="text-muted"> · {day(a.due, locale)}</span>}
+                            </span>
+                            {done ? (
+                              <Link href={`/t/${done.key}`} className="font-mono text-xs font-semibold">{done.key}</Link>
+                            ) : (
+                              <Link href={newTicket(a)} className="text-xs font-semibold">{t("createTicket")}</Link>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
                 <div>
                   <h2 className={sectionTitle}>{t("tickets")}</h2>
                   {note.tickets.length === 0 ? <p className="text-muted">—</p> : (

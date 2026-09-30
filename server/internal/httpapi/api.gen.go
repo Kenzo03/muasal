@@ -2608,13 +2608,16 @@ type TicketCreate struct {
 	AssigneeId *int64 `json:"assignee_id,omitempty"`
 
 	// ClientId Omitted for core work (all clients).
-	ClientId           *int64              `json:"client_id,omitempty"`
-	Description        *string             `json:"description,omitempty"`
-	DueDate            *openapi_types.Date `json:"due_date,omitempty"`
-	NodeIds            []int64             `json:"node_ids"`
-	Priority           *Priority           `json:"priority,omitempty"`
-	Reason             *string             `json:"reason,omitempty"`
-	RequesterContactId *int64              `json:"requester_contact_id,omitempty"`
+	ClientId    *int64              `json:"client_id,omitempty"`
+	Description *string             `json:"description,omitempty"`
+	DueDate     *openapi_types.Date `json:"due_date,omitempty"`
+	NodeIds     []int64             `json:"node_ids"`
+
+	// NoteKey A decision note of this project the caller may see, e.g. HRIS-DN7: the ticket joins its tickets, as when filed from one of its action items (MSL-11).
+	NoteKey            *string   `json:"note_key,omitempty"`
+	Priority           *Priority `json:"priority,omitempty"`
+	Reason             *string   `json:"reason,omitempty"`
+	RequesterContactId *int64    `json:"requester_contact_id,omitempty"`
 
 	// RequesterUserId Without a requester the reporter is the requester.
 	RequesterUserId *int64 `json:"requester_user_id,omitempty"`

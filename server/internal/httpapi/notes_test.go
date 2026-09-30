@@ -3,6 +3,7 @@ package httpapi_test
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/kenzo03/muasal/server/internal/db"
@@ -114,5 +115,31 @@ func TestNotesFollowVisibilityAndAuthorship(t *testing.T) {
 	}
 	if e.call(w.pm, http.MethodGet, "/projects/HRIS/notes", nil, &list); len(list.Items) != 0 {
 		t.Fatalf("an archived note is listed: %+v", list.Items)
+	}
+}
+
+// MSL-11: a ticket filed from a note's action item joins the note's tickets;
+// a note of another project, or none, is refused.
+func TestTicketsFiledFromANoteJoinIt(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	var n httpapi.Note
+	if code := e.call(w.pm, http.MethodPost, "/projects/HRIS/notes", noteBody("Monthly review with Client A", "2026-09-22", &w.a.ID, []int64{w.ot.ID}), &n); code != http.StatusCreated {
+		t.Fatalf("note: %d", code)
+	}
+	body := map[string]any{"type": "change_request", "title": "Design the priority flag", "client_id": w.a.ID, "node_ids": []int64{w.ot.ID},
+		"reason": "Action item of the monthly review: priority customers.", "note_key": strings.ToLower(n.Key)}
+	var tk httpapi.Ticket
+	if code := e.call(w.pm, http.MethodPost, "/projects/HRIS/tickets", body, &tk); code != http.StatusCreated {
+		t.Fatalf("ticket: %d", code)
+	}
+	e.call(w.pm, http.MethodGet, "/notes/"+n.Key, nil, &n)
+	if len(n.Tickets) != 1 || n.Tickets[0].Key != tk.Key {
+		t.Fatalf("note tickets: %+v", n.Tickets)
+	}
+	body["note_key"] = "HRIS-DN99"
+	var p httpapi.Problem
+	if code := e.call(w.pm, http.MethodPost, "/projects/HRIS/tickets", body, &p); code != http.StatusUnprocessableEntity || firstError(p).Field != "note_key" {
+		t.Fatalf("unknown note: %d %+v", code, p)
 	}
 }

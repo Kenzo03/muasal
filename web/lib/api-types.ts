@@ -1974,6 +1974,8 @@ export interface components {
              * @description An open status; omitted means the project's default.
              */
             status_id?: number;
+            /** @description A decision note of this project the caller may see, e.g. HRIS-DN7: the ticket joins its tickets, as when filed from one of its action items (MSL-11). */
+            note_key?: string;
         };
         /** @description Replaces every editable field; send the current value of each field you keep. */
         TicketUpdate: {

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "@/components/Icon";
-import TicketForm from "@/components/TicketForm";
+import TicketForm, { type Prefill } from "@/components/TicketForm";
 import type { Client, Node, Ref } from "@/lib/problem";
 
 type Props = {
@@ -15,6 +15,7 @@ type Props = {
   assignees: Ref[];
   statusId?: number;
   nodeId?: number;
+  from?: Prefill;
 };
 
 // A native <dialog> around the create form. Closing it (×, Cancel, Escape or

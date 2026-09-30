@@ -70,6 +70,18 @@ func (s *Server) CreateTicket(w http.ResponseWriter, r *http.Request, key string
 	if !statusOK {
 		fields = append(fields, FieldError{Field: "status_id", Code: "invalid", Message: "Choose an open status of this project"})
 	}
+	var noteID int64 // MSL-11: filed from a note's action item
+	if k := strings.ToUpper(strings.TrimSpace(deref(in.NoteKey))); k != "" {
+		note, err := s.q.GetNoteByKey(ctx, k)
+		if err == nil && note.DecisionNote.ProjectID == pc.project.ID && note.DecisionNote.ArchivedAt == nil && pc.scope.Sees(note.DecisionNote.ClientID) {
+			noteID = note.DecisionNote.ID
+		} else if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			s.fail(w, r, err)
+			return
+		} else {
+			fields = append(fields, FieldError{Field: "note_key", Code: "invalid", Message: "Choose a decision note of this project"})
+		}
+	}
 	if len(fields) > 0 {
 		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields", fields...)
 		return
@@ -106,6 +118,14 @@ func (s *Server) CreateTicket(w http.ResponseWriter, r *http.Request, key string
 		}
 		if created.AssigneeID != nil {
 			if err := notify(ctx, q, "assigned", created.ID, &pc.user.ID, []int64{*created.AssigneeID}, nil); err != nil {
+				return err
+			}
+		}
+		if noteID != 0 {
+			if err := q.LinkNoteTicket(ctx, db.LinkNoteTicketParams{NoteID: noteID, TicketID: created.ID}); err != nil {
+				return err
+			}
+			if err := s.indexNote(ctx, tx, noteID); err != nil { // the note's chunk names its tickets
 				return err
 			}
 		}
