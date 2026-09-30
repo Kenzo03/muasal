@@ -524,6 +524,8 @@
   },
   "ticketFilters": {
     "label": "Saring tiket",
+    "filters": "Filter",
+    "filtersSet": "Filter ({count})",
     "q": "Cari",
     "qPlaceholder": "Judul atau kunci",
     "client": "Klien",

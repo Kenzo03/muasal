@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { showsClients } from "@/components/Chips";
 import Icon from "@/components/Icon";
 import type { Client, Ref, Status } from "@/lib/problem";
-import { button } from "@/lib/ui";
+import { button, cx } from "@/lib/ui";
 
 type Props = {
   action: string;
@@ -20,99 +20,108 @@ export default async function TicketFilters({ action, values, clients, assignees
   // Each filter is a chip: its name, then a borderless select.
   const pick = "flex h-9 items-center gap-1 rounded-[10px] border border-line bg-white pl-3 text-[13.5px] font-semibold text-ink focus-within:border-accent";
   const select = "h-full cursor-pointer rounded-[10px] bg-transparent text-[13.5px] font-medium text-muted outline-none";
+  const set = ["client", "type", "assignee", "status", "due", "stale", "missing"].filter((k) => values[k]).length;
   return (
     <form method="get" action={action} aria-label={t("label")} className="flex flex-wrap items-center gap-2">
       <label className="flex h-9 items-center gap-2 rounded-[10px] border border-line bg-white px-3 text-muted focus-within:border-accent">
         <Icon name="search" />
         <input name="q" defaultValue={values.q} aria-label={t("q")} placeholder={t("qPlaceholder")} className="w-40 bg-transparent text-[13.5px] text-ink outline-none placeholder:text-muted" />
       </label>
-      {showsClients(clients) && (
-        <label className={pick}>
-          {t("client")}
-          <select name="client" defaultValue={values.client ?? ""} className={select}>
-            <option value="">{t("allClients")}</option>
-            <option value="core">{t("core")}</option>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        </label>
-      )}
-      <label className={pick}>
-        {t("type")}
-        <select name="type" defaultValue={values.type ?? ""} className={select}>
-          <option value="">{t("anyType")}</option>
-          {(["bug", "change_request", "feature"] as const).map((ty) => (
-            <option key={ty} value={ty}>{tTypes(ty)}</option>
-          ))}
-        </select>
+      {/* MSL-35: on a phone the filters fold behind one button, open while any is set. */}
+      <input id={`${action}-filters`} type="checkbox" defaultChecked={set > 0} className="peer sr-only md:hidden" />
+      <label htmlFor={`${action}-filters`} className={cx(button.secondary, "cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-accent md:hidden")}>
+        <Icon name="sliders" />
+        {set > 0 ? t("filtersSet", { count: set }) : t("filters")}
       </label>
-      <label className={pick}>
-        {t("assignee")}
-        <select name="assignee" defaultValue={values.assignee ?? ""} className={select}>
-          <option value="">{t("anyone")}</option>
-          <option value="me">{t("mine")}</option>
-          <option value="none">{t("unassigned")}</option>
-          {assignees.map((a) => (
-            <option key={a.id} value={a.id}>{a.name}</option>
-          ))}
-        </select>
-      </label>
-      {statuses && (
-        <>
+      <div className="hidden w-full flex-wrap items-center gap-2 peer-checked:flex md:flex md:w-auto">
+        {showsClients(clients) && (
           <label className={pick}>
-            {t("status")}
-            <select name="status" defaultValue={values.status ?? ""} className={select}>
-              <option value="">{t("anyStatus")}</option>
-              <option value="open">{t("openStatuses")}</option>
-              {statuses.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
+            {t("client")}
+            <select name="client" defaultValue={values.client ?? ""} className={select}>
+              <option value="">{t("allClients")}</option>
+              <option value="core">{t("core")}</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
           </label>
-          <label className={pick}>
-            {t("due")}
-            <select name="due" defaultValue={values.due ?? ""} className={select}>
-              <option value="">{t("anyDue")}</option>
-              <option value="overdue">{t("overdue")}</option>
-              <option value="week">{t("dueWeek")}</option>
-            </select>
-          </label>
-          <label className={pick}>
-            {t("stale")}
-            <select name="stale" defaultValue={values.stale ?? ""} className={select}>
-              <option value="">{t("anyActivity")}</option>
-              {/* A link from the workload page may carry another number of days. */}
-              {[...new Set([7, 14, 30, ...(/^\d+$/.test(values.stale ?? "") ? [Number(values.stale)] : [])])]
-                .sort((a, b) => a - b)
-                .map((d) => (
-                  <option key={d} value={d}>{t("staleDays", { days: d })}</option>
+        )}
+        <label className={pick}>
+          {t("type")}
+          <select name="type" defaultValue={values.type ?? ""} className={select}>
+            <option value="">{t("anyType")}</option>
+            {(["bug", "change_request", "feature"] as const).map((ty) => (
+              <option key={ty} value={ty}>{tTypes(ty)}</option>
+            ))}
+          </select>
+        </label>
+        <label className={pick}>
+          {t("assignee")}
+          <select name="assignee" defaultValue={values.assignee ?? ""} className={select}>
+            <option value="">{t("anyone")}</option>
+            <option value="me">{t("mine")}</option>
+            <option value="none">{t("unassigned")}</option>
+            {assignees.map((a) => (
+              <option key={a.id} value={a.id}>{a.name}</option>
+            ))}
+          </select>
+        </label>
+        {statuses && (
+          <>
+            <label className={pick}>
+              {t("status")}
+              <select name="status" defaultValue={values.status ?? ""} className={select}>
+                <option value="">{t("anyStatus")}</option>
+                <option value="open">{t("openStatuses")}</option>
+                {statuses.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
-            </select>
-          </label>
-          <label className={pick}>
-            {t("missing")}
-            <select name="missing" defaultValue={values.missing ?? ""} className={select}>
-              <option value="">{t("nothingMissing")}</option>
-              <option value="reason">{t("missingReason")}</option>
-              <option value="menus">{t("missingMenus")}</option>
-              <option value="weak_reason">{t("weakReason")}</option>
-            </select>
-          </label>
-          <label className={pick}>
-            {t("sort")}
-            <select name="sort" defaultValue={values.sort ?? "updated"} className={select}>
-              <option value="updated">{t("sortUpdated")}</option>
-              <option value="created">{t("sortCreated")}</option>
-              <option value="key">{t("sortKey")}</option>
-              <option value="priority">{t("sortPriority")}</option>
-              <option value="due">{t("sortDue")}</option>
-            </select>
-          </label>
-        </>
-      )}
-      <button className={button.secondary}>{t("apply")}</button>
-      <a href={action} className={button.quiet}>{t("reset")}</a>
+              </select>
+            </label>
+            <label className={pick}>
+              {t("due")}
+              <select name="due" defaultValue={values.due ?? ""} className={select}>
+                <option value="">{t("anyDue")}</option>
+                <option value="overdue">{t("overdue")}</option>
+                <option value="week">{t("dueWeek")}</option>
+              </select>
+            </label>
+            <label className={pick}>
+              {t("stale")}
+              <select name="stale" defaultValue={values.stale ?? ""} className={select}>
+                <option value="">{t("anyActivity")}</option>
+                {/* A link from the workload page may carry another number of days. */}
+                {[...new Set([7, 14, 30, ...(/^\d+$/.test(values.stale ?? "") ? [Number(values.stale)] : [])])]
+                  .sort((a, b) => a - b)
+                  .map((d) => (
+                    <option key={d} value={d}>{t("staleDays", { days: d })}</option>
+                  ))}
+              </select>
+            </label>
+            <label className={pick}>
+              {t("missing")}
+              <select name="missing" defaultValue={values.missing ?? ""} className={select}>
+                <option value="">{t("nothingMissing")}</option>
+                <option value="reason">{t("missingReason")}</option>
+                <option value="menus">{t("missingMenus")}</option>
+                <option value="weak_reason">{t("weakReason")}</option>
+              </select>
+            </label>
+            <label className={pick}>
+              {t("sort")}
+              <select name="sort" defaultValue={values.sort ?? "updated"} className={select}>
+                <option value="updated">{t("sortUpdated")}</option>
+                <option value="created">{t("sortCreated")}</option>
+                <option value="key">{t("sortKey")}</option>
+                <option value="priority">{t("sortPriority")}</option>
+                <option value="due">{t("sortDue")}</option>
+              </select>
+            </label>
+          </>
+        )}
+        <button className={button.secondary}>{t("apply")}</button>
+        <a href={action} className={button.quiet}>{t("reset")}</a>
+      </div>
     </form>
   );
 }

@@ -524,6 +524,8 @@
   },
   "ticketFilters": {
     "label": "Filter tickets",
+    "filters": "Filters",
+    "filtersSet": "Filters ({count})",
     "q": "Search",
     "qPlaceholder": "Title or key",
     "client": "Client",
