@@ -86,4 +86,8 @@ func TestContradictsDue(t *testing.T) {
 			t.Errorf("%q: %v, want %v", text, got, want)
 		}
 	}
+	// The live answer's third claim named no key but cited the one not overdue.
+	if !ask.ContradictsDue(ask.Claim{Text: "Ketiga tiket terlambat tersebut dipegang oleh Fajar Nugroho.", Cites: []string{"HRIS-6", "HRIS-8"}}, blocks) {
+		t.Error("a cited not-overdue ticket should count")
+	}
 }

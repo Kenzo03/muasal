@@ -97,7 +97,9 @@ func ContradictsDue(c Claim, blocks map[string]string) bool {
 	if !lateRe.MatchString(c.Text) || notLateRe.MatchString(c.Text) {
 		return false
 	}
-	for _, key := range citeKeyRe.FindAllString(c.Text, -1) {
+	// A ticket counts whether the claim names it or only cites it, as in "all
+	// three late tickets are Fajar's" citing one that isn't late.
+	for _, key := range append(citeKeyRe.FindAllString(c.Text, -1), c.Cites...) {
 		for k, b := range blocks {
 			if strings.EqualFold(k, key) && (strings.Contains(b, ", not overdue") || strings.Contains(b, ", due today")) {
 				return true
