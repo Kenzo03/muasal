@@ -12,8 +12,8 @@ import (
 )
 
 const insertAuditEvent = `-- name: InsertAuditEvent :exec
-INSERT INTO audit_events (actor_id, via, entity, entity_id, project_id, action, changes, request_id, ip)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+INSERT INTO audit_events (actor_id, via, entity, entity_id, project_id, action, changes, request_id, ip, token_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 `
 
 type InsertAuditEventParams struct {
@@ -26,6 +26,7 @@ type InsertAuditEventParams struct {
 	Changes   []byte
 	RequestID *string
 	Ip        *netip.Addr
+	TokenID   *int64
 }
 
 func (q *Queries) InsertAuditEvent(ctx context.Context, arg InsertAuditEventParams) error {
@@ -39,15 +40,30 @@ func (q *Queries) InsertAuditEvent(ctx context.Context, arg InsertAuditEventPara
 		arg.Changes,
 		arg.RequestID,
 		arg.Ip,
+		arg.TokenID,
 	)
 	return err
 }
 
 const listAudit = `-- name: ListAudit :many
-SELECT e.id, e.occurred_at, e.actor_id, u.name AS actor_name, e.via, e.entity, e.entity_id, p.key AS project_key, e.action, e.changes
+SELECT e.id, e.occurred_at, e.actor_id, u.name AS actor_name, e.via, e.entity, e.entity_id, p.key AS project_key, e.action, e.changes,
+       tk.name AS token_name,
+       coalesce(CASE e.entity
+          WHEN 'ticket' THEN (SELECT key FROM tickets WHERE id = e.entity_id)
+          WHEN 'note' THEN (SELECT key FROM decision_notes WHERE id = e.entity_id)
+          WHEN 'document' THEN (SELECT key FROM documents WHERE id = e.entity_id)
+          WHEN 'project' THEN (SELECT key FROM projects WHERE id = e.entity_id)
+          WHEN 'node' THEN (SELECT name FROM nodes WHERE id = e.entity_id)
+          WHEN 'client' THEN (SELECT name FROM clients WHERE id = e.entity_id)
+          WHEN 'contact' THEN (SELECT name FROM contacts WHERE id = e.entity_id)
+          WHEN 'user' THEN (SELECT name FROM users WHERE id = e.entity_id)
+          WHEN 'token' THEN (SELECT name FROM api_tokens WHERE id = e.entity_id)
+          WHEN 'repo' THEN (SELECT name FROM git_repos WHERE id = e.entity_id)
+        END, '')::text AS subject
 FROM audit_events e
 LEFT JOIN users u ON u.id = e.actor_id
 LEFT JOIN projects p ON p.id = e.project_id
+LEFT JOIN api_tokens tk ON tk.id = e.token_id
 WHERE ($1::bigint IS NULL OR e.actor_id = $1::bigint)
   AND ($2::text IS NULL OR e.entity = $2::text)
   AND ($3::text IS NULL OR e.action = $3::text)
@@ -79,10 +95,13 @@ type ListAuditRow struct {
 	ProjectKey *string
 	Action     string
 	Changes    []byte
+	TokenName  *string
+	Subject    string
 }
 
 // The audit log for system admins, newest first, filtered (FSD §15.4). Dates
 // are whole days in the admin's timezone, passed as bounds.
+// subject names the entity as people know it (MSL-27): a key or a name.
 func (q *Queries) ListAudit(ctx context.Context, arg ListAuditParams) ([]ListAuditRow, error) {
 	rows, err := q.db.Query(ctx, listAudit,
 		arg.ActorID,
@@ -111,6 +130,8 @@ func (q *Queries) ListAudit(ctx context.Context, arg ListAuditParams) ([]ListAud
 			&i.ProjectKey,
 			&i.Action,
 			&i.Changes,
+			&i.TokenName,
+			&i.Subject,
 		); err != nil {
 			return nil, err
 		}
@@ -123,7 +144,7 @@ func (q *Queries) ListAudit(ctx context.Context, arg ListAuditParams) ([]ListAud
 }
 
 const listAuditEvents = `-- name: ListAuditEvents :many
-SELECT id, occurred_at, actor_id, via, entity, entity_id, project_id, action, changes, request_id, ip FROM audit_events WHERE entity = $1 AND entity_id = $2 ORDER BY id
+SELECT id, occurred_at, actor_id, via, entity, entity_id, project_id, action, changes, request_id, ip, token_id FROM audit_events WHERE entity = $1 AND entity_id = $2 ORDER BY id
 `
 
 type ListAuditEventsParams struct {
@@ -152,6 +173,7 @@ func (q *Queries) ListAuditEvents(ctx context.Context, arg ListAuditEventsParams
 			&i.Changes,
 			&i.RequestID,
 			&i.Ip,
+			&i.TokenID,
 		); err != nil {
 			return nil, err
 		}

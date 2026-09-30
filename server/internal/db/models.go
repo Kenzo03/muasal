@@ -82,6 +82,7 @@ type AuditEvent struct {
 	Changes    []byte
 	RequestID  *string
 	Ip         *netip.Addr
+	TokenID    *int64
 }
 
 type Chunk struct {

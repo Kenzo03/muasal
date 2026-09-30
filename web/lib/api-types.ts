@@ -3076,9 +3076,13 @@ export interface components {
             occurred_at: string;
             actor?: components["schemas"]["Ref"];
             via: string;
+            /** @description The name of the API token the action came through (MSL-27). */
+            token?: string;
             entity: string;
             /** Format: int64 */
             entity_id: number;
+            /** @description The entity as people know it: a ticket, note or document key, a project key, or a name (MSL-27). */
+            subject?: string;
             /** @description The project key */
             project?: string;
             action: string;

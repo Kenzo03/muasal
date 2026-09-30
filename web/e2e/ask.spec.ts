@@ -91,5 +91,5 @@ test("a member asks from Home and the node page, and an admin reads the Ask and 
   await expect(page.getByRole("row").filter({ hasText: key }).first()).toContainText("create");
   const exported = await page.request.get(`/api/v1/admin/audit/export?entity=project`);
   expect(exported.headers()["content-type"]).toContain("text/csv");
-  expect((await exported.text()).split("\n")[0]).toBe("id,occurred_at,actor,via,entity,entity_id,project,action,changes");
+  expect((await exported.text()).split("\n")[0]).toBe("id,occurred_at,actor,via,entity,entity_id,project,action,changes,token,subject");
 });

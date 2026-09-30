@@ -1441,7 +1441,13 @@ type AuditEvent struct {
 
 	// Project The project key
 	Project *string `json:"project,omitempty"`
-	Via     string  `json:"via"`
+
+	// Subject The entity as people know it: a ticket, note or document key, a project key, or a name (MSL-27).
+	Subject *string `json:"subject,omitempty"`
+
+	// Token The name of the API token the action came through (MSL-27).
+	Token *string `json:"token,omitempty"`
+	Via   string  `json:"via"`
 }
 
 // AuditPage defines model for AuditPage.

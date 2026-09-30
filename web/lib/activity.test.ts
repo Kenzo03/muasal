@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { describeChange } from "./activity.ts";
+import { changeLines, describeChange } from "./activity.ts";
 
 const messages: Record<string, string> = {
   you: "You",
@@ -23,5 +23,14 @@ test("describes imports", () => {
   assert.equal(
     describeChange(t, { kind: "event", action: "import_update", at, actor: { id: 2, name: "Bayu" }, changes: { external_ref: "ARU-101" } }, 1),
     "Bayu updated the ticket from import ARU-101",
+  );
+});
+
+// MSL-27: the audit log reads field by field.
+test("lists an audit event's changes", () => {
+  const field = (k: string) => ({ status: "Status", menus: "Menus" })[k] ?? k;
+  assert.deepEqual(
+    changeLines({ status: { old: "To do", new: "In progress" }, menus: { old: [], new: ["Leave", "Payroll"] }, name: "Cahaya", extra: { a: 1 } }, field),
+    ["Status: To do → In progress", "Menus: — → Leave, Payroll", "name: Cahaya", 'extra: {"a":1}'],
   );
 });

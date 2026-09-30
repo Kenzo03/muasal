@@ -3536,8 +3536,10 @@ components:
         occurred_at: { type: string, format: date-time }
         actor: { $ref: "#/components/schemas/Ref" }
         via: { type: string }
+        token: { type: string, description: The name of the API token the action came through (MSL-27). }
         entity: { type: string }
         entity_id: { type: integer, format: int64 }
+        subject: { type: string, description: "The entity as people know it: a ticket, note or document key, a project key, or a name (MSL-27)." }
         project: { type: string, description: The project key, when the event belongs to one. }
         action: { type: string }
         changes: { type: object, additionalProperties: true }

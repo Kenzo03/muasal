@@ -122,7 +122,8 @@ func TestAuditLogFiltersAndExports(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	rows, err := csv.NewReader(strings.NewReader(string(body))).ReadAll()
 	if resp.StatusCode != http.StatusOK || !strings.HasPrefix(resp.Header.Get("Content-Type"), "text/csv") || err != nil ||
-		len(rows) != 2 || strings.Join(rows[0], ",") != "id,occurred_at,actor,via,entity,entity_id,project,action,changes" || rows[1][4] != "client" {
+		len(rows) != 2 || strings.Join(rows[0], ",") != "id,occurred_at,actor,via,entity,entity_id,project,action,changes,token,subject" || rows[1][4] != "client" ||
+		rows[1][10] != "Cahaya Farma" {
 		t.Fatalf("export: %d %q %v %q", resp.StatusCode, resp.Header.Get("Content-Type"), err, body)
 	}
 	for _, path := range []string{"/admin/audit", "/admin/audit/export"} {

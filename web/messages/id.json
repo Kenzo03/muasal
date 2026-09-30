@@ -985,7 +985,35 @@
     "project": "Proyek",
     "changes": "Perubahan",
     "system": "Sistem",
-    "older": "Lebih lama"
+    "older": "Lebih lama",
+    "entities": {
+      "ticket": "Tiket",
+      "comment": "Komentar",
+      "node": "Menu atau modul",
+      "project": "Proyek",
+      "status": "Status",
+      "statuses": "Status",
+      "client": "Klien",
+      "contact": "Kontak",
+      "user": "Pengguna",
+      "ai_settings": "Pengaturan AI",
+      "summary_schedule": "Jadwal ringkasan",
+      "backup": "Cadangan",
+      "document": "Dokumen",
+      "import": "Impor",
+      "note": "Catatan keputusan",
+      "repo": "Repositori",
+      "token": "Token API"
+    },
+    "vias": {
+      "web": "Web",
+      "api": "API",
+      "system": "Sistem",
+      "import": "Impor",
+      "webhook": "Webhook",
+      "token": "API · token “{token}”"
+    },
+    "via": "Lewat"
   },
   "system": {
     "title": "Status sistem",

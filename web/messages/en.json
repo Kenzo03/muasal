@@ -985,7 +985,35 @@
     "project": "Project",
     "changes": "Changes",
     "system": "System",
-    "older": "Older"
+    "older": "Older",
+    "entities": {
+      "ticket": "Ticket",
+      "comment": "Comment",
+      "node": "Menu or module",
+      "project": "Project",
+      "status": "Status",
+      "statuses": "Statuses",
+      "client": "Client",
+      "contact": "Contact",
+      "user": "User",
+      "ai_settings": "AI settings",
+      "summary_schedule": "Summary schedule",
+      "backup": "Backup",
+      "document": "Document",
+      "import": "Import",
+      "note": "Decision note",
+      "repo": "Repository",
+      "token": "API token"
+    },
+    "vias": {
+      "web": "Web",
+      "api": "API",
+      "system": "System",
+      "import": "Import",
+      "webhook": "Webhook",
+      "token": "API · token “{token}”"
+    },
+    "via": "Via"
   },
   "system": {
     "title": "System status",

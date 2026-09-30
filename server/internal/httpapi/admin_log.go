@@ -166,11 +166,12 @@ func (s *Server) ExportAudit(w http.ResponseWriter, r *http.Request, params Expo
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 	w.Header().Set("Content-Disposition", `attachment; filename="audit-`+time.Now().Format("20060102")+`.csv"`)
 	cw := csv.NewWriter(w)
-	_ = cw.Write([]string{"id", "occurred_at", "actor", "via", "entity", "entity_id", "project", "action", "changes"})
+	// token and subject came later (MSL-27), so they go last and old columns keep their places.
+	_ = cw.Write([]string{"id", "occurred_at", "actor", "via", "entity", "entity_id", "project", "action", "changes", "token", "subject"})
 	for _, row := range rows {
 		_ = cw.Write([]string{
 			strconv.FormatInt(row.ID, 10), row.OccurredAt.UTC().Format(time.RFC3339), deref(row.ActorName), row.Via, row.Entity,
-			strconv.FormatInt(row.EntityID, 10), deref(row.ProjectKey), row.Action, string(row.Changes),
+			strconv.FormatInt(row.EntityID, 10), deref(row.ProjectKey), row.Action, string(row.Changes), deref(row.TokenName), row.Subject,
 		})
 	}
 	cw.Flush()
@@ -191,7 +192,10 @@ func auditFilter(u *db.User, actor *int64, entity, action *string, from, to *ope
 
 func toAuditEvent(row db.ListAuditRow) (AuditEvent, error) {
 	ev := AuditEvent{Id: row.ID, OccurredAt: row.OccurredAt, Via: row.Via, Entity: row.Entity, EntityId: row.EntityID,
-		Project: row.ProjectKey, Action: row.Action, Changes: map[string]any{}}
+		Project: row.ProjectKey, Action: row.Action, Changes: map[string]any{}, Token: row.TokenName}
+	if row.Subject != "" {
+		ev.Subject = &row.Subject
+	}
 	if row.ActorID != nil {
 		ev.Actor = &Ref{Id: *row.ActorID, Name: deref(row.ActorName)}
 	}

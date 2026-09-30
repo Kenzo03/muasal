@@ -154,6 +154,7 @@ type auditMeta struct {
 	requestID *string
 	ip        *netip.Addr
 	projectID *int64 // lets project admins search their project's history (FSD §5.1)
+	tokenID   *int64 // the API token the request came with (MSL-27)
 }
 
 // inProject tags the event with its project.
@@ -166,11 +167,11 @@ var systemMeta = auditMeta{via: "system"}
 
 // webMeta records a request's origin: "api" for a token, "web" for a session.
 func webMeta(r *http.Request) auditMeta {
-	via := "web"
-	if currentToken(r) != nil {
-		via = "api"
+	m := auditMeta{via: "web", requestID: ptr(requestIDFrom(r.Context())), ip: ipAddr(r)}
+	if t := currentToken(r); t != nil {
+		m.via, m.tokenID = "api", &t.ID
 	}
-	return auditMeta{via: via, requestID: ptr(requestIDFrom(r.Context())), ip: ipAddr(r)}
+	return m
 }
 
 // audit appends one event. changes must never contain secrets.
@@ -184,7 +185,7 @@ func audit(ctx context.Context, q *db.Queries, m auditMeta, actorID *int64, enti
 	}
 	return q.InsertAuditEvent(ctx, db.InsertAuditEventParams{
 		ActorID: actorID, Via: m.via, Entity: entity, EntityID: entityID, ProjectID: m.projectID,
-		Action: action, Changes: b, RequestID: m.requestID, Ip: m.ip,
+		Action: action, Changes: b, RequestID: m.requestID, Ip: m.ip, TokenID: m.tokenID,
 	})
 }
 
