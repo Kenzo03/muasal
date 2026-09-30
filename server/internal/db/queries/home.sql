@@ -126,3 +126,12 @@ SELECT (SELECT count(*) FROM users WHERE disabled_at IS NULL) > 1 AS invited,
        EXISTS (SELECT 1 FROM nodes) AS tree,
        EXISTS (SELECT 1 FROM tickets) AS history,
        coalesce((SELECT key FROM projects ORDER BY id LIMIT 1), '')::text AS first_project;
+
+-- name: ProjectSetupStatus :one
+-- How far a project is set up, for its checklist on the board (MSL-48).
+SELECT EXISTS (SELECT 1 FROM project_clients WHERE project_id = sqlc.arg('pid')::bigint) AS clients,
+       (SELECT count(*) FROM memberships WHERE project_id = sqlc.arg('pid')::bigint) > 1 AS team,
+       EXISTS (SELECT 1 FROM documents WHERE project_id = sqlc.arg('pid')::bigint) AS documents,
+       EXISTS (SELECT 1 FROM nodes WHERE project_id = sqlc.arg('pid')::bigint) AS tree,
+       EXISTS (SELECT 1 FROM tickets WHERE project_id = sqlc.arg('pid')::bigint) AS tickets,
+       EXISTS (SELECT 1 FROM git_repos WHERE project_id = sqlc.arg('pid')::bigint) AS repos;

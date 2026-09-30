@@ -9,7 +9,8 @@ import { useProblemText } from "@/lib/problem";
 import { button } from "@/lib/ui";
 
 // "Draft module tree" (§7.7): project admins start a tree draft from this document.
-export default function DraftButton({ docKey }: { docKey: string }) {
+// quiet is the list row's smaller style (MSL-48).
+export default function DraftButton({ docKey, quiet }: { docKey: string; quiet?: boolean }) {
   const t = useTranslations("documents");
   const router = useRouter();
   const problemText = useProblemText();
@@ -20,7 +21,7 @@ export default function DraftButton({ docKey }: { docKey: string }) {
       <button
         type="button"
         disabled={busy}
-        className={button.primary}
+        className={quiet ? button.secondary : button.primary}
         onClick={async () => {
           setBusy(true);
           const { data, error } = await api.POST("/documents/{key}/tree-drafts", { params: { path: { key: docKey } } });

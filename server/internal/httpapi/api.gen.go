@@ -2275,6 +2275,27 @@ type ProjectList struct {
 // ProjectRole defines model for ProjectRole.
 type ProjectRole string
 
+// ProjectSetup defines model for ProjectSetup.
+type ProjectSetup struct {
+	// Clients A client is linked.
+	Clients bool `json:"clients"`
+
+	// Documents A specification is uploaded.
+	Documents bool `json:"documents"`
+
+	// Repos A repository is connected (optional).
+	Repos bool `json:"repos"`
+
+	// Team Someone besides the creator is a member.
+	Team bool `json:"team"`
+
+	// Tickets There is a ticket.
+	Tickets bool `json:"tickets"`
+
+	// Tree The module tree has a node.
+	Tree bool `json:"tree"`
+}
+
 // ProjectUpdate defines model for ProjectUpdate.
 type ProjectUpdate struct {
 	Description *string `json:"description,omitempty"`
@@ -3597,6 +3618,9 @@ type ServerInterface interface {
 
 	// (POST /projects/{key}/repos)
 	CreateRepo(w http.ResponseWriter, r *http.Request, key string)
+
+	// (GET /projects/{key}/setup)
+	GetProjectSetup(w http.ResponseWriter, r *http.Request, key string)
 
 	// (GET /projects/{key}/statuses)
 	GetStatuses(w http.ResponseWriter, r *http.Request, key string)
@@ -5965,6 +5989,32 @@ func (siw *ServerInterfaceWrapper) CreateRepo(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// GetProjectSetup operation middleware
+func (siw *ServerInterfaceWrapper) GetProjectSetup(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetProjectSetup(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetStatuses operation middleware
 func (siw *ServerInterfaceWrapper) GetStatuses(w http.ResponseWriter, r *http.Request) {
 
@@ -7229,6 +7279,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/clients/{id}", wrapper.UpdateClient)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/members", wrapper.ListProjectMembers)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/projects/{key}/members", wrapper.SetProjectMembers)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/setup", wrapper.GetProjectSetup)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/member-candidates", wrapper.ListMemberCandidates)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/contacts", wrapper.ListContacts)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/contacts", wrapper.CreateContact)

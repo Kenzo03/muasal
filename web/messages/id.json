@@ -203,7 +203,17 @@
     "notes": "Notulen",
     "summaries": "Ringkasan",
     "documents": "Dokumen",
-    "workload": "Beban kerja"
+    "workload": "Beban kerja",
+    "setup": {
+      "title": "Siapkan proyek ini",
+      "hint": "Yang dibutuhkan tim sebelum kerja harian; hilang setelah empat langkah pertama selesai.",
+      "clients": "Tautkan klien yang dilayani proyek ini",
+      "team": "Tambahkan tim dan atur cakupan kliennya",
+      "documents": "Unggah spesifikasi dari klien",
+      "tree": "Susun pohon modul: draf dari spesifikasi, impor CSV, atau tambahkan manual",
+      "tickets": "Catat tiket pertama, atau impor backlog klien",
+      "repos": "Hubungkan repositori kode (opsional)"
+    }
   },
   "workload": {
     "intro": "Tiket terbuka per orang di proyek ini. Setiap angka membuka daftar tiket yang tersaring; tidak bergerak berarti tanpa perubahan {days} hari atau lebih.",

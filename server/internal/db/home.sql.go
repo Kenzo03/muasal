@@ -395,6 +395,39 @@ func (q *Queries) ListRecentTickets(ctx context.Context, arg ListRecentTicketsPa
 	return items, nil
 }
 
+const projectSetupStatus = `-- name: ProjectSetupStatus :one
+SELECT EXISTS (SELECT 1 FROM project_clients WHERE project_id = $1::bigint) AS clients,
+       (SELECT count(*) FROM memberships WHERE project_id = $1::bigint) > 1 AS team,
+       EXISTS (SELECT 1 FROM documents WHERE project_id = $1::bigint) AS documents,
+       EXISTS (SELECT 1 FROM nodes WHERE project_id = $1::bigint) AS tree,
+       EXISTS (SELECT 1 FROM tickets WHERE project_id = $1::bigint) AS tickets,
+       EXISTS (SELECT 1 FROM git_repos WHERE project_id = $1::bigint) AS repos
+`
+
+type ProjectSetupStatusRow struct {
+	Clients   bool
+	Team      bool
+	Documents bool
+	Tree      bool
+	Tickets   bool
+	Repos     bool
+}
+
+// How far a project is set up, for its checklist on the board (MSL-48).
+func (q *Queries) ProjectSetupStatus(ctx context.Context, pid int64) (ProjectSetupStatusRow, error) {
+	row := q.db.QueryRow(ctx, projectSetupStatus, pid)
+	var i ProjectSetupStatusRow
+	err := row.Scan(
+		&i.Clients,
+		&i.Team,
+		&i.Documents,
+		&i.Tree,
+		&i.Tickets,
+		&i.Repos,
+	)
+	return i, err
+}
+
 const setupStatus = `-- name: SetupStatus :one
 SELECT (SELECT count(*) FROM users WHERE disabled_at IS NULL) > 1 AS invited,
        EXISTS (SELECT 1 FROM projects) AS project,

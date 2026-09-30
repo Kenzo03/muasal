@@ -203,7 +203,17 @@
     "notes": "Notes",
     "summaries": "Summaries",
     "documents": "Documents",
-    "workload": "Workload"
+    "workload": "Workload",
+    "setup": {
+      "title": "Set up this project",
+      "hint": "What the team needs before daily work; this goes away once the first four steps are done.",
+      "clients": "Link the clients this project serves",
+      "team": "Add the team and set their client scope",
+      "documents": "Upload the client's specification",
+      "tree": "Build the module tree: draft it from the specification, import a CSV or add it by hand",
+      "tickets": "File the first tickets, or import the client's backlog",
+      "repos": "Connect the code repository (optional)"
+    }
   },
   "workload": {
     "intro": "Open tickets per person in this project. Each number opens the filtered ticket list; no activity means no change for {days} days or more.",

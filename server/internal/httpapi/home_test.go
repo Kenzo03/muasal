@@ -201,3 +201,34 @@ func TestSetupChecklist(t *testing.T) {
 		t.Fatalf("a member: %d", code)
 	}
 }
+
+// MSL-48: a project admin sees how far the project is set up; members don't.
+func TestProjectSetupChecklist(t *testing.T) {
+	e := newEnv(t)
+	admin, _ := e.signedIn("admin@example.com", true)
+	if code := e.call(admin, http.MethodPost, "/projects", map[string]any{"key": "HRIS", "name": "HRIS"}, nil); code != http.StatusCreated {
+		t.Fatalf("create: %d", code)
+	}
+	var st httpapi.ProjectSetup
+	if code := e.call(admin, http.MethodGet, "/projects/HRIS/setup", nil, &st); code != http.StatusOK ||
+		st.Clients || st.Team || st.Documents || st.Tree || st.Tickets || st.Repos {
+		t.Fatalf("a new project: %d %+v", code, st)
+	}
+	p, err := e.q.GetProjectByKey(t.Context(), "HRIS")
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := e.seedClient("Client A")
+	if _, err := e.d.Pool.Exec(t.Context(), `INSERT INTO project_clients (project_id, client_id) VALUES ($1, $2)`, p.ID, a.ID); err != nil {
+		t.Fatal(err)
+	}
+	member, mu := e.signedIn("member@example.com", false)
+	e.seedMember(mu, p, "member")
+	e.seedTicket(p, mu, "First request", &a)
+	if e.call(admin, http.MethodGet, "/projects/HRIS/setup", nil, &st); !st.Clients || !st.Team || !st.Tickets || st.Tree || st.Documents {
+		t.Fatalf("after clients, team and a ticket: %+v", st)
+	}
+	if code := e.call(member, http.MethodGet, "/projects/HRIS/setup", nil, nil); code != http.StatusForbidden {
+		t.Fatalf("a member reads the checklist: %d", code)
+	}
+}

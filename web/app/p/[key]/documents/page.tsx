@@ -7,6 +7,7 @@ import PageBar from "@/components/PageBar";
 import { dateTime, dayOf } from "@/lib/format";
 import { getProject, serverApi } from "@/lib/server-api";
 import { chip, cx, panel } from "@/lib/ui";
+import DraftButton from "@/app/documents/[docKey]/DraftButton";
 import Upload from "./Upload";
 
 // The file's kind as a tile: PDF, DOCX or MD, from its extension.
@@ -54,8 +55,8 @@ export default async function DocumentsPage({ params }: { params: Promise<{ key:
           ) : (
             <ul aria-label={t("heading")} className={cx(panel, "flex flex-col gap-0.5 p-1.5")}>
               {items.map((d) => (
-                <li key={d.key}>
-                  <Link href={`/documents/${d.key}`} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-ink no-underline hover:bg-paper hover:text-ink">
+                <li key={d.key} className="flex items-center gap-2 pr-2">
+                  <Link href={`/documents/${d.key}`} className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3 py-2.5 text-ink no-underline hover:bg-paper hover:text-ink">
                     <FileTile filename={d.filename} />
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <span className={cx("text-sm font-semibold", d.superseded_by && "text-muted")}>{d.title}</span>
@@ -66,6 +67,8 @@ export default async function DocumentsPage({ params }: { params: Promise<{ key:
                     {d.superseded_by && <span className={cx(chip, "bg-warn-soft text-warn")}>{t("supersededBy", { key: d.superseded_by })}</span>}
                     {withClients && <ClientChip client={d.client} coreLabel={t("allClients")} />}
                   </Link>
+                  {/* MSL-48: draft the tree from the list, not two pages away. */}
+                  {admin && !d.superseded_by && <DraftButton docKey={d.key} quiet />}
                 </li>
               ))}
             </ul>
