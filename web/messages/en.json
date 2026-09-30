@@ -207,7 +207,7 @@
     "workload": "Workload",
     "setup": {
       "title": "Set up this project",
-      "hint": "What the team needs before daily work; this goes away once the first four steps are done.",
+      "hint": "What the team needs before daily work; this goes away once the clients, team, module tree and first tickets are in place.",
       "clients": "Link the clients this project serves",
       "team": "Add the team and set their client scope",
       "documents": "Upload the client's specification",
