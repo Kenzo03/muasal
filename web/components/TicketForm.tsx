@@ -219,12 +219,13 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
           </Row>
           <Row label={t("requestedBy")} id="tf-requester">
             <div role="radiogroup" aria-labelledby="tf-requester" className="flex flex-wrap gap-2">
-              <label className={choice}>
-                <input type="radio" name="requester" checked={requester === "user"} onChange={() => setRequester("user")} />
+              {/* Explicit label ids: some assistive tech misses wrapping labels (MSL-62). */}
+              <label htmlFor="tf-requester-user" className={choice}>
+                <input id="tf-requester-user" type="radio" name="requester" value="user" checked={requester === "user"} onChange={() => setRequester("user")} />
                 {userRequester?.name ?? t("me")}
               </label>
-              <label className={choice}>
-                <input type="radio" name="requester" checked={requester === "contact"} onChange={() => setRequester("contact")} />
+              <label htmlFor="tf-requester-contact" className={choice}>
+                <input id="tf-requester-contact" type="radio" name="requester" value="contact" checked={requester === "contact"} onChange={() => setRequester("contact")} />
                 {t("contact")}
               </label>
             </div>
@@ -300,8 +301,8 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
         <Row label={t("type")} id="tf-type">
           <div role="radiogroup" aria-labelledby="tf-type" className="flex flex-wrap gap-2" onChange={(e) => setType((e.target as HTMLInputElement).value as TicketType)}>
             {types.map((ty) => (
-              <label key={ty} className={choice}>
-                <input type="radio" name="type" value={ty} defaultChecked={(ticket?.type ?? "change_request") === ty} />
+              <label key={ty} htmlFor={`tf-type-${ty}`} className={choice}>
+                <input id={`tf-type-${ty}`} type="radio" name="type" value={ty} defaultChecked={(ticket?.type ?? "change_request") === ty} />
                 <Icon name={typeIcon[ty][0]} className={cx("size-3.5", typeIcon[ty][1])} />
                 {tTypes(ty)}
               </label>
