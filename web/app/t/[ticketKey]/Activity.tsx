@@ -13,15 +13,17 @@ import { dateTime } from "@/lib/format";
 import { pasteImages } from "@/lib/paste";
 import { useProblemText, type ActivityItem } from "@/lib/problem";
 import { button, chip, cx, field, panel } from "@/lib/ui";
+import type { Person } from "@/lib/mentions";
 
 type Filter = "all" | "comments" | "history";
 
 // A ticket's comments and history, oldest first (FSD §8.7).
-export default function Activity({ ticketKey, items, meId, canComment }: {
+export default function Activity({ ticketKey, items, meId, canComment, people }: {
   ticketKey: string;
   items: ActivityItem[];
   meId: number;
   canComment: boolean;
+  people: Person[]; // their @handles show as names (MSL-30)
 }) {
   const t = useTranslations("activity");
   const locale = useLocale();
@@ -153,7 +155,7 @@ export default function Activity({ ticketKey, items, meId, canComment }: {
                     </div>
                   </form>
                 ) : (
-                  <Markdown text={it.body ?? ""} />
+                  <Markdown text={it.body ?? ""} people={people} />
                 )}
                 {!it.deleted && canComment && it.actor?.id === meId && editing !== it.comment_id && (
                   <div className="flex gap-3">
