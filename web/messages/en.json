@@ -620,7 +620,7 @@
     "due": "Due date",
     "create": "Create",
     "createAnother": "Create and add another",
-    "created": "{key} created.",
+    "created": "<link>{key}</link> created.",
     "save": "Save",
     "cancel": "Cancel",
     "reload": "Reload",

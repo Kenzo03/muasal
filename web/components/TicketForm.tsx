@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { typeIcon } from "@/components/Chips";
@@ -75,7 +76,7 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
   const [type, setType] = useState<TicketType>(ticket?.type ?? "change_request");
   const [error, setError] = useState("");
   const [stale, setStale] = useState(false);
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState<ReactNode>("");
 
   // A new ticket starts with the client picked last time (FSD §8.3).
   useEffect(() => {
@@ -186,7 +187,7 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
       setNodeIds(new Set());
       setReason("");
       setError("");
-      setNotice(t("created", { key: data.key }));
+      setNotice(t.rich("created", { key: data.key, link: (key) => <Link href={`/t/${data.key}`}>{key}</Link> })); // MSL-32
       return;
     }
     router.push(`/t/${data.key}`);

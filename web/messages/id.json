@@ -620,7 +620,7 @@
     "due": "Tenggat",
     "create": "Buat",
     "createAnother": "Buat dan tambah lagi",
-    "created": "{key} dibuat.",
+    "created": "<link>{key}</link> dibuat.",
     "save": "Simpan",
     "cancel": "Batal",
     "reload": "Muat ulang",
