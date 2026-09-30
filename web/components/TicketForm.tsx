@@ -348,34 +348,34 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
         </Row>
         {/* MSL-58: set on nearly every ticket, so in view rather than under "More". */}
         <div className="grid gap-3 md:grid-cols-4">
-          <label className={field.label}>
+          <label htmlFor="tf-assignee" className={field.label}>
             {t("assignee")}
-            <select name="assignee_id" defaultValue={ticket?.assignee?.id ?? from?.assigneeId ?? ""} className={field.input}>
+            <select id="tf-assignee" name="assignee_id" defaultValue={ticket?.assignee?.id ?? from?.assigneeId ?? ""} className={field.input}>
               <option value="">{t("nobody")}</option>
               {people.map((a) => (
                 <option key={a.id} value={a.id}>{a.name}</option>
               ))}
             </select>
           </label>
-          <label className={field.label}>
+          <label htmlFor="tf-priority" className={field.label}>
             {t("priority")}
-            <select name="priority" defaultValue={ticket?.priority ?? "medium"} className={field.input}>
+            <select id="tf-priority" name="priority" defaultValue={ticket?.priority ?? "medium"} className={field.input}>
               {priorities.map((p) => (
                 <option key={p} value={p}>{tPri(p)}</option>
               ))}
             </select>
           </label>
-          <label className={field.label}>
+          <label htmlFor="tf-due" className={field.label}>
             {t("due")}
-            <input type="date" name="due_date" defaultValue={ticket?.due_date ?? from?.due ?? ""} className={field.input} />
+            <input id="tf-due" type="date" name="due_date" defaultValue={ticket?.due_date ?? from?.due ?? ""} className={field.input} />
           </label>
-          <label className={field.label}>
+          <label htmlFor="tf-estimate" className={field.label}>
             {t("estimate")}
-            <input type="number" name="estimate_hours" min={0} max={9999} step={0.5} defaultValue={ticket?.estimate_hours ?? ""} className={field.input} />
+            <input id="tf-estimate" type="number" name="estimate_hours" min={0} max={9999} step={0.5} defaultValue={ticket?.estimate_hours ?? ""} className={field.input} />
           </label>
-          <label className={cx(field.label, "md:col-span-4")}>
+          <label htmlFor="tf-labels" className={cx(field.label, "md:col-span-4")}>
             {t("labels")}
-            <input name="labels" defaultValue={ticket?.labels?.join(", ") ?? ""} placeholder={t("labelsHint")} className={field.input} />
+            <input id="tf-labels" name="labels" defaultValue={ticket?.labels?.join(", ") ?? ""} placeholder={t("labelsHint")} className={field.input} />
           </label>
         </div>
         {error && (
