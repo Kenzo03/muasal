@@ -2680,7 +2680,10 @@ type Ticket struct {
 	Decision    *DecisionRecord     `json:"decision,omitempty"`
 	Description string              `json:"description"`
 	DueDate     *openapi_types.Date `json:"due_date"`
-	Id          int64               `json:"id"`
+
+	// EstimateHours The effort estimate in hours (MSL-54).
+	EstimateHours *float64 `json:"estimate_hours,omitempty"`
+	Id            int64    `json:"id"`
 
 	// Key Example: HRIS-231
 	Key string `json:"key"`
@@ -2714,7 +2717,10 @@ type TicketCreate struct {
 	ClientId    *int64              `json:"client_id,omitempty"`
 	Description *string             `json:"description,omitempty"`
 	DueDate     *openapi_types.Date `json:"due_date,omitempty"`
-	NodeIds     []int64             `json:"node_ids"`
+
+	// EstimateHours Hours of effort; omitted means no estimate (MSL-54).
+	EstimateHours *float64 `json:"estimate_hours,omitempty"`
+	NodeIds       []int64  `json:"node_ids"`
 
 	// NoteKey A decision note of this project the caller may see, e.g. HRIS-DN7: the ticket joins its tickets, as when filed from one of its action items (MSL-11).
 	NoteKey            *string   `json:"note_key,omitempty"`
@@ -2785,13 +2791,16 @@ type TicketUpdate struct {
 	AssigneeId *int64 `json:"assignee_id,omitempty"`
 
 	// ClientId Omitted for core work (all clients).
-	ClientId           *int64              `json:"client_id,omitempty"`
-	Description        *string             `json:"description,omitempty"`
-	DueDate            *openapi_types.Date `json:"due_date,omitempty"`
-	NodeIds            []int64             `json:"node_ids"`
-	Priority           *Priority           `json:"priority,omitempty"`
-	Reason             *string             `json:"reason,omitempty"`
-	RequesterContactId *int64              `json:"requester_contact_id,omitempty"`
+	ClientId    *int64              `json:"client_id,omitempty"`
+	Description *string             `json:"description,omitempty"`
+	DueDate     *openapi_types.Date `json:"due_date,omitempty"`
+
+	// EstimateHours Hours of effort; omitted means no estimate (MSL-54).
+	EstimateHours      *float64  `json:"estimate_hours,omitempty"`
+	NodeIds            []int64   `json:"node_ids"`
+	Priority           *Priority `json:"priority,omitempty"`
+	Reason             *string   `json:"reason,omitempty"`
+	RequesterContactId *int64    `json:"requester_contact_id,omitempty"`
 
 	// RequesterUserId One of the two requester fields is required.
 	RequesterUserId *int64     `json:"requester_user_id,omitempty"`
@@ -2969,12 +2978,18 @@ type WorkloadRow struct {
 	// DueWeek Due from today through 7 days ahead.
 	DueWeek int `json:"due_week"`
 
+	// Estimated How many of the open tickets have an estimate.
+	Estimated int `json:"estimated"`
+
 	// High Urgent or high priority.
 	High       int `json:"high"`
 	InProgress int `json:"in_progress"`
 
 	// Open To do and In progress.
 	Open int `json:"open"`
+
+	// OpenHours The open tickets' estimates added up (MSL-54).
+	OpenHours float64 `json:"open_hours"`
 
 	// Overdue Due before today, the date in the caller's timezone.
 	Overdue int `json:"overdue"`

@@ -20,6 +20,7 @@ export function updateBody(t: Ticket, c: BulkChange) {
     assignee_id: c.assignee === undefined ? t.assignee?.id : c.assignee === "" ? undefined : Number(c.assignee),
     priority: c.priority ?? t.priority,
     due_date: c.due === undefined ? (t.due_date ?? undefined) : c.due || undefined,
+    estimate_hours: t.estimate_hours ?? undefined,
   };
 }
 

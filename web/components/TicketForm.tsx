@@ -146,6 +146,7 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
     const form = new FormData(formEl);
     if (requester === "contact" && contactId === null) return setError(t("chooseContact"));
     const due = String(form.get("due_date") ?? "");
+    const estimate = String(form.get("estimate_hours") ?? "");
     const assignee = String(form.get("assignee_id") ?? "");
     const body = {
       type: String(form.get("type")) as TicketType,
@@ -159,6 +160,7 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
       assignee_id: assignee ? Number(assignee) : undefined,
       priority: String(form.get("priority")) as Priority,
       due_date: due || undefined,
+      estimate_hours: estimate ? Number(estimate) : undefined, // MSL-54
     };
     if (ticket) {
       const { error } = await api.PUT("/tickets/{key}", {
@@ -346,7 +348,7 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
             <Icon name="chevronRight" className="size-4 text-muted transition-transform group-open:rotate-90" />
             {t("more")}
           </summary>
-          <div className="grid gap-3 px-3.5 pb-3.5 pt-1 md:grid-cols-3">
+          <div className="grid gap-3 px-3.5 pb-3.5 pt-1 md:grid-cols-4">
             <label className={field.label}>
               {t("assignee")}
               <select name="assignee_id" defaultValue={ticket?.assignee?.id ?? from?.assigneeId ?? ""} className={field.input}>
@@ -367,6 +369,10 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
             <label className={field.label}>
               {t("due")}
               <input type="date" name="due_date" defaultValue={ticket?.due_date ?? from?.due ?? ""} className={field.input} />
+            </label>
+            <label className={field.label}>
+              {t("estimate")}
+              <input type="number" name="estimate_hours" min={0} max={9999} step={0.5} defaultValue={ticket?.estimate_hours ?? ""} className={field.input} />
             </label>
           </div>
         </details>

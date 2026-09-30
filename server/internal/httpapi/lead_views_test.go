@@ -284,3 +284,40 @@ func TestWeeklySummaryListsTheWeeksDecisions(t *testing.T) {
 		t.Fatalf("stop: %d", code)
 	}
 }
+
+// MSL-54: tickets carry an optional estimate in hours; Workload adds up each
+// person's open hours.
+func TestEstimatesAddUpOnWorkload(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	file := func(title string, hours any) (int, httpapi.Ticket) {
+		var tk httpapi.Ticket
+		code := e.call(w.pm, http.MethodPost, "/projects/HRIS/tickets", map[string]any{
+			"type": "feature", "title": title, "client_id": w.a.ID, "node_ids": []int64{w.ot.ID}, "reason": "Needed for the pilot",
+			"assignee_id": w.pmUser.ID, "estimate_hours": hours,
+		}, &tk)
+		return code, tk
+	}
+	if code, tk := file("Copy last week's shifts", 6.5); code != http.StatusCreated || tk.EstimateHours == nil || *tk.EstimateHours != 6.5 {
+		t.Fatalf("create with an estimate: %d %+v", code, tk.EstimateHours)
+	}
+	file("Salary slips as PDF", 10)
+	file("Holiday calendar", nil)
+	if code, _ := file("Negative work", -1); code != http.StatusUnprocessableEntity {
+		t.Fatalf("a negative estimate: %d", code)
+	}
+	var wl httpapi.Workload
+	e.call(w.pm, http.MethodGet, "/projects/HRIS/workload", nil, &wl)
+	found := false
+	for _, r := range wl.Rows {
+		if r.Assignee != nil && r.Assignee.Id == w.pmUser.ID {
+			found = true
+			if r.OpenHours != 16.5 || r.Estimated != 2 || r.Open != 3 {
+				t.Fatalf("workload row: %+v", r)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("no workload row for the assignee: %+v", wl.Rows)
+	}
+}

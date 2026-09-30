@@ -226,7 +226,10 @@
     "stale": "No activity {days}+ days",
     "high": "High priority",
     "unassigned": "Unassigned",
-    "none": "Nobody can own tickets in this project yet."
+    "none": "Nobody can own tickets in this project yet.",
+    "openHours": "Open hours",
+    "hours": "{hours} h",
+    "estimatedOf": "{estimated} of {open} open tickets have an estimate"
   },
   "settings": {
     "adminsOnly": "Only project admins can change settings.",
@@ -673,7 +676,8 @@
     "recent": "Recent",
     "bugBehaviors": "Is it a bug, or how the menu was agreed to work? See the behaviors of",
     "newIn": "New ticket in {project}",
-    "close": "Close"
+    "close": "Close",
+    "estimate": "Estimate (hours)"
   },
   "ticket": {
     "edit": "Edit",
@@ -695,7 +699,9 @@
     "details": "Ticket details",
     "people": "People and dates",
     "path": "Path",
-    "closed": "Closed"
+    "closed": "Closed",
+    "estimate": "Estimate",
+    "hours": "{hours} h"
   },
   "close": {
     "title": "Close {key} as {status}",

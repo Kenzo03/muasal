@@ -226,7 +226,10 @@
     "stale": "Tidak bergerak {days}+ hari",
     "high": "Prioritas tinggi",
     "unassigned": "Belum ditugaskan",
-    "none": "Belum ada anggota yang dapat menangani tiket."
+    "none": "Belum ada anggota yang dapat menangani tiket.",
+    "openHours": "Jam terbuka",
+    "hours": "{hours} jam",
+    "estimatedOf": "{estimated} dari {open} tiket terbuka punya estimasi"
   },
   "settings": {
     "adminsOnly": "Hanya admin proyek yang dapat mengubah pengaturan.",
@@ -673,7 +676,8 @@
     "recent": "Terakhir",
     "bugBehaviors": "Bug, atau memang perilaku yang sudah disepakati? Lihat perilaku",
     "newIn": "Tiket baru di {project}",
-    "close": "Tutup"
+    "close": "Tutup",
+    "estimate": "Estimasi (jam)"
   },
   "ticket": {
     "edit": "Ubah",
@@ -695,7 +699,9 @@
     "details": "Rincian tiket",
     "people": "Orang dan tanggal",
     "path": "Jejak",
-    "closed": "Ditutup"
+    "closed": "Ditutup",
+    "estimate": "Estimasi",
+    "hours": "{hours} jam"
   },
   "close": {
     "title": "Tutup {key} sebagai {status}",
