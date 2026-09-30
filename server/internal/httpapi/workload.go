@@ -41,7 +41,7 @@ func (s *Server) GetWorkload(w http.ResponseWriter, r *http.Request, key string,
 	var unassigned *WorkloadRow
 	for _, c := range counts {
 		row := WorkloadRow{Open: int(c.Open), InProgress: int(c.InProgress), Overdue: int(c.Overdue), DueWeek: int(c.DueWeek),
-			Stale: int(c.Stale), High: int(c.High)}
+			Stale: int(c.Stale), High: int(c.High), OpenHours: c.OpenHours, Estimated: int(c.Estimated)}
 		if c.AssigneeID == nil {
 			unassigned = &row
 			continue

@@ -4,8 +4,8 @@ UPDATE projects SET ticket_seq = ticket_seq + 1 WHERE id = $1 RETURNING ticket_s
 
 -- name: CreateTicket :one
 INSERT INTO tickets (project_id, number, key, type, title, description, reason, status_id, client_id,
-                     requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                     requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, estimate_hours)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 RETURNING *;
 
 -- name: GetTicketByKey :one
@@ -26,7 +26,7 @@ WHERE t.key = $1;
 -- Optimistic locking: no row comes back when the version moved on (FSD §8.6).
 UPDATE tickets SET type = $3, title = $4, description = $5, reason = $6, client_id = $7,
   requester_contact_id = $8, requester_user_id = $9, assignee_id = $10, priority = $11, due_date = $12,
-  version = version + 1, updated_at = now()
+  estimate_hours = $13, version = version + 1, updated_at = now()
 WHERE id = $1 AND version = $2
 RETURNING *;
 

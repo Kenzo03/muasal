@@ -225,6 +225,12 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
                       <dd className="font-semibold">{day(ticket.due_date, locale)}</dd>
                     </>
                   )}
+                  {ticket.estimate_hours != null && (
+                    <>
+                      <dt className="text-muted">{t("estimate")}</dt>
+                      <dd>{t("hours", { hours: ticket.estimate_hours })}</dd>
+                    </>
+                  )}
                   <dt className="text-muted">{t("created")}</dt>
                   <dd>{dateTime(ticket.created_at, locale, timeZone)}</dd>
                   {ticket.closed_at && (

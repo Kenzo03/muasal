@@ -2027,6 +2027,11 @@ export interface components {
             priority: components["schemas"]["Priority"];
             /** Format: date */
             due_date: string | null;
+            /**
+             * Format: double
+             * @description The effort estimate in hours (MSL-54).
+             */
+            estimate_hours?: number | null;
             nodes: components["schemas"]["NodeRef"][];
             attachments: components["schemas"]["Attachment"][];
             /** Format: int32 */
@@ -2069,6 +2074,11 @@ export interface components {
             /** Format: date */
             due_date?: string;
             /**
+             * Format: double
+             * @description Hours of effort; omitted means no estimate (MSL-54).
+             */
+            estimate_hours?: number;
+            /**
              * Format: int64
              * @description An open status; omitted means the project's default.
              */
@@ -2100,6 +2110,11 @@ export interface components {
             priority?: components["schemas"]["Priority"];
             /** Format: date */
             due_date?: string;
+            /**
+             * Format: double
+             * @description Hours of effort; omitted means no estimate (MSL-54).
+             */
+            estimate_hours?: number;
         };
         TransitionRequest: {
             /** Format: int64 */
@@ -2335,6 +2350,13 @@ export interface components {
             stale: number;
             /** @description Urgent or high priority. */
             high: number;
+            /**
+             * Format: double
+             * @description The open tickets' estimates added up (MSL-54).
+             */
+            open_hours: number;
+            /** @description How many of the open tickets have an estimate. */
+            estimated: number;
         };
         Workload: {
             /** @description People by name; a row without assignee counts unassigned tickets. */

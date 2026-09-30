@@ -36,6 +36,7 @@ type ticketInput struct {
 	AssigneeID  *int64
 	Priority    *Priority
 	DueDate     *openapi_types.Date
+	Estimate    *float64 // hours (MSL-54)
 }
 
 func (s *Server) CreateTicket(w http.ResponseWriter, r *http.Request, key string, params CreateTicketParams) {
@@ -56,7 +57,7 @@ func (s *Server) CreateTicket(w http.ResponseWriter, r *http.Request, key string
 	draft, nodeIDs, fields, err := s.checkTicket(ctx, pc, ticketInput{
 		Type: in.Type, Title: in.Title, ClientID: in.ClientId, ContactID: in.RequesterContactId, UserID: in.RequesterUserId,
 		NodeIDs: in.NodeIds, Reason: in.Reason, Description: in.Description, AssigneeID: in.AssigneeId,
-		Priority: in.Priority, DueDate: in.DueDate,
+		Priority: in.Priority, DueDate: in.DueDate, Estimate: in.EstimateHours,
 	})
 	if err != nil {
 		s.fail(w, r, err)
@@ -192,7 +193,7 @@ func (s *Server) UpdateTicket(w http.ResponseWriter, r *http.Request, key string
 	draft, nodeIDs, fields, err := s.checkTicket(ctx, pc, ticketInput{
 		Type: in.Type, Title: in.Title, ClientID: in.ClientId, ContactID: in.RequesterContactId, UserID: in.RequesterUserId,
 		NodeIDs: in.NodeIds, Reason: in.Reason, Description: in.Description, AssigneeID: in.AssigneeId,
-		Priority: in.Priority, DueDate: in.DueDate,
+		Priority: in.Priority, DueDate: in.DueDate, Estimate: in.EstimateHours,
 	})
 	if err != nil {
 		s.fail(w, r, err)
@@ -219,6 +220,7 @@ func (s *Server) UpdateTicket(w http.ResponseWriter, r *http.Request, key string
 			ID: row.Ticket.ID, Version: version, Type: draft.Type, Title: draft.Title, Description: draft.Description,
 			Reason: draft.Reason, ClientID: draft.ClientID, RequesterContactID: draft.RequesterContactID,
 			RequesterUserID: draft.RequesterUserID, AssigneeID: draft.AssigneeID, Priority: draft.Priority, DueDate: draft.DueDate,
+			EstimateHours: draft.EstimateHours,
 		})
 		if errors.Is(err, pgx.ErrNoRows) {
 			return errStale
@@ -475,6 +477,12 @@ func (s *Server) checkTicket(ctx context.Context, pc projectCtx, in ticketInput)
 	if in.DueDate != nil {
 		t.DueDate = &in.DueDate.Time
 	}
+	if in.Estimate != nil {
+		if *in.Estimate < 0 || *in.Estimate > 9999 {
+			f = append(f, FieldError{Field: "estimate_hours", Code: "invalid", Message: "Use 0 to 9,999 hours"})
+		}
+		t.EstimateHours = in.Estimate
+	}
 	// The client is in the caller's scope; the database checks it is linked (AC-TK-4).
 	if !pc.scope.Sees(in.ClientID) {
 		f = append(f, clientIDField)
@@ -600,7 +608,7 @@ func ticketFromRow(ctx context.Context, q *db.Queries, row db.GetTicketByKeyRow,
 		Description: t.Description, Reason: t.Reason, Priority: Priority(t.Priority), Version: t.Version,
 		Status: toAPIStatus(row.Status), Reporter: Ref{Id: t.ReporterID, Name: row.ReporterName},
 		CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt, ClosedAt: t.ClosedAt, Decision: decision, Links: links, Code: code,
-		Nodes: make([]NodeRef, len(nodes)), Attachments: make([]Attachment, len(files)),
+		Nodes: make([]NodeRef, len(nodes)), Attachments: make([]Attachment, len(files)), EstimateHours: t.EstimateHours,
 	}
 	if t.ClientID != nil {
 		out.Client = &Ref{Id: *t.ClientID, Name: deref(row.ClientName)}
@@ -635,7 +643,7 @@ func ticketAudit(t Ticket) map[string]any {
 	m := map[string]any{
 		"title": t.Title, "type": string(t.Type), "priority": string(t.Priority), "reason": t.Reason,
 		"description": t.Description, "status": t.Status.Name, "requester": t.Requester.Name, "menus": menus,
-		"client": nil, "assignee": nil, "due_date": nil,
+		"client": nil, "assignee": nil, "due_date": nil, "estimate_hours": t.EstimateHours,
 	}
 	if t.Client != nil {
 		m["client"] = t.Client.Name
