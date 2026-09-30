@@ -606,7 +606,30 @@
     "none": "Tidak ada tiket yang cocok dengan saringan ini.",
     "next": "Halaman berikutnya",
     "exportCsv": "Ekspor CSV",
-    "importTickets": "Impor tiket"
+    "importTickets": "Impor tiket",
+    "bulk": {
+      "label": "Ubah beberapa tiket",
+      "hint": "Centang tiket untuk mengubahnya sekaligus.",
+      "selected": "{count, plural, other {# tiket dipilih}}",
+      "assignee": "Penanggung jawab",
+      "keep": "Tetap",
+      "nobody": "Tidak ada",
+      "priority": "Prioritas",
+      "priorities": {
+        "low": "Rendah",
+        "medium": "Sedang",
+        "high": "Tinggi",
+        "urgent": "Mendesak"
+      },
+      "due": "Tenggat",
+      "clearDue": "Hapus tenggat",
+      "status": "Status",
+      "apply": "Terapkan ke {count}",
+      "progress": "Memperbarui {done} dari {total}…",
+      "failed": "Tidak berubah:",
+      "select": "Pilih {key}",
+      "selectAll": "Pilih semua"
+    }
   },
   "ticketForm": {
     "newTitle": "Tiket baru",
