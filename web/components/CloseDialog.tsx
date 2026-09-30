@@ -172,7 +172,7 @@ export default function CloseDialog({ ticket, status, nodes, onDone, onCancel, d
             onChange={typing("what", setWhatChanged)}
             max={1000}
             rows={2}
-            hint={prior ? t("fromRecord") : done ? t("fromTitle") : undefined}
+            hint={drafted ? undefined : prior ? t("fromRecord") : done ? t("fromTitle") : undefined}
             error={serverError("decision.what_changed")}
           />
           <Area
