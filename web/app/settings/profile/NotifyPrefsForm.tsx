@@ -23,6 +23,7 @@ export default function NotifyPrefsForm({ me }: { me: User }) {
     const next: Record<string, boolean> = {};
     for (const ev of events) next[ev] = form.get(ev) === "on";
     next.browser = form.get("browser") === "on";
+    next.email = form.get("email") === "on";
     if (next.browser && "Notification" in window && Notification.permission === "default") {
       next.browser = (await Notification.requestPermission()) === "granted";
     }
@@ -45,6 +46,12 @@ export default function NotifyPrefsForm({ me }: { me: User }) {
         {t("browser")}
       </label>
       <p className={field.hint}>{t("browserHint")}</p>
+      {/* MSL-10: email reaches people who do not keep the app open. */}
+      <label className="flex items-center gap-2 text-[13px]">
+        <input type="checkbox" name="email" defaultChecked={prefs.email === true} className="size-4 accent-accent" />
+        {t("email")}
+      </label>
+      <p className={field.hint}>{t("emailHint")}</p>
       <div className="flex items-center gap-3">
         <button className={button.secondary}>{t("save")}</button>
         {status && <span role="status" className="text-[13px] text-muted">{status}</span>}

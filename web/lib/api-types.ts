@@ -2567,6 +2567,8 @@ export interface components {
             status?: boolean;
             job_done?: boolean;
             browser?: boolean;
+            /** @description Also by email, a digest of what is still unread after two minutes, when the server has SMTP set up (MSL-10). Off until chosen. */
+            email?: boolean;
         };
         Notification: {
             /** Format: int64 */
@@ -3070,6 +3072,11 @@ export interface components {
             items: components["schemas"]["Backup"][];
         };
         SystemStatus: {
+            /** @description Email notifications (MSL-10), set up by SMTP_HOST and friends in deploy/.env. */
+            email: {
+                enabled: boolean;
+                host?: string;
+            };
             /** Format: int64 */
             database_bytes: number;
             /** @description River jobs by state (available, scheduled, running, retryable, discarded). */

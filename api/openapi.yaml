@@ -3007,6 +3007,7 @@ components:
         status: { type: boolean }
         job_done: { type: boolean }
         browser: { type: boolean }
+        email: { type: boolean, description: "Also by email, a digest of what is still unread after two minutes, when the server has SMTP set up (MSL-10). Off until chosen." }
     Notification:
       type: object
       required: [id, type, payload, created_at, read]
@@ -3526,8 +3527,15 @@ components:
         items: { type: array, items: { $ref: "#/components/schemas/Backup" } }
     SystemStatus:
       type: object
-      required: [database_bytes, jobs, model, disks, warnings]
+      required: [database_bytes, jobs, model, email, disks, warnings]
       properties:
+        email:
+          type: object
+          description: Email notifications (MSL-10), set up by SMTP_HOST and friends in deploy/.env.
+          required: [enabled]
+          properties:
+            enabled: { type: boolean }
+            host: { type: string }
         database_bytes: { type: integer, format: int64 }
         jobs:
           type: object

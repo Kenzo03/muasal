@@ -125,6 +125,9 @@ func (s *Server) GetSystemStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	out := SystemStatus{DatabaseBytes: f.dbBytes, Jobs: f.jobs, Disks: f.disks, Warnings: []SystemStatusWarnings{}}
 	out.Model.Mode = AIMode(f.mode)
+	if out.Email.Enabled = s.cfg.SMTP.On(); out.Email.Enabled {
+		out.Email.Host = &s.cfg.SMTP.Host
+	}
 	out.Model.Reachable = f.model
 	if f.modelEr != "" {
 		out.Model.Error = &f.modelEr

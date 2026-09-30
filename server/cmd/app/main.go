@@ -28,6 +28,7 @@ import (
 	"github.com/kenzo03/muasal/server/internal/gitlink"
 	"github.com/kenzo03/muasal/server/internal/httpapi"
 	"github.com/kenzo03/muasal/server/internal/indexer"
+	"github.com/kenzo03/muasal/server/internal/mail"
 	"github.com/kenzo03/muasal/server/internal/migrate"
 	"github.com/kenzo03/muasal/server/internal/ticketimport"
 )
@@ -104,12 +105,10 @@ func serve(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 			river.AddWorker(ws, &gitlink.Worker{Pool: pool})
 			river.AddWorker(ws, &draft.TreeWorker{Pool: pool, AI: api.AI()})
 			river.AddWorker(ws, &httpapi.SummaryScheduleWorker{Server: api})
+			river.AddWorker(ws, &mail.Worker{Pool: pool, Config: cfg.SMTP, PublicURL: cfg.PublicURL})
 		},
 		// Weekly change summaries: each hour writes the ones due today that have not run.
-		Periodic: []*river.PeriodicJob{
-			river.NewPeriodicJob(river.PeriodicInterval(time.Hour),
-				func() (river.JobArgs, *river.InsertOpts) { return httpapi.SummaryScheduleTick{}, nil }, &river.PeriodicJobOpts{RunOnStart: true}),
-		},
+		Periodic: periodic(cfg),
 	})
 	if err != nil {
 		return err
@@ -297,4 +296,19 @@ func healthcheck(cfg config.Config) error {
 		return fmt.Errorf("readyz answered %s", res.Status)
 	}
 	return nil
+}
+
+// periodic lists the other packages' periodic jobs: weekly change summaries
+// (each hour writes the ones due today that have not run) and, with SMTP set
+// up, the email digests every minute (MSL-10).
+func periodic(cfg config.Config) []*river.PeriodicJob {
+	jobs := []*river.PeriodicJob{
+		river.NewPeriodicJob(river.PeriodicInterval(time.Hour),
+			func() (river.JobArgs, *river.InsertOpts) { return httpapi.SummaryScheduleTick{}, nil }, &river.PeriodicJobOpts{RunOnStart: true}),
+	}
+	if cfg.SMTP.On() {
+		jobs = append(jobs, river.NewPeriodicJob(river.PeriodicInterval(time.Minute),
+			func() (river.JobArgs, *river.InsertOpts) { return mail.SendEmails{}, nil }, nil))
+	}
+	return jobs
 }

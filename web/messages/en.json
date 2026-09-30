@@ -991,7 +991,10 @@
       "disk_backups": "The backups disk is 80% full or more.",
       "model_unreachable": "The model server is unreachable; Ask and indexing wait.",
       "jobs_failed": "Some background jobs failed; see Admin → AI → Index status."
-    }
+    },
+    "email": "Email",
+    "emailOn": "On, through {host}",
+    "emailOff": "Off. Set SMTP_HOST and SMTP_FROM in deploy/.env to send notifications by email."
   },
   "backups": {
     "title": "Backups",
@@ -1207,10 +1210,12 @@
       "job_done": "An import I started finishes"
     },
     "browser": "Browser notifications when the app is in a background tab",
-    "browserHint": "The app sends no email. Notifications need an open app tab.",
+    "browserHint": "Browser notifications need the app open in a tab.",
     "save": "Save",
     "saved": "Saved.",
-    "failed": "Could not save."
+    "failed": "Could not save.",
+    "email": "Also email me",
+    "emailHint": "Gathered into one email every few minutes, once the admin has set up the server's email. What you already read in the app is not sent."
   },
   "repos": {
     "title": "Repositories",

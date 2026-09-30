@@ -2131,9 +2131,12 @@ type NotifyPrefs struct {
 	Assigned *bool `json:"assigned,omitempty"`
 	Browser  *bool `json:"browser,omitempty"`
 	Comment  *bool `json:"comment,omitempty"`
-	JobDone  *bool `json:"job_done,omitempty"`
-	Mention  *bool `json:"mention,omitempty"`
-	Status   *bool `json:"status,omitempty"`
+
+	// Email Also by email, a digest of what is still unread after two minutes, when the server has SMTP set up (MSL-10). Off until chosen.
+	Email   *bool `json:"email,omitempty"`
+	JobDone *bool `json:"job_done,omitempty"`
+	Mention *bool `json:"mention,omitempty"`
+	Status  *bool `json:"status,omitempty"`
 }
 
 // Priority defines model for Priority.
@@ -2548,6 +2551,12 @@ type SummaryUpdate struct {
 type SystemStatus struct {
 	DatabaseBytes int64     `json:"database_bytes"`
 	Disks         []DiskUse `json:"disks"`
+
+	// Email Email notifications (MSL-10), set up by SMTP_HOST and friends in deploy/.env.
+	Email struct {
+		Enabled bool    `json:"enabled"`
+		Host    *string `json:"host,omitempty"`
+	} `json:"email"`
 
 	// Jobs River jobs by state (available, scheduled, running, retryable, discarded).
 	Jobs  map[string]int64 `json:"jobs"`

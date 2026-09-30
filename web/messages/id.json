@@ -991,7 +991,10 @@
       "disk_backups": "Disk cadangan terisi 80% atau lebih.",
       "model_unreachable": "Server model tidak terhubung; Tanya dan pengindeksan menunggu.",
       "jobs_failed": "Ada tugas latar yang gagal; lihat Admin → AI → Status indeks."
-    }
+    },
+    "email": "Email",
+    "emailOn": "Aktif lewat {host}",
+    "emailOff": "Mati. Isi SMTP_HOST dan SMTP_FROM di deploy/.env untuk mengirim pemberitahuan lewat email."
   },
   "backups": {
     "title": "Cadangan",
@@ -1207,10 +1210,12 @@
       "job_done": "Impor yang saya mulai selesai"
     },
     "browser": "Notifikasi browser saat aplikasi ada di tab latar",
-    "browserHint": "Aplikasi tidak mengirim email. Notifikasi butuh tab aplikasi yang terbuka.",
+    "browserHint": "Notifikasi browser butuh tab aplikasi yang terbuka.",
     "save": "Simpan",
     "saved": "Tersimpan.",
-    "failed": "Tidak dapat menyimpan."
+    "failed": "Tidak dapat menyimpan.",
+    "email": "Kirim juga ke email saya",
+    "emailHint": "Dikumpulkan jadi satu email tiap beberapa menit, bila admin sudah mengatur email server. Yang sudah Anda baca di aplikasi tidak dikirim."
   },
   "repos": {
     "title": "Repositori",

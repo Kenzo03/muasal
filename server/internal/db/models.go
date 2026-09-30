@@ -305,6 +305,7 @@ type Notification struct {
 	Payload   []byte
 	CreatedAt time.Time
 	ReadAt    *time.Time
+	EmailedAt *time.Time
 }
 
 type Project struct {

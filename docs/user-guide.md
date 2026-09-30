@@ -60,7 +60,7 @@ Project admins connect GitHub, GitLab or Gitea repositories in project settings.
 
 ## Notifications
 
-The bell shows assignments, comments, mentions, status changes and finished imports or tree drafts, live while the app is open. Your profile turns each event on or off, and can turn on browser notifications.
+The bell shows assignments, comments, mentions, status changes and finished imports or tree drafts, live while the app is open. Your profile turns each event on or off, and can turn on browser notifications, and, once your admin has set up email, an email of what you have not read after a couple of minutes.
 
 ## For scripts
 
