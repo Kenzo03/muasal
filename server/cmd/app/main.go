@@ -105,6 +105,7 @@ func serve(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 			river.AddWorker(ws, &gitlink.Worker{Pool: pool})
 			river.AddWorker(ws, &draft.TreeWorker{Pool: pool, AI: api.AI()})
 			river.AddWorker(ws, &httpapi.SummaryScheduleWorker{Server: api})
+			river.AddWorker(ws, &httpapi.DueRemindersWorker{Server: api})
 			river.AddWorker(ws, &mail.Worker{Pool: pool, Config: cfg.SMTP, PublicURL: cfg.PublicURL})
 		},
 		// Weekly change summaries: each hour writes the ones due today that have not run.
@@ -305,6 +306,8 @@ func periodic(cfg config.Config) []*river.PeriodicJob {
 	jobs := []*river.PeriodicJob{
 		river.NewPeriodicJob(river.PeriodicInterval(time.Hour),
 			func() (river.JobArgs, *river.InsertOpts) { return httpapi.SummaryScheduleTick{}, nil }, &river.PeriodicJobOpts{RunOnStart: true}),
+		river.NewPeriodicJob(river.PeriodicInterval(time.Hour),
+			func() (river.JobArgs, *river.InsertOpts) { return httpapi.DueReminders{}, nil }, &river.PeriodicJobOpts{RunOnStart: true}),
 	}
 	if cfg.SMTP.On() {
 		jobs = append(jobs, river.NewPeriodicJob(river.PeriodicInterval(time.Minute),

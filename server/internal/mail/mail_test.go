@@ -147,3 +147,11 @@ func TestWorkerSendsOneDigestPerUser(t *testing.T) {
 		t.Fatalf("sent: %q", sent)
 	}
 }
+
+// MSL-52: a due reminder reads as one.
+func TestDigestDue(t *testing.T) {
+	subject, body := Digest("id", "Fajar Nugroho", []Item{{Type: "due", Key: "HRIS-8", Title: "Cut-off payroll", Payload: map[string]any{"when": "tomorrow"}}}, "https://m.example")
+	if subject != "Muasal: HRIS-8 Cut-off payroll jatuh tempo besok" || !strings.Contains(body, "https://m.example/t/HRIS-8") {
+		t.Fatalf("%q\n%s", subject, body)
+	}
+}

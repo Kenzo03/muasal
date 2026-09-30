@@ -583,6 +583,7 @@ func (e NodeType) Valid() bool {
 const (
 	NotificationTypeAssigned NotificationType = "assigned"
 	NotificationTypeComment  NotificationType = "comment"
+	NotificationTypeDue      NotificationType = "due"
 	NotificationTypeJobDone  NotificationType = "job_done"
 	NotificationTypeMention  NotificationType = "mention"
 	NotificationTypeStatus   NotificationType = "status"
@@ -594,6 +595,8 @@ func (e NotificationType) Valid() bool {
 	case NotificationTypeAssigned:
 		return true
 	case NotificationTypeComment:
+		return true
+	case NotificationTypeDue:
 		return true
 	case NotificationTypeJobDone:
 		return true
@@ -2165,10 +2168,12 @@ type Notification struct {
 	Read        bool                   `json:"read"`
 	TicketKey   *string                `json:"ticket_key,omitempty"`
 	TicketTitle *string                `json:"ticket_title,omitempty"`
-	Type        NotificationType       `json:"type"`
+
+	// Type due (MSL-52): payload.when is today, tomorrow or overdue, payload.due the date.
+	Type NotificationType `json:"type"`
 }
 
-// NotificationType defines model for Notification.Type.
+// NotificationType due (MSL-52): payload.when is today, tomorrow or overdue, payload.due the date.
 type NotificationType string
 
 // NotificationList defines model for NotificationList.
@@ -2182,6 +2187,9 @@ type NotifyPrefs struct {
 	Assigned *bool `json:"assigned,omitempty"`
 	Browser  *bool `json:"browser,omitempty"`
 	Comment  *bool `json:"comment,omitempty"`
+
+	// Due The morning reminder of tickets due today or tomorrow
+	Due *bool `json:"due,omitempty"`
 
 	// Email Also by email, a digest of what is still unread after two minutes, when the server has SMTP set up (MSL-10). Off until chosen.
 	Email   *bool `json:"email,omitempty"`

@@ -8,6 +8,7 @@ import (
 
 	"github.com/kenzo03/muasal/server/internal/db"
 	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"time"
 )
 
 // assign gives a ticket to a user, due in dueIn days from today on the test
@@ -230,5 +231,46 @@ func TestProjectSetupChecklist(t *testing.T) {
 	}
 	if code := e.call(member, http.MethodGet, "/projects/HRIS/setup", nil, nil); code != http.StatusForbidden {
 		t.Fatalf("a member reads the checklist: %d", code)
+	}
+}
+
+// MSL-52: from 08:00 in the assignee's timezone they hear, once a day, about
+// tickets due today or tomorrow, or overdue since yesterday; nothing else.
+func TestDueReminders(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	due := func(title, day string, assignee *db.User) db.Ticket {
+		tk := e.seedTicket(w.p, w.pmUser, title, &w.a, w.ot)
+		if _, err := e.d.Pool.Exec(t.Context(), `UPDATE tickets SET due_date = $2, assignee_id = $3 WHERE id = $1`, tk.ID, day, assignee.ID); err != nil {
+			t.Fatal(err)
+		}
+		return tk
+	}
+	due("Due today", "2026-09-30", &w.pmUser)
+	due("Due tomorrow", "2026-10-01", &w.pmUser)
+	due("Overdue since yesterday", "2026-09-29", &w.pmUser)
+	due("Overdue for a week", "2026-09-23", &w.pmUser)
+	due("Due next week", "2026-10-07", &w.pmUser)
+	jakarta, _ := time.LoadLocation("Asia/Jakarta")
+	if n, err := e.api.RemindDue(t.Context(), time.Date(2026, 9, 30, 7, 30, 0, 0, jakarta)); err != nil || n != 0 {
+		t.Fatalf("before 08:00: %d %v", n, err)
+	}
+	morning := time.Date(2026, 9, 30, 8, 5, 0, 0, jakarta)
+	if n, err := e.api.RemindDue(t.Context(), morning); err != nil || n != 3 {
+		t.Fatalf("at 08:05: %d %v", n, err)
+	}
+	if n, _ := e.api.RemindDue(t.Context(), morning.Add(time.Hour)); n != 0 {
+		t.Fatalf("an hour later, again: %d", n)
+	}
+	var got httpapi.NotificationList
+	e.call(w.pm, http.MethodGet, "/notifications", nil, &got)
+	whens := map[string]bool{}
+	for _, n := range got.Items {
+		if n.Type == httpapi.NotificationTypeDue {
+			whens[n.Payload["when"].(string)] = true
+		}
+	}
+	if len(whens) != 3 || !whens["today"] || !whens["tomorrow"] || !whens["overdue"] {
+		t.Fatalf("reminders: %+v", got.Items)
 	}
 }

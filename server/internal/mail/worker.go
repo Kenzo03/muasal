@@ -84,12 +84,14 @@ func Digest(locale, name string, items []Item, publicURL string) (subject, body 
 		"assigned": "%s assigned you %s", "comment": "%s commented on %s", "mention": "%s mentioned you on %s",
 		"status": "%s moved %s to %s", "job_done": "%s finished", "hello": "Hi %s,", "someone": "Someone",
 		"many": "Muasal: %d new notifications", "footer": "Choose which notifications reach you at %s/settings/profile.",
+		"due.today": "%s is due today", "due.tomorrow": "%s is due tomorrow", "due.overdue": "%s is overdue",
 	}
 	if locale == "id" {
 		words = map[string]string{
 			"assigned": "%s menugaskan %s kepada Anda", "comment": "%s berkomentar di %s", "mention": "%s menyebut Anda di %s",
 			"status": "%s memindahkan %s ke %s", "job_done": "%s selesai", "hello": "Halo %s,", "someone": "Seseorang",
 			"many": "Muasal: %d pemberitahuan baru", "footer": "Atur pemberitahuan yang Anda terima di %s/settings/profile.",
+			"due.today": "%s jatuh tempo hari ini", "due.tomorrow": "%s jatuh tempo besok", "due.overdue": "%s sudah lewat jatuh tempo",
 		}
 	}
 	var lines []string
@@ -111,6 +113,8 @@ func Digest(locale, name string, items []Item, publicURL string) (subject, body 
 			line = fmt.Sprintf(words["status"], actor, ticket, str("status"))
 		case "job_done":
 			line, link = fmt.Sprintf(words["job_done"], str("name")), str("link")
+		case "due": // MSL-52
+			line = fmt.Sprintf(words["due."+str("when")], ticket)
 		default:
 			line = fmt.Sprintf(words[it.Type], actor, ticket)
 		}
