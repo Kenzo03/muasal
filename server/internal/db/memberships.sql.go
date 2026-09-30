@@ -96,17 +96,27 @@ const listAssignees = `-- name: ListAssignees :many
 SELECT u.id, u.name
 FROM memberships m JOIN users u ON u.id = m.user_id
 WHERE m.project_id = $1 AND m.role IN ('admin', 'member') AND u.disabled_at IS NULL
+  AND ($2::bigint IS NULL OR m.role = 'admin' OR m.all_clients OR EXISTS (
+        SELECT 1 FROM membership_clients mc
+        WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = $2::bigint))
 ORDER BY lower(u.name), u.id
 `
+
+type ListAssigneesParams struct {
+	ProjectID int64
+	ClientID  *int64
+}
 
 type ListAssigneesRow struct {
 	ID   int64
 	Name string
 }
 
-// Who can own tickets: active members who are not viewers (FSD §8.1).
-func (q *Queries) ListAssignees(ctx context.Context, projectID int64) ([]ListAssigneesRow, error) {
-	rows, err := q.db.Query(ctx, listAssignees, projectID)
+// Who can own tickets: active members who are not viewers (FSD §8.1). With a
+// client, only those who may see its tickets (MSL-22): project admins, members
+// of all clients, and members scoped to it.
+func (q *Queries) ListAssignees(ctx context.Context, arg ListAssigneesParams) ([]ListAssigneesRow, error) {
+	rows, err := q.db.Query(ctx, listAssignees, arg.ProjectID, arg.ClientID)
 	if err != nil {
 		return nil, err
 	}

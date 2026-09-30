@@ -97,6 +97,19 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
     };
   }, [clientId]);
 
+  // MSL-22: only people who may see the chosen client's tickets can own this one.
+  const [people, setPeople] = useState(assignees);
+  useEffect(() => {
+    if (clientId === null) return setPeople(assignees);
+    let live = true;
+    api
+      .GET("/projects/{key}/assignees", { params: { path: { key: projectKey }, query: { client_id: clientId } } })
+      .then(({ data }) => live && data && setPeople(data.items));
+    return () => {
+      live = false;
+    };
+  }, [clientId, projectKey, assignees]);
+
   // R-MR-10: warn, without blocking, when a chosen menu belongs to other clients only.
   const warnings = clientId === null ? [] : nodes.filter((n) => nodeIds.has(n.id) && n.client_specific && !n.clients.some((c) => c.id === clientId));
 
@@ -333,7 +346,7 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
               {t("assignee")}
               <select name="assignee_id" defaultValue={ticket?.assignee?.id ?? ""} className={field.input}>
                 <option value="">{t("nobody")}</option>
-                {assignees.map((a) => (
+                {people.map((a) => (
                   <option key={a.id} value={a.id}>{a.name}</option>
                 ))}
               </select>

@@ -2,6 +2,7 @@ package httpapi_test
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"slices"
 	"testing"
@@ -244,5 +245,35 @@ func TestStatusesInUseKeepTheirKind(t *testing.T) {
 	moved, err := e.q.GetTicketByKey(ctx, shipped.Key)
 	if err != nil || moved.Ticket.StatusID != deployed.Id || moved.Ticket.ClosedAt == nil {
 		t.Fatalf("the shipped ticket after the move: %+v %v", moved.Ticket, err)
+	}
+}
+
+// MSL-22: for a client's ticket, the assignee list offers only those who may
+// see it: project admins, members of all clients and members of that client.
+func TestAssigneesForAClient(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e) // the PM is a member for Client A only
+	lead, lu := e.signedIn("lead@example.com", false)
+	e.seedMember(lu, w.p, "admin")
+	e.seedMember(e.seedUser("dewi@example.com", pw, false), w.p, "member", w.b)
+	names := func(query string) []string {
+		var list httpapi.RefList
+		if code := e.call(lead, http.MethodGet, "/projects/HRIS/assignees"+query, nil, &list); code != http.StatusOK {
+			t.Fatalf("%s: %d", query, code)
+		}
+		var out []string
+		for _, u := range list.Items {
+			out = append(out, u.Name)
+		}
+		return out
+	}
+	if got := names(fmt.Sprintf("?client_id=%d", w.a.ID)); slices.Contains(got, "dewi@example.com") || !slices.Contains(got, "lead@example.com") || !slices.Contains(got, w.pmUser.Name) {
+		t.Errorf("Client A: %v", got)
+	}
+	if got := names(fmt.Sprintf("?client_id=%d", w.b.ID)); !slices.Contains(got, "dewi@example.com") || slices.Contains(got, w.pmUser.Name) {
+		t.Errorf("Client B: %v", got)
+	}
+	if got := names(""); !slices.Contains(got, "dewi@example.com") || !slices.Contains(got, w.pmUser.Name) {
+		t.Errorf("core work: %v", got)
 	}
 }

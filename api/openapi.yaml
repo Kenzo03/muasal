@@ -712,6 +712,8 @@ paths:
       operationId: listAssignees
       tags: [projects]
       description: Members who can own tickets (not viewers).
+      parameters:
+        - { name: client_id, in: query, schema: { type: integer, format: int64 }, description: "Only those who may see this client's tickets (MSL-22)." }
       responses:
         "200":
           description: Assignable members by name.

@@ -4162,7 +4162,10 @@ export interface operations {
     };
     listAssignees: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Only those who may see this client's tickets (MSL-22). */
+                client_id?: number;
+            };
             header?: never;
             path: {
                 key: string;

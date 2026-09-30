@@ -185,12 +185,12 @@ func closedCategory(c string) bool {
 }
 
 // ListAssignees lists who can own the project's tickets.
-func (s *Server) ListAssignees(w http.ResponseWriter, r *http.Request, key string) {
+func (s *Server) ListAssignees(w http.ResponseWriter, r *http.Request, key string, params ListAssigneesParams) {
 	pc, ok := s.projectFor(w, r, key, access.Viewer)
 	if !ok {
 		return
 	}
-	rows, err := s.q.ListAssignees(r.Context(), pc.project.ID)
+	rows, err := s.q.ListAssignees(r.Context(), db.ListAssigneesParams{ProjectID: pc.project.ID, ClientID: params.ClientId})
 	if err != nil {
 		s.fail(w, r, err)
 		return

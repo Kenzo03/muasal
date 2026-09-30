@@ -2947,6 +2947,12 @@ type MarkNotificationsReadJSONBody struct {
 	Id *int64 `json:"id,omitempty"`
 }
 
+// ListAssigneesParams defines parameters for ListAssignees.
+type ListAssigneesParams struct {
+	// ClientId Only those who may see this client's tickets (MSL-22).
+	ClientId *int64 `form:"client_id,omitempty" json:"client_id,omitempty"`
+}
+
 // UploadDocumentMultipartBody defines parameters for UploadDocument.
 type UploadDocumentMultipartBody struct {
 	ClientId *int64             `json:"client_id,omitempty"`
@@ -3427,7 +3433,7 @@ type ServerInterface interface {
 	UpdateProject(w http.ResponseWriter, r *http.Request, key string)
 
 	// (GET /projects/{key}/assignees)
-	ListAssignees(w http.ResponseWriter, r *http.Request, key string)
+	ListAssignees(w http.ResponseWriter, r *http.Request, key string, params ListAssigneesParams)
 
 	// (GET /projects/{key}/clients)
 	ListProjectClients(w http.ResponseWriter, r *http.Request, key string)
@@ -5361,8 +5367,24 @@ func (siw *ServerInterfaceWrapper) ListAssignees(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAssigneesParams
+
+	// ------------- Optional query parameter "client_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "client_id", r.URL.Query(), &params.ClientId, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "client_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "client_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListAssignees(w, r, key)
+		siw.Handler.ListAssignees(w, r, key, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

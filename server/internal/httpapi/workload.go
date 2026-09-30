@@ -32,7 +32,7 @@ func (s *Server) GetWorkload(w http.ResponseWriter, r *http.Request, key string,
 		s.fail(w, r, err)
 		return
 	}
-	members, err := s.q.ListAssignees(ctx, pc.project.ID)
+	members, err := s.q.ListAssignees(ctx, db.ListAssigneesParams{ProjectID: pc.project.ID})
 	if err != nil {
 		s.fail(w, r, err)
 		return
