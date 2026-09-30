@@ -18,6 +18,12 @@ func TestAdminCreatesAProjectAndMembersSeeOnlyTheirProjects(t *testing.T) {
 	if code != http.StatusCreated || p.Key != "HRIS" || p.Name != "HRIS" || p.Role != httpapi.ProjectRoleAdmin {
 		t.Fatalf("create: %d %+v", code, p)
 	}
+	// MSL-47: the creator is the new project's admin, so they can be assigned.
+	var members httpapi.MemberList
+	if e.call(admin, http.MethodGet, "/projects/HRIS/members", nil, &members); len(members.Items) != 1 ||
+		members.Items[0].Email != "admin@example.com" || members.Items[0].Role != httpapi.ProjectRoleAdmin {
+		t.Fatalf("members after create: %+v", members.Items)
+	}
 	pay := e.seedProject("PAY")
 	budi, bu := e.signedIn("budi@example.com", false)
 	e.seedMember(bu, pay, "viewer")
