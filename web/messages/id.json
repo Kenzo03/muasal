@@ -243,12 +243,15 @@
     "allClients": "Semua klien",
     "someClients": "Klien tertentu",
     "remove": "Hapus",
-    "email": "Email",
+    "person": "Orang",
+    "pickPerson": "Pilih orang…",
+    "notListed": "Tidak ada di daftar? Admin sistem menambahkan orang di Admin › Pengguna.",
+    "unsaved": "Ada perubahan yang belum disimpan",
+    "unsavedLeave": "Tinggalkan halaman tanpa menyimpan perubahan anggota?",
     "addMember": "Tambah anggota",
     "saveMembers": "Simpan anggota",
     "noMembers": "Belum ada anggota.",
-    "unknownUserHint": "Minta admin sistem membuat akunnya di Admin › Pengguna, lalu tambahkan lagi.",
-    "alreadyListed": "Email ini sudah ada di daftar."
+    "unknownUserHint": "Minta admin sistem membuat akunnya di Admin › Pengguna, lalu tambahkan lagi."
   },
   "clients": {
     "title": "Klien",

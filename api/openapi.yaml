@@ -496,6 +496,20 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/MemberList" }
         default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/member-candidates:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listMemberCandidates
+      tags: [projects]
+      description: Project admins only. The active users a project admin can add as members, by name (MSL-21).
+      responses:
+        "200":
+          description: Users by name, members included.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PersonList" }
+        default: { $ref: "#/components/responses/Problem" }
   /contacts:
     get:
       operationId: listContacts
@@ -2068,6 +2082,20 @@ components:
         client_ids:
           type: array
           items: { type: integer, format: int64 }
+    Person:
+      type: object
+      required: [id, name, email]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        email: { type: string }
+    PersonList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Person" }
     MemberList:
       type: object
       required: [items]

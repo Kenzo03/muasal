@@ -423,6 +423,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{key}/member-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description Project admins only. The active users a project admin can add as members, by name (MSL-21). */
+        get: operations["listMemberCandidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/contacts": {
         parameters: {
             query?: never;
@@ -1687,6 +1706,15 @@ export interface components {
             role: components["schemas"]["ProjectRole"];
             all_clients: boolean;
             client_ids: number[];
+        };
+        Person: {
+            /** Format: int64 */
+            id: number;
+            name: string;
+            email: string;
+        };
+        PersonList: {
+            items: components["schemas"]["Person"][];
         };
         MemberList: {
             items: components["schemas"]["Member"][];
@@ -3891,6 +3919,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MemberList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listMemberCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Users by name, members included. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonList"];
                 };
             };
             default: components["responses"]["Problem"];

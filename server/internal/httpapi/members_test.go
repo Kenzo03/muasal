@@ -41,6 +41,26 @@ func TestProjectAdminSetsMembersAndScopes(t *testing.T) {
 	if err != nil || len(events) != 1 || events[0].Action != "set_members" {
 		t.Fatalf("audit: %+v %v", events, err)
 	}
+	// MSL-21: a project admin adds members by picking from the active users.
+	e.seedUser("gone@example.com", pw, false)
+	if _, err := e.d.Pool.Exec(context.Background(), `UPDATE users SET disabled_at = now() WHERE email = 'gone@example.com'`); err != nil {
+		t.Fatal(err)
+	}
+	var people httpapi.PersonList
+	if code := e.call(owner, http.MethodGet, "/projects/HRIS/member-candidates", nil, &people); code != http.StatusOK {
+		t.Fatalf("candidates: %d", code)
+	}
+	emails := []string{}
+	for _, u := range people.Items {
+		emails = append(emails, u.Email)
+	}
+	if !slices.Contains(emails, "budi@example.com") || !slices.Contains(emails, "ani@example.com") || slices.Contains(emails, "gone@example.com") {
+		t.Fatalf("candidates: %v", emails)
+	}
+	stranger, _ := e.signedIn("stranger@example.com", false)
+	if code := e.call(stranger, http.MethodGet, "/projects/HRIS/member-candidates", nil, nil); code == http.StatusOK {
+		t.Fatal("a non-member lists the users")
+	}
 }
 
 func TestMemberUpdatesAreValidated(t *testing.T) {

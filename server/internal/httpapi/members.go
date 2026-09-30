@@ -26,6 +26,26 @@ func (s *Server) ListProjectMembers(w http.ResponseWriter, r *http.Request, key 
 	writeJSON(w, http.StatusOK, MemberList{Items: toAPIMembers(rows)})
 }
 
+// ListMemberCandidates lists the active users a project admin can add, so
+// adding a member is a pick, not a typed email (MSL-21).
+func (s *Server) ListMemberCandidates(w http.ResponseWriter, r *http.Request, key string) {
+	if _, ok := s.projectFor(w, r, key, access.Admin); !ok {
+		return
+	}
+	users, err := s.q.ListUsers(r.Context())
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	out := PersonList{Items: []Person{}}
+	for _, u := range users {
+		if u.DisabledAt == nil {
+			out.Items = append(out.Items, Person{Id: u.ID, Name: u.Name, Email: u.Email})
+		}
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
 // SetProjectMembers replaces the project's members and their client scopes in
 // one transaction, for one member or many at once (FSD §15.2).
 func (s *Server) SetProjectMembers(w http.ResponseWriter, r *http.Request, key string) {

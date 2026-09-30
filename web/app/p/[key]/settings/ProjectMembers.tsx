@@ -1,22 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Avatar } from "@/components/Chips";
 import { api } from "@/lib/api";
+import type { components } from "@/lib/api-types";
 import { useProblemText, type Client, type Member, type ProjectRole } from "@/lib/problem";
 import { button, cx, field, panel, table } from "@/lib/ui";
 
 type Row = { email: string; name: string; role: ProjectRole; all_clients: boolean; client_ids: number[] };
 
 const toRow = (m: Member): Row => ({ email: m.email, name: m.name, role: m.role, all_clients: m.all_clients, client_ids: m.client_ids });
+const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 
 // Edits the whole member list locally and saves it in one request (FSD §15.2: one by one or in bulk).
 // A save the server refuses marks the rows it names, such as an email no user has.
-export default function ProjectMembers({ projectKey, members, clients }: { projectKey: string; members: Member[]; clients: Client[] }) {
+// Members are picked from the active users (MSL-21); leaving with unsaved
+// changes asks first.
+export default function ProjectMembers({
+  projectKey,
+  members,
+  clients,
+  people,
+}: {
+  projectKey: string;
+  members: Member[];
+  clients: Client[];
+  people: components["schemas"]["Person"][];
+}) {
   const t = useTranslations("settings");
   const problemText = useProblemText();
   const [rows, setRows] = useState<Row[]>(() => members.map(toRow));
+  const [saved, setSaved] = useState(rows);
+  const dirty = JSON.stringify(rows) !== JSON.stringify(saved);
   const [status, setStatus] = useState("");
   const [rowErrors, setRowErrors] = useState<Record<number, { text: string; unknownUser: boolean }>>({}); // by row, from the last save
 
@@ -24,14 +40,35 @@ export default function ProjectMembers({ projectKey, members, clients }: { proje
   const edit = (next: (rs: Row[]) => Row[]) => {
     setRows(next);
     setRowErrors({});
+    setStatus("");
   };
   const update = (i: number, patch: Partial<Row>) => edit((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
 
+  useEffect(() => {
+    if (!dirty) return;
+    const onUnload = (e: BeforeUnloadEvent) => e.preventDefault();
+    // A link inside the app navigates without unloading, so clicks ask too.
+    const onClick = (e: MouseEvent) => {
+      const a = (e.target as Element).closest?.("a[href]");
+      if (!a || a.getAttribute("target") === "_blank" || a.hasAttribute("download") || e.metaKey || e.ctrlKey || e.shiftKey) return;
+      if (!window.confirm(t("unsavedLeave"))) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    window.addEventListener("beforeunload", onUnload);
+    document.addEventListener("click", onClick, true);
+    return () => {
+      window.removeEventListener("beforeunload", onUnload);
+      document.removeEventListener("click", onClick, true);
+    };
+  }, [dirty, t]);
+
   function add(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const email = String(new FormData(e.currentTarget).get("email")).trim();
-    if (rows.some((r) => r.email.toLowerCase() === email.toLowerCase())) return setStatus(t("alreadyListed"));
-    edit((rs) => [...rs, { email, name: email, role: "member", all_clients: true, client_ids: [] }]);
+    const person = people.find((p) => same(p.email, String(new FormData(e.currentTarget).get("email"))));
+    if (!person) return;
+    edit((rs) => [...rs, { email: person.email, name: person.name, role: "member", all_clients: true, client_ids: [] }]);
     setStatus("");
     e.currentTarget.reset();
   }
@@ -53,7 +90,9 @@ export default function ProjectMembers({ projectKey, members, clients }: { proje
       setRowErrors(byRow);
       return setStatus(problemText(error));
     }
-    edit(() => data.items.map(toRow));
+    const next = data.items.map(toRow);
+    edit(() => next);
+    setSaved(next);
     setStatus(t("saved"));
   }
 
@@ -145,14 +184,26 @@ export default function ProjectMembers({ projectKey, members, clients }: { proje
       )}
       <form aria-label={t("addMember")} onSubmit={add} className="flex flex-wrap items-end gap-2">
         <label className={field.label}>
-          {t("email")}
-          <input name="email" type="email" required className={cx(field.input, "w-72")} />
+          {t("person")}
+          <select name="email" required defaultValue="" aria-describedby="members-not-listed" className={cx(field.input, "w-80")}>
+            <option value="" disabled>{t("pickPerson")}</option>
+            {people
+              .filter((p) => !rows.some((r) => same(r.email, p.email)))
+              .map((p) => (
+                <option key={p.id} value={p.email}>{p.name} · {p.email}</option>
+              ))}
+          </select>
         </label>
         <button className={cx(button.secondary, "h-[34px]")}>{t("addMember")}</button>
+        <p id="members-not-listed" className={cx(field.hint, "basis-full")}>{t("notListed")}</p>
       </form>
       <div className="flex items-center gap-3 border-t border-line-soft pt-3">
         <button type="button" onClick={save} className={button.primary}>{t("saveMembers")}</button>
-        {status && <p role="status" className="text-[13px] text-muted">{status}</p>}
+        {status ? (
+          <p role="status" className="text-[13px] text-muted">{status}</p>
+        ) : (
+          dirty && <p className="text-[13px] text-warn">{t("unsaved")}</p>
+        )}
       </div>
     </section>
   );

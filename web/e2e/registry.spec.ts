@@ -47,7 +47,7 @@ test("an admin builds the HRIS tree and a member scoped to one client sees only 
   await links.getByRole("button", { name: "Simpan klien" }).click();
   await expect(links.getByRole("status")).toHaveText("Tersimpan");
 
-  await page.getByRole("form", { name: "Tambah anggota" }).getByLabel("Email").fill(budiEmail);
+  await page.getByRole("form", { name: "Tambah anggota" }).getByLabel("Orang").selectOption(budiEmail); // MSL-21: a pick
   await page.getByRole("button", { name: "Tambah anggota" }).click();
   const budiRow = page.getByRole("row", { name: budiEmail });
   await budiRow.getByLabel("Cakupan klien").selectOption("some");

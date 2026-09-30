@@ -243,12 +243,15 @@
     "allClients": "All clients",
     "someClients": "Selected clients",
     "remove": "Remove",
-    "email": "Email",
+    "person": "Person",
+    "pickPerson": "Choose a person…",
+    "notListed": "Not listed? A system admin adds people in Admin › Users.",
+    "unsaved": "Unsaved changes",
+    "unsavedLeave": "Leave without saving the member changes?",
     "addMember": "Add member",
     "saveMembers": "Save members",
     "noMembers": "No members yet.",
-    "unknownUserHint": "Ask a system admin to create the account in Admin › Users, then add it again.",
-    "alreadyListed": "This email is already listed."
+    "unknownUserHint": "Ask a system admin to create the account in Admin › Users, then add it again."
   },
   "clients": {
     "title": "Clients",

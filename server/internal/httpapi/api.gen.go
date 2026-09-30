@@ -2184,6 +2184,18 @@ type NotifyPrefs struct {
 	Status  *bool `json:"status,omitempty"`
 }
 
+// Person defines model for Person.
+type Person struct {
+	Email string `json:"email"`
+	Id    int64  `json:"id"`
+	Name  string `json:"name"`
+}
+
+// PersonList defines model for PersonList.
+type PersonList struct {
+	Items []Person `json:"items"`
+}
+
 // Priority defines model for Priority.
 type Priority string
 
@@ -3546,6 +3558,9 @@ type ServerInterface interface {
 
 	// (POST /projects/{key}/documents)
 	UploadDocument(w http.ResponseWriter, r *http.Request, key string)
+
+	// (GET /projects/{key}/member-candidates)
+	ListMemberCandidates(w http.ResponseWriter, r *http.Request, key string)
 
 	// (GET /projects/{key}/members)
 	ListProjectMembers(w http.ResponseWriter, r *http.Request, key string)
@@ -5626,6 +5641,32 @@ func (siw *ServerInterfaceWrapper) UploadDocument(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ListMemberCandidates operation middleware
+func (siw *ServerInterfaceWrapper) ListMemberCandidates(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMemberCandidates(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListProjectMembers operation middleware
 func (siw *ServerInterfaceWrapper) ListProjectMembers(w http.ResponseWriter, r *http.Request) {
 
@@ -7182,6 +7223,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/clients/{id}", wrapper.UpdateClient)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/members", wrapper.ListProjectMembers)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/projects/{key}/members", wrapper.SetProjectMembers)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/member-candidates", wrapper.ListMemberCandidates)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/contacts", wrapper.ListContacts)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/contacts", wrapper.CreateContact)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/contacts/{id}", wrapper.UpdateContact)
