@@ -3065,6 +3065,7 @@ components:
         mention: { type: boolean }
         status: { type: boolean }
         job_done: { type: boolean }
+        due: { type: boolean, description: The morning reminder of tickets due today or tomorrow, or just overdue (MSL-52). }
         browser: { type: boolean }
         email: { type: boolean, description: "Also by email, a digest of what is still unread after two minutes, when the server has SMTP set up (MSL-10). Off until chosen." }
     Notification:
@@ -3072,7 +3073,7 @@ components:
       required: [id, type, payload, created_at, read]
       properties:
         id: { type: integer, format: int64 }
-        type: { type: string, enum: [assigned, comment, mention, status, job_done] }
+        type: { type: string, enum: [assigned, comment, mention, status, job_done, due], description: "due (MSL-52): payload.when is today, tomorrow or overdue, payload.due the date." }
         ticket_key: { type: string }
         ticket_title: { type: string }
         actor: { $ref: "#/components/schemas/Ref" }

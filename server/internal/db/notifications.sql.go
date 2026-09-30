@@ -177,6 +177,63 @@ func (q *Queries) MarkRead(ctx context.Context, arg MarkReadParams) error {
 	return err
 }
 
+const notifyDue = `-- name: NotifyDue :many
+WITH ins AS (
+  INSERT INTO notifications (user_id, type, ticket_id, payload)
+  SELECT u.id, 'due', t.id,
+         jsonb_build_object('when', CASE t.due_date - d.today WHEN 0 THEN 'today' WHEN 1 THEN 'tomorrow' ELSE 'overdue' END,
+                            'due', t.due_date, 'on', d.today)
+  FROM tickets t
+  JOIN users u ON u.id = t.assignee_id AND u.disabled_at IS NULL
+  CROSS JOIN LATERAL (
+    SELECT ($1::timestamptz AT TIME ZONE u.timezone)::date AS today,
+           extract(hour FROM $1::timestamptz AT TIME ZONE u.timezone) AS hour
+  ) d
+  WHERE t.closed_at IS NULL AND t.due_date - d.today IN (-1, 0, 1) AND d.hour >= 8
+    AND coalesce((u.notify_prefs ->> 'due')::boolean, true)
+    AND (u.is_admin OR EXISTS (
+          SELECT 1 FROM memberships m
+          WHERE m.user_id = u.id AND m.project_id = t.project_id
+            AND (m.all_clients OR t.client_id IS NULL OR EXISTS (
+                  SELECT 1 FROM membership_clients mc
+                  WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = t.client_id))))
+    AND NOT EXISTS (
+          SELECT 1 FROM notifications n
+          WHERE n.user_id = u.id AND n.ticket_id = t.id AND n.type = 'due' AND n.payload ->> 'on' = d.today::text)
+  RETURNING id, user_id
+)
+SELECT ins.id, ins.user_id, pg_notify('muasal_notifications', ins.user_id || ':' || ins.id)::text AS sent FROM ins
+`
+
+type NotifyDueRow struct {
+	ID     int64
+	UserID int64
+	Sent   string
+}
+
+// MSL-52: from 08:00 in the assignee's timezone, once a day per ticket, their
+// open tickets due today or tomorrow, or overdue since yesterday. Those who
+// turned "due" off, or can no longer see the ticket, hear nothing.
+func (q *Queries) NotifyDue(ctx context.Context, now time.Time) ([]NotifyDueRow, error) {
+	rows, err := q.db.Query(ctx, notifyDue, now)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []NotifyDueRow
+	for rows.Next() {
+		var i NotifyDueRow
+		if err := rows.Scan(&i.ID, &i.UserID, &i.Sent); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const notifyJobDone = `-- name: NotifyJobDone :exec
 WITH ins AS (
   INSERT INTO notifications (user_id, type, payload)

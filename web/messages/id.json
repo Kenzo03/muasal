@@ -1269,6 +1269,11 @@
       "comment": "berkomentar",
       "mention": "menyebut Anda",
       "status": "memindahkan ke {status}"
+    },
+    "due": {
+      "today": "{ticket} jatuh tempo hari ini",
+      "tomorrow": "{ticket} jatuh tempo besok",
+      "overdue": "{ticket} sudah lewat jatuh tempo"
     }
   },
   "notifyPrefs": {
@@ -1278,7 +1283,8 @@
       "comment": "Ada komentar di tiket saya",
       "mention": "Seseorang menyebut saya",
       "status": "Status tiket saya berubah",
-      "job_done": "Impor yang saya mulai selesai"
+      "job_done": "Impor yang saya mulai selesai",
+      "due": "Jatuh tempo: pengingat pagi untuk yang jatuh tempo hari ini atau besok, atau baru lewat"
     },
     "browser": "Notifikasi browser saat aplikasi ada di tab latar",
     "browserHint": "Notifikasi browser butuh tab aplikasi yang terbuka.",

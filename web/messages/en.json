@@ -1269,6 +1269,11 @@
       "comment": "commented",
       "mention": "mentioned you",
       "status": "moved it to {status}"
+    },
+    "due": {
+      "today": "{ticket} is due today",
+      "tomorrow": "{ticket} is due tomorrow",
+      "overdue": "{ticket} is now overdue"
     }
   },
   "notifyPrefs": {
@@ -1278,7 +1283,8 @@
       "comment": "Someone comments on my tickets",
       "mention": "Someone mentions me",
       "status": "My tickets change status",
-      "job_done": "An import I started finishes"
+      "job_done": "An import I started finishes",
+      "due": "Due dates: a morning reminder of what is due today or tomorrow, or just went overdue"
     },
     "browser": "Browser notifications when the app is in a background tab",
     "browserHint": "Browser notifications need the app open in a tab.",

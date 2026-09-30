@@ -2631,6 +2631,8 @@ export interface components {
             mention?: boolean;
             status?: boolean;
             job_done?: boolean;
+            /** @description The morning reminder of tickets due today or tomorrow */
+            due?: boolean;
             browser?: boolean;
             /** @description Also by email, a digest of what is still unread after two minutes, when the server has SMTP set up (MSL-10). Off until chosen. */
             email?: boolean;
@@ -2638,8 +2640,11 @@ export interface components {
         Notification: {
             /** Format: int64 */
             id: number;
-            /** @enum {string} */
-            type: "assigned" | "comment" | "mention" | "status" | "job_done";
+            /**
+             * @description due (MSL-52): payload.when is today, tomorrow or overdue, payload.due the date.
+             * @enum {string}
+             */
+            type: "assigned" | "comment" | "mention" | "status" | "job_done" | "due";
             ticket_key?: string;
             ticket_title?: string;
             actor?: components["schemas"]["Ref"];
