@@ -23,7 +23,7 @@ Press **c** anywhere to file a ticket. It needs a title, a type, the client (or 
 
 **Closing** a ticket, by moving it to Done or Cancelled, opens the close dialog. It asks what changed, why, and what alternatives were rejected, prefilled from the ticket. **Draft with AI** fills these fields from the ticket's comments and linked commits. It leaves Why empty when the thread never says why, so you ask the requester instead of guessing. Nothing is saved until **Close ticket**.
 
-**Decision notes** record decisions made in meetings, calls or emails, outside any ticket. They appear on menu pages and in Ask, and are cited like `HRIS-DN7`.
+**Decision notes** record decisions made in meetings, calls or emails, outside any ticket. They appear on menu pages and in Ask, and are cited like `HRIS-DN7`. A note about the whole project, such as a kickoff, needs no menu; whole-project summaries include it.
 
 ## Ask
 

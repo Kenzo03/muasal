@@ -1131,6 +1131,8 @@
     "attendees": "Peserta",
     "attendeesHint": "Siapa yang hadir",
     "menus": "Menu",
+    "menusHint": "Kosongkan untuk catatan tentang seluruh proyek, seperti kickoff.",
+    "wholeProject": "Seluruh proyek",
     "tickets": "Tiket terkait",
     "ticketsHint": "Kunci tiket, dipisah koma.",
     "body": "Isi",

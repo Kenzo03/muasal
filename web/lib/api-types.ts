@@ -2535,7 +2535,7 @@ export interface components {
              */
             client_id?: number;
             attendees?: string;
-            /** @description One or more menus or modules of the project. */
+            /** @description Menus or modules of the project; none makes a project-wide note, such as a kickoff (MSL-59). */
             node_ids: number[];
             /** @description Tickets the decision relates to, in any project the author can see. */
             ticket_keys?: string[];

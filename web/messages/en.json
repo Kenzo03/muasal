@@ -1131,6 +1131,8 @@
     "attendees": "Attendees",
     "attendeesHint": "Who was there",
     "menus": "Menus",
+    "menusHint": "None for a note about the whole project, such as a kickoff.",
+    "wholeProject": "The whole project",
     "tickets": "Related tickets",
     "ticketsHint": "Keys, separated by commas.",
     "body": "Note",

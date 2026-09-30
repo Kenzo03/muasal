@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -80,7 +81,7 @@ func (s *Server) summaryScope(w http.ResponseWriter, r *http.Request, in Summary
 		}
 		clientName = c.Name
 	}
-	items, err := s.summaryItems(ctx, pc, ids, in.ClientId, in.From.Time, in.To.Time, deref(in.IncludeCancelled), names)
+	items, err := s.summaryItems(ctx, pc, ids, in.NodeId == 0, in.ClientId, in.From.Time, in.To.Time, deref(in.IncludeCancelled), names)
 	if err != nil {
 		s.fail(w, r, err)
 		return projectCtx{}, db.Node{}, "", nil, false
@@ -89,8 +90,9 @@ func (s *Server) summaryScope(w http.ResponseWriter, r *http.Request, in Summary
 }
 
 // summaryItems lists the visible closed tickets and decision notes on the nodes
-// ids between from and to, for one client with core work (clientID) or all.
-func (s *Server) summaryItems(ctx context.Context, pc projectCtx, ids []int64, clientID *int64, from, to time.Time, cancelled bool, names map[int64]string) ([]summaryItem, error) {
+// ids between from and to, for one client with core work (clientID) or all;
+// whole says ids are the whole project, which holds notes without a menu.
+func (s *Server) summaryItems(ctx context.Context, pc projectCtx, ids []int64, whole bool, clientID *int64, from, to time.Time, cancelled bool, names map[int64]string) ([]summaryItem, error) {
 	rows, err := s.q.ListNodeTimeline(ctx, db.ListNodeTimelineParams{
 		ProjectID: pc.project.ID, NodeIds: ids, AllClients: pc.scope.AllClients, ClientIds: orEmpty(pc.scope.ClientIDs),
 		FromDate: &from, ToDate: &to, Lim: 2000,
@@ -99,7 +101,7 @@ func (s *Server) summaryItems(ctx context.Context, pc projectCtx, ids []int64, c
 		return nil, err
 	}
 	notes, err := s.q.ListNodeNotes(ctx, db.ListNodeNotesParams{
-		ProjectID: pc.project.ID, NodeIds: ids, AllClients: pc.scope.AllClients, ClientIds: orEmpty(pc.scope.ClientIDs),
+		ProjectID: pc.project.ID, NodeIds: ids, Whole: whole, AllClients: pc.scope.AllClients, ClientIds: orEmpty(pc.scope.ClientIDs),
 		FromDate: &from, ToDate: &to,
 	})
 	if err != nil {
@@ -165,7 +167,8 @@ func (s *Server) summaryItems(ctx context.Context, pc projectCtx, ids []int64, c
 		if items[i].ticketID != 0 {
 			items[i].api.Menu = menuOf[fmt.Sprint("t", items[i].ticketID)]
 		} else {
-			items[i].api.Menu = menuOf[fmt.Sprint("n", items[i].noteID)]
+			// A note without a menu is about the whole project (MSL-59).
+			items[i].api.Menu = cmp.Or(menuOf[fmt.Sprint("n", items[i].noteID)], pc.project.Name)
 		}
 	}
 	slices.SortStableFunc(items, func(a, b summaryItem) int {
