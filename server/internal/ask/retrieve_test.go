@@ -174,7 +174,11 @@ func TestPackSaysWhoHasItAndWhetherItIsLate(t *testing.T) {
 	w.check(err)
 	src := must(indexer.Load(ctx, w.q, tk.ID))
 	items := []ask.Evidence{{Ticket: &src}}
-	for today, want := range map[string]string{"2026-09-29": "due 2026-09-26, overdue", "2026-09-26": "due 2026-09-26\n"} {
+	for today, want := range map[string]string{
+		"2026-09-29": "due 2026-09-26, overdue by 3 days\n", "2026-09-27": "due 2026-09-26, overdue by 1 day\n",
+		"2026-09-26": "due 2026-09-26, due today\n", "2026-09-25": "due 2026-09-26, due tomorrow, not overdue\n",
+		"2026-09-20": "due 2026-09-26, due in 6 days, not overdue\n", // MSL-43: a due date the model can't misread
+	} {
 		_, _, blocks := ask.Pack(items, 2500, must(time.Parse(time.DateOnly, today)))
 		if b := blocks[tk.Key]; !strings.Contains(b, "Assigned to Rina · priority urgent · "+want) {
 			t.Errorf("today %s:\n%s", today, b)
