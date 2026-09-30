@@ -72,9 +72,16 @@ func TestUnwrapDropsAnUnnamedSharedRoot(t *testing.T) {
 
 // MSL-46: model names lose their heading IDs; an acronym stays.
 func TestCleanPath(t *testing.T) {
-	prefixes := map[string]bool{"ATT": true}
-	got := cleanPath([]string{"Absensi (ATT)", "Clock In dan Clock Out (ATT-01)", "Upload Foto (JPG)"}, prefixes)
+	prefixes, ids := map[string]bool{"ATT": true}, map[string]bool{"ATT": true, "ATT-01": true}
+	got := cleanPath([]string{"Absensi (ATT)", "Clock In dan Clock Out (ATT-01)", "Upload Foto (JPG)"}, prefixes, ids)
 	if strings.Join(got, "|") != "Absensi|Clock In dan Clock Out|Upload Foto (JPG)" {
 		t.Fatalf("%q", got)
+	}
+	// The live redraft put IDs in as levels of their own.
+	if got := cleanPath([]string{"Absensi", "Clock In dan Clock Out", "ATT-01"}, prefixes, ids); strings.Join(got, "|") != "Absensi|Clock In dan Clock Out" {
+		t.Fatalf("ID levels: %q", got)
+	}
+	if got := cleanPath([]string{"Absensi", "ATT"}, prefixes, ids); strings.Join(got, "|") != "Absensi" {
+		t.Fatalf("module ID level: %q", got)
 	}
 }

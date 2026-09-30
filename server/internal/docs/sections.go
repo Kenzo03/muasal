@@ -95,6 +95,18 @@ func Prefixes(sections []Section) map[string]bool {
 	return out
 }
 
+// IDs lists every heading's ID, such as ATT-01, and each module ID its menus
+// start with, such as ATT (MSL-46).
+func IDs(sections []Section) map[string]bool {
+	prefixes, out := Prefixes(sections), map[string]bool{}
+	for _, s := range sections {
+		if _, id := NameIn(s.Title, prefixes); id != "" {
+			out[id] = true
+		}
+	}
+	return out
+}
+
 // NameIn is HeadingName that also takes a capitals-only ID, such as "(ATT)",
 // when other IDs start with it: a module's code. An acronym such as "(PDF)"
 // stays part of the name (MSL-46).
