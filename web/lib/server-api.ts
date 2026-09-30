@@ -26,8 +26,11 @@ export const getProject = cache(async (key: string) => {
   return data;
 });
 
-/** The projects the user may open, with their role in each. One API call per request. */
+/**
+ * The projects the user may open, with their role in each, archived ones too
+ * (MSL-64): pickers take active() of them. One API call per request.
+ */
 export const getProjects = cache(async () => {
-  const { data } = await (await serverApi()).GET("/projects");
+  const { data } = await (await serverApi()).GET("/projects", { params: { query: { archived: true } } });
   return data?.items ?? [];
 });

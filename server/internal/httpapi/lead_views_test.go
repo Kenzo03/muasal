@@ -284,3 +284,99 @@ func TestWeeklySummaryListsTheWeeksDecisions(t *testing.T) {
 		t.Fatalf("stop: %d", code)
 	}
 }
+
+// MSL-54: tickets carry an optional estimate in hours; Workload adds up each
+// person's open hours.
+func TestEstimatesAddUpOnWorkload(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	file := func(title string, hours any) (int, httpapi.Ticket) {
+		var tk httpapi.Ticket
+		code := e.call(w.pm, http.MethodPost, "/projects/HRIS/tickets", map[string]any{
+			"type": "feature", "title": title, "client_id": w.a.ID, "node_ids": []int64{w.ot.ID}, "reason": "Needed for the pilot",
+			"assignee_id": w.pmUser.ID, "estimate_hours": hours,
+		}, &tk)
+		return code, tk
+	}
+	if code, tk := file("Copy last week's shifts", 6.5); code != http.StatusCreated || tk.EstimateHours == nil || *tk.EstimateHours != 6.5 {
+		t.Fatalf("create with an estimate: %d %+v", code, tk.EstimateHours)
+	}
+	file("Salary slips as PDF", 10)
+	file("Holiday calendar", nil)
+	if code, _ := file("Negative work", -1); code != http.StatusUnprocessableEntity {
+		t.Fatalf("a negative estimate: %d", code)
+	}
+	var wl httpapi.Workload
+	e.call(w.pm, http.MethodGet, "/projects/HRIS/workload", nil, &wl)
+	found := false
+	for _, r := range wl.Rows {
+		if r.Assignee != nil && r.Assignee.Id == w.pmUser.ID {
+			found = true
+			if r.OpenHours != 16.5 || r.Estimated != 2 || r.Open != 3 {
+				t.Fatalf("workload row: %+v", r)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("no workload row for the assignee: %+v", wl.Rows)
+	}
+}
+
+// MSL-55: a description's task list shows as progress in the list.
+func TestChecklistProgressInTheList(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	var tk httpapi.Ticket
+	desc := "Langkah:\n- [x] Salin jadwal\n- [ ] Ubah shift pagi\n  * [X] Kirim ke toko\n1. [ ] Uji di 10 toko\n\nBukan tugas: [ ] di tengah kalimat."
+	if code := e.call(w.pm, http.MethodPost, "/projects/HRIS/tickets", map[string]any{
+		"type": "feature", "title": "Copy last week's shifts", "client_id": w.a.ID, "node_ids": []int64{w.ot.ID}, "description": desc,
+	}, &tk); code != http.StatusCreated {
+		t.Fatalf("create: %d", code)
+	}
+	var page httpapi.TicketPage
+	e.call(w.pm, http.MethodGet, "/projects/HRIS/tickets", nil, &page)
+	for _, it := range page.Items {
+		if it.Key == tk.Key {
+			if it.Checklist == nil || it.Checklist.Done != 2 || it.Checklist.Total != 4 {
+				t.Fatalf("checklist: %+v", it.Checklist)
+			}
+			return
+		}
+	}
+	t.Fatalf("ticket not listed: %+v", page.Items)
+}
+
+// MSL-56: labels are normalised, filter the list, and the project lists them.
+func TestLabelsGroupTickets(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	file := func(title string, labels []string) (int, httpapi.Ticket) {
+		var tk httpapi.Ticket
+		code := e.call(w.pm, http.MethodPost, "/projects/HRIS/tickets", map[string]any{
+			"type": "feature", "title": title, "client_id": w.a.ID, "node_ids": []int64{w.ot.ID}, "labels": labels,
+		}, &tk)
+		return code, tk
+	}
+	if code, tk := file("Pilot accounts for 10 stores", []string{" Pilot ", "UAT", "pilot"}); code != http.StatusCreated ||
+		tk.Labels == nil || strings.Join(*tk.Labels, ",") != "pilot,uat" {
+		t.Fatalf("create: %d %+v", code, tk.Labels)
+	}
+	file("Migrate leave balances", []string{"migration", "pilot"})
+	file("Holiday calendar", nil)
+	if code, _ := file("Too many labels", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"}); code != http.StatusUnprocessableEntity {
+		t.Fatalf("eleven labels: %d", code)
+	}
+	var page httpapi.TicketPage
+	if e.call(w.pm, http.MethodGet, "/projects/HRIS/tickets?label=PILOT", nil, &page); len(page.Items) != 2 {
+		t.Fatalf("filter by label: %+v", page.Items)
+	}
+	var labels struct {
+		Items []struct {
+			Label string
+			Uses  int
+		}
+	}
+	if e.call(w.pm, http.MethodGet, "/projects/HRIS/labels", nil, &labels); len(labels.Items) != 3 || labels.Items[0].Label != "pilot" || labels.Items[0].Uses != 2 {
+		t.Fatalf("labels: %+v", labels.Items)
+	}
+}

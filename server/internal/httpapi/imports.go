@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"errors"
@@ -19,9 +20,23 @@ import (
 // importFileMax is the largest ticket import (FSD §14.2).
 const importFileMax = 200 << 20
 
-// ListImports lists ticket imports for system admins, newest first.
+// mayImport reports whether u imports into the project: system admins
+// anywhere, project admins into the projects they run (MSL-49).
+func (s *Server) mayImport(ctx context.Context, u *db.User, projectID int64) (bool, error) {
+	if u.IsAdmin {
+		return true, nil
+	}
+	m, err := s.q.GetMembership(ctx, db.GetMembershipParams{UserID: u.ID, ProjectID: projectID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	return err == nil && m.Role == "admin", err
+}
+
+// ListImports lists the ticket imports the caller may run, newest first.
 func (s *Server) ListImports(w http.ResponseWriter, r *http.Request) {
-	if s.requireAdmin(w, r) == nil {
+	u := s.requireUser(w, r)
+	if u == nil {
 		return
 	}
 	rows, err := s.q.ListImportRuns(r.Context())
@@ -31,6 +46,12 @@ func (s *Server) ListImports(w http.ResponseWriter, r *http.Request) {
 	}
 	out := ImportRunList{Items: []ImportRun{}}
 	for _, row := range rows {
+		if ok, err := s.mayImport(r.Context(), u, row.ImportRun.ProjectID); err != nil {
+			s.fail(w, r, err)
+			return
+		} else if !ok {
+			continue
+		}
 		run, err := toAPIImport(db.GetImportRunRow(row), false)
 		if err != nil {
 			s.fail(w, r, err)
@@ -43,7 +64,7 @@ func (s *Server) ListImports(w http.ResponseWriter, r *http.Request) {
 
 // CreateImport stores an uploaded file as a new import and dry-runs it.
 func (s *Server) CreateImport(w http.ResponseWriter, r *http.Request) {
-	u := s.requireAdmin(w, r)
+	u := s.requireUser(w, r)
 	if u == nil {
 		return
 	}
@@ -118,6 +139,17 @@ func (s *Server) CreateImport(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, err)
 		return
 	}
+	if ok, err := s.mayImport(ctx, u, p.ID); err != nil {
+		s.fail(w, r, err)
+		return
+	} else if !ok {
+		writeProblem(w, http.StatusForbidden, "forbidden", "Only system admins and this project's admins import tickets")
+		return
+	}
+	if p.ArchivedAt != nil {
+		denyRole(w, projectCtx{project: p})
+		return
+	}
 	m := ticketimport.Mapping{Columns: map[string]string{}}
 	if preset == "jira" {
 		m = ticketimport.JiraPreset()
@@ -146,10 +178,11 @@ func (s *Server) CreateImport(w http.ResponseWriter, r *http.Request) {
 
 // GetImport shows an import with its dry run and progress.
 func (s *Server) GetImport(w http.ResponseWriter, r *http.Request, id int64) {
-	if s.requireAdmin(w, r) == nil {
+	u := s.requireUser(w, r)
+	if u == nil {
 		return
 	}
-	row, ok := s.importFor(w, r, id)
+	row, ok := s.importFor(w, r, u, id)
 	if !ok {
 		return
 	}
@@ -163,14 +196,15 @@ func (s *Server) GetImport(w http.ResponseWriter, r *http.Request, id int64) {
 
 // PlanImport dry-runs an import again under a new mapping.
 func (s *Server) PlanImport(w http.ResponseWriter, r *http.Request, id int64) {
-	if s.requireAdmin(w, r) == nil {
+	u := s.requireUser(w, r)
+	if u == nil {
 		return
 	}
 	var in ImportMapping
 	if !decodeJSON(w, r, &in) {
 		return
 	}
-	row, ok := s.importFor(w, r, id)
+	row, ok := s.importFor(w, r, u, id)
 	if !ok {
 		return
 	}
@@ -191,11 +225,11 @@ func (s *Server) PlanImport(w http.ResponseWriter, r *http.Request, id int64) {
 
 // RunImport starts a dry-run import as a background job.
 func (s *Server) RunImport(w http.ResponseWriter, r *http.Request, id int64) {
-	u := s.requireAdmin(w, r)
+	u := s.requireUser(w, r)
 	if u == nil {
 		return
 	}
-	row, ok := s.importFor(w, r, id)
+	row, ok := s.importFor(w, r, u, id)
 	if !ok {
 		return
 	}
@@ -204,7 +238,16 @@ func (s *Server) RunImport(w http.ResponseWriter, r *http.Request, id int64) {
 		return
 	}
 	ctx := r.Context()
-	err := s.inJobTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
+	p, err := s.q.GetProjectByID(ctx, row.ImportRun.ProjectID)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	if p.ArchivedAt != nil { // archived after the upload (MSL-64)
+		denyRole(w, projectCtx{project: p})
+		return
+	}
+	err = s.inJobTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		// Progress starts over; the dry run's counts stay.
 		var st ticketimport.Stats
 		_ = json.Unmarshal(row.ImportRun.Stats, &st)
@@ -222,7 +265,7 @@ func (s *Server) RunImport(w http.ResponseWriter, r *http.Request, id int64) {
 		s.fail(w, r, err)
 		return
 	}
-	row, ok = s.importFor(w, r, id)
+	row, ok = s.importFor(w, r, u, id)
 	if !ok {
 		return
 	}
@@ -234,8 +277,16 @@ func (s *Server) RunImport(w http.ResponseWriter, r *http.Request, id int64) {
 	writeJSON(w, http.StatusAccepted, out)
 }
 
-func (s *Server) importFor(w http.ResponseWriter, r *http.Request, id int64) (db.GetImportRunRow, bool) {
+// importFor loads an import the caller may run; others get 404, as for a
+// missing one (MSL-49).
+func (s *Server) importFor(w http.ResponseWriter, r *http.Request, u *db.User, id int64) (db.GetImportRunRow, bool) {
 	row, err := s.q.GetImportRun(r.Context(), id)
+	if err == nil {
+		var ok bool
+		if ok, err = s.mayImport(r.Context(), u, row.ImportRun.ProjectID); err == nil && !ok {
+			err = pgx.ErrNoRows
+		}
+	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		writeProblem(w, http.StatusNotFound, "not_found", "Import not found")
 		return row, false

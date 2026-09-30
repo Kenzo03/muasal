@@ -232,12 +232,13 @@ FROM decision_notes n
 JOIN users u ON u.id = n.created_by
 LEFT JOIN clients c ON c.id = n.client_id
 WHERE n.project_id = $1 AND n.archived_at IS NULL
-  AND EXISTS (SELECT 1 FROM decision_note_nodes dn WHERE dn.note_id = n.id AND dn.node_id = ANY ($2::bigint[]))
-  AND ($3::boolean OR n.client_id IS NULL OR n.client_id = ANY ($4::bigint[]))
-  AND ($5::bigint IS NULL OR n.client_id = $5::bigint)
-  AND (NOT $6::boolean OR n.client_id IS NULL)
-  AND ($7::date IS NULL OR n.decided_on >= $7::date)
-  AND ($8::date IS NULL OR n.decided_on <= $8::date)
+  AND (EXISTS (SELECT 1 FROM decision_note_nodes dn WHERE dn.note_id = n.id AND dn.node_id = ANY ($2::bigint[]))
+       OR $3::boolean AND NOT EXISTS (SELECT 1 FROM decision_note_nodes dn WHERE dn.note_id = n.id))
+  AND ($4::boolean OR n.client_id IS NULL OR n.client_id = ANY ($5::bigint[]))
+  AND ($6::bigint IS NULL OR n.client_id = $6::bigint)
+  AND (NOT $7::boolean OR n.client_id IS NULL)
+  AND ($8::date IS NULL OR n.decided_on >= $8::date)
+  AND ($9::date IS NULL OR n.decided_on <= $9::date)
 ORDER BY n.decided_on DESC, n.id DESC
 LIMIT 500
 `
@@ -245,6 +246,7 @@ LIMIT 500
 type ListNodeNotesParams struct {
 	ProjectID  int64
 	NodeIds    []int64
+	Whole      bool
 	AllClients bool
 	ClientIds  []int64
 	ClientID   *int64
@@ -266,11 +268,14 @@ type ListNodeNotesRow struct {
 }
 
 // The visible notes on these nodes for a node page, newest decision first
-// (§9.4, AC-DC-8); from_date and to_date filter on the decision date.
+// (§9.4, AC-DC-8); from_date and to_date filter on the decision date. With
+// whole, the nodes are the whole project, which also holds notes without a
+// menu (MSL-59).
 func (q *Queries) ListNodeNotes(ctx context.Context, arg ListNodeNotesParams) ([]ListNodeNotesRow, error) {
 	rows, err := q.db.Query(ctx, listNodeNotes,
 		arg.ProjectID,
 		arg.NodeIds,
+		arg.Whole,
 		arg.AllClients,
 		arg.ClientIds,
 		arg.ClientID,

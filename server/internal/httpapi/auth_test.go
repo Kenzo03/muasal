@@ -13,11 +13,14 @@ import (
 	"strings"
 	"testing"
 
+	"fmt"
 	"github.com/kenzo03/muasal/server/internal/auth"
 	"github.com/kenzo03/muasal/server/internal/config"
 	"github.com/kenzo03/muasal/server/internal/db"
 	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/muasal/server/internal/mail"
 	"github.com/kenzo03/muasal/server/internal/testdb"
+	"time"
 )
 
 const (
@@ -230,5 +233,44 @@ func TestHealthChecks(t *testing.T) {
 		if res.StatusCode != http.StatusNoContent {
 			t.Fatalf("%s: %d", path, res.StatusCode)
 		}
+	}
+}
+
+// MSL-50: with email set up, a setup link also goes to its user by email, in
+// their language; the response says where, and the link stays to copy.
+func TestSetupLinksAreEmailed(t *testing.T) {
+	e := newEnvWith(t, func(c *config.Config) {
+		c.SMTP = mail.Config{Host: "smtp.example.test", Port: 587, From: "muasal@example.test", TLS: "starttls"}
+	})
+	sent := make(chan [3]string, 2)
+	e.api.SetSendMail(func(_ mail.Config, to, subject, body string) error {
+		sent <- [3]string{to, subject, body}
+		return nil
+	})
+	admin, _ := e.signedIn("admin@example.com", true)
+	var out httpapi.CreatedUser
+	if code := e.call(admin, http.MethodPost, "/admin/users", map[string]any{"email": "budi@example.com", "name": "Budi Santoso", "locale": "id"}, &out); code != http.StatusCreated ||
+		out.SetupLink.EmailedTo == nil || *out.SetupLink.EmailedTo != "budi@example.com" || out.SetupLink.Url == "" {
+		t.Fatalf("create: %d %+v", code, out.SetupLink)
+	}
+	select {
+	case m := <-sent:
+		if m[0] != "budi@example.com" || m[1] != "Undangan ke Muasal" || !strings.Contains(m[2], "Halo Budi") || !strings.Contains(m[2], out.SetupLink.Url) {
+			t.Fatalf("email: %q", m)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("no email was sent")
+	}
+	var link httpapi.SetupLink
+	if code := e.call(admin, http.MethodPost, fmt.Sprintf("/admin/users/%d/setup-link", out.User.Id), nil, &link); code != http.StatusCreated || link.EmailedTo == nil {
+		t.Fatalf("new link: %d %+v", code, link)
+	}
+	select {
+	case m := <-sent:
+		if !strings.Contains(m[2], link.Url) {
+			t.Fatalf("new link email: %q", m)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("no email for the new link")
 	}
 }

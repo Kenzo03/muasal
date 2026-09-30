@@ -285,7 +285,7 @@ func (s *Server) nodeFor(w http.ResponseWriter, r *http.Request, id int64, need 
 		return projectCtx{}, db.Node{}, false
 	}
 	if !pc.scope.Allows(need) {
-		writeProblem(w, http.StatusForbidden, "forbidden", "Your project role does not allow this")
+		denyRole(w, pc)
 		return projectCtx{}, db.Node{}, false
 	}
 	return pc, n, true

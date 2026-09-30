@@ -25,6 +25,9 @@ export function ticketQuery(v: Record<string, string>) {
     client_id: v.client && v.client !== "core" ? Number(v.client) : undefined,
     core: v.client === "core" ? true : undefined,
     type: v.type as TicketType | undefined,
+    label: v.label || undefined, // MSL-56
+    accepted: v.accepted === "yes" ? true : v.accepted === "no" ? false : undefined, // MSL-66
+    release_id: id(v.release), // MSL-67
     mine: v.assignee === "me" ? true : undefined,
     unassigned: v.assignee === "none" ? true : undefined,
     assignee_id: id(v.assignee),

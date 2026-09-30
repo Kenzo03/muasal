@@ -15,11 +15,17 @@ SELECT id FROM projects WHERE id = $1 FOR UPDATE;
 
 -- name: ListProjects :many
 -- System admins see every project; everyone else sees the projects they belong to.
+-- Archived projects only with archived (MSL-64).
 SELECT sqlc.embed(p), m.role
 FROM projects p
 LEFT JOIN memberships m ON m.project_id = p.id AND m.user_id = sqlc.arg('user_id')
-WHERE sqlc.arg('is_admin')::boolean OR m.user_id IS NOT NULL
+WHERE (sqlc.arg('is_admin')::boolean OR m.user_id IS NOT NULL)
+  AND (sqlc.arg('archived')::boolean OR p.archived_at IS NULL)
 ORDER BY p.key;
+
+-- name: SetProjectArchived :one
+UPDATE projects SET archived_at = CASE WHEN sqlc.arg('archived')::boolean THEN coalesce(archived_at, now()) END
+WHERE id = sqlc.arg('id') RETURNING *;
 
 -- name: UpdateProject :one
 UPDATE projects SET

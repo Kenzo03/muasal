@@ -15,10 +15,13 @@ import { dateTime, day } from "@/lib/format";
 import { nodePaths } from "@/lib/nodes";
 import { useProblemText, type Client, type Node, type Ref, type Status, type Ticket } from "@/lib/problem";
 import { button, cx, field, panel, sectionTitle } from "@/lib/ui";
+import Acceptance from "./Acceptance";
 import Code from "./Code";
 import DecisionCard from "./DecisionCard";
 import Links from "./Links";
 import type { Person } from "@/lib/mentions";
+import { updateBody } from "@/lib/bulk";
+import { toggleTask } from "@/lib/tasks";
 
 type Props = {
   ticket: Ticket;
@@ -42,6 +45,24 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
   const tTypes = useTranslations("ticketTypes");
   const tPri = useTranslations("priorities");
   const tf = useTranslations("ticketForm");
+  const [taskError, setTaskError] = useState("");
+  const [following, setFollowing] = useState(Boolean(ticket.following));
+  async function toggleFollow() {
+    const path = { params: { path: { key: ticket.key } } };
+    const { error } = following ? await api.DELETE("/tickets/{key}/follow", path) : await api.POST("/tickets/{key}/follow", path);
+    if (!error) setFollowing(!following);
+  }
+  // MSL-55: a ticked step saves the description, through the same update as an edit.
+  async function tickTask(line: number, checked: boolean) {
+    const description = toggleTask(ticket.description, line, checked);
+    if (description === ticket.description) return;
+    const { error } = await api.PUT("/tickets/{key}", {
+      params: { path: { key: ticket.key }, header: { "If-Match": `"${ticket.version}"` } },
+      body: { ...updateBody(ticket, {}), description },
+    });
+    setTaskError(error ? problemText(error) : "");
+    if (!error) router.refresh();
+  }
   const locale = useLocale();
   const timeZone = useTimeZone();
   const problemText = useProblemText();
@@ -81,6 +102,11 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
           <Icon name="sparkle" className="size-4 text-accent" />
           {ta("askAboutTicket")}
         </Link>
+        {/* MSL-57: anyone who can see the ticket follows it to hear its comments and status. */}
+        <button type="button" onClick={toggleFollow} aria-pressed={following} className={button.secondary}>
+          <Icon name="bell" className={following ? "size-4 text-accent" : "size-4"} />
+          {following ? t("following") : t("follow")}
+        </button>
         {canEdit && !editing && (
           <button type="button" onClick={() => setEditing(true)} className={button.secondary}>
             <Icon name="edit" />
@@ -181,7 +207,12 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
                 </div>
                 <div className={block}>
                   <h2 className={sectionTitle}>{t("description")}</h2>
-                  {ticket.description ? <Markdown text={ticket.description} people={people} /> : <p className="text-sm text-muted">{t("none")}</p>}
+                  {ticket.description ? (
+                    <Markdown text={ticket.description} people={people} onTask={canEdit ? tickTask : undefined} />
+                  ) : (
+                    <p className="text-sm text-muted">{t("none")}</p>
+                  )}
+                  {taskError && <p role="alert" className="text-xs text-danger">{taskError}</p>}
                 </div>
               </section>
               <Links ticketKey={ticket.key} links={ticket.links} canEdit={canEdit} />
@@ -225,6 +256,30 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
                       <dd className="font-semibold">{day(ticket.due_date, locale)}</dd>
                     </>
                   )}
+                  {(ticket.labels?.length ?? 0) > 0 && (
+                    <>
+                      <dt className="text-muted">{t("labels")}</dt>
+                      <dd className="flex flex-wrap gap-1">
+                        {ticket.labels!.map((l) => (
+                          <a key={l} href={`/p/${ticket.project_key}/tickets?label=${encodeURIComponent(l)}`} className="rounded-full bg-well px-2 text-xs font-semibold text-ink-soft no-underline hover:text-ink">
+                            {l}
+                          </a>
+                        ))}
+                      </dd>
+                    </>
+                  )}
+                  {ticket.release && (
+                    <>
+                      <dt className="text-muted">{t("release")}</dt>
+                      <dd><a href={`/p/${ticket.project_key}/tickets?release=${ticket.release.id}`} className="font-semibold">{ticket.release.name}</a></dd>
+                    </>
+                  )}
+                  {ticket.estimate_hours != null && (
+                    <>
+                      <dt className="text-muted">{t("estimate")}</dt>
+                      <dd>{t("hours", { hours: ticket.estimate_hours })}</dd>
+                    </>
+                  )}
                   <dt className="text-muted">{t("created")}</dt>
                   <dd>{dateTime(ticket.created_at, locale, timeZone)}</dd>
                   {ticket.closed_at && (
@@ -238,6 +293,7 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
                   {t("updated")} {dateTime(ticket.updated_at, locale, timeZone)}
                 </p>
               </section>
+              <Acceptance ticket={ticket} canEdit={canEdit} />
               {attachments}
             </aside>
           </div>

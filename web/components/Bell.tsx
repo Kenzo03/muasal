@@ -64,6 +64,8 @@ export default function Bell({ browser }: { browser: boolean }) {
         return t("mention", { who, ticket });
       case "status":
         return t("status", { who, ticket, status: String(n.payload.status ?? "") });
+      case "due": // MSL-52: the morning reminder
+        return t(`due.${String(n.payload.when) as "today" | "tomorrow" | "overdue"}`, { ticket });
       default:
         return t("jobDone", { name: String(n.payload.name ?? "") });
     }

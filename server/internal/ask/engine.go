@@ -213,7 +213,7 @@ func (e *Engine) Ask(ctx context.Context, r Request, sink Sink) (Result, error) 
 	logRow.llmCalled = true
 	genCtx, cancel := context.WithTimeout(ctx, time.Duration(s.TimeoutSeconds)*time.Second)
 	body, err := chat.ChatStream(genCtx, llm.ChatRequest{
-		System: System(res.Language), User: User(r.Question, text, fu.conversation), Schema: Schema(packed),
+		System: System(res.Language), User: User(r.Question, text, fu.conversation, today), Schema: Schema(packed),
 		Temperature: s.Temperature, MaxTokens: 600, Seed: e.Seed,
 	})
 	if err == nil {
@@ -244,6 +244,10 @@ func (e *Engine) Ask(ctx context.Context, r Request, sink Sink) (Result, error) 
 			if recited, moved := Recite(valid, blocks, packed); moved != nil {
 				valid = recited
 				logRow.dropped = append(logRow.dropped, *moved)
+			}
+			if ContradictsDue(valid, blocks) {
+				logRow.dropped = append(logRow.dropped, Dropped{Claim: valid, Reason: "contradicts_due"})
+				return
 			}
 			if why && saysNoReason(valid.Text) {
 				noReason = append(noReason, valid)

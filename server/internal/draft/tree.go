@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/kenzo03/muasal/server/internal/ai"
@@ -68,6 +69,7 @@ func ExtractTree(ctx context.Context, rt *ai.Runtime, title string, parts [][]do
 		all = append(all, part...)
 	}
 	head := "DOCUMENT: " + title + "\nOUTLINE:\n" + outline(all) + "\n"
+	prefixes, ids := docs.Prefixes(all), docs.IDs(all)
 	var out []docs.Candidate
 	for i, part := range parts {
 		var b strings.Builder
@@ -91,17 +93,65 @@ func ExtractTree(ctx context.Context, rt *ai.Runtime, title string, parts [][]do
 			return nil, err
 		}
 		for _, n := range a.Nodes {
-			sec, code := linkSection(part, n.Path, n.Section)
+			path := cleanPath(n.Path, prefixes, ids)
+			if len(path) == 0 {
+				continue
+			}
+			sec, code := linkSection(part, path, n.Section)
 			if !contains(numbers, sec) {
 				sec = ""
 			}
-			out = append(out, docs.Candidate{Path: n.Path, Type: n.Type, Aliases: n.Aliases, Description: n.Description, Section: sec, Code: code})
+			out = append(out, docs.Candidate{Path: path, Type: n.Type, Aliases: n.Aliases, Description: n.Description, Section: sec, Code: code})
 		}
 		if done != nil {
 			done(i + 1)
 		}
 	}
-	return out, nil
+	return unwrap(out, all, title), nil
+}
+
+// cleanPath takes heading IDs out of the model's path, which it adds despite
+// the prompt: in a name, as "Clock In (ATT-01)", or as a level of its own, as
+// "Absensi › ATT" (MSL-46). The heading's ID becomes the code instead.
+func cleanPath(path []string, prefixes, ids map[string]bool) []string {
+	var out []string
+	for _, p := range path {
+		if ids[strings.TrimSpace(p)] {
+			continue
+		}
+		name, _ := docs.NameIn(p, prefixes)
+		out = append(out, name)
+	}
+	return out
+}
+
+// unwrap drops a first level every node shares when it is the product's name:
+// a word of the document's title that no heading names, such as "HRIS" in
+// "Spesifikasi Fungsional HRIS …" put over "Absensi › Clock In" (MSL-45). A top
+// module the document names, or words differently, stays.
+func unwrap(cands []docs.Candidate, sections []docs.Section, title string) []docs.Candidate {
+	if len(cands) == 0 || len(cands[0].Path) == 0 {
+		return cands
+	}
+	root, nested := strings.TrimSpace(cands[0].Path[0]), false
+	for _, c := range cands {
+		if len(c.Path) == 0 || !strings.EqualFold(strings.TrimSpace(c.Path[0]), root) {
+			return cands
+		}
+		nested = nested || len(c.Path) > 1
+	}
+	inTitle := slices.ContainsFunc(strings.Fields(title), func(w string) bool { return strings.EqualFold(w, root) })
+	if n, _ := docs.SectionFor(sections, root); !nested || n != "" || !inTitle {
+		return cands
+	}
+	out := cands[:0:0]
+	for _, c := range cands {
+		if len(c.Path) > 1 {
+			c.Path = c.Path[1:]
+			out = append(out, c)
+		}
+	}
+	return out
 }
 
 // linkSection picks a node's section: the heading that names it, else the

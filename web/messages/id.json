@@ -174,9 +174,11 @@
     "newLink": "Tautan baru",
     "copy": "Salin",
     "copied": "Tersalin",
-    "dismiss": "Tutup"
+    "dismiss": "Tutup",
+    "emailedTo": "Juga dikirim ke {email}."
   },
   "projectList": {
+    "archived": "Diarsipkan",
     "heading": "Semua proyek",
     "count": "{count} proyek",
     "find": "Cari proyek menurut nama atau kunci",
@@ -203,7 +205,17 @@
     "notes": "Notulen",
     "summaries": "Ringkasan",
     "documents": "Dokumen",
-    "workload": "Beban kerja"
+    "workload": "Beban kerja",
+    "setup": {
+      "title": "Siapkan proyek ini",
+      "hint": "Yang dibutuhkan tim sebelum kerja harian; hilang setelah klien, tim, pohon modul, dan tiket pertama siap.",
+      "clients": "Tautkan klien yang dilayani proyek ini",
+      "team": "Tambahkan tim dan atur cakupan kliennya",
+      "documents": "Unggah spesifikasi dari klien",
+      "tree": "Susun pohon modul: draf dari spesifikasi, impor CSV, atau tambahkan manual",
+      "tickets": "Catat tiket pertama, atau impor backlog klien",
+      "repos": "Hubungkan repositori kode (opsional)"
+    }
   },
   "workload": {
     "intro": "Tiket terbuka per orang di proyek ini. Setiap angka membuka daftar tiket yang tersaring; tidak bergerak berarti tanpa perubahan {days} hari atau lebih.",
@@ -215,9 +227,13 @@
     "stale": "Tidak bergerak {days}+ hari",
     "high": "Prioritas tinggi",
     "unassigned": "Belum ditugaskan",
-    "none": "Belum ada anggota yang dapat menangani tiket."
+    "none": "Belum ada anggota yang dapat menangani tiket.",
+    "openHours": "Jam terbuka",
+    "hours": "{hours} jam",
+    "estimatedOf": "{estimated} dari {open} tiket terbuka punya estimasi"
   },
   "settings": {
+    "archivedReadOnly": "Proyek ini diarsipkan; pulihkan dulu untuk mengubah pengaturannya.",
     "adminsOnly": "Hanya admin proyek yang dapat mengubah pengaturan.",
     "general": "Umum",
     "key": "Kunci",
@@ -529,7 +545,14 @@
     "urgent": "Mendesak"
   },
   "ticketFilters": {
+    "release": "Rilis",
+    "anyRelease": "Semua",
+    "accepted": "Penerimaan",
+    "anyAcceptance": "Semua",
+    "acceptedYes": "Sudah diterima",
+    "acceptedNo": "Belum diterima",
     "label": "Saring tiket",
+    "labelFilter": "Label",
     "filters": "Filter",
     "filtersSet": "Filter ({count})",
     "q": "Cari",
@@ -565,7 +588,8 @@
     "sortPriority": "Prioritas",
     "sortDue": "Tenggat",
     "apply": "Terapkan",
-    "reset": "Atur ulang"
+    "reset": "Atur ulang",
+    "anyLabel": "Label apa saja"
   },
   "board": {
     "newTicket": "Tiket baru",
@@ -576,7 +600,8 @@
     "showAll": "Tampilkan semua",
     "showRecent": "14 hari terakhir",
     "moveTo": "Status {key}",
-    "noClient": "Inti"
+    "noClient": "Inti",
+    "checklist": "Langkah checklist yang selesai"
   },
   "tickets": {
     "new": "Tiket baru",
@@ -594,7 +619,35 @@
     "due": "Tenggat",
     "none": "Tidak ada tiket yang cocok dengan saringan ini.",
     "next": "Halaman berikutnya",
-    "exportCsv": "Ekspor CSV"
+    "exportCsv": "Ekspor CSV",
+    "importTickets": "Impor tiket",
+    "bulk": {
+      "label": "Ubah beberapa tiket",
+      "hint": "Centang tiket untuk mengubahnya sekaligus.",
+      "selected": "{count, plural, other {# tiket dipilih}}",
+      "assignee": "Penanggung jawab",
+      "keep": "Tetap",
+      "nobody": "Tidak ada",
+      "priority": "Prioritas",
+      "priorities": {
+        "low": "Rendah",
+        "medium": "Sedang",
+        "high": "Tinggi",
+        "urgent": "Mendesak"
+      },
+      "due": "Tenggat",
+      "clearDue": "Hapus tenggat",
+      "status": "Status",
+      "apply": "Terapkan ke {count}",
+      "closeOut": "Tutup {count}…",
+      "release": "Rilis",
+      "noRelease": "Tidak ada",
+      "progress": "Memperbarui {done} dari {total}…",
+      "failed": "Tidak berubah:",
+      "select": "Pilih {key}",
+      "selectAll": "Pilih semua"
+    },
+    "checklist": "Langkah checklist yang selesai"
   },
   "ticketForm": {
     "newTitle": "Tiket baru",
@@ -621,7 +674,6 @@
     "weakReason": "Jelaskan mengapa klien membutuhkannya, misalnya kebijakan mereka atau masalah yang diselesaikan",
     "type": "Jenis",
     "description": "Deskripsi",
-    "more": "Lainnya",
     "assignee": "Penanggung jawab",
     "nobody": "Belum ada",
     "priority": "Prioritas",
@@ -638,7 +690,12 @@
     "recent": "Terakhir",
     "bugBehaviors": "Bug, atau memang perilaku yang sudah disepakati? Lihat perilaku",
     "newIn": "Tiket baru di {project}",
-    "close": "Tutup"
+    "close": "Tutup",
+    "estimate": "Estimasi (jam)",
+    "labels": "Label",
+    "labelsHint": "Pisahkan dengan koma, mis. pilot, uat",
+    "release": "Rilis",
+    "noRelease": "Tidak ada"
   },
   "ticket": {
     "edit": "Ubah",
@@ -660,7 +717,13 @@
     "details": "Rincian tiket",
     "people": "Orang dan tanggal",
     "path": "Jejak",
-    "closed": "Ditutup"
+    "closed": "Ditutup",
+    "estimate": "Estimasi",
+    "hours": "{hours} jam",
+    "labels": "Label",
+    "follow": "Ikuti",
+    "release": "Rilis",
+    "following": "Diikuti"
   },
   "close": {
     "title": "Tutup {key} sebagai {status}",
@@ -1083,6 +1146,8 @@
     "attendees": "Peserta",
     "attendeesHint": "Siapa yang hadir",
     "menus": "Menu",
+    "menusHint": "Kosongkan untuk catatan tentang seluruh proyek, seperti kickoff.",
+    "wholeProject": "Seluruh proyek",
     "tickets": "Tiket terkait",
     "ticketsHint": "Kunci tiket, dipisah koma.",
     "body": "Isi",
@@ -1096,6 +1161,9 @@
     "byline": "Oleh {name} · diperbarui {at}",
     "actionItems": "Tindak lanjut",
     "createTicket": "Buat tiket",
+    "createAll": "Buat semua {count} tiket",
+    "creating": "Membuat {done} dari {total}…",
+    "createFailed": "Tidak dibuat:",
     "actionReason": "Tindak lanjut dari notulen {key}: {title}",
     "bodyHint": "Tulis tindak lanjut sebagai daftar, mis. \"- Bayu: rancang penanda, paling lambat 10 Okt\". Tiap butir bisa dijadikan tiket dari halaman notulen."
   },
@@ -1257,6 +1325,11 @@
       "comment": "berkomentar",
       "mention": "menyebut Anda",
       "status": "memindahkan ke {status}"
+    },
+    "due": {
+      "today": "{ticket} jatuh tempo hari ini",
+      "tomorrow": "{ticket} jatuh tempo besok",
+      "overdue": "{ticket} sudah lewat jatuh tempo"
     }
   },
   "notifyPrefs": {
@@ -1266,7 +1339,8 @@
       "comment": "Ada komentar di tiket saya",
       "mention": "Seseorang menyebut saya",
       "status": "Status tiket saya berubah",
-      "job_done": "Impor yang saya mulai selesai"
+      "job_done": "Impor yang saya mulai selesai",
+      "due": "Jatuh tempo: pengingat pagi untuk yang jatuh tempo hari ini atau besok, atau baru lewat"
     },
     "browser": "Notifikasi browser saat aplikasi ada di tab latar",
     "browserHint": "Notifikasi browser butuh tab aplikasi yang terbuka.",
@@ -1314,7 +1388,99 @@
       "closed": "Ditutup"
     }
   },
+  "status": {
+    "heading": "Status mingguan",
+    "intro": "Posisi proyek minggu ini, untuk laporan ke klien: yang selesai 7 hari terakhir, yang sedang dikerjakan, terlambat, jatuh tempo 7 hari ke depan atau belum ada penanggung jawabnya. Satu tiket bisa masuk lebih dari satu kelompok.",
+    "title": "Status {project}, {date}",
+    "done": "Selesai 7 hari terakhir",
+    "inProgress": "Sedang dikerjakan",
+    "overdue": "Terlambat",
+    "dueSoon": "Jatuh tempo 7 hari ke depan",
+    "unassigned": "Terbuka tanpa penanggung jawab",
+    "none": "Tidak ada.",
+    "nobody": "belum ditugaskan",
+    "due": "tenggat {date}",
+    "more": "Hanya 200 pertama yang tampil; sisanya ada di daftar tiket.",
+    "client": "Klien",
+    "allClients": "Semua klien",
+    "show": "Tampilkan",
+    "copy": "Salin sebagai Markdown",
+    "copied": "Tersalin",
+    "print": "Cetak",
+    "link": "Status mingguan"
+  },
+  "archive": {
+    "title": "Arsipkan proyek ini",
+    "hint": "Saat pekerjaan selesai: proyek menjadi hanya-baca untuk semua orang dan keluar dari pilihan proyek dan Beranda. Proyek tetap ada di Semua proyek, dan admin proyek dapat memulihkannya.",
+    "archive": "Arsipkan proyek",
+    "confirm": "Arsipkan {name}? Tidak ada yang dapat mengubahnya sampai admin proyek memulihkannya.",
+    "restore": "Pulihkan proyek",
+    "banner": "Proyek ini diarsipkan: hanya-baca dan tidak muncul di pilihan proyek dan Beranda sampai admin proyek memulihkannya."
+  },
+  "closeout": {
+    "heading": "Penutupan",
+    "intro": "Tutup beberapa tiket sekaligus, masing-masing dengan catatan keputusannya. Catatan disusun AI satu per satu di latar belakang; buka tiap tiket untuk mengonfirmasi atau mengubahnya, dan setelah satu ditutup, tiket berikutnya terbuka.",
+    "empty": "Belum ada tiket yang dipilih. Centang di daftar tiket, lalu pilih Penutupan.",
+    "viewers": "Viewer tidak dapat menutup tiket.",
+    "closeAs": "Tutup sebagai",
+    "start": "Tinjau dan tutup {count}",
+    "progress": "{closed} dari {total} ditutup",
+    "review": "Tinjau dan tutup",
+    "state": {
+      "loading": "Memuat…",
+      "missing": "Tidak ditemukan",
+      "closed": "Ditutup",
+      "waiting": "Menunggu draf",
+      "drafting": "Menyusun draf…",
+      "drafted": "Draf siap",
+      "off": "AI nonaktif: diisi dari judul dan alasan",
+      "failed": "Tanpa draf: diisi dari judul dan alasan"
+    }
+  },
+  "acceptance": {
+    "title": "Penerimaan klien",
+    "accepted": "Diterima oleh {name} pada {date}",
+    "none": "Belum diterima.",
+    "record": "Catat penerimaan",
+    "contact": "Diterima oleh",
+    "pick": "Pilih kontak",
+    "date": "Tanggal",
+    "note": "Catatan",
+    "notePlaceholder": "Misalnya di mana disetujui",
+    "save": "Simpan",
+    "cancel": "Batal",
+    "remove": "Hapus",
+    "noContacts": "Klien ini belum punya kontak; tambahkan dulu di formulir tiket."
+  },
+  "releases": {
+    "title": "Rilis",
+    "intro": "Beri nama rilis yang dikirim proyek ini, misalnya v1.0; tiket lalu menyebut rilisnya, daftar tiket bisa disaring per rilis, dan ringkasan bisa mencakup satu rilis.",
+    "name": "Nama",
+    "releasedOn": "Dirilis pada",
+    "save": "Simpan",
+    "add": "Tambah rilis",
+    "tickets": "Tiketnya"
+  },
+  "handover": {
+    "heading": "Serah terima",
+    "link": "Serah terima",
+    "title": "Serah terima {project}, {date}",
+    "intro": "Semua yang dibutuhkan klien di akhir proyek, per modul dan menu: bagian spesifikasi yang berlaku, perilaku yang berlaku (keputusan selama proyek) dan yang masih terbuka. Cetak atau salin sebagai Markdown.",
+    "spec": "Spesifikasi",
+    "behaviors": "Perilaku yang berlaku",
+    "open": "Masih terbuka",
+    "why": "Alasan",
+    "nobody": "belum ditugaskan",
+    "due": "tenggat {date}",
+    "nothing": "Belum ada catatan.",
+    "noTree": "Proyek ini belum punya modul.",
+    "client": "Klien",
+    "allClients": "Semua klien",
+    "show": "Tampilkan"
+  },
   "summaries": {
+    "release": "Rilis",
+    "anyRelease": "Semua rilis, dengan catatan keputusan",
     "heading": "Ringkasan perubahan",
     "new": "Ringkasan baru",
     "newTitle": "Ringkasan perubahan baru",
@@ -1442,6 +1608,7 @@
     "applied": "Diterapkan: {created} node dibuat, {linked} tautan bagian.",
     "openTree": "Buka pohon modul",
     "discarded": "Draf ini dibuang.",
-    "alreadyApplied": "Draf ini sudah diterapkan."
+    "alreadyApplied": "Draf ini sudah diterapkan.",
+    "elapsed": "sudah {seconds} dtk"
   }
 }

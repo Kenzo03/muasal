@@ -89,3 +89,34 @@ func TestJiraImportThroughTheAPI(t *testing.T) {
 		t.Fatalf("list: %+v", list)
 	}
 }
+
+// MSL-49: a project admin imports into their project without a system admin;
+// the import stays out of sight for members and other projects' admins.
+func TestProjectAdminsImportTheirBacklog(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	lead, lu := e.signedIn("lead@example.com", false)
+	e.seedMember(lu, w.p, "admin")
+	code, run := e.upload(lead, map[string]string{"project_key": "HRIS", "preset": "jira"}, jiraFile)
+	if code != http.StatusCreated || run.Status != httpapi.ImportRunStatusDryRun {
+		t.Fatalf("a project admin's dry run: %d %+v", code, run)
+	}
+	other, ou := e.signedIn("other@example.com", false)
+	e.seedMember(ou, e.seedProject("PAY"), "admin")
+	for who, c := range map[string]*http.Client{"a member": w.pm, "another project's admin": other} {
+		var list httpapi.ImportRunList
+		if e.call(c, http.MethodGet, "/imports", nil, &list); len(list.Items) != 0 {
+			t.Errorf("%s sees the import: %+v", who, list.Items)
+		}
+		if code := e.call(c, http.MethodGet, fmt.Sprintf("/imports/%d", run.Id), nil, nil); code != http.StatusNotFound {
+			t.Errorf("%s opens the import: %d", who, code)
+		}
+	}
+	if code, _ := e.upload(other, map[string]string{"project_key": "HRIS", "preset": "jira"}, jiraFile); code != http.StatusForbidden {
+		t.Fatalf("another project's admin imports into HRIS: %d", code)
+	}
+	var started httpapi.ImportRun
+	if code := e.call(lead, http.MethodPost, fmt.Sprintf("/imports/%d/run", run.Id), nil, &started); code != http.StatusAccepted {
+		t.Fatalf("the project admin runs it: %d", code)
+	}
+}

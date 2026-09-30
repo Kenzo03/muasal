@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useLayoutEffect, useState } from 
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { Project, User } from "@/lib/problem";
+import { active } from "@/lib/projects";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 
@@ -47,6 +48,7 @@ export default function Frame({ me, projects, rail: railCookie, recent: recentCo
   const path = usePathname();
   const [pageKey, setPageKey] = useState<string>();
   const project = projects.find((p) => p.key === (currentKey(path) ?? pageKey));
+  const inUse = active(projects); // an archived project shows only while open (MSL-64)
   const [rail, setRail] = useState(railCookie);
   const [drawer, setDrawer] = useState(false);
   const [recent, setRecent] = useState(recentCookie);
@@ -88,7 +90,7 @@ export default function Frame({ me, projects, rail: railCookie, recent: recentCo
       )}
       <Sidebar
         me={me}
-        projects={projects}
+        projects={inUse}
         project={project}
         recent={recent}
         rail={rail}
@@ -97,7 +99,7 @@ export default function Frame({ me, projects, rail: railCookie, recent: recentCo
         onToggleRail={toggleRail}
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar me={me} projects={projects} project={project} recent={recent} drawer={drawer} onMenu={() => setDrawer(true)} />
+        <TopBar me={me} projects={inUse} project={project} recent={recent} drawer={drawer} onMenu={() => setDrawer(true)} />
         <PageProject.Provider value={setPageKey}>{children}</PageProject.Provider>
       </div>
     </div>

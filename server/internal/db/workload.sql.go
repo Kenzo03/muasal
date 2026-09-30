@@ -17,7 +17,9 @@ SELECT t.assignee_id, a.name AS assignee_name,
        count(*) FILTER (WHERE t.due_date < $1::date) AS overdue,
        count(*) FILTER (WHERE t.due_date BETWEEN $1::date AND $1::date + 7) AS due_week,
        count(*) FILTER (WHERE t.updated_at < now() - make_interval(days => $2::int)) AS stale,
-       count(*) FILTER (WHERE t.priority IN ('urgent', 'high')) AS high
+       count(*) FILTER (WHERE t.priority IN ('urgent', 'high')) AS high,
+       coalesce(sum(t.estimate_hours), 0)::double precision AS open_hours,
+       count(t.estimate_hours) AS estimated
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
 LEFT JOIN users a ON a.id = t.assignee_id
@@ -44,6 +46,8 @@ type ProjectWorkloadRow struct {
 	DueWeek      int64
 	Stale        int64
 	High         int64
+	OpenHours    float64
+	Estimated    int64
 }
 
 // Open tickets per assignee (NULL: nobody) that the scope may see (R-AC-2,
@@ -74,6 +78,8 @@ func (q *Queries) ProjectWorkload(ctx context.Context, arg ProjectWorkloadParams
 			&i.DueWeek,
 			&i.Stale,
 			&i.High,
+			&i.OpenHours,
+			&i.Estimated,
 		); err != nil {
 			return nil, err
 		}

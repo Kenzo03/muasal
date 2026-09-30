@@ -100,10 +100,11 @@ SELECT t.id, t.key, t.title, t.type, t.client_id, c.name AS client_name,
        t.requester_contact_id, rc.name AS requester_contact_name, rc.title AS requester_contact_title,
        t.requester_user_id, ru.name AS requester_user_name, t.created_at, t.closed_at, s.id, s.project_id, s.name, s.category, s.position, s.color, s.is_default,
        d.what_changed, d.why, d.alternatives, d.outcome, d.state, d.confirmed_by, cu.name AS confirmer_name, d.confirmed_at,
-       sk.key AS superseded_by_key
+       sk.key AS superseded_by_key, t.accepted_on, ac.name AS accepted_contact_name, t.release_id
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
 LEFT JOIN clients c ON c.id = t.client_id
+LEFT JOIN contacts ac ON ac.id = t.accepted_contact_id
 LEFT JOIN contacts rc ON rc.id = t.requester_contact_id
 LEFT JOIN users ru ON ru.id = t.requester_user_id
 LEFT JOIN decision_records d ON d.ticket_id = t.id
@@ -159,6 +160,9 @@ type ListNodeTimelineRow struct {
 	ConfirmerName         *string
 	ConfirmedAt           *time.Time
 	SupersededByKey       *string
+	AcceptedOn            *time.Time
+	AcceptedContactName   *string
+	ReleaseID             *int64
 }
 
 // The visible tickets on these nodes (R-AC-3, R-AC-7) for a node page (FSD
@@ -216,6 +220,9 @@ func (q *Queries) ListNodeTimeline(ctx context.Context, arg ListNodeTimelinePara
 			&i.ConfirmerName,
 			&i.ConfirmedAt,
 			&i.SupersededByKey,
+			&i.AcceptedOn,
+			&i.AcceptedContactName,
+			&i.ReleaseID,
 		); err != nil {
 			return nil, err
 		}

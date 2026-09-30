@@ -411,6 +411,24 @@ func (e DiskUseVolume) Valid() bool {
 	}
 }
 
+// Defines values for HandoverNodeType.
+const (
+	HandoverNodeTypeMenu   HandoverNodeType = "menu"
+	HandoverNodeTypeModule HandoverNodeType = "module"
+)
+
+// Valid indicates whether the value is a known member of the HandoverNodeType enum.
+func (e HandoverNodeType) Valid() bool {
+	switch e {
+	case HandoverNodeTypeMenu:
+		return true
+	case HandoverNodeTypeModule:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportRunStatus.
 const (
 	ImportRunStatusDone     ImportRunStatus = "done"
@@ -583,6 +601,7 @@ func (e NodeType) Valid() bool {
 const (
 	NotificationTypeAssigned NotificationType = "assigned"
 	NotificationTypeComment  NotificationType = "comment"
+	NotificationTypeDue      NotificationType = "due"
 	NotificationTypeJobDone  NotificationType = "job_done"
 	NotificationTypeMention  NotificationType = "mention"
 	NotificationTypeStatus   NotificationType = "status"
@@ -594,6 +613,8 @@ func (e NotificationType) Valid() bool {
 	case NotificationTypeAssigned:
 		return true
 	case NotificationTypeComment:
+		return true
+	case NotificationTypeDue:
 		return true
 	case NotificationTypeJobDone:
 		return true
@@ -1115,6 +1136,16 @@ type APITokenCreated struct {
 // APITokenList defines model for APITokenList.
 type APITokenList struct {
 	Items []APIToken `json:"items"`
+}
+
+// AcceptanceInput defines model for AcceptanceInput.
+type AcceptanceInput struct {
+	// AcceptedOn Today or earlier.
+	AcceptedOn openapi_types.Date `json:"accepted_on"`
+
+	// ContactId A contact of the ticket's client; any client's contact for core work.
+	ContactId int64   `json:"contact_id"`
+	Note      *string `json:"note,omitempty"`
 }
 
 // ActivityItem defines model for ActivityItem.
@@ -1733,6 +1764,37 @@ type FieldError struct {
 	Message string `json:"message"`
 }
 
+// Handover The project as it stands, per module and menu in tree order: the spec sections in force, the behaviours in force and the open tickets (MSL-68).
+type Handover struct {
+	Nodes []HandoverNode `json:"nodes"`
+}
+
+// HandoverNode defines model for HandoverNode.
+type HandoverNode struct {
+	Behaviors []Behavior `json:"behaviors"`
+	Code      *string    `json:"code,omitempty"`
+
+	// Depth 0 for a top module.
+	Depth    int               `json:"depth"`
+	Id       int64             `json:"id"`
+	Name     string            `json:"name"`
+	Open     []HandoverTicket  `json:"open"`
+	Sections []TimelineSection `json:"sections"`
+	Type     HandoverNodeType  `json:"type"`
+}
+
+// HandoverNodeType defines model for HandoverNode.Type.
+type HandoverNodeType string
+
+// HandoverTicket defines model for HandoverTicket.
+type HandoverTicket struct {
+	Assignee *string             `json:"assignee,omitempty"`
+	DueDate  *openapi_types.Date `json:"due_date,omitempty"`
+	Key      string              `json:"key"`
+	Status   string              `json:"status"`
+	Title    string              `json:"title"`
+}
+
 // ImportMapping defines model for ImportMapping.
 type ImportMapping struct {
 	// Columns Field → column header. Fields are key, title, description, reason, type, status, priority, client, created, resolved, reporter, assignee, components, labels, comments, attachments.
@@ -2105,7 +2167,7 @@ type NoteInput struct {
 	ClientId  *int64             `json:"client_id,omitempty"`
 	DecidedOn openapi_types.Date `json:"decided_on"`
 
-	// NodeIds One or more menus or modules of the project.
+	// NodeIds Menus or modules of the project; none makes a project-wide note, such as a kickoff (MSL-59).
 	NodeIds []int64 `json:"node_ids"`
 
 	// TicketKeys Tickets the decision relates to, in any project the author can see.
@@ -2146,7 +2208,7 @@ type NoteUpdate struct {
 	ClientId  *int64             `json:"client_id,omitempty"`
 	DecidedOn openapi_types.Date `json:"decided_on"`
 
-	// NodeIds One or more menus or modules of the project.
+	// NodeIds Menus or modules of the project; none makes a project-wide note, such as a kickoff (MSL-59).
 	NodeIds []int64 `json:"node_ids"`
 
 	// TicketKeys Tickets the decision relates to, in any project the author can see.
@@ -2165,10 +2227,12 @@ type Notification struct {
 	Read        bool                   `json:"read"`
 	TicketKey   *string                `json:"ticket_key,omitempty"`
 	TicketTitle *string                `json:"ticket_title,omitempty"`
-	Type        NotificationType       `json:"type"`
+
+	// Type due (MSL-52): payload.when is today, tomorrow or overdue, payload.due the date.
+	Type NotificationType `json:"type"`
 }
 
-// NotificationType defines model for Notification.Type.
+// NotificationType due (MSL-52): payload.when is today, tomorrow or overdue, payload.due the date.
 type NotificationType string
 
 // NotificationList defines model for NotificationList.
@@ -2182,6 +2246,9 @@ type NotifyPrefs struct {
 	Assigned *bool `json:"assigned,omitempty"`
 	Browser  *bool `json:"browser,omitempty"`
 	Comment  *bool `json:"comment,omitempty"`
+
+	// Due The morning reminder of tickets due today or tomorrow
+	Due *bool `json:"due,omitempty"`
 
 	// Email Also by email, a digest of what is still unread after two minutes, when the server has SMTP set up (MSL-10). Off until chosen.
 	Email   *bool `json:"email,omitempty"`
@@ -2217,6 +2284,11 @@ type Problem struct {
 
 // Project defines model for Project.
 type Project struct {
+	// ArchivedAt When it was archived (MSL-64): an archived project is read-only, so role reads viewer for everyone until it is restored.
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+
+	// CanRestore The caller may archive or restore it (a project admin or system admin).
+	CanRestore  *bool     `json:"can_restore,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 	Description string    `json:"description"`
 	Id          int64     `json:"id"`
@@ -2275,6 +2347,27 @@ type ProjectList struct {
 // ProjectRole defines model for ProjectRole.
 type ProjectRole string
 
+// ProjectSetup defines model for ProjectSetup.
+type ProjectSetup struct {
+	// Clients A client is linked.
+	Clients bool `json:"clients"`
+
+	// Documents A specification is uploaded.
+	Documents bool `json:"documents"`
+
+	// Repos A repository is connected (optional).
+	Repos bool `json:"repos"`
+
+	// Team Someone besides the creator is a member.
+	Team bool `json:"team"`
+
+	// Tickets There is a ticket.
+	Tickets bool `json:"tickets"`
+
+	// Tree The module tree has a node.
+	Tree bool `json:"tree"`
+}
+
 // ProjectUpdate defines model for ProjectUpdate.
 type ProjectUpdate struct {
 	Description *string `json:"description,omitempty"`
@@ -2324,6 +2417,26 @@ type ReindexRequestScope string
 // ReindexResult defines model for ReindexResult.
 type ReindexResult struct {
 	Queued int `json:"queued"`
+}
+
+// Release A project release, such as v1.0 (MSL-67).
+type Release struct {
+	Id   int64  `json:"id"`
+	Name string `json:"name"`
+
+	// ReleasedOn Omitted while it is still to ship.
+	ReleasedOn *openapi_types.Date `json:"released_on,omitempty"`
+}
+
+// ReleaseInput defines model for ReleaseInput.
+type ReleaseInput struct {
+	Name       string              `json:"name"`
+	ReleasedOn *openapi_types.Date `json:"released_on,omitempty"`
+}
+
+// ReleaseList defines model for ReleaseList.
+type ReleaseList struct {
+	Items []Release `json:"items"`
 }
 
 // Repo defines model for Repo.
@@ -2422,6 +2535,8 @@ type SearchTicket struct {
 
 // SetupLink defines model for SetupLink.
 type SetupLink struct {
+	// EmailedTo With email set up
+	EmailedTo *string   `json:"emailed_to,omitempty"`
 	ExpiresAt time.Time `json:"expires_at"`
 	Url       string    `json:"url"`
 }
@@ -2509,15 +2624,21 @@ type SummaryCreate struct {
 	Language         SummaryLanguage    `json:"language"`
 
 	// NodeId The node, with its sub-nodes; 0 covers the whole project, as a weekly summary does.
-	NodeId     int64              `json:"node_id"`
-	ProjectKey string             `json:"project_key"`
-	To         openapi_types.Date `json:"to"`
+	NodeId     int64  `json:"node_id"`
+	ProjectKey string `json:"project_key"`
+
+	// ReleaseId Only this release's tickets, without decision notes (MSL-67).
+	ReleaseId *int64             `json:"release_id,omitempty"`
+	To        openapi_types.Date `json:"to"`
 }
 
 // SummaryItem defines model for SummaryItem.
 type SummaryItem struct {
-	Cancelled *bool   `json:"cancelled,omitempty"`
-	Client    *string `json:"client,omitempty"`
+	// AcceptedBy The client contact who accepted it (MSL-66).
+	AcceptedBy *string             `json:"accepted_by,omitempty"`
+	AcceptedOn *openapi_types.Date `json:"accepted_on,omitempty"`
+	Cancelled  *bool               `json:"cancelled,omitempty"`
+	Client     *string             `json:"client,omitempty"`
 
 	// Date The close date
 	Date        openapi_types.Date `json:"date"`
@@ -2599,9 +2720,12 @@ type SummaryScope struct {
 	Language         SummaryLanguage    `json:"language"`
 
 	// NodeId The node, with its sub-nodes; 0 covers the whole project, as a weekly summary does.
-	NodeId     int64              `json:"node_id"`
-	ProjectKey string             `json:"project_key"`
-	To         openapi_types.Date `json:"to"`
+	NodeId     int64  `json:"node_id"`
+	ProjectKey string `json:"project_key"`
+
+	// ReleaseId Only this release's tickets, without decision notes (MSL-67).
+	ReleaseId *int64             `json:"release_id,omitempty"`
+	To        openapi_types.Date `json:"to"`
 }
 
 // SummaryUpdate defines model for SummaryUpdate.
@@ -2638,9 +2762,11 @@ type SystemStatusWarnings string
 
 // Ticket defines model for Ticket.
 type Ticket struct {
-	Assignee    *Ref         `json:"assignee,omitempty"`
-	Attachments []Attachment `json:"attachments"`
-	Client      *Ref         `json:"client,omitempty"`
+	// Acceptance Who at the client accepted the ticket's work, as in UAT sign-off, and when (MSL-66).
+	Acceptance  *TicketAcceptance `json:"acceptance,omitempty"`
+	Assignee    *Ref              `json:"assignee,omitempty"`
+	Attachments []Attachment      `json:"attachments"`
+	Client      *Ref              `json:"client,omitempty"`
 
 	// ClosedAt Set on close
 	ClosedAt    *time.Time          `json:"closed_at,omitempty"`
@@ -2649,10 +2775,19 @@ type Ticket struct {
 	Decision    *DecisionRecord     `json:"decision,omitempty"`
 	Description string              `json:"description"`
 	DueDate     *openapi_types.Date `json:"due_date"`
-	Id          int64               `json:"id"`
+
+	// EstimateHours The effort estimate in hours (MSL-54).
+	EstimateHours *float64 `json:"estimate_hours,omitempty"`
+
+	// Following The caller follows the ticket (MSL-57).
+	Following *bool `json:"following,omitempty"`
+	Id        int64 `json:"id"`
 
 	// Key Example: HRIS-231
 	Key string `json:"key"`
+
+	// Labels Free-text labels, lowercased (MSL-56).
+	Labels *[]string `json:"labels,omitempty"`
 
 	// Links Links to tickets the reader can see, oldest first (FSD §8.8).
 	Links      []TicketLink    `json:"links"`
@@ -2660,6 +2795,7 @@ type Ticket struct {
 	Priority   Priority        `json:"priority"`
 	ProjectKey string          `json:"project_key"`
 	Reason     string          `json:"reason"`
+	Release    *Ref            `json:"release,omitempty"`
 	Reporter   Ref             `json:"reporter"`
 	Requester  TicketRequester `json:"requester"`
 	Status     Status          `json:"status"`
@@ -2667,6 +2803,13 @@ type Ticket struct {
 	Type       TicketType      `json:"type"`
 	UpdatedAt  time.Time       `json:"updated_at"`
 	Version    int32           `json:"version"`
+}
+
+// TicketAcceptance Who at the client accepted the ticket's work, as in UAT sign-off, and when (MSL-66).
+type TicketAcceptance struct {
+	AcceptedOn openapi_types.Date `json:"accepted_on"`
+	Contact    Ref                `json:"contact"`
+	Note       string             `json:"note"`
 }
 
 // TicketCode defines model for TicketCode.
@@ -2683,13 +2826,22 @@ type TicketCreate struct {
 	ClientId    *int64              `json:"client_id,omitempty"`
 	Description *string             `json:"description,omitempty"`
 	DueDate     *openapi_types.Date `json:"due_date,omitempty"`
-	NodeIds     []int64             `json:"node_ids"`
+
+	// EstimateHours Hours of effort; omitted means no estimate (MSL-54).
+	EstimateHours *float64 `json:"estimate_hours,omitempty"`
+
+	// Labels Up to 10 labels of 1 to 30 characters; omitted means none (MSL-56).
+	Labels  *[]string `json:"labels,omitempty"`
+	NodeIds []int64   `json:"node_ids"`
 
 	// NoteKey A decision note of this project the caller may see, e.g. HRIS-DN7: the ticket joins its tickets, as when filed from one of its action items (MSL-11).
-	NoteKey            *string   `json:"note_key,omitempty"`
-	Priority           *Priority `json:"priority,omitempty"`
-	Reason             *string   `json:"reason,omitempty"`
-	RequesterContactId *int64    `json:"requester_contact_id,omitempty"`
+	NoteKey  *string   `json:"note_key,omitempty"`
+	Priority *Priority `json:"priority,omitempty"`
+	Reason   *string   `json:"reason,omitempty"`
+
+	// ReleaseId A release of this project; omitted means none (MSL-67).
+	ReleaseId          *int64 `json:"release_id,omitempty"`
+	RequesterContactId *int64 `json:"requester_contact_id,omitempty"`
 
 	// RequesterUserId Without a requester the reporter is the requester.
 	RequesterUserId *int64 `json:"requester_user_id,omitempty"`
@@ -2731,19 +2883,31 @@ type TicketRequesterKind string
 
 // TicketSummary defines model for TicketSummary.
 type TicketSummary struct {
-	Assignee      *Ref                `json:"assignee,omitempty"`
+	// AcceptedOn When the client accepted it (MSL-66).
+	AcceptedOn *openapi_types.Date `json:"accepted_on,omitempty"`
+	Assignee   *Ref                `json:"assignee,omitempty"`
+
+	// Checklist The description's task list, when it has one (MSL-55).
+	Checklist *struct {
+		Done  int `json:"done"`
+		Total int `json:"total"`
+	} `json:"checklist,omitempty"`
 	Client        *Ref                `json:"client,omitempty"`
 	DueDate       *openapi_types.Date `json:"due_date"`
 	Id            int64               `json:"id"`
 	Key           string              `json:"key"`
+	Labels        *[]string           `json:"labels,omitempty"`
 	MissingReason bool                `json:"missing_reason"`
 	NodeNames     []string            `json:"node_names"`
 	Priority      Priority            `json:"priority"`
-	RequesterName string              `json:"requester_name"`
-	StatusId      int64               `json:"status_id"`
-	Title         string              `json:"title"`
-	Type          TicketType          `json:"type"`
-	UpdatedAt     time.Time           `json:"updated_at"`
+
+	// Release Its release's name (MSL-67).
+	Release       *string    `json:"release,omitempty"`
+	RequesterName string     `json:"requester_name"`
+	StatusId      int64      `json:"status_id"`
+	Title         string     `json:"title"`
+	Type          TicketType `json:"type"`
+	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
 // TicketType defines model for TicketType.
@@ -2754,13 +2918,22 @@ type TicketUpdate struct {
 	AssigneeId *int64 `json:"assignee_id,omitempty"`
 
 	// ClientId Omitted for core work (all clients).
-	ClientId           *int64              `json:"client_id,omitempty"`
-	Description        *string             `json:"description,omitempty"`
-	DueDate            *openapi_types.Date `json:"due_date,omitempty"`
-	NodeIds            []int64             `json:"node_ids"`
-	Priority           *Priority           `json:"priority,omitempty"`
-	Reason             *string             `json:"reason,omitempty"`
-	RequesterContactId *int64              `json:"requester_contact_id,omitempty"`
+	ClientId    *int64              `json:"client_id,omitempty"`
+	Description *string             `json:"description,omitempty"`
+	DueDate     *openapi_types.Date `json:"due_date,omitempty"`
+
+	// EstimateHours Hours of effort; omitted means no estimate (MSL-54).
+	EstimateHours *float64 `json:"estimate_hours,omitempty"`
+
+	// Labels Up to 10 labels of 1 to 30 characters; omitted means none (MSL-56).
+	Labels   *[]string `json:"labels,omitempty"`
+	NodeIds  []int64   `json:"node_ids"`
+	Priority *Priority `json:"priority,omitempty"`
+	Reason   *string   `json:"reason,omitempty"`
+
+	// ReleaseId A release of this project; omitted means none (MSL-67).
+	ReleaseId          *int64 `json:"release_id,omitempty"`
+	RequesterContactId *int64 `json:"requester_contact_id,omitempty"`
 
 	// RequesterUserId One of the two requester fields is required.
 	RequesterUserId *int64     `json:"requester_user_id,omitempty"`
@@ -2938,12 +3111,18 @@ type WorkloadRow struct {
 	// DueWeek Due from today through 7 days ahead.
 	DueWeek int `json:"due_week"`
 
+	// Estimated How many of the open tickets have an estimate.
+	Estimated int `json:"estimated"`
+
 	// High Urgent or high priority.
 	High       int `json:"high"`
 	InProgress int `json:"in_progress"`
 
 	// Open To do and In progress.
 	Open int `json:"open"`
+
+	// OpenHours The open tickets' estimates added up (MSL-54).
+	OpenHours float64 `json:"open_hours"`
 
 	// Overdue Due before today, the date in the caller's timezone.
 	Overdue int `json:"overdue"`
@@ -3056,6 +3235,12 @@ type MarkNotificationsReadJSONBody struct {
 	Id *int64 `json:"id,omitempty"`
 }
 
+// ListProjectsParams defines parameters for ListProjects.
+type ListProjectsParams struct {
+	// Archived Also archived projects, as All projects lists them; pickers leave them out (MSL-64).
+	Archived *bool `form:"archived,omitempty" json:"archived,omitempty"`
+}
+
 // ListAssigneesParams defines parameters for ListAssignees.
 type ListAssigneesParams struct {
 	// ClientId Only those who may see this client's tickets (MSL-22).
@@ -3071,6 +3256,11 @@ type UploadDocumentMultipartBody struct {
 	// Supersedes An older document's key
 	Supersedes *string `json:"supersedes,omitempty"`
 	Title      string  `json:"title"`
+}
+
+// GetHandoverParams defines parameters for GetHandover.
+type GetHandoverParams struct {
+	ClientId *int64 `form:"client_id,omitempty" json:"client_id,omitempty"`
 }
 
 // ListNodesParams defines parameters for ListNodes.
@@ -3102,7 +3292,16 @@ type ListTicketsParams struct {
 	// ClosedDays Closed tickets only when closed within this many days; the board asks for 14.
 	ClosedDays *int32      `form:"closed_days,omitempty" json:"closed_days,omitempty"`
 	Type       *TicketType `form:"type,omitempty" json:"type,omitempty"`
-	ClientId   *int64      `form:"client_id,omitempty" json:"client_id,omitempty"`
+
+	// Label Tickets with this label (MSL-56).
+	Label *string `form:"label,omitempty" json:"label,omitempty"`
+
+	// Accepted Tickets the client accepted (true) or not yet (false) (MSL-66).
+	Accepted *bool `form:"accepted,omitempty" json:"accepted,omitempty"`
+
+	// ReleaseId Tickets of this release (MSL-67).
+	ReleaseId *int64 `form:"release_id,omitempty" json:"release_id,omitempty"`
+	ClientId  *int64 `form:"client_id,omitempty" json:"client_id,omitempty"`
 
 	// Core Only core work (no client).
 	Core       *bool  `form:"core,omitempty" json:"core,omitempty"`
@@ -3292,6 +3491,9 @@ type ImportNodesMultipartRequestBody ImportNodesMultipartBody
 // CreateNoteJSONRequestBody defines body for CreateNote for application/json ContentType.
 type CreateNoteJSONRequestBody = NoteInput
 
+// CreateReleaseJSONRequestBody defines body for CreateRelease for application/json ContentType.
+type CreateReleaseJSONRequestBody = ReleaseInput
+
 // CreateRepoJSONRequestBody defines body for CreateRepo for application/json ContentType.
 type CreateRepoJSONRequestBody = RepoInput
 
@@ -3303,6 +3505,9 @@ type CreateSummaryScheduleJSONRequestBody = SummaryScheduleCreate
 
 // CreateTicketJSONRequestBody defines body for CreateTicket for application/json ContentType.
 type CreateTicketJSONRequestBody = TicketCreate
+
+// UpdateReleaseJSONRequestBody defines body for UpdateRelease for application/json ContentType.
+type UpdateReleaseJSONRequestBody = ReleaseInput
 
 // UpdateRepoJSONRequestBody defines body for UpdateRepo for application/json ContentType.
 type UpdateRepoJSONRequestBody = RepoUpdate
@@ -3318,6 +3523,9 @@ type UpdateSummaryJSONRequestBody = SummaryUpdate
 
 // UpdateTicketJSONRequestBody defines body for UpdateTicket for application/json ContentType.
 type UpdateTicketJSONRequestBody = TicketUpdate
+
+// AcceptTicketJSONRequestBody defines body for AcceptTicket for application/json ContentType.
+type AcceptTicketJSONRequestBody = AcceptanceInput
 
 // UploadAttachmentMultipartRequestBody defines body for UploadAttachment for multipart/form-data ContentType.
 type UploadAttachmentMultipartRequestBody UploadAttachmentMultipartBody
@@ -3539,7 +3747,7 @@ type ServerInterface interface {
 	StreamNotifications(w http.ResponseWriter, r *http.Request)
 
 	// (GET /projects)
-	ListProjects(w http.ResponseWriter, r *http.Request)
+	ListProjects(w http.ResponseWriter, r *http.Request, params ListProjectsParams)
 
 	// (POST /projects)
 	CreateProject(w http.ResponseWriter, r *http.Request)
@@ -3549,6 +3757,9 @@ type ServerInterface interface {
 
 	// (PATCH /projects/{key})
 	UpdateProject(w http.ResponseWriter, r *http.Request, key string)
+
+	// (POST /projects/{key}/archive)
+	ArchiveProject(w http.ResponseWriter, r *http.Request, key string)
 
 	// (GET /projects/{key}/assignees)
 	ListAssignees(w http.ResponseWriter, r *http.Request, key string, params ListAssigneesParams)
@@ -3564,6 +3775,12 @@ type ServerInterface interface {
 
 	// (POST /projects/{key}/documents)
 	UploadDocument(w http.ResponseWriter, r *http.Request, key string)
+
+	// (GET /projects/{key}/handover)
+	GetHandover(w http.ResponseWriter, r *http.Request, key string, params GetHandoverParams)
+
+	// (GET /projects/{key}/labels)
+	ListProjectLabels(w http.ResponseWriter, r *http.Request, key string)
 
 	// (GET /projects/{key}/member-candidates)
 	ListMemberCandidates(w http.ResponseWriter, r *http.Request, key string)
@@ -3592,11 +3809,23 @@ type ServerInterface interface {
 	// (POST /projects/{key}/notes)
 	CreateNote(w http.ResponseWriter, r *http.Request, key string)
 
+	// (GET /projects/{key}/releases)
+	ListReleases(w http.ResponseWriter, r *http.Request, key string)
+
+	// (POST /projects/{key}/releases)
+	CreateRelease(w http.ResponseWriter, r *http.Request, key string)
+
 	// (GET /projects/{key}/repos)
 	ListRepos(w http.ResponseWriter, r *http.Request, key string)
 
 	// (POST /projects/{key}/repos)
 	CreateRepo(w http.ResponseWriter, r *http.Request, key string)
+
+	// (POST /projects/{key}/restore)
+	RestoreProject(w http.ResponseWriter, r *http.Request, key string)
+
+	// (GET /projects/{key}/setup)
+	GetProjectSetup(w http.ResponseWriter, r *http.Request, key string)
 
 	// (GET /projects/{key}/statuses)
 	GetStatuses(w http.ResponseWriter, r *http.Request, key string)
@@ -3618,6 +3847,9 @@ type ServerInterface interface {
 
 	// (GET /projects/{key}/workload)
 	GetWorkload(w http.ResponseWriter, r *http.Request, key string, params GetWorkloadParams)
+
+	// (PATCH /releases/{id})
+	UpdateRelease(w http.ResponseWriter, r *http.Request, id int64)
 
 	// (DELETE /repos/{id})
 	DeleteRepo(w http.ResponseWriter, r *http.Request, id int64)
@@ -3652,6 +3884,12 @@ type ServerInterface interface {
 	// (PUT /tickets/{key})
 	UpdateTicket(w http.ResponseWriter, r *http.Request, key string, params UpdateTicketParams)
 
+	// (DELETE /tickets/{key}/acceptance)
+	UnacceptTicket(w http.ResponseWriter, r *http.Request, key string)
+
+	// (PUT /tickets/{key}/acceptance)
+	AcceptTicket(w http.ResponseWriter, r *http.Request, key string)
+
 	// (GET /tickets/{key}/activity)
 	GetTicketActivity(w http.ResponseWriter, r *http.Request, key string)
 
@@ -3666,6 +3904,12 @@ type ServerInterface interface {
 
 	// (POST /tickets/{key}/decision-draft)
 	DraftDecision(w http.ResponseWriter, r *http.Request, key string)
+
+	// (DELETE /tickets/{key}/follow)
+	UnfollowTicket(w http.ResponseWriter, r *http.Request, key string)
+
+	// (POST /tickets/{key}/follow)
+	FollowTicket(w http.ResponseWriter, r *http.Request, key string)
 
 	// (POST /tickets/{key}/links)
 	CreateLink(w http.ResponseWriter, r *http.Request, key string)
@@ -5424,8 +5668,27 @@ func (siw *ServerInterfaceWrapper) StreamNotifications(w http.ResponseWriter, r 
 // ListProjects operation middleware
 func (siw *ServerInterfaceWrapper) ListProjects(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListProjectsParams
+
+	// ------------- Optional query parameter "archived" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "archived", r.URL.Query(), &params.Archived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "archived"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "archived", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListProjects(w, r)
+		siw.Handler.ListProjects(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -5492,6 +5755,32 @@ func (siw *ServerInterfaceWrapper) UpdateProject(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateProject(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ArchiveProject operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveProject(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveProject(w, r, key)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -5638,6 +5927,74 @@ func (siw *ServerInterfaceWrapper) UploadDocument(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UploadDocument(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetHandover operation middleware
+func (siw *ServerInterfaceWrapper) GetHandover(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetHandoverParams
+
+	// ------------- Optional query parameter "client_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "client_id", r.URL.Query(), &params.ClientId, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "client_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "client_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetHandover(w, r, key, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListProjectLabels operation middleware
+func (siw *ServerInterfaceWrapper) ListProjectLabels(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProjectLabels(w, r, key)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -5913,6 +6270,58 @@ func (siw *ServerInterfaceWrapper) CreateNote(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// ListReleases operation middleware
+func (siw *ServerInterfaceWrapper) ListReleases(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListReleases(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateRelease operation middleware
+func (siw *ServerInterfaceWrapper) CreateRelease(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateRelease(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListRepos operation middleware
 func (siw *ServerInterfaceWrapper) ListRepos(w http.ResponseWriter, r *http.Request) {
 
@@ -5956,6 +6365,58 @@ func (siw *ServerInterfaceWrapper) CreateRepo(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateRepo(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RestoreProject operation middleware
+func (siw *ServerInterfaceWrapper) RestoreProject(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreProject(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetProjectSetup operation middleware
+func (siw *ServerInterfaceWrapper) GetProjectSetup(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetProjectSetup(w, r, key)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -6148,6 +6609,45 @@ func (siw *ServerInterfaceWrapper) ListTickets(w http.ResponseWriter, r *http.Re
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "type"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "label" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "label", r.URL.Query(), &params.Label, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "label"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "label", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "accepted" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "accepted", r.URL.Query(), &params.Accepted, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "accepted"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "accepted", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "release_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "release_id", r.URL.Query(), &params.ReleaseId, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "release_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "release_id", Err: err})
 		}
 		return
 	}
@@ -6428,6 +6928,32 @@ func (siw *ServerInterfaceWrapper) GetWorkload(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetWorkload(w, r, key, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateRelease operation middleware
+func (siw *ServerInterfaceWrapper) UpdateRelease(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateRelease(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -6741,6 +7267,58 @@ func (siw *ServerInterfaceWrapper) UpdateTicket(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// UnacceptTicket operation middleware
+func (siw *ServerInterfaceWrapper) UnacceptTicket(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnacceptTicket(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AcceptTicket operation middleware
+func (siw *ServerInterfaceWrapper) AcceptTicket(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcceptTicket(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetTicketActivity operation middleware
 func (siw *ServerInterfaceWrapper) GetTicketActivity(w http.ResponseWriter, r *http.Request) {
 
@@ -6862,6 +7440,58 @@ func (siw *ServerInterfaceWrapper) DraftDecision(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DraftDecision(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnfollowTicket operation middleware
+func (siw *ServerInterfaceWrapper) UnfollowTicket(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnfollowTicket(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// FollowTicket operation middleware
+func (siw *ServerInterfaceWrapper) FollowTicket(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.FollowTicket(w, r, key)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -7229,6 +7859,14 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/clients/{id}", wrapper.UpdateClient)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/members", wrapper.ListProjectMembers)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/projects/{key}/members", wrapper.SetProjectMembers)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/labels", wrapper.ListProjectLabels)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/setup", wrapper.GetProjectSetup)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/handover", wrapper.GetHandover)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/releases", wrapper.ListReleases)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/releases", wrapper.CreateRelease)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/releases/{id}", wrapper.UpdateRelease)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/archive", wrapper.ArchiveProject)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/restore", wrapper.RestoreProject)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/member-candidates", wrapper.ListMemberCandidates)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/contacts", wrapper.ListContacts)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/contacts", wrapper.CreateContact)
@@ -7254,6 +7892,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/tickets", wrapper.CreateTicket)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/tickets/{key}", wrapper.GetTicket)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/tickets/{key}", wrapper.UpdateTicket)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/tickets/{key}/acceptance", wrapper.UnacceptTicket)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/tickets/{key}/acceptance", wrapper.AcceptTicket)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/transition", wrapper.TransitionTicket)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/documents", wrapper.ListDocuments)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/documents", wrapper.UploadDocument)
@@ -7272,6 +7912,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/summaries/{id}", wrapper.GetSummary)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/summaries/{id}", wrapper.UpdateSummary)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/tickets/{key}/decision", wrapper.UpdateDecision)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/tickets/{key}/follow", wrapper.UnfollowTicket)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/follow", wrapper.FollowTicket)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/links", wrapper.CreateLink)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/links/{id}", wrapper.DeleteLink)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/tickets/{key}/activity", wrapper.GetTicketActivity)

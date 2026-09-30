@@ -13,6 +13,7 @@ SELECT t.id, t.key, t.title, t.type, t.priority, t.due_date, t.client_id, c.name
                  WHERE tn.ticket_id = t.id ORDER BY lower(n.name), n.id LIMIT 1), '')::text AS menu
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
+JOIN projects p ON p.id = t.project_id AND p.archived_at IS NULL -- MSL-64
 LEFT JOIN clients c ON c.id = t.client_id
 WHERE t.assignee_id = sqlc.arg('user_id')::bigint
   AND s.category IN ('todo', 'in_progress')
@@ -38,6 +39,7 @@ SELECT count(*) AS all_open,
        count(*) FILTER (WHERE t.reason = '' OR NOT EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id)) AS incomplete
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
+JOIN projects p ON p.id = t.project_id AND p.archived_at IS NULL -- MSL-64
 WHERE t.assignee_id = sqlc.arg('user_id')::bigint
   AND s.category IN ('todo', 'in_progress')
   AND (sqlc.arg('is_admin')::boolean OR EXISTS (
@@ -52,7 +54,7 @@ WHERE t.assignee_id = sqlc.arg('user_id')::bigint
 SELECT p.key, count(*) AS open
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
-JOIN projects p ON p.id = t.project_id
+JOIN projects p ON p.id = t.project_id AND p.archived_at IS NULL -- MSL-64
 WHERE t.assignee_id = sqlc.arg('user_id')::bigint
   AND s.category IN ('todo', 'in_progress')
   AND (sqlc.arg('is_admin')::boolean OR EXISTS (
@@ -70,6 +72,7 @@ ORDER BY p.key;
 SELECT t.id, t.key, t.title, t.type, t.updated_at, sqlc.embed(s)
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
+JOIN projects p ON p.id = t.project_id AND p.archived_at IS NULL -- MSL-64
 WHERE (sqlc.arg('is_admin')::boolean OR EXISTS (
         SELECT 1 FROM memberships m
         WHERE m.user_id = sqlc.arg('user_id')::bigint AND m.project_id = t.project_id
@@ -111,7 +114,7 @@ SELECT p.key, p.name,
        count(*) FILTER (WHERE t.updated_at < now() - interval '7 days') AS stale
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
-JOIN projects p ON p.id = t.project_id
+JOIN projects p ON p.id = t.project_id AND p.archived_at IS NULL -- MSL-64
 WHERE s.category IN ('todo', 'in_progress')
   AND (sqlc.arg('is_admin')::boolean OR EXISTS (
         SELECT 1 FROM memberships m
@@ -126,3 +129,12 @@ SELECT (SELECT count(*) FROM users WHERE disabled_at IS NULL) > 1 AS invited,
        EXISTS (SELECT 1 FROM nodes) AS tree,
        EXISTS (SELECT 1 FROM tickets) AS history,
        coalesce((SELECT key FROM projects ORDER BY id LIMIT 1), '')::text AS first_project;
+
+-- name: ProjectSetupStatus :one
+-- How far a project is set up, for its checklist on the board (MSL-48).
+SELECT EXISTS (SELECT 1 FROM project_clients WHERE project_id = sqlc.arg('pid')::bigint) AS clients,
+       (SELECT count(*) FROM memberships WHERE project_id = sqlc.arg('pid')::bigint) > 1 AS team,
+       EXISTS (SELECT 1 FROM documents WHERE project_id = sqlc.arg('pid')::bigint) AS documents,
+       EXISTS (SELECT 1 FROM nodes WHERE project_id = sqlc.arg('pid')::bigint) AS tree,
+       EXISTS (SELECT 1 FROM tickets WHERE project_id = sqlc.arg('pid')::bigint) AS tickets,
+       EXISTS (SELECT 1 FROM git_repos WHERE project_id = sqlc.arg('pid')::bigint) AS repos;

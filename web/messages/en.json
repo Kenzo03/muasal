@@ -174,9 +174,11 @@
     "newLink": "New link",
     "copy": "Copy",
     "copied": "Copied",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "emailedTo": "Also emailed to {email}."
   },
   "projectList": {
+    "archived": "Archived",
     "heading": "All projects",
     "count": "{count, plural, one {# project} other {# projects}}",
     "find": "Find a project by name or key",
@@ -203,7 +205,17 @@
     "notes": "Notes",
     "summaries": "Summaries",
     "documents": "Documents",
-    "workload": "Workload"
+    "workload": "Workload",
+    "setup": {
+      "title": "Set up this project",
+      "hint": "What the team needs before daily work; this goes away once the clients, team, module tree and first tickets are in place.",
+      "clients": "Link the clients this project serves",
+      "team": "Add the team and set their client scope",
+      "documents": "Upload the client's specification",
+      "tree": "Build the module tree: draft it from the specification, import a CSV or add it by hand",
+      "tickets": "File the first tickets, or import the client's backlog",
+      "repos": "Connect the code repository (optional)"
+    }
   },
   "workload": {
     "intro": "Open tickets per person in this project. Each number opens the filtered ticket list; no activity means no change for {days} days or more.",
@@ -215,9 +227,13 @@
     "stale": "No activity {days}+ days",
     "high": "High priority",
     "unassigned": "Unassigned",
-    "none": "Nobody can own tickets in this project yet."
+    "none": "Nobody can own tickets in this project yet.",
+    "openHours": "Open hours",
+    "hours": "{hours} h",
+    "estimatedOf": "{estimated} of {open} open tickets have an estimate"
   },
   "settings": {
+    "archivedReadOnly": "This project is archived; restore it to change its settings.",
     "adminsOnly": "Only project admins can change settings.",
     "general": "General",
     "key": "Key",
@@ -529,7 +545,14 @@
     "urgent": "Urgent"
   },
   "ticketFilters": {
+    "release": "Release",
+    "anyRelease": "Any",
+    "accepted": "Acceptance",
+    "anyAcceptance": "Any",
+    "acceptedYes": "Accepted",
+    "acceptedNo": "Not accepted yet",
     "label": "Filter tickets",
+    "labelFilter": "Label",
     "filters": "Filters",
     "filtersSet": "Filters ({count})",
     "q": "Search",
@@ -565,7 +588,8 @@
     "sortPriority": "Priority",
     "sortDue": "Due date",
     "apply": "Apply",
-    "reset": "Reset"
+    "reset": "Reset",
+    "anyLabel": "Any label"
   },
   "board": {
     "newTicket": "New ticket",
@@ -576,7 +600,8 @@
     "showAll": "Show all",
     "showRecent": "Last 14 days",
     "moveTo": "Status of {key}",
-    "noClient": "Core"
+    "noClient": "Core",
+    "checklist": "Checklist steps done"
   },
   "tickets": {
     "new": "New ticket",
@@ -594,7 +619,35 @@
     "due": "Due",
     "none": "No tickets match these filters.",
     "next": "Next page",
-    "exportCsv": "Export CSV"
+    "exportCsv": "Export CSV",
+    "importTickets": "Import tickets",
+    "bulk": {
+      "label": "Change several tickets",
+      "hint": "Tick tickets to change them together.",
+      "selected": "{count, plural, one {# ticket selected} other {# tickets selected}}",
+      "assignee": "Assignee",
+      "keep": "Keep",
+      "nobody": "Nobody",
+      "priority": "Priority",
+      "priorities": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "urgent": "Urgent"
+      },
+      "due": "Due date",
+      "clearDue": "Clear due date",
+      "status": "Status",
+      "apply": "Apply to {count}",
+      "closeOut": "Close out {count}…",
+      "release": "Release",
+      "noRelease": "None",
+      "progress": "Updating {done} of {total}…",
+      "failed": "Not changed:",
+      "select": "Select {key}",
+      "selectAll": "Select all"
+    },
+    "checklist": "Checklist steps done"
   },
   "ticketForm": {
     "newTitle": "New ticket",
@@ -621,7 +674,6 @@
     "weakReason": "Say why the client needs this, e.g. their policy or the problem it solves",
     "type": "Type",
     "description": "Description",
-    "more": "More",
     "assignee": "Assignee",
     "nobody": "Nobody",
     "priority": "Priority",
@@ -638,7 +690,12 @@
     "recent": "Recent",
     "bugBehaviors": "Is it a bug, or how the menu was agreed to work? See the behaviors of",
     "newIn": "New ticket in {project}",
-    "close": "Close"
+    "close": "Close",
+    "estimate": "Estimate (hours)",
+    "labels": "Labels",
+    "labelsHint": "Comma-separated, such as pilot, uat",
+    "release": "Release",
+    "noRelease": "None"
   },
   "ticket": {
     "edit": "Edit",
@@ -660,7 +717,13 @@
     "details": "Ticket details",
     "people": "People and dates",
     "path": "Path",
-    "closed": "Closed"
+    "closed": "Closed",
+    "estimate": "Estimate",
+    "hours": "{hours} h",
+    "labels": "Labels",
+    "follow": "Follow",
+    "release": "Release",
+    "following": "Following"
   },
   "close": {
     "title": "Close {key} as {status}",
@@ -1083,6 +1146,8 @@
     "attendees": "Attendees",
     "attendeesHint": "Who was there",
     "menus": "Menus",
+    "menusHint": "None for a note about the whole project, such as a kickoff.",
+    "wholeProject": "The whole project",
     "tickets": "Related tickets",
     "ticketsHint": "Keys, separated by commas.",
     "body": "Note",
@@ -1096,6 +1161,9 @@
     "byline": "By {name} · updated {at}",
     "actionItems": "Action items",
     "createTicket": "Create ticket",
+    "createAll": "Create all {count} tickets",
+    "creating": "Creating {done} of {total}…",
+    "createFailed": "Not created:",
     "actionReason": "Action item of decision note {key}: {title}",
     "bodyHint": "List action items like \"- Bayu: design the flag, by 10 Oct\". Each one can become a ticket from the note page."
   },
@@ -1257,6 +1325,11 @@
       "comment": "commented",
       "mention": "mentioned you",
       "status": "moved it to {status}"
+    },
+    "due": {
+      "today": "{ticket} is due today",
+      "tomorrow": "{ticket} is due tomorrow",
+      "overdue": "{ticket} is now overdue"
     }
   },
   "notifyPrefs": {
@@ -1266,7 +1339,8 @@
       "comment": "Someone comments on my tickets",
       "mention": "Someone mentions me",
       "status": "My tickets change status",
-      "job_done": "An import I started finishes"
+      "job_done": "An import I started finishes",
+      "due": "Due dates: a morning reminder of what is due today or tomorrow, or just went overdue"
     },
     "browser": "Browser notifications when the app is in a background tab",
     "browserHint": "Browser notifications need the app open in a tab.",
@@ -1314,7 +1388,99 @@
       "closed": "Closed"
     }
   },
+  "status": {
+    "heading": "Weekly status",
+    "intro": "Where the project stands this week, for the client update: what closed in the last 7 days, what's in progress, late, due in the next 7 days or without an owner. A ticket can sit in more than one group.",
+    "title": "{project} status, {date}",
+    "done": "Done in the last 7 days",
+    "inProgress": "In progress",
+    "overdue": "Overdue",
+    "dueSoon": "Due in the next 7 days",
+    "unassigned": "Open without an assignee",
+    "none": "None.",
+    "nobody": "unassigned",
+    "due": "due {date}",
+    "more": "Only the first 200 are listed; the ticket list has the rest.",
+    "client": "Client",
+    "allClients": "All clients",
+    "show": "Show",
+    "copy": "Copy as Markdown",
+    "copied": "Copied",
+    "print": "Print",
+    "link": "Weekly status"
+  },
+  "archive": {
+    "title": "Archive this project",
+    "hint": "When the work is done: the project becomes read-only for everyone and leaves pickers and Home. It stays under All projects, and a project admin can restore it.",
+    "archive": "Archive project",
+    "confirm": "Archive {name}? Nobody can change it until a project admin restores it.",
+    "restore": "Restore project",
+    "banner": "This project is archived: it's read-only and out of pickers and Home until a project admin restores it."
+  },
+  "closeout": {
+    "heading": "Close out",
+    "intro": "Close several tickets, each with its own decision record. The records are drafted with AI one after another in the background; open each to confirm or edit it, and closing one opens the next.",
+    "empty": "No tickets picked. Tick them in the ticket list, then choose Close out.",
+    "viewers": "Viewers can't close tickets.",
+    "closeAs": "Close as",
+    "start": "Review and close {count}",
+    "progress": "{closed} of {total} closed",
+    "review": "Review and close",
+    "state": {
+      "loading": "Loading…",
+      "missing": "Not found",
+      "closed": "Closed",
+      "waiting": "Waiting for its draft",
+      "drafting": "Drafting…",
+      "drafted": "Draft ready",
+      "off": "AI is off: prefilled from the title and reason",
+      "failed": "No draft: prefilled from the title and reason"
+    }
+  },
+  "acceptance": {
+    "title": "Client acceptance",
+    "accepted": "Accepted by {name} on {date}",
+    "none": "Not accepted yet.",
+    "record": "Record acceptance",
+    "contact": "Accepted by",
+    "pick": "Choose a contact",
+    "date": "Date",
+    "note": "Note",
+    "notePlaceholder": "Such as where it was signed off",
+    "save": "Save",
+    "cancel": "Cancel",
+    "remove": "Remove",
+    "noContacts": "This client has no contacts yet; add one on the ticket form first."
+  },
+  "releases": {
+    "title": "Releases",
+    "intro": "Name the releases this project ships, such as v1.0; tickets then name their release, the list filters by it, and a summary can cover one release.",
+    "name": "Name",
+    "releasedOn": "Released on",
+    "save": "Save",
+    "add": "Add release",
+    "tickets": "Its tickets"
+  },
+  "handover": {
+    "heading": "Handover",
+    "link": "Handover",
+    "title": "{project} handover, {date}",
+    "intro": "Everything the client needs at the end of the project, per module and menu: the specification sections in force, the behaviours in force (decisions made along the way) and what is still open. Print it or copy it as Markdown.",
+    "spec": "Specification",
+    "behaviors": "Behaviours in force",
+    "open": "Still open",
+    "why": "Why",
+    "nobody": "unassigned",
+    "due": "due {date}",
+    "nothing": "Nothing recorded yet.",
+    "noTree": "This project has no modules yet.",
+    "client": "Client",
+    "allClients": "All clients",
+    "show": "Show"
+  },
   "summaries": {
+    "release": "Release",
+    "anyRelease": "Any release, with decision notes",
     "heading": "Change summaries",
     "new": "New summary",
     "newTitle": "New change summary",
@@ -1442,6 +1608,7 @@
     "applied": "Applied: {created} nodes created, {linked} section links.",
     "openTree": "Open the module tree",
     "discarded": "This draft was discarded.",
-    "alreadyApplied": "This draft was applied."
+    "alreadyApplied": "This draft was applied.",
+    "elapsed": "{seconds} s so far"
   }
 }

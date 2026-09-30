@@ -6,8 +6,7 @@ import ImportDetail from "./ImportDetail";
 
 export default async function ImportPage({ params }: { params: Promise<{ id: string }> }) {
   const me = await getMe();
-  if (!me) redirect("/login");
-  if (!me.is_admin) notFound();
+  if (!me) redirect("/login"); // the API shows an import only to those who may run it (MSL-49)
   const id = Number((await params).id);
   const { data } = await (await serverApi()).GET("/imports/{id}", { params: { path: { id } } });
   if (!data) notFound();

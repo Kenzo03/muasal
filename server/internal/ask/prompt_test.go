@@ -3,6 +3,7 @@ package ask
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 // MSL-4: the claims a why answer holds back, and the ones that give a reason,
@@ -38,9 +39,17 @@ func TestUserRepeatsTheReasonRuleForWhyQuestions(t *testing.T) {
 		"Siapa yang meminta perubahan periode payroll?":                false,
 		"Bagaimana cara kerja potongan pinjaman?":                      false,
 	} {
-		got := strings.Contains(User(q, "[HRIS-1] Ticket", ""), "The question asks why.")
+		got := strings.Contains(User(q, "[HRIS-1] Ticket", "", time.Time{}), "The question asks why.")
 		if got != want {
 			t.Errorf("%q: reminder %v, want %v", q, got, want)
 		}
+	}
+}
+
+// MSL-43: the prompt opens with the asker's today, so lateness has a reference.
+func TestUserStartsWithToday(t *testing.T) {
+	got := User("Which tickets are late?", "[HRIS-1] Ticket", "", time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC))
+	if !strings.HasPrefix(got, "TODAY: 2026-09-30 (Wednesday)\n\nEVIDENCE:") || !strings.Contains(System("en"), "never judge it from when the ticket was created") {
+		t.Fatalf("%q", got)
 	}
 }

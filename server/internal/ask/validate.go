@@ -63,6 +63,9 @@ func evidenceKey(evidence []string, k string) string {
 var (
 	// figureRe finds the figures a text states: days, amounts, times, shares.
 	figureRe = regexp.MustCompile(`\d+`)
+	// unitRe finds a one-digit figure that carries its unit, such as "3 jam"
+	// (MSL-44); the 1 of "H+1" carries none.
+	unitRe = regexp.MustCompile(`(?i)(?:^|[^\d.,])(\d)\s*(%|persen|percent|jam|hari|minggu|bulan|tahun|menit|kali|orang|toko|hours?|days?|weeks?|months?|years?|minutes?|times?)\b`)
 	// citeKeyRe finds citation keys in a claim's text, whose digits are no figures:
 	// HRIS-231, HRIS-DN7, HRIS-DOC1/7.4, and FSD menu IDs such as PAY-PR-03.
 	citeKeyRe = regexp.MustCompile(`(?i)\b[a-z][a-z0-9]{1,9}-(?:doc\d+/[\w.]+|dn\d+|[a-z]{1,5}-\d+|\d+)\b`)
@@ -77,24 +80,55 @@ var (
 		`|\b(does not|doesn't|do not|don't|did not|didn't|not)\b.{0,40}\b(say|says|state|states|stated|record|records|recorded|explain|explains|mention|mentions|give|gives)\b.{0,40}\b(why|reason)\b` +
 		`|\breasons?\b.{0,30}\b(is|are|was|were)\s+not\s+(recorded|stated|given|documented|mentioned)\b`)
 	// becauseRe finds a claim that gives a reason.
+	// lateRe and notLateRe spot a claim that calls a ticket late, and one that
+	// says it is not (MSL-43).
+	lateRe    = regexp.MustCompile(`(?i)\b(terlambat|telat|overdue|late|past due|lewat jatuh tempo|melewati (?:batas waktu|tenggat|jatuh tempo))\b`)
+	notLateRe = regexp.MustCompile(`(?i)\b(belum|tidak|tak|bukan|not|isn't|is not|no longer|tidak lagi)\s+(terlambat|telat|overdue|late|past due)\b`)
 	becauseRe = regexp.MustCompile(`(?i)\b(karena|sebab|disebabkan|akibat|agar|supaya|because|due to|so that)\b`)
 )
 
 // saysNoReason reports whether a claim says the reason is not recorded.
 func saysNoReason(text string) bool { return noReasonRe.MatchString(text) }
 
+// ContradictsDue reports whether a claim calls a ticket late whose own due note
+// says it is not: a small model does so even with "due tomorrow, not overdue"
+// in front of it (MSL-43).
+func ContradictsDue(c Claim, blocks map[string]string) bool {
+	if !lateRe.MatchString(c.Text) || notLateRe.MatchString(c.Text) {
+		return false
+	}
+	// A ticket counts whether the claim names it or only cites it, as in "all
+	// three late tickets are Fajar's" citing one that isn't late.
+	for _, key := range append(citeKeyRe.FindAllString(c.Text, -1), c.Cites...) {
+		for k, b := range blocks {
+			if strings.EqualFold(k, key) && (strings.Contains(b, ", not overdue") || strings.Contains(b, ", due today")) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // givesReason reports whether a claim gives a reason.
 func givesReason(text string) bool { return becauseRe.MatchString(text) && !saysNoReason(text) }
 
 // figures lists a text's numbers of two digits or more, without leading
-// zeros, so 09 and 9 match. One digit is no evidence: dates, versions and
-// keys all hold one, as does the 1 of "H+1" (MSL-5).
+// zeros, so 09 and 9 match. A bare digit is no evidence: dates, versions and
+// keys all hold one, as does the 1 of "H+1" (MSL-5). A digit with its unit is:
+// "3 jam" is the rule, kept as "3 jam" so it never matches "3 hari" (MSL-44).
 func figures(s string) map[string]bool {
 	out := map[string]bool{}
 	for _, n := range figureRe.FindAllString(s, -1) {
 		if t := strings.TrimLeft(n, "0"); len(t) > 1 {
 			out[t] = true
 		}
+	}
+	for _, m := range unitRe.FindAllStringSubmatch(s, -1) {
+		unit := strings.ToLower(m[2])
+		if len(unit) > 3 && strings.HasSuffix(unit, "s") {
+			unit = strings.TrimSuffix(unit, "s") // hours and hour are one unit
+		}
+		out[m[1]+" "+unit] = true
 	}
 	return out
 }

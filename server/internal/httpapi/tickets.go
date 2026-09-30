@@ -36,6 +36,9 @@ type ticketInput struct {
 	AssigneeID  *int64
 	Priority    *Priority
 	DueDate     *openapi_types.Date
+	Estimate    *float64  // hours (MSL-54)
+	Labels      *[]string // MSL-56
+	ReleaseID   *int64    // MSL-67
 }
 
 func (s *Server) CreateTicket(w http.ResponseWriter, r *http.Request, key string, params CreateTicketParams) {
@@ -56,7 +59,7 @@ func (s *Server) CreateTicket(w http.ResponseWriter, r *http.Request, key string
 	draft, nodeIDs, fields, err := s.checkTicket(ctx, pc, ticketInput{
 		Type: in.Type, Title: in.Title, ClientID: in.ClientId, ContactID: in.RequesterContactId, UserID: in.RequesterUserId,
 		NodeIDs: in.NodeIds, Reason: in.Reason, Description: in.Description, AssigneeID: in.AssigneeId,
-		Priority: in.Priority, DueDate: in.DueDate,
+		Priority: in.Priority, DueDate: in.DueDate, Estimate: in.EstimateHours, Labels: in.Labels, ReleaseID: in.ReleaseId,
 	})
 	if err != nil {
 		s.fail(w, r, err)
@@ -192,7 +195,7 @@ func (s *Server) UpdateTicket(w http.ResponseWriter, r *http.Request, key string
 	draft, nodeIDs, fields, err := s.checkTicket(ctx, pc, ticketInput{
 		Type: in.Type, Title: in.Title, ClientID: in.ClientId, ContactID: in.RequesterContactId, UserID: in.RequesterUserId,
 		NodeIDs: in.NodeIds, Reason: in.Reason, Description: in.Description, AssigneeID: in.AssigneeId,
-		Priority: in.Priority, DueDate: in.DueDate,
+		Priority: in.Priority, DueDate: in.DueDate, Estimate: in.EstimateHours, Labels: in.Labels, ReleaseID: in.ReleaseId,
 	})
 	if err != nil {
 		s.fail(w, r, err)
@@ -219,6 +222,7 @@ func (s *Server) UpdateTicket(w http.ResponseWriter, r *http.Request, key string
 			ID: row.Ticket.ID, Version: version, Type: draft.Type, Title: draft.Title, Description: draft.Description,
 			Reason: draft.Reason, ClientID: draft.ClientID, RequesterContactID: draft.RequesterContactID,
 			RequesterUserID: draft.RequesterUserID, AssigneeID: draft.AssigneeID, Priority: draft.Priority, DueDate: draft.DueDate,
+			EstimateHours: draft.EstimateHours, Labels: draft.Labels, ReleaseID: draft.ReleaseID,
 		})
 		if errors.Is(err, pgx.ErrNoRows) {
 			return errStale
@@ -386,7 +390,11 @@ func (s *Server) TransitionTicket(w http.ResponseWriter, r *http.Request, key st
 		if err := audit(ctx, q, m, &pc.user.ID, "ticket", row.Ticket.ID, "transition", changed(ticketAudit(before), ticketAudit(out))); err != nil {
 			return err
 		}
-		if err := notify(ctx, q, "status", row.Ticket.ID, &pc.user.ID, []int64{row.Ticket.ReporterID, deref(row.Ticket.AssigneeID)},
+		followers, err := q.ListFollowers(ctx, row.Ticket.ID) // MSL-57
+		if err != nil {
+			return err
+		}
+		if err := notify(ctx, q, "status", row.Ticket.ID, &pc.user.ID, append([]int64{row.Ticket.ReporterID, deref(row.Ticket.AssigneeID)}, followers...),
 			map[string]any{"status": st.Name, "from": row.Status.Name}); err != nil {
 			return err
 		}
@@ -438,7 +446,7 @@ func (s *Server) ticketFor(w http.ResponseWriter, r *http.Request, key, need str
 		return projectCtx{}, db.GetTicketByKeyRow{}, false
 	}
 	if !pc.scope.Allows(need) {
-		writeProblem(w, http.StatusForbidden, "forbidden", "Your project role does not allow this")
+		denyRole(w, pc)
 		return projectCtx{}, db.GetTicketByKeyRow{}, false
 	}
 	return pc, row, true
@@ -474,6 +482,29 @@ func (s *Server) checkTicket(ctx context.Context, pc projectCtx, in ticketInput)
 	}
 	if in.DueDate != nil {
 		t.DueDate = &in.DueDate.Time
+	}
+	if in.Labels != nil {
+		labels, ok := normalLabels(*in.Labels)
+		if !ok {
+			f = append(f, FieldError{Field: "labels", Code: "invalid", Message: "Use up to 10 labels of 1 to 30 characters"})
+		}
+		t.Labels = labels
+	}
+	if in.Estimate != nil {
+		if *in.Estimate < 0 || *in.Estimate > 9999 {
+			f = append(f, FieldError{Field: "estimate_hours", Code: "invalid", Message: "Use 0 to 9,999 hours"})
+		}
+		t.EstimateHours = in.Estimate
+	}
+	if in.ReleaseID != nil {
+		rl, err := s.q.GetRelease(ctx, *in.ReleaseID)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return t, nil, nil, err
+		}
+		if err != nil || rl.ProjectID != pc.project.ID {
+			f = append(f, FieldError{Field: "release_id", Code: "invalid", Message: "Choose a release of this project"})
+		}
+		t.ReleaseID = in.ReleaseID
 	}
 	// The client is in the caller's scope; the database checks it is linked (AC-TK-4).
 	if !pc.scope.Sees(in.ClientID) {
@@ -575,6 +606,10 @@ func readTicket(ctx context.Context, q *db.Queries, key string, u *db.User) (Tic
 
 func ticketFromRow(ctx context.Context, q *db.Queries, row db.GetTicketByKeyRow, u *db.User) (Ticket, error) {
 	t := row.Ticket
+	following, err := q.IsFollowing(ctx, db.IsFollowingParams{TicketID: t.ID, UserID: u.ID})
+	if err != nil {
+		return Ticket{}, err
+	}
 	nodes, err := q.ListTicketNodes(ctx, t.ID)
 	if err != nil {
 		return Ticket{}, err
@@ -600,7 +635,8 @@ func ticketFromRow(ctx context.Context, q *db.Queries, row db.GetTicketByKeyRow,
 		Description: t.Description, Reason: t.Reason, Priority: Priority(t.Priority), Version: t.Version,
 		Status: toAPIStatus(row.Status), Reporter: Ref{Id: t.ReporterID, Name: row.ReporterName},
 		CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt, ClosedAt: t.ClosedAt, Decision: decision, Links: links, Code: code,
-		Nodes: make([]NodeRef, len(nodes)), Attachments: make([]Attachment, len(files)),
+		Nodes: make([]NodeRef, len(nodes)), Attachments: make([]Attachment, len(files)), EstimateHours: t.EstimateHours,
+		Labels: &t.Labels, Following: &following,
 	}
 	if t.ClientID != nil {
 		out.Client = &Ref{Id: *t.ClientID, Name: deref(row.ClientName)}
@@ -616,6 +652,13 @@ func ticketFromRow(ctx context.Context, q *db.Queries, row db.GetTicketByKeyRow,
 	}
 	if t.DueDate != nil {
 		out.DueDate = &openapi_types.Date{Time: *t.DueDate}
+	}
+	if t.ReleaseID != nil { // MSL-67
+		out.Release = &Ref{Id: *t.ReleaseID, Name: deref(row.ReleaseName)}
+	}
+	if t.AcceptedContactID != nil && t.AcceptedOn != nil { // MSL-66
+		out.Acceptance = &TicketAcceptance{Contact: Ref{Id: *t.AcceptedContactID, Name: deref(row.AcceptedContactName)},
+			AcceptedOn: openapi_types.Date{Time: *t.AcceptedOn}, Note: t.AcceptanceNote}
 	}
 	for i, n := range nodes {
 		out.Nodes[i] = NodeRef{Id: n.ID, Name: n.Name, Archived: n.Archived}
@@ -635,7 +678,10 @@ func ticketAudit(t Ticket) map[string]any {
 	m := map[string]any{
 		"title": t.Title, "type": string(t.Type), "priority": string(t.Priority), "reason": t.Reason,
 		"description": t.Description, "status": t.Status.Name, "requester": t.Requester.Name, "menus": menus,
-		"client": nil, "assignee": nil, "due_date": nil,
+		"client": nil, "assignee": nil, "due_date": nil, "estimate_hours": t.EstimateHours, "labels": deref(t.Labels), "release": nil,
+	}
+	if t.Release != nil {
+		m["release"] = t.Release.Name
 	}
 	if t.Client != nil {
 		m["client"] = t.Client.Name
@@ -670,4 +716,20 @@ func ifMatch(w http.ResponseWriter, header string) (int32, bool) {
 		return 0, false
 	}
 	return int32(v), true
+}
+
+// normalLabels trims, lowercases and de-duplicates labels, keeping their order
+// (MSL-56); false when one is empty or over 30 characters, or there are over 10.
+func normalLabels(in []string) ([]string, bool) {
+	out := []string{}
+	for _, l := range in {
+		l = strings.ToLower(strings.Join(strings.Fields(l), " "))
+		if n := utf8.RuneCountInString(l); n == 0 || n > 30 {
+			return out, false
+		}
+		if !slices.Contains(out, l) {
+			out = append(out, l)
+		}
+	}
+	return out, len(out) <= 10
 }
