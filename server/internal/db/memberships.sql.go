@@ -96,17 +96,27 @@ const listAssignees = `-- name: ListAssignees :many
 SELECT u.id, u.name
 FROM memberships m JOIN users u ON u.id = m.user_id
 WHERE m.project_id = $1 AND m.role IN ('admin', 'member') AND u.disabled_at IS NULL
+  AND ($2::bigint IS NULL OR m.role = 'admin' OR m.all_clients OR EXISTS (
+        SELECT 1 FROM membership_clients mc
+        WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = $2::bigint))
 ORDER BY lower(u.name), u.id
 `
+
+type ListAssigneesParams struct {
+	ProjectID int64
+	ClientID  *int64
+}
 
 type ListAssigneesRow struct {
 	ID   int64
 	Name string
 }
 
-// Who can own tickets: active members who are not viewers (FSD §8.1).
-func (q *Queries) ListAssignees(ctx context.Context, projectID int64) ([]ListAssigneesRow, error) {
-	rows, err := q.db.Query(ctx, listAssignees, projectID)
+// Who can own tickets: active members who are not viewers (FSD §8.1). With a
+// client, only those who may see its tickets (MSL-22): project admins, members
+// of all clients, and members scoped to it.
+func (q *Queries) ListAssignees(ctx context.Context, arg ListAssigneesParams) ([]ListAssigneesRow, error) {
+	rows, err := q.db.Query(ctx, listAssignees, arg.ProjectID, arg.ClientID)
 	if err != nil {
 		return nil, err
 	}
@@ -115,6 +125,49 @@ func (q *Queries) ListAssignees(ctx context.Context, projectID int64) ([]ListAss
 	for rows.Next() {
 		var i ListAssigneesRow
 		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listMemberCandidates = `-- name: ListMemberCandidates :many
+SELECT u.id, u.name, u.email FROM users u
+WHERE u.disabled_at IS NULL
+  AND ($1::boolean OR EXISTS (
+    SELECT 1 FROM memberships mine
+    JOIN memberships theirs ON theirs.project_id = mine.project_id
+    WHERE mine.user_id = $2 AND theirs.user_id = u.id))
+ORDER BY lower(u.name), u.id
+`
+
+type ListMemberCandidatesParams struct {
+	Everyone bool
+	UserID   int64
+}
+
+type ListMemberCandidatesRow struct {
+	ID    int64
+	Name  string
+	Email string
+}
+
+// MSL-21: who a project admin can pick as a member: the active users who
+// already share a project with them. A system admin picks from everyone.
+func (q *Queries) ListMemberCandidates(ctx context.Context, arg ListMemberCandidatesParams) ([]ListMemberCandidatesRow, error) {
+	rows, err := q.db.Query(ctx, listMemberCandidates, arg.Everyone, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListMemberCandidatesRow
+	for rows.Next() {
+		var i ListMemberCandidatesRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.Email); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

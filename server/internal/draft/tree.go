@@ -91,17 +91,30 @@ func ExtractTree(ctx context.Context, rt *ai.Runtime, title string, parts [][]do
 			return nil, err
 		}
 		for _, n := range a.Nodes {
-			sec := n.Section
+			sec, code := linkSection(part, n.Path, n.Section)
 			if !contains(numbers, sec) {
 				sec = ""
 			}
-			out = append(out, docs.Candidate{Path: n.Path, Type: n.Type, Aliases: n.Aliases, Description: n.Description, Section: sec})
+			out = append(out, docs.Candidate{Path: n.Path, Type: n.Type, Aliases: n.Aliases, Description: n.Description, Section: sec, Code: code})
 		}
 		if done != nil {
 			done(i + 1)
 		}
 	}
 	return out, nil
+}
+
+// linkSection picks a node's section: the heading that names it, else the
+// model's choice. A small model tends to pick the enum's first section for
+// every node, which linked a whole tree to a document's intro (MSL-3). The
+// heading's trailing ID becomes the node's code (MSL-17).
+func linkSection(part []docs.Section, path []string, model string) (section, code string) {
+	if len(path) > 0 {
+		if s, id := docs.SectionFor(part, path[len(path)-1]); s != "" {
+			return s, id
+		}
+	}
+	return model, ""
 }
 
 func contains(list []string, s string) bool {

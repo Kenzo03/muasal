@@ -36,8 +36,24 @@ INSERT INTO membership_clients (user_id, project_id, client_id)
 SELECT sqlc.arg('user_id')::bigint, sqlc.arg('project_id')::bigint, unnest(sqlc.arg('client_ids')::bigint[]);
 
 -- name: ListAssignees :many
--- Who can own tickets: active members who are not viewers (FSD §8.1).
+-- Who can own tickets: active members who are not viewers (FSD §8.1). With a
+-- client, only those who may see its tickets (MSL-22): project admins, members
+-- of all clients, and members scoped to it.
 SELECT u.id, u.name
 FROM memberships m JOIN users u ON u.id = m.user_id
-WHERE m.project_id = $1 AND m.role IN ('admin', 'member') AND u.disabled_at IS NULL
+WHERE m.project_id = sqlc.arg('project_id') AND m.role IN ('admin', 'member') AND u.disabled_at IS NULL
+  AND (sqlc.narg('client_id')::bigint IS NULL OR m.role = 'admin' OR m.all_clients OR EXISTS (
+        SELECT 1 FROM membership_clients mc
+        WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = sqlc.narg('client_id')::bigint))
+ORDER BY lower(u.name), u.id;
+
+-- name: ListMemberCandidates :many
+-- MSL-21: who a project admin can pick as a member: the active users who
+-- already share a project with them. A system admin picks from everyone.
+SELECT u.id, u.name, u.email FROM users u
+WHERE u.disabled_at IS NULL
+  AND (sqlc.arg('everyone')::boolean OR EXISTS (
+    SELECT 1 FROM memberships mine
+    JOIN memberships theirs ON theirs.project_id = mine.project_id
+    WHERE mine.user_id = sqlc.arg('user_id') AND theirs.user_id = u.id))
 ORDER BY lower(u.name), u.id;

@@ -41,6 +41,38 @@ func TestProjectAdminSetsMembersAndScopes(t *testing.T) {
 	if err != nil || len(events) != 1 || events[0].Action != "set_members" {
 		t.Fatalf("audit: %+v %v", events, err)
 	}
+	// MSL-21: a project admin picks members from the active people they already
+	// share a project with, not the whole directory; a system admin, from everyone.
+	gone := e.seedUser("gone@example.com", pw, false)
+	e.seedMember(gone, p, "member")
+	if _, err := e.d.Pool.Exec(context.Background(), `UPDATE users SET disabled_at = now() WHERE email = 'gone@example.com'`); err != nil {
+		t.Fatal(err)
+	}
+	e.seedUser("outsider@example.com", pw, false)
+	candidates := func(c *http.Client) []string {
+		t.Helper()
+		var people httpapi.PersonList
+		if code := e.call(c, http.MethodGet, "/projects/HRIS/member-candidates", nil, &people); code != http.StatusOK {
+			t.Fatalf("candidates: %d", code)
+		}
+		emails := []string{}
+		for _, u := range people.Items {
+			emails = append(emails, u.Email)
+		}
+		return emails
+	}
+	if got := candidates(owner); !slices.Contains(got, "budi@example.com") || !slices.Contains(got, "ani@example.com") ||
+		slices.Contains(got, "gone@example.com") || slices.Contains(got, "outsider@example.com") {
+		t.Fatalf("a project admin's candidates: %v", got)
+	}
+	root, _ := e.signedIn("root@example.com", true)
+	if got := candidates(root); !slices.Contains(got, "outsider@example.com") || slices.Contains(got, "gone@example.com") {
+		t.Fatalf("a system admin's candidates: %v", got)
+	}
+	stranger, _ := e.signedIn("stranger@example.com", false)
+	if code := e.call(stranger, http.MethodGet, "/projects/HRIS/member-candidates", nil, nil); code == http.StatusOK {
+		t.Fatal("a non-member lists the users")
+	}
 }
 
 func TestMemberUpdatesAreValidated(t *testing.T) {

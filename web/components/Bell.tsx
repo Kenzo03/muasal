@@ -8,6 +8,7 @@ import Menu from "./Menu";
 import { api } from "@/lib/api";
 import type { components } from "@/lib/api-types";
 import { dateTime } from "@/lib/format";
+import { bursts } from "@/lib/notifications";
 import { button, cx } from "@/lib/ui";
 
 type Notification = components["schemas"]["Notification"];
@@ -40,7 +41,7 @@ export default function Bell({ browser }: { browser: boolean }) {
         const os = new Notification(t("title"), { body: text(n), tag: `muasal-${n.id}` });
         os.onclick = () => {
           window.focus();
-          open(n);
+          open([n]);
         };
       }
     });
@@ -68,12 +69,20 @@ export default function Bell({ browser }: { browser: boolean }) {
     }
   }
 
-  async function open(n: Notification) {
-    if (!n.read) {
-      await api.POST("/notifications/read", { body: { id: n.id } });
-      setItems((xs) => xs.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
-      setUnread((u) => Math.max(0, u - 1));
+  // What the earlier notifications of a burst add, without repeating the ticket (MSL-28).
+  function also(n: Notification): string {
+    return n.type === "status" ? t("did.status", { status: String(n.payload.status ?? "") }) : t(`did.${n.type as "assigned" | "comment" | "mention"}`);
+  }
+
+  // Opening a burst reads all of it.
+  async function open(g: Notification[]) {
+    const ids = g.filter((n) => !n.read).map((n) => n.id);
+    await Promise.all(ids.map((id) => api.POST("/notifications/read", { body: { id } })));
+    if (ids.length > 0) {
+      setItems((xs) => xs.map((x) => (ids.includes(x.id) ? { ...x, read: true } : x)));
+      setUnread((u) => Math.max(0, u - ids.length));
     }
+    const n = g[0];
     router.push(n.ticket_key ? `/t/${n.ticket_key}` : String(n.payload.link ?? "/"));
   }
 
@@ -109,19 +118,25 @@ export default function Bell({ browser }: { browser: boolean }) {
         <p className="px-3 py-3 text-[13px] text-muted">{t("none")}</p>
       ) : (
         <ul className="max-h-96 w-80 overflow-y-auto">
-          {items.map((n) => (
-            <li key={n.id}>
-              <button
-                type="button"
-                onClick={() => open(n)}
-                className={cx("flex w-full cursor-pointer flex-col items-start gap-0.5 px-3 py-2 text-left text-[13px] hover:bg-paper", !n.read && "bg-accent-soft/40")}
-              >
-                <span className={cx(!n.read && "font-semibold")}>{text(n)}</span>
-                {n.type === "comment" || n.type === "mention" ? <span className="line-clamp-2 text-xs text-muted">{String(n.payload.excerpt ?? "")}</span> : null}
-                <span className="text-xs text-muted">{dateTime(n.created_at, locale, timeZone)}</span>
-              </button>
-            </li>
-          ))}
+          {bursts(items).map((g) => {
+            const [n, ...earlier] = g;
+            const unreadHere = g.some((x) => !x.read);
+            const said = g.find((x) => x.type === "comment" || x.type === "mention");
+            return (
+              <li key={n.id}>
+                <button
+                  type="button"
+                  onClick={() => open(g)}
+                  className={cx("flex w-full cursor-pointer flex-col items-start gap-0.5 px-3 py-2 text-left text-[13px] hover:bg-paper", unreadHere && "bg-accent-soft/40")}
+                >
+                  <span className={cx(unreadHere && "font-semibold")}>{text(n)}</span>
+                  {earlier.length > 0 && <span className="text-xs text-ink-soft">{t("also", { actions: [...new Set(earlier.map(also))].join(", ") })}</span>}
+                  {said && <span className="line-clamp-2 text-xs text-muted">{String(said.payload.excerpt ?? "")}</span>}
+                  <span className="text-xs text-muted">{dateTime(n.created_at, locale, timeZone)}</span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </Menu>

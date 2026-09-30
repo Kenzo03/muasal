@@ -8,7 +8,7 @@ import { button, cx, field } from "@/lib/ui";
 
 const messageFor: Record<string, string> = { account_locked: "locked", rate_limited: "rateLimited" };
 
-export default function LoginForm() {
+export default function LoginForm({ email }: { email?: string }) {
   const t = useTranslations("login");
   const router = useRouter();
   const [error, setError] = useState("");
@@ -35,7 +35,8 @@ export default function LoginForm() {
     <form onSubmit={onSubmit} className="flex flex-col gap-3.5">
       <label className={field.label}>
         {t("email")}
-        <input name="email" type="email" required autoComplete="username" className={field.input} />
+        {/* MSL-20: a new user arrives from their setup page with the email filled in. */}
+        <input name="email" type="email" required autoComplete="username" defaultValue={email} className={field.input} />
       </label>
       <label className={field.label}>
         {t("password")}

@@ -23,7 +23,7 @@ func (s *Server) Search(w http.ResponseWriter, r *http.Request, params SearchPar
 		writeProblem(w, http.StatusBadRequest, "invalid_parameter", "Search for at most 200 characters")
 		return
 	}
-	out := SearchResults{Tickets: []SearchTicket{}, Nodes: []SearchNode{}, Notes: []SearchNote{}}
+	out := SearchResults{Tickets: []SearchTicket{}, Nodes: []SearchNode{}, Notes: []SearchNote{}, Sections: []SearchSection{}}
 	if utf8.RuneCountInString(q) < 2 {
 		writeJSON(w, http.StatusOK, out)
 		return
@@ -44,6 +44,15 @@ func (s *Server) Search(w http.ResponseWriter, r *http.Request, params SearchPar
 		s.fail(w, r, err)
 		return
 	}
+	sections, err := s.q.SearchSections(ctx, db.SearchSectionsParams{IsAdmin: u.IsAdmin, UserID: u.ID, Q: q})
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	for _, sec := range sections {
+		out.Sections = append(out.Sections, SearchSection{DocumentKey: sec.DocumentKey, DocumentTitle: sec.DocumentTitle, ProjectKey: sec.ProjectKey,
+			Number: sec.Number, Title: sec.Title, Excerpt: excerpt(sec.Body, q), Superseded: sec.Superseded})
+	}
 	for _, n := range notes {
 		out.Notes = append(out.Notes, SearchNote{Key: n.Key, Title: n.Title, ProjectKey: n.ProjectKey, DecidedOn: openapi_types.Date{Time: n.DecidedOn}})
 	}
@@ -61,4 +70,27 @@ func (s *Server) Search(w http.ResponseWriter, r *http.Request, params SearchPar
 		})
 	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+// excerpt is plain text around the first word of q found in body, so a result
+// shows why it matched (MSL-15); the start of the body when none is.
+func excerpt(body, q string) string {
+	text := []rune(strings.Join(strings.Fields(body), " "))
+	lower := []rune(strings.ToLower(string(text)))
+	at := 0
+	for _, word := range strings.Fields(strings.ToLower(q)) {
+		if i := strings.Index(string(lower), word); utf8.RuneCountInString(word) > 1 && i >= 0 {
+			at = utf8.RuneCountInString(string(lower)[:i])
+			break
+		}
+	}
+	from, to := max(0, at-60), min(len(text), at+140)
+	out := string(text[from:to])
+	if from > 0 {
+		out = "…" + out
+	}
+	if to < len(text) {
+		out += "…"
+	}
+	return out
 }

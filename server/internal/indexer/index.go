@@ -122,6 +122,9 @@ func Load(ctx context.Context, q *db.Queries, ticketID int64) (Source, error) {
 	if src.MRs, err = q.ListTicketMergeRequests(ctx, ticketID); err != nil {
 		return Source{}, err
 	}
+	if src.Links, err = q.ListTicketLinks(ctx, ticketID); err != nil {
+		return Source{}, err
+	}
 	var emails []string
 	for _, c := range src.Commits {
 		if c.AuthorEmail != nil {

@@ -58,13 +58,16 @@ func TestClaimsHandlesBrokenAndWrappedAnswers(t *testing.T) {
 // AC-AK-6: citations outside the evidence go; a claim left without one goes;
 // a claim naming an outside key goes.
 func TestValidateDropsWhatTheEvidenceDoesNotBack(t *testing.T) {
-	evidence := []string{"HRIS-231", "HRIS-240"}
+	evidence := []string{"HRIS-231", "HRIS-240", "HRIS-DOC1/s3"}
 	for _, c := range []struct {
 		in     ask.Claim
 		cites  []string
 		reason string
 	}{
 		{ask.Claim{Text: "Skips the supervisor.", Cites: []string{"HRIS-231"}}, []string{"HRIS-231"}, ""},
+		// A section under an unnumbered heading keeps its lower-case s (MSL-2).
+		{ask.Claim{Text: "The spec leaves it out.", Cites: []string{"HRIS-DOC1/s3"}}, []string{"HRIS-DOC1/s3"}, ""},
+		{ask.Claim{Text: "The spec leaves it out.", Cites: []string{"hris-doc1/S3"}}, []string{"HRIS-DOC1/s3"}, ""},
 		{ask.Claim{Text: "Skips the supervisor.", Cites: []string{"hris-231", "HRIS-999", "HRIS-231"}}, []string{"HRIS-231"}, "citation_removed"},
 		{ask.Claim{Text: "Skips the supervisor.", Cites: []string{"HRIS-999"}}, nil, "no_citation"},
 		{ask.Claim{Text: "Like HRIS-999, it skips the supervisor.", Cites: []string{"HRIS-231"}}, nil, "outside_key"},

@@ -123,6 +123,18 @@ func TestChangeSummary(t *testing.T) {
 	if e.call(w.pm, http.MethodPost, "/summaries/preview", scope, &prev); len(prev.Items) != 4 {
 		t.Fatalf("with cancelled: %+v", prev.Items)
 	}
+	// MSL-16: node 0 is the whole project, across modules.
+	payroll := e.seedNode(w.p, nil, "module", "Payroll")
+	pay := e.seedTicket(w.p, w.pmUser, "Payslip lists overtime", &w.a, payroll)
+	e.seedClose(pay, done, w.pmUser, "The payslip lists overtime hours.")
+	if e.call(w.pm, http.MethodPost, "/summaries/preview", scope, &prev); len(prev.Items) != 4 {
+		t.Fatalf("HR only: %+v", prev.Items)
+	}
+	scope["node_id"] = 0
+	if code := e.call(w.pm, http.MethodPost, "/summaries/preview", scope, &prev); code != http.StatusOK || len(prev.Items) != 5 {
+		t.Fatalf("whole project: %d %+v", code, prev.Items)
+	}
+	scope["node_id"] = w.hr.ID
 
 	fake := e.localAI(admin)
 	var prompt string

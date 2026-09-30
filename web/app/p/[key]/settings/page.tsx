@@ -30,10 +30,11 @@ export default async function SettingsPage({ params }: { params: Promise<{ key: 
   }
   const api = await serverApi();
   const path = { params: { path: { key } } };
-  const [all, linked, members, statuses, repos] = await Promise.all([
+  const [all, linked, members, people, statuses, repos] = await Promise.all([
     api.GET("/clients"),
     api.GET("/projects/{key}/clients", path),
     api.GET("/projects/{key}/members", path),
+    api.GET("/projects/{key}/member-candidates", path),
     api.GET("/projects/{key}/statuses", path),
     api.GET("/projects/{key}/repos", path),
   ]);
@@ -45,7 +46,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ key: 
         <ProjectForm project={project} />
         <StatusesForm projectKey={key} statuses={statuses.data?.items ?? []} />
         <ProjectClients projectKey={key} all={all.data?.items ?? []} linked={linkedClients} />
-        <ProjectMembers projectKey={key} members={members.data?.items ?? []} clients={linkedClients} />
+        <ProjectMembers projectKey={key} members={members.data?.items ?? []} clients={linkedClients} people={people.data?.items ?? []} />
         <Repos projectKey={key} repos={repos.data?.items ?? []} />
       </main>
     </>

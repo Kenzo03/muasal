@@ -164,6 +164,9 @@ func (s *Server) UploadDocument(w http.ResponseWriter, r *http.Request, key stri
 			if err := q.SupersedeDocument(ctx, db.SupersedeDocumentParams{ID: older.Document.ID, By: &d.ID}); err != nil {
 				return err
 			}
+			if err := q.CarrySectionLinks(ctx, db.CarrySectionLinksParams{OldID: older.Document.ID, NewID: d.ID}); err != nil {
+				return err // MSL-14: the new version keeps the old one's menus
+			}
 			old, err := q.ListDocumentSectionIDs(ctx, older.Document.ID) // their chunks now say "superseded"
 			if err != nil {
 				return err
@@ -266,6 +269,16 @@ func (s *Server) UpdateDocument(w http.ResponseWriter, r *http.Request, key stri
 		if err != nil {
 			return err
 		}
+		if by != nil { // MSL-14: the newer document keeps this one's menus
+			if err := q.CarrySectionLinks(ctx, db.CarrySectionLinksParams{OldID: d.Document.ID, NewID: *by}); err != nil {
+				return err
+			}
+			newer, err := q.ListDocumentSectionIDs(ctx, *by)
+			if err != nil {
+				return err
+			}
+			ids = append(ids, newer...)
+		}
 		return s.indexSections(ctx, tx, ids...)
 	})
 	if err != nil {
@@ -285,6 +298,10 @@ func (s *Server) writeDocument(w http.ResponseWriter, r *http.Request, pc projec
 	doc := d.Document
 	out := Document{Key: doc.Key, ProjectKey: pc.project.Key, Title: doc.Title, Filename: doc.Filename, Markdown: doc.Markdown,
 		UploadedBy: d.UploaderName, CreatedAt: doc.CreatedAt, SupersededBy: d.SupersededByKey}
+	out.Replaces = make([]struct {
+		Key   string `json:"key"`
+		Title string `json:"title"`
+	}, 0)
 	if doc.ClientID != nil {
 		out.Client = &Ref{Id: *doc.ClientID, Name: deref(d.ClientName)}
 	}
@@ -315,6 +332,17 @@ func (s *Server) writeDocument(w http.ResponseWriter, r *http.Request, pc projec
 				out.Sections[i].Nodes = append(out.Sections[i].Nodes, Ref{Id: l.NodeID, Name: name})
 			}
 		}
+	}
+	replaced, err := s.q.ListReplacedDocuments(ctx, &doc.ID)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	for _, o := range replaced {
+		out.Replaces = append(out.Replaces, struct {
+			Key   string `json:"key"`
+			Title string `json:"title"`
+		}{o.Key, o.Title})
 	}
 	drafts, err := s.q.ListDocumentDrafts(ctx, doc.ID)
 	if err != nil {
@@ -510,7 +538,7 @@ func checkProposal(in []TreeDraftNode) ([]docs.Node, []FieldError) {
 		if n.Type != NodeTypeModule && n.Type != NodeTypeMenu {
 			fields = append(fields, FieldError{Field: fmt.Sprintf("proposal[%d].type", i), Code: "invalid", Message: "Choose module or menu"})
 		}
-		out[i] = docs.Node{TmpID: n.TmpId, Parent: n.Parent, Type: string(n.Type), Name: name, Aliases: orEmpty(n.Aliases),
+		out[i] = docs.Node{TmpID: n.TmpId, Parent: n.Parent, Type: string(n.Type), Name: name, Code: cutRunes(strings.TrimSpace(deref(n.Code)), 100), Aliases: orEmpty(n.Aliases),
 			Description: cutRunes(strings.TrimSpace(n.Description), 300), Sections: orEmpty(n.Sections), Keep: n.Keep, Exists: n.Exists, Duplicate: deref(n.Duplicate)}
 	}
 	for i, n := range out {
@@ -554,6 +582,17 @@ func (s *Server) ApplyTreeDraft(w http.ResponseWriter, r *http.Request, id int64
 		if err != nil {
 			return err
 		}
+		// Codes are unique in a project, archived nodes included (MSL-17).
+		coded, err := q.ListNodes(ctx, db.ListNodesParams{ProjectID: pc.project.ID, AllClients: true, ClientIds: []int64{}, IncludeArchived: true})
+		if err != nil {
+			return err
+		}
+		usedCodes := map[string]bool{}
+		for _, n := range coded {
+			if n.Code != nil {
+				usedCodes[*n.Code] = true
+			}
+		}
 		ids := map[string]int64{} // path key → node id
 		for _, e := range existing {
 			ids[key(e.Path)] = e.ID
@@ -596,8 +635,12 @@ func (s *Server) ApplyTreeDraft(w http.ResponseWriter, r *http.Request, id int64
 				pid := ids[key(path[:len(path)-1])]
 				parent = &pid
 			}
+			var code *string
+			if n.Code != "" && !usedCodes[n.Code] {
+				code, usedCodes[n.Code] = &n.Code, true
+			}
 			node, err := q.CreateNode(ctx, db.CreateNodeParams{ProjectID: pc.project.ID, ParentID: parent, Type: n.Type, Name: n.Name,
-				Aliases: orEmpty(n.Aliases), Description: n.Description})
+				Code: code, Aliases: orEmpty(n.Aliases), Description: n.Description})
 			if err != nil {
 				return err
 			}

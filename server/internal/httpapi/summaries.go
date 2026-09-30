@@ -52,17 +52,24 @@ func (s *Server) summaryScope(w http.ResponseWriter, r *http.Request, in Summary
 	for _, n := range nodes {
 		names[n.ID] = n.Name
 	}
-	if _, ok := names[in.NodeId]; !ok {
+	if _, ok := names[in.NodeId]; !ok && in.NodeId != 0 { // 0 is the whole project (MSL-16)
 		fields = append(fields, FieldError{Field: "node_id", Code: "invalid", Message: "Choose a menu or module of this project"})
 	}
 	if len(fields) > 0 {
 		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields", fields...)
 		return projectCtx{}, db.Node{}, "", nil, false
 	}
-	node, err := s.q.GetNode(ctx, in.NodeId)
-	if err != nil {
-		s.fail(w, r, err)
-		return projectCtx{}, db.Node{}, "", nil, false
+	// The whole project, as a weekly summary covers it, reads by the project's name.
+	node, ids := db.Node{Name: pc.project.Name}, make([]int64, 0, len(nodes))
+	for _, n := range nodes {
+		ids = append(ids, n.ID)
+	}
+	if in.NodeId != 0 {
+		if node, err = s.q.GetNode(ctx, in.NodeId); err != nil {
+			s.fail(w, r, err)
+			return projectCtx{}, db.Node{}, "", nil, false
+		}
+		ids = subtree(nodes, in.NodeId)
 	}
 	clientName := ""
 	if in.ClientId != nil {
@@ -73,7 +80,7 @@ func (s *Server) summaryScope(w http.ResponseWriter, r *http.Request, in Summary
 		}
 		clientName = c.Name
 	}
-	items, err := s.summaryItems(ctx, pc, subtree(nodes, in.NodeId), in.ClientId, in.From.Time, in.To.Time, deref(in.IncludeCancelled), names)
+	items, err := s.summaryItems(ctx, pc, ids, in.ClientId, in.From.Time, in.To.Time, deref(in.IncludeCancelled), names)
 	if err != nil {
 		s.fail(w, r, err)
 		return projectCtx{}, db.Node{}, "", nil, false
@@ -302,6 +309,9 @@ func (s *Server) summaryInputs(ctx context.Context, items []summaryItem, client 
 		inputs[i] = draft.Item{Key: it.api.Key, Kind: string(it.api.Kind), Title: it.api.Title, Menu: it.api.Menu,
 			Client: deref(it.api.Client), RequestedBy: deref(it.api.RequestedBy), Date: it.api.Date.Time,
 			Cancelled: deref(it.api.Cancelled), Text: b.String()}
+		if d := it.decision; d != nil && d.State != nil {
+			inputs[i].Change, inputs[i].Why, inputs[i].ReversedBy = deref(d.WhatChanged), deref(d.Why), deref(d.SupersededByKey)
+		}
 	}
 	return inputs, outItems, nil
 }

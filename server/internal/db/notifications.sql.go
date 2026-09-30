@@ -152,6 +152,15 @@ func (q *Queries) ListNotifications(ctx context.Context, arg ListNotificationsPa
 	return items, nil
 }
 
+const markEmailed = `-- name: MarkEmailed :exec
+UPDATE notifications SET emailed_at = now() WHERE id = ANY ($1::bigint[])
+`
+
+func (q *Queries) MarkEmailed(ctx context.Context, ids []int64) error {
+	_, err := q.db.Exec(ctx, markEmailed, ids)
+	return err
+}
+
 const markRead = `-- name: MarkRead :exec
 UPDATE notifications SET read_at = now()
 WHERE user_id = $1 AND read_at IS NULL AND ($2::bigint IS NULL OR id = $2::bigint)
@@ -244,6 +253,68 @@ func (q *Queries) NotifyTicket(ctx context.Context, arg NotifyTicketParams) ([]N
 	for rows.Next() {
 		var i NotifyTicketRow
 		if err := rows.Scan(&i.ID, &i.UserID, &i.Sent); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const pendingEmails = `-- name: PendingEmails :many
+SELECT n.id, n.user_id, n.type, n.payload, n.created_at, u.email, u.name AS user_name, u.locale,
+       t.key AS ticket_key, t.title AS ticket_title, a.name AS actor_name
+FROM notifications n
+JOIN users u ON u.id = n.user_id
+LEFT JOIN tickets t ON t.id = n.ticket_id
+LEFT JOIN users a ON a.id = n.actor_id
+WHERE n.emailed_at IS NULL AND n.read_at IS NULL
+  AND n.created_at > now() - interval '1 day' AND n.created_at < now() - interval '2 minutes'
+  AND u.disabled_at IS NULL AND coalesce((u.notify_prefs ->> 'email')::boolean, false)
+ORDER BY n.user_id, n.id
+LIMIT 500
+`
+
+type PendingEmailsRow struct {
+	ID          int64
+	UserID      int64
+	Type        string
+	Payload     []byte
+	CreatedAt   time.Time
+	Email       string
+	UserName    string
+	Locale      string
+	TicketKey   *string
+	TicketTitle *string
+	ActorName   *string
+}
+
+// MSL-10: notifications still unread two minutes on, from the last day, not
+// yet emailed, for users who chose email; the sender groups them per user.
+func (q *Queries) PendingEmails(ctx context.Context) ([]PendingEmailsRow, error) {
+	rows, err := q.db.Query(ctx, pendingEmails)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PendingEmailsRow
+	for rows.Next() {
+		var i PendingEmailsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Type,
+			&i.Payload,
+			&i.CreatedAt,
+			&i.Email,
+			&i.UserName,
+			&i.Locale,
+			&i.TicketKey,
+			&i.TicketTitle,
+			&i.ActorName,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

@@ -32,6 +32,10 @@ export function describeChange(t: Translate, it: ActivityItem, meId?: number): s
       return t("attachmentAdded", { actor, file: shown(c.filename) });
     case "attachment_delete":
       return t("attachmentDeleted", { actor, file: shown(c.filename) });
+    case "import_create": // MSL-41: not the raw action name
+      return t("imported", { actor, ref: shown(c.external_ref) });
+    case "import_update":
+      return t("importUpdated", { actor, ref: shown(c.external_ref) });
     case "decision_confirm":
       return t("decisionConfirmed", { actor });
     case "decision_draft":
@@ -46,3 +50,14 @@ export function describeChange(t: Translate, it: ActivityItem, meId?: number): s
       return `${actor}: ${it.action}`;
   }
 }
+
+/** An audit event's changes as lines, e.g. "Status: To do → In progress" (MSL-27). */
+export function changeLines(changes: Record<string, unknown>, field: (k: string) => string): string[] {
+  return Object.entries(changes).map(([k, v]) => {
+    const c = v as Change;
+    if (v && typeof v === "object" && !Array.isArray(v) && ("old" in c || "new" in c)) return `${field(k)}: ${shown(flat(c.old))} → ${shown(flat(c.new))}`;
+    return `${field(k)}: ${shown(flat(v))}`;
+  });
+}
+
+const flat = (v: unknown) => (v && typeof v === "object" && !Array.isArray(v) ? JSON.stringify(v) : v);

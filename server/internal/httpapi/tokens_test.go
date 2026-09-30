@@ -64,6 +64,13 @@ func TestTokensActAsTheirOwner(t *testing.T) {
 	if via != "api" {
 		t.Fatalf("audit via %q", via)
 	}
+	// MSL-27: the audit log names the token and the ticket by its key.
+	admin, _ := e.signedIn("admin@example.com", true)
+	var audit httpapi.AuditPage
+	if code := e.call(admin, http.MethodGet, "/admin/audit?entity=ticket&action=create", nil, &audit); code != http.StatusOK || len(audit.Items) == 0 ||
+		audit.Items[0].Token == nil || *audit.Items[0].Token != "Sync script" || audit.Items[0].Subject == nil || *audit.Items[0].Subject != created.Key {
+		t.Fatalf("audit: %d %+v", code, audit.Items)
+	}
 
 	var p httpapi.Problem
 	if code := e.bearer(tok.Token, http.MethodPost, "/me/tokens", map[string]any{"name": "Another", "read_only": true}, &p); code != http.StatusForbidden || p.Code != "session_required" {

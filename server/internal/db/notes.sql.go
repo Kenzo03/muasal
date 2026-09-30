@@ -187,6 +187,21 @@ func (q *Queries) IsProjectClient(ctx context.Context, arg IsProjectClientParams
 	return column_1, err
 }
 
+const linkNoteTicket = `-- name: LinkNoteTicket :exec
+INSERT INTO decision_note_tickets (note_id, ticket_id) VALUES ($1, $2) ON CONFLICT DO NOTHING
+`
+
+type LinkNoteTicketParams struct {
+	NoteID   int64
+	TicketID int64
+}
+
+// A ticket filed from a note's action item joins the note's tickets (MSL-11).
+func (q *Queries) LinkNoteTicket(ctx context.Context, arg LinkNoteTicketParams) error {
+	_, err := q.db.Exec(ctx, linkNoteTicket, arg.NoteID, arg.TicketID)
+	return err
+}
+
 const listAllNoteIDs = `-- name: ListAllNoteIDs :many
 SELECT id FROM decision_notes ORDER BY id DESC
 `

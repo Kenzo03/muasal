@@ -29,10 +29,41 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const timeZone = await getTimeZone();
   const projects = await getProjects();
   const api = await serverApi();
-  const [mine, updates] = await Promise.all([
+  const [mine, updates, attention] = await Promise.all([
     api.GET("/me/tickets", { params: { query: { view, cursor: values.cursor } } }),
     api.GET("/me/updates"),
+    api.GET("/me/attention"),
   ]);
+  const watch = attention.data?.items ?? [];
+  // MSL-18: a new server's checklist, for system admins until every step is done.
+  const setup = me.is_admin ? (await api.GET("/admin/setup")).data : undefined;
+  const steps = setup
+    ? ([
+        ["ai", setup.ai, "/admin/ai"],
+        ["invited", setup.invited, "/admin/users"],
+        ["project", setup.project, "/projects/new"],
+        ["tree", setup.tree, setup.first_project ? `/p/${setup.first_project}/documents` : "/projects/new"],
+        ["history", setup.history, "/admin/imports"],
+      ] as const)
+    : [];
+  const checklist = steps.some(([, done]) => !done) && (
+    <section aria-labelledby="setup-title" className={cx(panel, "mx-4 mb-2 flex flex-col gap-3 px-5 py-4 md:mx-5")}>
+      <div className="flex flex-col gap-0.5">
+        <h2 id="setup-title" className="text-base font-extrabold">{t("setup.title")}</h2>
+        <span className="text-[13px] text-muted">{t("setup.hint")}</span>
+      </div>
+      <ol className="flex flex-col gap-1.5">
+        {steps.map(([name, done, href]) => (
+          <li key={name} className="flex items-center gap-2.5 text-[13.5px]">
+            <span className={cx("flex size-5 shrink-0 items-center justify-center rounded-full", done ? "bg-ok-soft text-ok" : "bg-well text-muted")}>
+              {done && <Icon name="check" className="size-3.5" />}
+            </span>
+            {done ? <span className="text-muted line-through">{t(`setup.${name}`)}</span> : <Link href={href}>{t(`setup.${name}`)}</Link>}
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
   const items = mine.data?.items ?? [];
   const counts = mine.data?.counts ?? { all: 0, overdue: 0, week: 0, incomplete: 0 };
   const perProject = new Map((mine.data?.projects ?? []).map((p) => [p.key, p.open]));
@@ -81,6 +112,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
           </Link>
         )}
       </div>
+      {checklist}
       {projects.length === 0 ? (
         <main className="p-4 md:p-5">
           <p className="text-muted">{me.is_admin ? t("noProjectsAdmin") : t("noProjects")}</p>
@@ -103,6 +135,43 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
               />
               <button type="submit" className={button.primary}>{tk("send")}</button>
             </form>
+            {/* MSL-9: a lead with nothing assigned still sees what is late, unowned or incomplete. */}
+            {watch.length > 0 && (
+              <section aria-labelledby="attention-title" className={cx(panel, "min-w-0 px-5 py-4")}>
+                <div className="flex flex-col gap-0.5">
+                  <h2 id="attention-title" className="text-base font-extrabold">{t("attention")}</h2>
+                  <span className="text-[13px] text-muted">{t("attentionHint")}</span>
+                </div>
+                <ul className="mt-3 flex flex-col gap-2.5">
+                  {watch.map((p) => (
+                    <li key={p.key} className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                      <Link href={`/p/${p.key}/board`} className="min-w-0 truncate text-[13.5px] font-bold text-ink no-underline hover:underline">{p.name}</Link>
+                      {(
+                        [
+                          ["overdue", p.overdue, "due=overdue", "bg-danger-soft text-danger"],
+                          ["week", p.week, "due=week", "bg-well text-ink-soft"],
+                          ["unassigned", p.unassigned, "assignee=none", "bg-well text-ink-soft"],
+                          ["noReason", p.no_reason, "missing=reason", "bg-warn-soft text-warn"],
+                          ["weakReason", p.weak_reason, "missing=weak_reason", "bg-warn-soft text-warn"],
+                          ["noMenu", p.no_menu, "missing=menus", "bg-warn-soft text-warn"],
+                          ["stale", p.stale, "stale=7", "bg-well text-ink-soft"],
+                        ] as const
+                      )
+                        .filter(([, n]) => n > 0)
+                        .map(([name, n, query, tone]) => (
+                          <Link
+                            key={name}
+                            href={`/p/${p.key}/tickets?status=open&${query}`}
+                            className={cx("rounded-full px-2.5 text-xs font-semibold leading-6 no-underline hover:underline", tone)}
+                          >
+                            {t(`attentionCount.${name}`, { count: n })}
+                          </Link>
+                        ))}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
             <section aria-labelledby="mine-title" className={cx(panel, "min-w-0 overflow-hidden")}>
               <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4">
                 <div className="flex flex-col gap-0.5">
@@ -149,11 +218,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
                   {items.map((it) => {
                     const overdue = Boolean(it.due_date && it.due_date < today);
                     return (
-                      <li key={it.key} className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl px-3 py-3 hover:bg-paper md:flex-nowrap">
+                      <li key={it.key} className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl px-3 py-3 hover:bg-paper">
                         <span className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-well">
                           <TypeIcon type={it.type} label={tTypes(it.type)} className="size-4" />
                         </span>
-                        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        {/* MSL-23: the title keeps 16rem; client, status and due wrap below it on a narrow column. */}
+                        <div className="flex min-w-0 flex-[1_1_16rem] flex-col gap-0.5">
                           <Link href={`/t/${it.key}`} className="truncate text-[14.5px] font-bold text-ink no-underline hover:text-ink hover:underline">{it.title}</Link>
                           <span className="flex flex-wrap items-center gap-x-1.5 text-[12.5px] text-muted">
                             <Link href={`/t/${it.key}`} className="font-bold text-muted no-underline hover:text-ink">{it.key}</Link>

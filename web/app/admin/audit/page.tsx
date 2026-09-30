@@ -2,12 +2,15 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getLocale, getTimeZone, getTranslations } from "next-intl/server";
 import PageBar from "@/components/PageBar";
+import { changeLines } from "@/lib/activity";
 import { dateTime } from "@/lib/format";
 import { getMe, serverApi } from "@/lib/server-api";
 import { one } from "@/lib/ticket-query";
 import { button, cx, field, table } from "@/lib/ui";
 
-const entities = ["ticket", "comment", "node", "project", "status", "statuses", "client", "contact", "user", "ai_settings", "summary_schedule"];
+const entities = ["ticket", "node", "project", "client", "contact", "user", "note", "document", "repo", "token", "ai_settings", "summary_schedule", "backup", "import"];
+// Where a subject has its own page (MSL-27).
+const pages: Record<string, string> = { ticket: "/t/", note: "/notes/", document: "/documents/" };
 
 // Admin → Audit log (FSD §15.4): read-only, filtered by actor, entity, action
 // and date, with a CSV export of the same filter.
@@ -15,6 +18,9 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
   const me = await getMe();
   if (!me) redirect("/login");
   const t = await getTranslations("audit");
+  const tf = await getTranslations("activity.fields");
+  const entity = (e: string) => (t.has(`entities.${e}`) ? t(`entities.${e}`) : e);
+  const fieldName = (k: string) => (tf.has(k) ? tf(k) : k);
   const locale = await getLocale();
   const timeZone = await getTimeZone();
   const v = one(await searchParams);
@@ -61,7 +67,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                 <select name="entity" defaultValue={v.entity ?? ""} className={field.compact}>
                   <option value="">{t("anything")}</option>
                   {entities.map((e) => (
-                    <option key={e} value={e}>{e}</option>
+                    <option key={e} value={e}>{entity(e)}</option>
                   ))}
                 </select>
               </label>
@@ -89,6 +95,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                     <tr>
                       <th className={table.th}>{t("when")}</th>
                       <th className={table.th}>{t("actor")}</th>
+                      <th className={table.th}>{t("via")}</th>
                       <th className={table.th}>{t("entity")}</th>
                       <th className={table.th}>{t("action")}</th>
                       <th className={table.th}>{t("project")}</th>
@@ -100,13 +107,27 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                       <tr key={e.id} className={table.row}>
                         <td className={cx(table.td, "whitespace-nowrap text-muted")}>{dateTime(e.occurred_at, locale, timeZone)}</td>
                         <td className={table.td}>{e.actor?.name ?? t("system")}</td>
+                        <td className={cx(table.td, "text-muted")}>
+                          {e.token ? t("vias.token", { token: e.token }) : t.has(`vias.${e.via}`) ? t(`vias.${e.via}`) : e.via}
+                        </td>
                         <td className={cx(table.td, "whitespace-nowrap")}>
-                          {e.entity} <span className="font-mono text-xs text-muted">#{e.entity_id}</span>
+                          {entity(e.entity)}{" "}
+                          {e.subject && pages[e.entity] ? (
+                            <Link href={pages[e.entity] + e.subject} className="font-semibold">{e.subject}</Link>
+                          ) : e.subject ? (
+                            <span className="font-semibold">{e.subject}</span>
+                          ) : (
+                            e.entity_id > 0 && <span className="font-mono text-xs text-muted">#{e.entity_id}</span>
+                          )}
                         </td>
                         <td className={table.td}>{e.action}</td>
                         <td className={cx(table.td, "font-mono text-xs")}>{e.project ?? "—"}</td>
-                        <td className={cx(table.td, "max-w-md truncate font-mono text-xs text-muted")} title={JSON.stringify(e.changes)}>
-                          {JSON.stringify(e.changes)}
+                        <td className={cx(table.td, "max-w-md text-xs text-muted")}>
+                          <ul className="flex flex-col gap-0.5">
+                            {changeLines(e.changes, fieldName).map((line, i) => (
+                              <li key={i} className="line-clamp-2 break-words" title={line}>{line}</li>
+                            ))}
+                          </ul>
                         </td>
                       </tr>
                     ))}

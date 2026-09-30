@@ -149,3 +149,55 @@ func orBlank(p *string) string {
 	}
 	return *p
 }
+
+// MSL-9: a project admin with nothing assigned still sees what is late,
+// unowned or incomplete in their projects; a member does not.
+func TestHomeNeedsAttentionForProjectAdmins(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	lead, leadUser := e.signedIn("lead@example.com", false)
+	e.seedMember(leadUser, w.p, "admin")
+	late := e.seedTicket(w.p, w.pmUser, "Delivery note prints the wrong warehouse", &w.a, w.ot)
+	e.assign(late, w.pmUser, days(-3), "Drivers went to the wrong warehouse twice.")
+	unowned := e.seedTicket(w.p, w.pmUser, "Invoice terms of 45 days", nil, w.ot)
+	if _, err := e.d.Pool.Exec(context.Background(), "UPDATE tickets SET reason = 'Permintaan klien.' WHERE id = $1", unowned.ID); err != nil {
+		t.Fatal(err)
+	}
+	var got httpapi.AttentionList
+	if code := e.call(lead, http.MethodGet, "/me/attention", nil, &got); code != http.StatusOK || len(got.Items) != 1 {
+		t.Fatalf("lead: %d %+v", code, got)
+	}
+	if a := got.Items[0]; a.Key != "HRIS" || a.Overdue != 1 || a.Unassigned != 1 || a.WeakReason != 1 || a.NoReason != 0 || a.NoMenu != 0 || a.Stale != 0 {
+		t.Fatalf("counts: %+v", a)
+	}
+	if code := e.call(w.pm, http.MethodGet, "/me/attention", nil, &got); code != http.StatusOK || len(got.Items) != 0 {
+		t.Fatalf("a member: %d %+v", code, got)
+	}
+}
+
+// MSL-18: a fresh server's checklist starts empty and ticks off as the admin
+// chooses AI, invites someone, and makes a project, its tree and tickets.
+func TestSetupChecklist(t *testing.T) {
+	e := newEnv(t)
+	admin, au := e.signedIn("admin@example.com", true)
+	type status struct {
+		AI, Invited, Project, Tree, History bool
+		FirstProject                        string `json:"first_project"`
+	}
+	var st status
+	if code := e.call(admin, http.MethodGet, "/admin/setup", nil, &st); code != http.StatusOK || st != (status{}) {
+		t.Fatalf("fresh: %d %+v", code, st)
+	}
+	p := e.seedProject("HRIS")
+	node := e.seedNode(p, nil, "module", "HR")
+	e.seedTicket(p, au, "First request", nil, node)
+	member, mu := e.signedIn("budi@example.com", false)
+	e.seedMember(mu, p, "member")
+	e.localAI(admin)
+	if e.call(admin, http.MethodGet, "/admin/setup", nil, &st); st != (status{true, true, true, true, true, "HRIS"}) {
+		t.Fatalf("set up: %+v", st)
+	}
+	if code := e.call(member, http.MethodGet, "/admin/setup", nil, nil); code != http.StatusForbidden {
+		t.Fatalf("a member: %d", code)
+	}
+}

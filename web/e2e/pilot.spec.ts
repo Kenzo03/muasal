@@ -35,13 +35,13 @@ test("a member reverses a decision, records a meeting's decision, and rates an a
   await page.goto(`/t/${now.key}`);
   const links = page.getByRole("region", { name: "Tautan" });
   await links.getByRole("button", { name: "Tambah tautan" }).click();
-  await links.getByLabel("Tiket ini").selectOption({ label: "Membatalkan" });
+  await links.getByLabel("Tiket ini").selectOption({ label: "Mencabut" });
   await links.getByLabel("Kunci tiket").fill(old.key);
   await links.getByRole("button", { name: "Tautkan" }).click();
   await expect(links.getByRole("link", { name: old.key })).toBeVisible();
-  await expect(links.getByText("Membatalkan", { exact: true })).toBeVisible();
+  await expect(links.getByText("Mencabut", { exact: true })).toBeVisible();
   await page.goto(`/t/${old.key}`);
-  await expect(page.getByRole("region", { name: "Tautan" }).getByText("Dibatalkan oleh")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Tautan" }).getByText("Dicabut oleh")).toBeVisible();
   await expect(page.getByRole("region", { name: "Catatan keputusan" }).getByText(`Digantikan oleh ${now.key}`)).toBeVisible();
 
   // AC-DC-8: a note from a meeting, dated 2025-11-04, on Overtime Approval.

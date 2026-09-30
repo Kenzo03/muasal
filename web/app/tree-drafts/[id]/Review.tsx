@@ -16,7 +16,7 @@ type TNode = components["schemas"]["TreeDraftNode"];
 // Reviewing a tree draft (§7.7): every proposed node shows its source
 // sections; the admin renames, retypes, unticks or adds nodes. Nodes the tree
 // already has stay as they are. Nothing changes until Apply.
-export default function Review({ initial, projectKey }: { initial: Draft; projectKey: string }) {
+export default function Review({ initial, projectKey, sections }: { initial: Draft; projectKey: string; sections: Record<string, string> }) {
   const t = useTranslations("treeDraft");
   const td = useTranslations("documents");
   const router = useRouter();
@@ -176,6 +176,7 @@ export default function Review({ initial, projectKey }: { initial: Draft; projec
           ) : (
             <span className="text-xs text-muted">{t(n.type)}</span>
           )}
+          {n.code && <span className="font-mono text-xs text-muted">{n.code}</span>}
           {n.exists && (
             <span className={cx(chip, "bg-ok-soft text-ok")}>
               <Icon name="check" className="size-3.5" />
@@ -195,11 +196,12 @@ export default function Review({ initial, projectKey }: { initial: Draft; projec
                   key={s}
                   href={`/documents/${draft.document_key}#s-${s}`}
                   target="_blank"
-                  title={`${draft.document_key}/${s}`}
-                  className="inline-flex items-center gap-1 rounded-md bg-well px-1.5 text-[11px] font-semibold leading-5 text-muted no-underline hover:bg-accent-soft hover:text-accent-strong"
+                  title={`${draft.document_key}/${s} · ${sections[s] ?? ""}`}
+                  className="inline-flex max-w-64 items-center gap-1 rounded-md bg-well px-1.5 text-[11px] font-semibold leading-5 text-muted no-underline hover:bg-accent-soft hover:text-accent-strong"
                 >
-                  <Icon name="file" className="size-3" />
-                  {s}
+                  <Icon name="file" className="size-3 shrink-0" />
+                  {/* MSL-3: the heading, not a bare "s1", so a wrong link shows. */}
+                  <span className="truncate">{s.startsWith("s") ? (sections[s] ?? s) : `${s} ${sections[s] ?? ""}`.trim()}</span>
                 </Link>
               ))}
             </span>

@@ -16,7 +16,8 @@
     "mismatch": "The passwords do not match",
     "submit": "Save password",
     "done": "Password saved. You can sign in now.",
-    "toLogin": "Go to sign in"
+    "toLogin": "Go to sign in",
+    "forAccount": "For {name} ({email})"
   },
   "nav": {
     "label": "Main",
@@ -35,7 +36,7 @@
     "newTicket": "New ticket",
     "chooseProject": "New ticket in",
     "search": "Search tickets or menus",
-    "searchPlaceholder": "Search, or type HRIS-231",
+    "searchPlaceholder": "Search, or type {example}",
     "language": "Language",
     "account": "Account of {name}",
     "newTicketShortcut": "New ticket (C)",
@@ -53,12 +54,13 @@
     "collapse": "Collapse navigation",
     "expand": "Expand navigation",
     "openMenu": "Open navigation",
-    "closeMenu": "Close navigation"
+    "closeMenu": "Close navigation",
+    "searchPlaceholderPlain": "Search tickets or menus"
   },
   "search": {
     "heading": "Search",
     "title": "Results for “{q}”",
-    "hint": "Type a key such as HRIS-231 to open that ticket.",
+    "hint": "Type a key such as {example} to open its ticket directly.",
     "kinds": "Result types",
     "all": "All",
     "nodes": "Menus and modules",
@@ -67,7 +69,9 @@
     "short": "Type at least 2 characters.",
     "aliases": "Also called: {aliases}",
     "core": "Core",
-    "notes": "Decision notes"
+    "notes": "Decision notes",
+    "documents": "Documents",
+    "superseded": "older version"
   },
   "home": {
     "title": "Home",
@@ -115,7 +119,27 @@
     "projects": "My projects",
     "yourTickets": "{count, plural, =0 {No tickets for you} one {# ticket for you} other {# tickets for you}}",
     "greeting": "{part, select, morning {Good morning} midday {Good afternoon} afternoon {Good afternoon} other {Good evening}}, {name}",
-    "openCount": "{count, plural, =0 {No open tickets for you.} one {# open ticket for you.} other {# open tickets for you.}}"
+    "openCount": "{count, plural, =0 {No open tickets for you.} one {# open ticket for you.} other {# open tickets for you.}}",
+    "attention": "Needs attention",
+    "attentionHint": "Open tickets in the projects you run",
+    "attentionCount": {
+      "overdue": "{count} overdue",
+      "week": "{count} due within 7 days",
+      "unassigned": "{count} unassigned",
+      "noReason": "{count, plural, one {# without a reason} other {# without a reason}}",
+      "weakReason": "{count, plural, one {# weak reason} other {# weak reasons}}",
+      "noMenu": "{count, plural, one {# without a menu} other {# without a menu}}",
+      "stale": "{count} unchanged for 7+ days"
+    },
+    "setup": {
+      "title": "Set up Muasal",
+      "hint": "Five steps before the team uses Muasal every day.",
+      "ai": "Choose an AI mode and test it",
+      "invited": "Invite the team and share their setup links",
+      "project": "Create the first project",
+      "tree": "Build the module tree from a spec, a CSV or by hand",
+      "history": "Bring in ticket history: import from Jira or CSV, or log the last 20–50 requests"
+    }
   },
   "profile": {
     "title": "Profile",
@@ -145,7 +169,12 @@
     "enable": "Enable",
     "resetPassword": "Reset password",
     "adminsOnly": "Only admins can manage users.",
-    "back": "Back"
+    "back": "Back",
+    "invited": "Invited",
+    "newLink": "New link",
+    "copy": "Copy",
+    "copied": "Copied",
+    "dismiss": "Dismiss"
   },
   "projectList": {
     "heading": "All projects",
@@ -214,12 +243,18 @@
     "allClients": "All clients",
     "someClients": "Selected clients",
     "remove": "Remove",
-    "email": "Email",
+    "person": "Person",
+    "pickPerson": "Choose a person…",
+    "notListed": "The list shows the people who share a project with you. For anyone else, choose “Someone else” and type their email; a system admin adds new people in Admin › Users.",
+    "unsaved": "Unsaved changes",
+    "unsavedLeave": "Leave without saving the member changes?",
     "addMember": "Add member",
     "saveMembers": "Save members",
     "noMembers": "No members yet.",
     "unknownUserHint": "Ask a system admin to create the account in Admin › Users, then add it again.",
-    "alreadyListed": "This email is already listed."
+    "email": "Email",
+    "someoneElse": "Someone else (type their email)…",
+    "alreadyListed": "This person is already listed."
   },
   "clients": {
     "title": "Clients",
@@ -282,6 +317,15 @@
     "failed": "Failed",
     "models": "Models",
     "dimension": "{dim} dimensions",
+    "reasons": {
+      "unknown_host": "The server name can't be found. Check the host name in the URL.",
+      "refused": "Nothing answers at that address. Check the port, and that the model server is running.",
+      "timeout": "The server didn't answer in time. It may be out of reach from this server, or still loading the model.",
+      "tls": "The server's certificate isn't trusted.",
+      "unauthorized": "The server refused the API key. Check the key.",
+      "not_found": "The server has nothing at this URL. OpenAI-compatible addresses usually end in /v1.",
+      "no_model": "The server doesn't have this model. Check the name, or pull the model on the server first."
+    },
     "reindexConfirm": "A new embedding model re-embeds all {chunks} chunks. Ask uses keyword search and the chunks already done until it finishes. Continue?",
     "indexStatus": "Index status",
     "reindexAll": "Re-index all",
@@ -349,7 +393,9 @@
       "end": "Dropped {name} at {target}.",
       "cancel": "Move cancelled."
     },
-    "importCsv": "Import CSV"
+    "importCsv": "Import CSV",
+    "emptyFromDocument": "Draft it from a specification",
+    "emptyFromCSV": "Import a CSV"
   },
   "nodePage": {
     "path": "Path",
@@ -390,7 +436,10 @@
     "attendees": "With {names}",
     "supersededBy": "Superseded by {key}",
     "spec": "Specification",
-    "specTitle": "Where it started in the documents"
+    "specTitle": "Where it started in the documents",
+    "unconfirmed": "Unconfirmed",
+    "unconfirmedHint": "A done ticket without a decision record, such as an imported one. Open it to confirm what changed.",
+    "reasonOnly": "Reason: {why}"
   },
   "errors": {
     "generic": "Something went wrong. Try again.",
@@ -481,6 +530,8 @@
   },
   "ticketFilters": {
     "label": "Filter tickets",
+    "filters": "Filters",
+    "filtersSet": "Filters ({count})",
     "q": "Search",
     "qPlaceholder": "Title or key",
     "client": "Client",
@@ -506,6 +557,7 @@
     "nothingMissing": "—",
     "missingReason": "No reason",
     "missingMenus": "No menus",
+    "weakReason": "Weak reason",
     "sort": "Sort",
     "sortUpdated": "Recently updated",
     "sortCreated": "Newest",
@@ -576,7 +628,7 @@
     "due": "Due date",
     "create": "Create",
     "createAnother": "Create and add another",
-    "created": "{key} created.",
+    "created": "<link>{key}</link> created.",
     "save": "Save",
     "cancel": "Cancel",
     "reload": "Reload",
@@ -641,7 +693,9 @@
     "draftWithAI": "Draft with AI",
     "drafting": "Drafting…",
     "drafted": "Drafted by {model} from the thread. Check each field; nothing is saved until Close ticket.",
-    "noWhy": "The thread never says why. Ask the requester and write the reason here."
+    "noWhy": "The thread never says why. Ask the requester and write the reason here.",
+    "draftWhy": "The draft's why:",
+    "useDraftWhy": "Use it"
   },
   "decision": {
     "title": "Decision record",
@@ -751,7 +805,9 @@
       }
     },
     "mentions": "Members to mention",
-    "mentionHint": "Type @ to mention a member."
+    "mentionHint": "Type @ to mention a member.",
+    "imported": "{actor} imported the ticket from {ref}",
+    "importUpdated": "{actor} updated the ticket from import {ref}"
   },
   "attachments": {
     "title": "Attachments",
@@ -784,6 +840,10 @@
     "question": "Question",
     "placeholder": "Ask about tickets, menus or decisions…",
     "homePlaceholder": "Ask something about your projects…",
+    "examples": "Try asking",
+    "exampleChanged": "What changed last month?",
+    "exampleTicket": "What did {key} change, and why?",
+    "exampleDecisions": "Which decisions were made this year?",
     "send": "Ask",
     "language": "Answer language",
     "langAuto": "Auto",
@@ -928,7 +988,35 @@
     "project": "Project",
     "changes": "Changes",
     "system": "System",
-    "older": "Older"
+    "older": "Older",
+    "entities": {
+      "ticket": "Ticket",
+      "comment": "Comment",
+      "node": "Menu or module",
+      "project": "Project",
+      "status": "Status",
+      "statuses": "Statuses",
+      "client": "Client",
+      "contact": "Contact",
+      "user": "User",
+      "ai_settings": "AI settings",
+      "summary_schedule": "Summary schedule",
+      "backup": "Backup",
+      "document": "Document",
+      "import": "Import",
+      "note": "Decision note",
+      "repo": "Repository",
+      "token": "API token"
+    },
+    "vias": {
+      "web": "Web",
+      "api": "API",
+      "system": "System",
+      "import": "Import",
+      "webhook": "Webhook",
+      "token": "API · token “{token}”"
+    },
+    "via": "Via"
   },
   "system": {
     "title": "System status",
@@ -952,13 +1040,18 @@
       "disk_backups": "The backups disk is 80% full or more.",
       "model_unreachable": "The model server is unreachable; Ask and indexing wait.",
       "jobs_failed": "Some background jobs failed; see Admin → AI → Index status."
-    }
+    },
+    "email": "Email",
+    "emailOn": "On, through {host}",
+    "emailOff": "Off. Set SMTP_HOST and SMTP_FROM in deploy/.env to send notifications by email."
   },
   "backups": {
     "title": "Backups",
     "adminsOnly": "Only system admins can manage backups.",
     "runNow": "Run backup now",
     "requested": "Requested; the backup starts within 30 seconds.",
+    "finished": "Backup done: {file}",
+    "slow": "No new backup yet. If this lasts, check that the backup service is running on the server.",
     "last": "Last backup",
     "none": "None yet",
     "size": "Size",
@@ -970,7 +1063,8 @@
     "restore1": "Sign in to the server and go to the Muasal install folder.",
     "restore2": "Run",
     "restore3": "The script stops the app, restores the database and the attachments, starts it again and re-indexes.",
-    "offsite": "Copying the backups folder off the server (NAS or tape) is up to you."
+    "offsite": "Copying the backups folder off the server (NAS or tape) is up to you.",
+    "sameDisk": "The backups are on the same disk as the data, so one disk failure would lose both. Copy them off the server regularly: the operations guide (docs/operations.md, “Backups and restore”) shows how."
   },
   "notes": {
     "heading": "Decision notes",
@@ -999,7 +1093,11 @@
     "save": "Save",
     "cancel": "Cancel",
     "path": "Location",
-    "byline": "By {name} · updated {at}"
+    "byline": "By {name} · updated {at}",
+    "actionItems": "Action items",
+    "createTicket": "Create ticket",
+    "actionReason": "Action item of decision note {key}: {title}",
+    "bodyHint": "List action items like \"- Bayu: design the flag, by 10 Oct\". Each one can become a ticket from the note page."
   },
   "tokens": {
     "title": "API tokens",
@@ -1152,7 +1250,14 @@
     "comment": "{who} commented on {ticket}",
     "mention": "{who} mentioned you on {ticket}",
     "status": "{who} moved {ticket} to {status}",
-    "jobDone": "{name} finished"
+    "jobDone": "{name} finished",
+    "also": "Also: {actions}",
+    "did": {
+      "assigned": "assigned you",
+      "comment": "commented",
+      "mention": "mentioned you",
+      "status": "moved it to {status}"
+    }
   },
   "notifyPrefs": {
     "title": "Notifications",
@@ -1164,14 +1269,16 @@
       "job_done": "An import I started finishes"
     },
     "browser": "Browser notifications when the app is in a background tab",
-    "browserHint": "The app sends no email. Notifications need an open app tab.",
+    "browserHint": "Browser notifications need the app open in a tab.",
     "save": "Save",
     "saved": "Saved.",
-    "failed": "Could not save."
+    "failed": "Could not save.",
+    "email": "Also email me",
+    "emailHint": "Gathered into one email every few minutes, once the admin has set up the server's email. What you already read in the app is not sent."
   },
   "repos": {
     "title": "Repositories",
-    "intro": "Commits and merge requests that name a ticket key (HRIS-123) show on that ticket and feed Ask. Add the repository, then paste the webhook URL and secret into your Git server.",
+    "intro": "Commits and merge requests that name a ticket key ({example}) show on that ticket and feed Ask. Add the repository, then paste the webhook URL and secret into your Git server.",
     "none": "No repositories yet.",
     "name": "Name",
     "provider": "Provider",
@@ -1260,7 +1367,8 @@
     "day": "Day",
     "schedule": "Schedule",
     "stop": "Stop",
-    "stopConfirm": "Stop this weekly summary? Summaries already written stay."
+    "stopConfirm": "Stop this weekly summary? Summaries already written stay.",
+    "allNodes": "All modules"
   },
   "documents": {
     "heading": "Documents",
@@ -1302,7 +1410,8 @@
     "replace": "Mark replaced",
     "makeCurrent": "Make current again",
     "noNewer": "No other current document in this project yet.",
-    "replacedBy": "Replaced by"
+    "replacedBy": "Replaced by",
+    "replaces": "Replaces {key} · {title}"
   },
   "treeDraft": {
     "heading": "Tree draft",

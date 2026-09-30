@@ -109,12 +109,7 @@ func (s *Server) GetNodeTimeline(w http.ResponseWriter, r *http.Request, id int6
 			return
 		}
 		for _, sec := range sections {
-			ts := TimelineSection{Key: sec.DocumentKey + "/" + sec.Number, DocumentKey: sec.DocumentKey, DocumentTitle: sec.DocumentTitle,
-				Title: sec.Title, Excerpt: cutRunes(sec.Body, 280), UploadedAt: sec.UploadedAt, SupersededBy: sec.SupersededByKey}
-			if sec.ClientID != nil {
-				ts.Client = &Ref{Id: *sec.ClientID, Name: deref(sec.ClientName)}
-			}
-			out.Sections = append(out.Sections, ts)
+			out.Sections = append(out.Sections, toTimelineSection(sec))
 		}
 	}
 	writeJSON(w, http.StatusOK, out)
@@ -141,14 +136,36 @@ func (s *Server) GetNodeBehaviors(w http.ResponseWriter, r *http.Request, id int
 		s.fail(w, r, err)
 		return
 	}
-	out := BehaviorList{Items: make([]Behavior, len(rows))}
+	// The spec's baseline (MSL-39): the sections of the documents in force.
+	sections, err := s.q.ListNodeSections(ctx, db.ListNodeSectionsParams{
+		ProjectID: pc.project.ID, NodeIds: ids, AllClients: pc.scope.AllClients, ClientIds: orEmpty(pc.scope.ClientIDs),
+	})
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	out := BehaviorList{Items: make([]Behavior, len(rows)), Sections: []TimelineSection{}}
 	for i, b := range rows {
-		out.Items[i] = Behavior{Key: b.Key, Title: b.Title, ClosedAt: b.ClosedAt, WhatChanged: b.WhatChanged, Why: b.Why, Alternatives: b.Alternatives}
+		out.Items[i] = Behavior{Key: b.Key, Title: b.Title, ClosedAt: b.ClosedAt, WhatChanged: b.WhatChanged, Why: b.Why, Alternatives: b.Alternatives, Unconfirmed: b.Unconfirmed}
 		if b.ClientID != nil {
 			out.Items[i].Client = &Ref{Id: *b.ClientID, Name: deref(b.ClientName)}
 		}
 	}
+	for _, sec := range sections {
+		if sec.SupersededByKey == nil {
+			out.Sections = append(out.Sections, toTimelineSection(sec))
+		}
+	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+func toTimelineSection(sec db.ListNodeSectionsRow) TimelineSection {
+	ts := TimelineSection{Key: sec.DocumentKey + "/" + sec.Number, DocumentKey: sec.DocumentKey, DocumentTitle: sec.DocumentTitle,
+		Title: sec.Title, Excerpt: cutRunes(sec.Body, 280), UploadedAt: sec.UploadedAt, SupersededBy: sec.SupersededByKey}
+	if sec.ClientID != nil {
+		ts.Client = &Ref{Id: *sec.ClientID, Name: deref(sec.ClientName)}
+	}
+	return ts
 }
 
 // visibleNodes lists the project's nodes the caller sees, archived ones too:

@@ -56,11 +56,11 @@ Review the draft: rename, retype, untick or add nodes. Every node shows the sect
 
 ## Code
 
-Project admins connect GitHub, GitLab or Gitea repositories in project settings. Commits and merge requests that mention a ticket key such as `HRIS-231` then show in the ticket's **Code** section, and Ask uses them as evidence.
+Project admins connect GitHub, GitLab or Gitea repositories in project settings. Commits and merge requests that mention a ticket key such as `HRIS-231` then show in the ticket's **Code** section, and Ask uses them as evidence. A pushed commit that says `Fixes HRIS-231` (or closes, resolves) moves the open ticket to In review, the project's last working status; closing it stays with you, since it needs the decision record.
 
 ## Notifications
 
-The bell shows assignments, comments, mentions, status changes and finished imports or tree drafts, live while the app is open. Your profile turns each event on or off, and can turn on browser notifications.
+The bell shows assignments, comments, mentions, status changes and finished imports or tree drafts, live while the app is open. Your profile turns each event on or off, and can turn on browser notifications, and, once your admin has set up email, an email of what you have not read after a couple of minutes.
 
 ## For scripts
 

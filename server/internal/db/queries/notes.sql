@@ -150,3 +150,7 @@ LIMIT 20;
 
 -- name: IsProjectClient :one
 SELECT EXISTS (SELECT 1 FROM project_clients WHERE project_id = $1 AND client_id = $2)::boolean;
+
+-- name: LinkNoteTicket :exec
+-- A ticket filed from a note's action item joins the note's tickets (MSL-11).
+INSERT INTO decision_note_tickets (note_id, ticket_id) VALUES ($1, $2) ON CONFLICT DO NOTHING;

@@ -10,6 +10,33 @@ import (
 	"time"
 )
 
+const carrySectionLinks = `-- name: CarrySectionLinks :exec
+INSERT INTO document_section_nodes (section_id, node_id)
+SELECT m.id, l.node_id
+FROM document_section_nodes l
+JOIN document_sections os ON os.id = l.section_id AND os.document_id = $1::bigint
+JOIN LATERAL (
+  SELECT ns.id FROM document_sections ns
+  WHERE ns.document_id = $2::bigint AND (lower(ns.title) = lower(os.title) OR ns.number = os.number)
+  ORDER BY lower(ns.title) = lower(os.title) DESC, ns.position
+  LIMIT 1
+) m ON true
+ON CONFLICT DO NOTHING
+`
+
+type CarrySectionLinksParams struct {
+	OldID int64
+	NewID int64
+}
+
+// A document that replaces another keeps its menus (MSL-14): each old
+// section's links move to the new section with the same title, else the same
+// number. The old document keeps its links as history.
+func (q *Queries) CarrySectionLinks(ctx context.Context, arg CarrySectionLinksParams) error {
+	_, err := q.db.Exec(ctx, carrySectionLinks, arg.OldID, arg.NewID)
+	return err
+}
+
 const createDocument = `-- name: CreateDocument :one
 INSERT INTO documents (project_id, number, key, title, client_id, filename, content_type, size_bytes, sha256, markdown, uploaded_by)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -633,6 +660,36 @@ func (q *Queries) ListProjectDocuments(ctx context.Context, arg ListProjectDocum
 	return items, nil
 }
 
+const listReplacedDocuments = `-- name: ListReplacedDocuments :many
+SELECT key, title FROM documents WHERE superseded_by = $1 AND archived_at IS NULL ORDER BY number
+`
+
+type ListReplacedDocumentsRow struct {
+	Key   string
+	Title string
+}
+
+// The documents this one replaced, for its Versions panel (MSL-14).
+func (q *Queries) ListReplacedDocuments(ctx context.Context, supersededBy *int64) ([]ListReplacedDocumentsRow, error) {
+	rows, err := q.db.Query(ctx, listReplacedDocuments, supersededBy)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListReplacedDocumentsRow
+	for rows.Next() {
+		var i ListReplacedDocumentsRow
+		if err := rows.Scan(&i.Key, &i.Title); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSectionNodePaths = `-- name: ListSectionNodePaths :many
 WITH RECURSIVE up AS (
   SELECT sn.node_id AS id, n.parent_id, ARRAY[n.name]::text[] AS path, sn.node_id AS origin
@@ -761,6 +818,71 @@ type SaveTreeDraftParams struct {
 func (q *Queries) SaveTreeDraft(ctx context.Context, arg SaveTreeDraftParams) error {
 	_, err := q.db.Exec(ctx, saveTreeDraft, arg.ID, arg.Proposal)
 	return err
+}
+
+const searchSections = `-- name: SearchSections :many
+SELECT d.key AS document_key, d.title AS document_title, p.key AS project_key, s.number, s.title, s.body,
+       (d.superseded_by IS NOT NULL)::boolean AS superseded
+FROM document_sections s
+JOIN documents d ON d.id = s.document_id
+JOIN projects p ON p.id = d.project_id
+WHERE d.archived_at IS NULL
+  AND ($1::boolean OR EXISTS (
+        SELECT 1 FROM memberships m
+        WHERE m.user_id = $2::bigint AND m.project_id = d.project_id
+          AND (m.all_clients OR d.client_id IS NULL OR EXISTS (
+                SELECT 1 FROM membership_clients mc
+                WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = d.client_id))))
+  AND (s.title ILIKE '%' || $3::text || '%'
+       OR to_tsvector('simple', s.title || ' ' || s.body) @@ websearch_to_tsquery('simple', $3::text))
+ORDER BY d.superseded_by IS NOT NULL, d.id DESC, s.position
+LIMIT 20
+`
+
+type SearchSectionsParams struct {
+	IsAdmin bool
+	UserID  int64
+	Q       string
+}
+
+type SearchSectionsRow struct {
+	DocumentKey   string
+	DocumentTitle string
+	ProjectKey    string
+	Number        string
+	Title         string
+	Body          string
+	Superseded    bool
+}
+
+// Document sections the user may see (R-AC-2, R-AC-3), by words in their
+// heading or text (MSL-15): current documents first, then newest.
+func (q *Queries) SearchSections(ctx context.Context, arg SearchSectionsParams) ([]SearchSectionsRow, error) {
+	rows, err := q.db.Query(ctx, searchSections, arg.IsAdmin, arg.UserID, arg.Q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SearchSectionsRow
+	for rows.Next() {
+		var i SearchSectionsRow
+		if err := rows.Scan(
+			&i.DocumentKey,
+			&i.DocumentTitle,
+			&i.ProjectKey,
+			&i.Number,
+			&i.Title,
+			&i.Body,
+			&i.Superseded,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const setDocumentSupersededBy = `-- name: SetDocumentSupersededBy :exec

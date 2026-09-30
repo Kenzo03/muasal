@@ -36,6 +36,39 @@ func (e AIMode) Valid() bool {
 	}
 }
 
+// Defines values for AIProbeReason.
+const (
+	AIProbeReasonNoModel      AIProbeReason = "no_model"
+	AIProbeReasonNotFound     AIProbeReason = "not_found"
+	AIProbeReasonRefused      AIProbeReason = "refused"
+	AIProbeReasonTimeout      AIProbeReason = "timeout"
+	AIProbeReasonTls          AIProbeReason = "tls"
+	AIProbeReasonUnauthorized AIProbeReason = "unauthorized"
+	AIProbeReasonUnknownHost  AIProbeReason = "unknown_host"
+)
+
+// Valid indicates whether the value is a known member of the AIProbeReason enum.
+func (e AIProbeReason) Valid() bool {
+	switch e {
+	case AIProbeReasonNoModel:
+		return true
+	case AIProbeReasonNotFound:
+		return true
+	case AIProbeReasonRefused:
+		return true
+	case AIProbeReasonTimeout:
+		return true
+	case AIProbeReasonTls:
+		return true
+	case AIProbeReasonUnauthorized:
+		return true
+	case AIProbeReasonUnknownHost:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityItemKind.
 const (
 	ActivityItemKindComment ActivityItemKind = "comment"
@@ -887,8 +920,9 @@ func (e ListTicketsParamsDue) Valid() bool {
 
 // Defines values for ListTicketsParamsMissing.
 const (
-	ListTicketsParamsMissingMenus  ListTicketsParamsMissing = "menus"
-	ListTicketsParamsMissingReason ListTicketsParamsMissing = "reason"
+	ListTicketsParamsMissingMenus      ListTicketsParamsMissing = "menus"
+	ListTicketsParamsMissingReason     ListTicketsParamsMissing = "reason"
+	ListTicketsParamsMissingWeakReason ListTicketsParamsMissing = "weak_reason"
 )
 
 // Valid indicates whether the value is a known member of the ListTicketsParamsMissing enum.
@@ -897,6 +931,8 @@ func (e ListTicketsParamsMissing) Valid() bool {
 	case ListTicketsParamsMissingMenus:
 		return true
 	case ListTicketsParamsMissingReason:
+		return true
+	case ListTicketsParamsMissingWeakReason:
 		return true
 	default:
 		return false
@@ -978,7 +1014,13 @@ type AIProbe struct {
 	LatencyMs int       `json:"latency_ms"`
 	Models    *[]string `json:"models,omitempty"`
 	Ok        bool      `json:"ok"`
+
+	// Reason The failure's likely cause, which the page says in plain words above the raw error (MSL-31).
+	Reason *AIProbeReason `json:"reason,omitempty"`
 }
+
+// AIProbeReason The failure's likely cause, which the page says in plain words above the raw error (MSL-31).
+type AIProbeReason string
 
 // AISettings defines model for AISettings.
 type AISettings struct {
@@ -1382,6 +1424,11 @@ type Attachment struct {
 	Uploader    Ref       `json:"uploader"`
 }
 
+// AttentionList defines model for AttentionList.
+type AttentionList struct {
+	Items []ProjectAttention `json:"items"`
+}
+
 // AuditEvent defines model for AuditEvent.
 type AuditEvent struct {
 	Action     string                 `json:"action"`
@@ -1394,7 +1441,13 @@ type AuditEvent struct {
 
 	// Project The project key
 	Project *string `json:"project,omitempty"`
-	Via     string  `json:"via"`
+
+	// Subject The entity as people know it: a ticket, note or document key, a project key, or a name (MSL-27).
+	Subject *string `json:"subject,omitempty"`
+
+	// Token The name of the API token the action came through (MSL-27).
+	Token *string `json:"token,omitempty"`
+	Via   string  `json:"via"`
 }
 
 // AuditPage defines model for AuditPage.
@@ -1421,6 +1474,9 @@ type BackupList struct {
 
 	// Requested A "Run backup now" is waiting for the backup service.
 	Requested bool `json:"requested"`
+
+	// SameDisk The backups sit on the same disk as the attachments (on a default install, also the database), so one disk failure loses both (MSL-40).
+	SameDisk bool `json:"same_disk"`
 }
 
 // Behavior defines model for Behavior.
@@ -1430,13 +1486,19 @@ type Behavior struct {
 	ClosedAt     *time.Time `json:"closed_at,omitempty"`
 	Key          string     `json:"key"`
 	Title        string     `json:"title"`
-	WhatChanged  string     `json:"what_changed"`
-	Why          string     `json:"why"`
+
+	// Unconfirmed A done ticket without a confirmed decision record, such as an imported one: what_changed is its title and why its reason (MSL-13).
+	Unconfirmed bool   `json:"unconfirmed"`
+	WhatChanged string `json:"what_changed"`
+	Why         string `json:"why"`
 }
 
 // BehaviorList defines model for BehaviorList.
 type BehaviorList struct {
 	Items []Behavior `json:"items"`
+
+	// Sections The linked sections of the documents in force, not replaced ones; the spec's baseline under the decisions (MSL-39).
+	Sections []TimelineSection `json:"sections"`
 }
 
 // Client defines model for Client.
@@ -1601,10 +1663,16 @@ type Document struct {
 		Id        int64           `json:"id"`
 		Status    TreeDraftStatus `json:"status"`
 	} `json:"drafts"`
-	Filename     string            `json:"filename"`
-	Key          string            `json:"key"`
-	Markdown     string            `json:"markdown"`
-	ProjectKey   string            `json:"project_key"`
+	Filename   string `json:"filename"`
+	Key        string `json:"key"`
+	Markdown   string `json:"markdown"`
+	ProjectKey string `json:"project_key"`
+
+	// Replaces The documents this one replaced (MSL-14).
+	Replaces []struct {
+		Key   string `json:"key"`
+		Title string `json:"title"`
+	} `json:"replaces"`
 	Sections     []DocumentSection `json:"sections"`
 	SupersededBy *string           `json:"superseded_by,omitempty"`
 	Title        string            `json:"title"`
@@ -2114,9 +2182,24 @@ type NotifyPrefs struct {
 	Assigned *bool `json:"assigned,omitempty"`
 	Browser  *bool `json:"browser,omitempty"`
 	Comment  *bool `json:"comment,omitempty"`
-	JobDone  *bool `json:"job_done,omitempty"`
-	Mention  *bool `json:"mention,omitempty"`
-	Status   *bool `json:"status,omitempty"`
+
+	// Email Also by email, a digest of what is still unread after two minutes, when the server has SMTP set up (MSL-10). Off until chosen.
+	Email   *bool `json:"email,omitempty"`
+	JobDone *bool `json:"job_done,omitempty"`
+	Mention *bool `json:"mention,omitempty"`
+	Status  *bool `json:"status,omitempty"`
+}
+
+// Person defines model for Person.
+type Person struct {
+	Email string `json:"email"`
+	Id    int64  `json:"id"`
+	Name  string `json:"name"`
+}
+
+// PersonList defines model for PersonList.
+type PersonList struct {
+	Items []Person `json:"items"`
 }
 
 // Priority defines model for Priority.
@@ -2142,6 +2225,23 @@ type Project struct {
 	Key  string      `json:"key"`
 	Name string      `json:"name"`
 	Role ProjectRole `json:"role"`
+}
+
+// ProjectAttention defines model for ProjectAttention.
+type ProjectAttention struct {
+	Key      string `json:"key"`
+	Name     string `json:"name"`
+	NoMenu   int    `json:"no_menu"`
+	NoReason int    `json:"no_reason"`
+	Overdue  int    `json:"overdue"`
+
+	// Stale Unchanged for 7 days or more.
+	Stale      int `json:"stale"`
+	Unassigned int `json:"unassigned"`
+	WeakReason int `json:"weak_reason"`
+
+	// Week Due today or within the next 7 days.
+	Week int `json:"week"`
 }
 
 // ProjectClientsUpdate defines model for ProjectClientsUpdate.
@@ -2286,9 +2386,29 @@ type SearchNote struct {
 
 // SearchResults defines model for SearchResults.
 type SearchResults struct {
-	Nodes   []SearchNode   `json:"nodes"`
-	Notes   []SearchNote   `json:"notes"`
-	Tickets []SearchTicket `json:"tickets"`
+	Nodes []SearchNode `json:"nodes"`
+	Notes []SearchNote `json:"notes"`
+
+	// Sections Document sections by words in their heading or text (MSL-15).
+	Sections []SearchSection `json:"sections"`
+	Tickets  []SearchTicket  `json:"tickets"`
+}
+
+// SearchSection defines model for SearchSection.
+type SearchSection struct {
+	DocumentKey   string `json:"document_key"`
+	DocumentTitle string `json:"document_title"`
+
+	// Excerpt Plain text around the first match.
+	Excerpt string `json:"excerpt"`
+
+	// Number Example: 3.2
+	Number     string `json:"number"`
+	ProjectKey string `json:"project_key"`
+
+	// Superseded A newer document replaced this one.
+	Superseded bool   `json:"superseded"`
+	Title      string `json:"title"`
 }
 
 // SearchTicket defines model for SearchTicket.
@@ -2388,7 +2508,7 @@ type SummaryCreate struct {
 	Keys             []string           `json:"keys"`
 	Language         SummaryLanguage    `json:"language"`
 
-	// NodeId The node, with its sub-nodes; 0 in a weekly summary, which covers the whole project.
+	// NodeId The node, with its sub-nodes; 0 covers the whole project, as a weekly summary does.
 	NodeId     int64              `json:"node_id"`
 	ProjectKey string             `json:"project_key"`
 	To         openapi_types.Date `json:"to"`
@@ -2478,7 +2598,7 @@ type SummaryScope struct {
 	IncludeCancelled *bool              `json:"include_cancelled,omitempty"`
 	Language         SummaryLanguage    `json:"language"`
 
-	// NodeId The node, with its sub-nodes; 0 in a weekly summary, which covers the whole project.
+	// NodeId The node, with its sub-nodes; 0 covers the whole project, as a weekly summary does.
 	NodeId     int64              `json:"node_id"`
 	ProjectKey string             `json:"project_key"`
 	To         openapi_types.Date `json:"to"`
@@ -2494,6 +2614,12 @@ type SummaryUpdate struct {
 type SystemStatus struct {
 	DatabaseBytes int64     `json:"database_bytes"`
 	Disks         []DiskUse `json:"disks"`
+
+	// Email Email notifications (MSL-10), set up by SMTP_HOST and friends in deploy/.env.
+	Email struct {
+		Enabled bool    `json:"enabled"`
+		Host    *string `json:"host,omitempty"`
+	} `json:"email"`
 
 	// Jobs River jobs by state (available, scheduled, running, retryable, discarded).
 	Jobs  map[string]int64 `json:"jobs"`
@@ -2554,13 +2680,16 @@ type TicketCreate struct {
 	AssigneeId *int64 `json:"assignee_id,omitempty"`
 
 	// ClientId Omitted for core work (all clients).
-	ClientId           *int64              `json:"client_id,omitempty"`
-	Description        *string             `json:"description,omitempty"`
-	DueDate            *openapi_types.Date `json:"due_date,omitempty"`
-	NodeIds            []int64             `json:"node_ids"`
-	Priority           *Priority           `json:"priority,omitempty"`
-	Reason             *string             `json:"reason,omitempty"`
-	RequesterContactId *int64              `json:"requester_contact_id,omitempty"`
+	ClientId    *int64              `json:"client_id,omitempty"`
+	Description *string             `json:"description,omitempty"`
+	DueDate     *openapi_types.Date `json:"due_date,omitempty"`
+	NodeIds     []int64             `json:"node_ids"`
+
+	// NoteKey A decision note of this project the caller may see, e.g. HRIS-DN7: the ticket joins its tickets, as when filed from one of its action items (MSL-11).
+	NoteKey            *string   `json:"note_key,omitempty"`
+	Priority           *Priority `json:"priority,omitempty"`
+	Reason             *string   `json:"reason,omitempty"`
+	RequesterContactId *int64    `json:"requester_contact_id,omitempty"`
 
 	// RequesterUserId Without a requester the reporter is the requester.
 	RequesterUserId *int64 `json:"requester_user_id,omitempty"`
@@ -2727,8 +2856,11 @@ type TreeDraft struct {
 
 // TreeDraftNode defines model for TreeDraftNode.
 type TreeDraftNode struct {
-	Aliases     []string `json:"aliases"`
-	Description string   `json:"description"`
+	Aliases []string `json:"aliases"`
+
+	// Code The ID its heading ends with, such as SO-02 from "Persetujuan Sales Order (SO-02)"; applying sets it unless another node has it.
+	Code        *string `json:"code,omitempty"`
+	Description string  `json:"description"`
 
 	// Duplicate A sibling's tmp_id whose name is nearly the same.
 	Duplicate *string `json:"duplicate,omitempty"`
@@ -2857,6 +2989,11 @@ type ExportAuditParams struct {
 	To      *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
 }
 
+// GetSetupAccountJSONBody defines parameters for GetSetupAccount.
+type GetSetupAccountJSONBody struct {
+	Token string `json:"token"`
+}
+
 // ListContactsParams defines parameters for ListContacts.
 type ListContactsParams struct {
 	Q        *string `form:"q,omitempty" json:"q,omitempty"`
@@ -2917,6 +3054,12 @@ type GetNodeTimelineParams struct {
 // MarkNotificationsReadJSONBody defines parameters for MarkNotificationsRead.
 type MarkNotificationsReadJSONBody struct {
 	Id *int64 `json:"id,omitempty"`
+}
+
+// ListAssigneesParams defines parameters for ListAssignees.
+type ListAssigneesParams struct {
+	// ClientId Only those who may see this client's tickets (MSL-22).
+	ClientId *int64 `form:"client_id,omitempty" json:"client_id,omitempty"`
 }
 
 // UploadDocumentMultipartBody defines parameters for UploadDocument.
@@ -2981,7 +3124,9 @@ type ListTicketsParams struct {
 	NodeId *int64 `form:"node_id,omitempty" json:"node_id,omitempty"`
 
 	// Q Words in the title
-	Q       *string                   `form:"q,omitempty" json:"q,omitempty"`
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// Missing weak_reason: a reason under 20 characters once stock phrases such as 'permintaan klien' are removed, the form's hint rule (R-DC-8).
 	Missing *ListTicketsParamsMissing `form:"missing,omitempty" json:"missing,omitempty"`
 	Sort    *ListTicketsParamsSort    `form:"sort,omitempty" json:"sort,omitempty"`
 	Limit   *int32                    `form:"limit,omitempty" json:"limit,omitempty"`
@@ -3077,6 +3222,9 @@ type LoginJSONRequestBody = LoginRequest
 
 // SetupPasswordJSONRequestBody defines body for SetupPassword for application/json ContentType.
 type SetupPasswordJSONRequestBody = SetupRequest
+
+// GetSetupAccountJSONRequestBody defines body for GetSetupAccount for application/json ContentType.
+type GetSetupAccountJSONRequestBody GetSetupAccountJSONBody
 
 // CreateClientJSONRequestBody defines body for CreateClient for application/json ContentType.
 type CreateClientJSONRequestBody = ClientCreate
@@ -3228,6 +3376,9 @@ type ServerInterface interface {
 	// (PUT /admin/settings/ai)
 	UpdateAISettings(w http.ResponseWriter, r *http.Request)
 
+	// (GET /admin/setup)
+	GetSetupStatus(w http.ResponseWriter, r *http.Request)
+
 	// (GET /admin/system/status)
 	GetSystemStatus(w http.ResponseWriter, r *http.Request)
 
@@ -3272,6 +3423,9 @@ type ServerInterface interface {
 
 	// (POST /auth/setup)
 	SetupPassword(w http.ResponseWriter, r *http.Request)
+
+	// (POST /auth/setup/account)
+	GetSetupAccount(w http.ResponseWriter, r *http.Request)
 
 	// (GET /clients)
 	ListClients(w http.ResponseWriter, r *http.Request)
@@ -3332,6 +3486,9 @@ type ServerInterface interface {
 
 	// (PATCH /me)
 	UpdateMe(w http.ResponseWriter, r *http.Request)
+
+	// (GET /me/attention)
+	ListMyAttention(w http.ResponseWriter, r *http.Request)
 
 	// (GET /me/tickets)
 	ListMyTickets(w http.ResponseWriter, r *http.Request, params ListMyTicketsParams)
@@ -3394,7 +3551,7 @@ type ServerInterface interface {
 	UpdateProject(w http.ResponseWriter, r *http.Request, key string)
 
 	// (GET /projects/{key}/assignees)
-	ListAssignees(w http.ResponseWriter, r *http.Request, key string)
+	ListAssignees(w http.ResponseWriter, r *http.Request, key string, params ListAssigneesParams)
 
 	// (GET /projects/{key}/clients)
 	ListProjectClients(w http.ResponseWriter, r *http.Request, key string)
@@ -3407,6 +3564,9 @@ type ServerInterface interface {
 
 	// (POST /projects/{key}/documents)
 	UploadDocument(w http.ResponseWriter, r *http.Request, key string)
+
+	// (GET /projects/{key}/member-candidates)
+	ListMemberCandidates(w http.ResponseWriter, r *http.Request, key string)
 
 	// (GET /projects/{key}/members)
 	ListProjectMembers(w http.ResponseWriter, r *http.Request, key string)
@@ -3956,6 +4116,20 @@ func (siw *ServerInterfaceWrapper) UpdateAISettings(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetSetupStatus operation middleware
+func (siw *ServerInterfaceWrapper) GetSetupStatus(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSetupStatus(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetSystemStatus operation middleware
 func (siw *ServerInterfaceWrapper) GetSystemStatus(w http.ResponseWriter, r *http.Request) {
 
@@ -4241,6 +4415,20 @@ func (siw *ServerInterfaceWrapper) SetupPassword(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SetupPassword(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSetupAccount operation middleware
+func (siw *ServerInterfaceWrapper) GetSetupAccount(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSetupAccount(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4710,6 +4898,20 @@ func (siw *ServerInterfaceWrapper) UpdateMe(w http.ResponseWriter, r *http.Reque
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateMe(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMyAttention operation middleware
+func (siw *ServerInterfaceWrapper) ListMyAttention(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMyAttention(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -5314,8 +5516,24 @@ func (siw *ServerInterfaceWrapper) ListAssignees(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAssigneesParams
+
+	// ------------- Optional query parameter "client_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "client_id", r.URL.Query(), &params.ClientId, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "client_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "client_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListAssignees(w, r, key)
+		siw.Handler.ListAssignees(w, r, key, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -5420,6 +5638,32 @@ func (siw *ServerInterfaceWrapper) UploadDocument(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UploadDocument(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMemberCandidates operation middleware
+func (siw *ServerInterfaceWrapper) ListMemberCandidates(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMemberCandidates(w, r, key)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -6956,10 +7200,13 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/login", wrapper.Login)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/logout", wrapper.Logout)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/setup", wrapper.SetupPassword)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/setup/account", wrapper.GetSetupAccount)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me", wrapper.GetMe)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/me", wrapper.UpdateMe)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/tickets", wrapper.ListMyTickets)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/updates", wrapper.ListMyUpdates)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/setup", wrapper.GetSetupStatus)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/attention", wrapper.ListMyAttention)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/tokens", wrapper.ListTokens)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/me/tokens", wrapper.CreateToken)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/me/tokens/{id}", wrapper.RevokeToken)
@@ -6982,6 +7229,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/clients/{id}", wrapper.UpdateClient)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/members", wrapper.ListProjectMembers)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/projects/{key}/members", wrapper.SetProjectMembers)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/member-candidates", wrapper.ListMemberCandidates)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/contacts", wrapper.ListContacts)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/contacts", wrapper.CreateContact)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/contacts/{id}", wrapper.UpdateContact)

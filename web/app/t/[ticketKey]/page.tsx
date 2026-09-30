@@ -13,13 +13,15 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketK
   const [me, project] = await Promise.all([getMe(), getProject(ticket.project_key)]);
   if (!me || !project) notFound();
   const path = { params: { path: { key: project.key } } };
-  const [statuses, activity, clients, nodes, assignees] = await Promise.all([
+  const [statuses, activity, clients, nodes, assignees, mentionable] = await Promise.all([
     api.GET("/projects/{key}/statuses", path),
     api.GET("/tickets/{key}/activity", { params: { path: { key: ticket.key } } }),
     api.GET("/projects/{key}/clients", path),
     api.GET("/projects/{key}/nodes", path),
     api.GET("/projects/{key}/assignees", path),
+    api.GET("/tickets/{key}/mentionable", { params: { path: { key: ticket.key } } }),
   ]);
+  const people = mentionable.data?.items ?? [];
   const canEdit = project.role !== "viewer";
   return (
     <TicketView
@@ -30,7 +32,8 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketK
       assignees={assignees.data?.items ?? []}
       canEdit={canEdit}
       canEditDecision={project.role === "admin" || ticket.decision?.confirmed_by?.id === me.id}
-      activity={<Activity ticketKey={ticket.key} items={activity.data?.items ?? []} meId={me.id} canComment={canEdit} />}
+      people={people}
+      activity={<Activity ticketKey={ticket.key} items={activity.data?.items ?? []} meId={me.id} canComment={canEdit} people={people} />}
       attachments={
         <Attachments ticketKey={ticket.key} files={ticket.attachments} meId={me.id} isProjectAdmin={project.role === "admin"} canUpload={canEdit} />
       }

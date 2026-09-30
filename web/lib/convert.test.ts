@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { asTables, linesToMarkdown } from "./convert.ts";
+import { asTables, firstHeading, linesToMarkdown } from "./convert.ts";
 
 test("numbered and larger short lines become headings", () => {
   const md = linesToMarkdown([
@@ -42,4 +42,10 @@ test("rows of cells become tables for display", () => {
   assert.equal(asTables(done), done);
   const code = "```\n| not | a table |\n```";
   assert.equal(asTables(code), code);
+});
+
+test("the first heading titles the document", () => {
+  assert.equal(firstHeading("Intro text\n\n# **Arunika DMS — Spesifikasi** #\n\n## 1. Penjualan\n"), "Arunika DMS — Spesifikasi");
+  assert.equal(firstHeading("#hashtag is not a heading\n### Payslip\n"), "Payslip");
+  assert.equal(firstHeading("No headings here."), "");
 });

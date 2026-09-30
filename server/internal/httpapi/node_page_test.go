@@ -150,3 +150,40 @@ func TestNodeBehaviorsListDecisionsInForceByClient(t *testing.T) {
 		}
 	}
 }
+
+// MSL-13: a done ticket without a confirmed decision record, such as an
+// imported one, shows under its client marked unconfirmed, with its title as
+// the change and its reason as the why.
+func TestBehaviorsShowUnconfirmedHistory(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	admin, au := e.signedIn("hana@example.com", false)
+	e.seedMember(au, w.p, "admin")
+	done := statusID(e, admin, "Done")
+	imported := e.seedTicket(w.p, w.pmUser, "Delivery notes hide prices", &w.a, w.ot)
+	ctx := context.Background()
+	if _, err := e.d.Pool.Exec(ctx, "UPDATE tickets SET reason = 'Store staff must not see prices.' WHERE id = $1", imported.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.q.SetTicketStatus(ctx, db.SetTicketStatusParams{ID: imported.ID, StatusID: done, Closed: true}); err != nil {
+		t.Fatal(err)
+	}
+	confirmed := e.seedTicket(w.p, w.pmUser, "Overtime cap", &w.a, w.ot)
+	e.seedClose(confirmed, done, au, "Overtime is capped at 40 hours.")
+	var list httpapi.BehaviorList
+	if code := e.call(w.pm, http.MethodGet, fmt.Sprintf("/nodes/%d/behaviors", w.ot.ID), nil, &list); code != http.StatusOK || len(list.Items) != 2 {
+		t.Fatalf("behaviors: %d %+v", code, list.Items)
+	}
+	for _, b := range list.Items {
+		switch b.Key {
+		case imported.Key:
+			if !b.Unconfirmed || b.WhatChanged != "Delivery notes hide prices" || b.Why != "Store staff must not see prices." {
+				t.Errorf("imported: %+v", b)
+			}
+		case confirmed.Key:
+			if b.Unconfirmed || b.WhatChanged != "Overtime is capped at 40 hours." {
+				t.Errorf("confirmed: %+v", b)
+			}
+		}
+	}
+}

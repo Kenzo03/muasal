@@ -52,6 +52,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/setup/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description The account a live setup link belongs to, so the setup page can name it (MSL-20). The token goes in the body, never the URL, to stay out of access logs. */
+        post: operations["getSetupAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me": {
         parameters: {
             query?: never;
@@ -94,6 +111,40 @@ export interface paths {
         };
         /** @description Home's Recently updated (FSD §6.4): the 10 tickets the caller may see that changed last, newest first, each with its latest change. A comment change carries no text. */
         get: operations["listMyUpdates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description System admins only. How far this server is set up, for Home's first-run checklist (MSL-18): AI chosen, a second user, a project, a module tree and some tickets. */
+        get: operations["getSetupStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/attention": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Home's Needs attention (MSL-9): per project the caller runs as project admin (every project for a system admin), the open tickets that are overdue, due within 7 days, unassigned, missing a reason or menu, with a weak reason, or unchanged for 7 days. Projects with none are left out. */
+        get: operations["listMyAttention"];
         put?: never;
         post?: never;
         delete?: never;
@@ -365,6 +416,25 @@ export interface paths {
         get: operations["listProjectMembers"];
         /** @description Project admins only. Replaces every membership of the project at once. */
         put: operations["setProjectMembers"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{key}/member-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description Project admins only (MSL-21). The active users who share a project with the caller, by name; a system admin gets every active user. Anyone else is added by exact email. */
+        get: operations["listMemberCandidates"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -1637,6 +1707,15 @@ export interface components {
             all_clients: boolean;
             client_ids: number[];
         };
+        Person: {
+            /** Format: int64 */
+            id: number;
+            name: string;
+            email: string;
+        };
+        PersonList: {
+            items: components["schemas"]["Person"][];
+        };
         MemberList: {
             items: components["schemas"]["Member"][];
         };
@@ -1797,6 +1876,8 @@ export interface components {
             author: string;
         };
         Behavior: {
+            /** @description A done ticket without a confirmed decision record, such as an imported one: what_changed is its title and why its reason (MSL-13). */
+            unconfirmed: boolean;
             key: string;
             title: string;
             client?: components["schemas"]["Ref"];
@@ -1808,6 +1889,8 @@ export interface components {
         };
         BehaviorList: {
             items: components["schemas"]["Behavior"][];
+            /** @description The linked sections of the documents in force, not replaced ones; the spec's baseline under the decisions (MSL-39). */
+            sections: components["schemas"]["TimelineSection"][];
         };
         Ref: {
             /** Format: int64 */
@@ -1955,6 +2038,8 @@ export interface components {
              * @description An open status; omitted means the project's default.
              */
             status_id?: number;
+            /** @description A decision note of this project the caller may see, e.g. HRIS-DN7: the ticket joins its tickets, as when filed from one of its action items (MSL-11). */
+            note_key?: string;
         };
         /** @description Replaces every editable field; send the current value of each field you keep. */
         TicketUpdate: {
@@ -2033,6 +2118,11 @@ export interface components {
             filename: string;
             markdown: string;
             sections: components["schemas"]["DocumentSection"][];
+            /** @description The documents this one replaced (MSL-14). */
+            replaces: {
+                key: string;
+                title: string;
+            }[];
             drafts: {
                 /** Format: int64 */
                 id: number;
@@ -2053,6 +2143,8 @@ export interface components {
             parent: string;
             type: components["schemas"]["NodeType"];
             name: string;
+            /** @description The ID its heading ends with, such as SO-02 from "Persetujuan Sales Order (SO-02)"; applying sets it unless another node has it. */
+            code?: string;
             aliases: string[];
             description: string;
             /** @description Source section numbers. */
@@ -2094,7 +2186,7 @@ export interface components {
             project_key: string;
             /**
              * Format: int64
-             * @description The node, with its sub-nodes; 0 in a weekly summary, which covers the whole project.
+             * @description The node, with its sub-nodes; 0 covers the whole project, as a weekly summary does.
              */
             node_id: number;
             /**
@@ -2505,6 +2597,8 @@ export interface components {
             status?: boolean;
             job_done?: boolean;
             browser?: boolean;
+            /** @description Also by email, a digest of what is still unread after two minutes, when the server has SMTP set up (MSL-10). Off until chosen. */
+            email?: boolean;
         };
         Notification: {
             /** Format: int64 */
@@ -2588,9 +2682,23 @@ export interface components {
             url?: string | null;
         };
         SearchResults: {
+            /** @description Document sections by words in their heading or text (MSL-15). */
+            sections: components["schemas"]["SearchSection"][];
             tickets: components["schemas"]["SearchTicket"][];
             notes: components["schemas"]["SearchNote"][];
             nodes: components["schemas"]["SearchNode"][];
+        };
+        SearchSection: {
+            document_key: string;
+            document_title: string;
+            project_key: string;
+            /** @example 3.2 */
+            number: string;
+            title: string;
+            /** @description Plain text around the first match. */
+            excerpt: string;
+            /** @description A newer document replaced this one. */
+            superseded: boolean;
         };
         SearchNote: {
             key: string;
@@ -2623,6 +2731,22 @@ export interface components {
             overdue: number;
             week: number;
             incomplete: number;
+        };
+        AttentionList: {
+            items: components["schemas"]["ProjectAttention"][];
+        };
+        ProjectAttention: {
+            key: string;
+            name: string;
+            overdue: number;
+            /** @description Due today or within the next 7 days. */
+            week: number;
+            unassigned: number;
+            no_reason: number;
+            weak_reason: number;
+            no_menu: number;
+            /** @description Unchanged for 7 days or more. */
+            stale: number;
         };
         ProjectCount: {
             key: string;
@@ -2709,6 +2833,11 @@ export interface components {
             ok: boolean;
             latency_ms: number;
             error?: string;
+            /**
+             * @description The failure's likely cause, which the page says in plain words above the raw error (MSL-31).
+             * @enum {string}
+             */
+            reason?: "unknown_host" | "refused" | "timeout" | "tls" | "unauthorized" | "not_found" | "no_model";
             models?: string[];
             /** @description The embedding's dimension. */
             dim?: number;
@@ -2947,9 +3076,13 @@ export interface components {
             occurred_at: string;
             actor?: components["schemas"]["Ref"];
             via: string;
+            /** @description The name of the API token the action came through (MSL-27). */
+            token?: string;
             entity: string;
             /** Format: int64 */
             entity_id: number;
+            /** @description The entity as people know it: a ticket, note or document key, a project key, or a name (MSL-27). */
+            subject?: string;
             /** @description The project key */
             project?: string;
             action: string;
@@ -2973,11 +3106,18 @@ export interface components {
         BackupList: {
             /** @description Where the backups live on the server. */
             location: string;
+            /** @description The backups sit on the same disk as the attachments (on a default install, also the database), so one disk failure loses both (MSL-40). */
+            same_disk: boolean;
             /** @description A "Run backup now" is waiting for the backup service. */
             requested: boolean;
             items: components["schemas"]["Backup"][];
         };
         SystemStatus: {
+            /** @description Email notifications (MSL-10), set up by SMTP_HOST and friends in deploy/.env. */
+            email: {
+                enabled: boolean;
+                host?: string;
+            };
             /** Format: int64 */
             database_bytes: number;
             /** @description River jobs by state (available, scheduled, running, retryable, discarded). */
@@ -3093,6 +3233,36 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    getSetupAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The account. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        name: string;
+                        email: string;
+                    };
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     getMe: {
         parameters: {
             query?: never;
@@ -3180,6 +3350,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecentTicketList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getSetupStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The steps and whether each is done. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ai: boolean;
+                        invited: boolean;
+                        project: boolean;
+                        tree: boolean;
+                        history: boolean;
+                        /** @description The oldest project's key */
+                        first_project: string;
+                    };
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listMyAttention: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The projects that need attention. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttentionList"];
                 };
             };
             default: components["responses"]["Problem"];
@@ -3708,6 +3928,29 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    listMemberCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The people to pick from, members included. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     listContacts: {
         parameters: {
             query?: {
@@ -4106,7 +4349,10 @@ export interface operations {
     };
     listAssignees: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Only those who may see this client's tickets (MSL-22). */
+                client_id?: number;
+            };
             header?: never;
             path: {
                 key: string;
@@ -4250,7 +4496,8 @@ export interface operations {
                 node_id?: number;
                 /** @description Words in the title */
                 q?: string;
-                missing?: "reason" | "menus";
+                /** @description weak_reason: a reason under 20 characters once stock phrases such as 'permintaan klien' are removed, the form's hint rule (R-DC-8). */
+                missing?: "reason" | "menus" | "weak_reason";
                 sort?: "updated" | "created" | "key" | "priority" | "due";
                 limit?: number;
                 cursor?: string;

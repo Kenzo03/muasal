@@ -282,6 +282,59 @@ func (q *Queries) ListTicketMergeRequests(ctx context.Context, ticketID int64) (
 	return items, nil
 }
 
+const moveFixedTickets = `-- name: MoveFixedTickets :many
+WITH review AS (
+  SELECT DISTINCT ON (project_id) project_id, id, name, position FROM statuses
+  WHERE category = 'in_progress' ORDER BY project_id, position DESC
+), moved AS (
+  SELECT t.id, cur.name AS old_status, r.id AS review_id, r.name AS new_status
+  FROM tickets t
+  JOIN statuses cur ON cur.id = t.status_id
+  JOIN review r ON r.project_id = t.project_id
+  WHERE t.key = ANY ($1::text[]) AND t.closed_at IS NULL
+    AND cur.category IN ('todo', 'in_progress') AND cur.position < r.position
+)
+UPDATE tickets t SET status_id = m.review_id, version = t.version + 1, updated_at = now()
+FROM moved m
+WHERE t.id = m.id
+RETURNING t.id, t.project_id, m.old_status, m.new_status
+`
+
+type MoveFixedTicketsRow struct {
+	ID        int64
+	ProjectID int64
+	OldStatus string
+	NewStatus string
+}
+
+// MSL-29: "Fixes KEY" in a pushed commit moves the open ticket to its
+// project's last working status, In review by default. Never back, and never
+// closed: closing needs a decision record.
+func (q *Queries) MoveFixedTickets(ctx context.Context, keys []string) ([]MoveFixedTicketsRow, error) {
+	rows, err := q.db.Query(ctx, moveFixedTickets, keys)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MoveFixedTicketsRow
+	for rows.Next() {
+		var i MoveFixedTicketsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.OldStatus,
+			&i.NewStatus,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const ticketIDsByKeys = `-- name: TicketIDsByKeys :many
 SELECT id FROM tickets WHERE key = ANY ($1::text[])
 `

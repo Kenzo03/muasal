@@ -100,6 +100,42 @@ func TestBYOKNeedsTheAcknowledgementAndHidesTheKey(t *testing.T) {
 	}
 }
 
+// MSL-31: a failed probe names its likely cause, which the page says in plain
+// words above the raw error.
+func TestConnectionTestExplainsFailures(t *testing.T) {
+	e := newEnv(t)
+	admin, _ := e.signedIn("admin@example.com", true)
+	fake := llmtest.New(t)
+	for _, c := range []struct {
+		name, url   string
+		set         func(s *llmtest.Server)
+		chat, embed httpapi.AIProbeReason
+	}{
+		{"unknown host", "http://no-such-host.invalid/v1", nil, httpapi.AIProbeReasonUnknownHost, httpapi.AIProbeReasonUnknownHost},
+		{"nothing listening", "http://127.0.0.1:1/v1", nil, httpapi.AIProbeReasonRefused, httpapi.AIProbeReasonRefused},
+		{"wrong path", fake.Server.URL + "/api", nil, httpapi.AIProbeReasonNotFound, httpapi.AIProbeReasonNotFound},
+		{"wrong key", fake.BaseURL(), func(s *llmtest.Server) { s.Key = "sk-other" }, httpapi.AIProbeReasonUnauthorized, httpapi.AIProbeReasonUnauthorized},
+		{"model not pulled", fake.BaseURL(), func(s *llmtest.Server) { s.Key, s.Missing = "", "bge-m3" }, "", httpapi.AIProbeReasonNoModel},
+	} {
+		if c.set != nil {
+			fake.Set(c.set)
+		}
+		var res httpapi.AITestResult
+		if code := e.call(admin, http.MethodPost, "/admin/ai/test", aiUpdate("local", c.url), &res); code != http.StatusOK {
+			t.Fatalf("%s: %d", c.name, code)
+		}
+		reason := func(p httpapi.AIProbe) httpapi.AIProbeReason {
+			if p.Reason == nil {
+				return ""
+			}
+			return *p.Reason
+		}
+		if reason(res.Chat) != c.chat || reason(res.Embed) != c.embed || res.Embed.Error == nil {
+			t.Errorf("%s: chat %q, embed %q, embed error %v", c.name, reason(res.Chat), reason(res.Embed), res.Embed.Error != nil)
+		}
+	}
+}
+
 // R-AI-3: without APP_SECRET_KEY a key cannot be saved.
 func TestKeysNeedTheSecretKey(t *testing.T) {
 	e := newEnv(t)

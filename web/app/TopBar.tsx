@@ -3,7 +3,7 @@
 import Form from "next/form";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import AskPanel from "@/components/ask/AskPanel";
 import Bell from "@/components/Bell";
@@ -18,6 +18,8 @@ type Props = { me: User; projects: Project[]; project?: Project; recent: string[
 // The light bar over every page: the sidebar's button on phones, search, Ask,
 // New ticket and the bell.
 export default function TopBar({ me, projects, project, recent, drawer, onMenu }: Props) {
+  // MSL-19: the example key is one of the user's own projects, not the demo's HRIS.
+  const example = project?.key ?? recent[0] ?? projects[0]?.key;
   const t = useTranslations("nav");
   const router = useRouter();
   const search = useRef<HTMLInputElement>(null);
@@ -25,6 +27,9 @@ export default function TopBar({ me, projects, project, recent, drawer, onMenu }
   // Off a project page, New ticket asks which project (FSD §6.1), those opened last first.
   const creatable = recentFirst(projects.filter((p) => p.role !== "viewer"), recent);
   const newTicketKey = project ? (project.role !== "viewer" ? project.key : undefined) : creatable.length === 1 ? creatable[0].key : undefined;
+  // MSL-32: on a menu page, the new ticket starts with that menu ticked.
+  const nodeId = usePathname().match(/^\/p\/[^/]+\/modules\/(\d+)/)?.[1];
+  const newTicketHref = `/p/${newTicketKey}/tickets/new${nodeId ? `?node_id=${nodeId}` : ""}`;
 
   // `c` opens New ticket from anywhere (§6.1, §8.3) and `/` jumps to search,
   // unless the user is typing or a dialog is open. With several projects to
@@ -38,7 +43,7 @@ export default function TopBar({ me, projects, project, recent, drawer, onMenu }
       if (el.closest("input, textarea, select, [contenteditable=true], dialog[open]") || document.querySelector("dialog[open]")) return;
       e.preventDefault();
       if (e.key === "/") return search.current?.focus();
-      if (newTicketKey) return router.push(`/p/${newTicketKey}/tickets/new`);
+      if (newTicketKey) return router.push(newTicketHref);
       const menu = document.getElementById("new-ticket-menu") as HTMLDetailsElement | null;
       if (menu) {
         menu.open = true;
@@ -48,7 +53,7 @@ export default function TopBar({ me, projects, project, recent, drawer, onMenu }
     document.addEventListener("keydown", onKey);
     setShortcut(true);
     return () => document.removeEventListener("keydown", onKey);
-  }, [newTicketKey, router]);
+  }, [newTicketKey, newTicketHref, router]);
 
   return (
     <header className="flex h-16 shrink-0 items-center gap-2 px-4 md:gap-3 md:px-5 print:hidden">
@@ -72,7 +77,7 @@ export default function TopBar({ me, projects, project, recent, drawer, onMenu }
             required
             aria-label={t("search")}
             aria-keyshortcuts={shortcut ? "/" : undefined}
-            placeholder={t("searchPlaceholder")}
+            placeholder={example ? t("searchPlaceholder", { example: `${example}-12` }) : t("searchPlaceholderPlain")}
             className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted"
           />
           {shortcut && <kbd className="hidden rounded-md border border-line bg-well px-1.5 font-sans text-xs font-bold text-ink-soft md:inline">/</kbd>}
@@ -81,7 +86,7 @@ export default function TopBar({ me, projects, project, recent, drawer, onMenu }
       <div className="ml-auto flex shrink-0 items-center gap-2">
         <AskPanel project={project} />
         {newTicketKey ? (
-          <Link href={`/p/${newTicketKey}/tickets/new`} aria-label={t("newTicket")} aria-keyshortcuts={shortcut ? "c" : undefined} title={t("newTicketShortcut")} className={button.primary}>
+          <Link href={newTicketHref} aria-label={t("newTicket")} aria-keyshortcuts={shortcut ? "c" : undefined} title={t("newTicketShortcut")} className={button.primary}>
             <Icon name="plus" />
             <span className="hidden sm:inline">{t("newTicket")}</span>
           </Link>

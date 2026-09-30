@@ -245,15 +245,18 @@ WHERE t.project_id = $1
   AND ($16::bigint[] IS NULL OR EXISTS (
         SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id AND tn.node_id = ANY ($16::bigint[])))
   AND (NOT $17::boolean OR t.reason = '')
-  AND (NOT $18::boolean OR NOT EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id))
-  AND ($19::text = '' OR t.title ILIKE '%' || $19::text || '%' OR t.key = upper($19::text))
+  -- Tickets filed through the API or an import never show the form's
+  -- weak-reason hint, so the list finds them (MSL-12, 00017).
+  AND (NOT $18::boolean OR weak_reason(t.reason))
+  AND (NOT $19::boolean OR NOT EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id))
+  AND ($20::text = '' OR t.title ILIKE '%' || $20::text || '%' OR t.key = upper($20::text))
 ORDER BY
-  CASE WHEN $20::text = 'priority' THEN array_position(ARRAY['urgent', 'high', 'medium', 'low'], t.priority) END,
-  CASE WHEN $20::text IN ('priority', 'due') THEN t.due_date END NULLS LAST,
-  CASE WHEN $20::text = 'updated' THEN t.updated_at END DESC,
-  CASE WHEN $20::text = 'created' THEN t.number END DESC,
+  CASE WHEN $21::text = 'priority' THEN array_position(ARRAY['urgent', 'high', 'medium', 'low'], t.priority) END,
+  CASE WHEN $21::text IN ('priority', 'due') THEN t.due_date END NULLS LAST,
+  CASE WHEN $21::text = 'updated' THEN t.updated_at END DESC,
+  CASE WHEN $21::text = 'created' THEN t.number END DESC,
   t.number
-LIMIT $22 OFFSET $21
+LIMIT $23 OFFSET $22
 `
 
 type ListTicketsParams struct {
@@ -274,6 +277,7 @@ type ListTicketsParams struct {
 	StaleDays     *int32
 	NodeIds       []int64
 	MissingReason bool
+	WeakReason    bool
 	MissingMenus  bool
 	Q             string
 	Sort          string
@@ -320,6 +324,7 @@ func (q *Queries) ListTickets(ctx context.Context, arg ListTicketsParams) ([]Lis
 		arg.StaleDays,
 		arg.NodeIds,
 		arg.MissingReason,
+		arg.WeakReason,
 		arg.MissingMenus,
 		arg.Q,
 		arg.Sort,

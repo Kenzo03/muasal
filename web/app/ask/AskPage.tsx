@@ -8,7 +8,19 @@ import { api } from "@/lib/api";
 import { button } from "@/lib/ui";
 
 // The open thread: its saved answers, then the Ask box for more questions.
-export default function AskPage({ threadId, history, chips, question }: { threadId?: number; history: Turn[]; chips: Chip[]; question?: string }) {
+export default function AskPage({
+  threadId,
+  history,
+  chips,
+  question,
+  examples,
+}: {
+  threadId?: number;
+  history: Turn[];
+  chips: Chip[];
+  question?: string;
+  examples?: string[];
+}) {
   const t = useTranslations("ask");
   const router = useRouter();
   return (
@@ -41,6 +53,7 @@ export default function AskPage({ threadId, history, chips, question }: { thread
         chips={chips}
         threadId={threadId}
         question={question}
+        examples={examples}
         onThread={() => {
           // Stay on this view, so the live answer keeps its scope and results;
           // the side list picks up the new thread. A Home question is not re-asked on reload.

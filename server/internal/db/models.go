@@ -82,6 +82,7 @@ type AuditEvent struct {
 	Changes    []byte
 	RequestID  *string
 	Ip         *netip.Addr
+	TokenID    *int64
 }
 
 type Chunk struct {
@@ -305,6 +306,7 @@ type Notification struct {
 	Payload   []byte
 	CreatedAt time.Time
 	ReadAt    *time.Time
+	EmailedAt *time.Time
 }
 
 type Project struct {

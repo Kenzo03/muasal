@@ -79,3 +79,37 @@ func TestAskLogRetention(t *testing.T) {
 		}
 	}
 }
+
+// MSL-10: email is off without SMTP_HOST; with it, a sender is required and
+// the port follows the TLS mode unless set.
+func TestSMTP(t *testing.T) {
+	base := map[string]string{"DATABASE_URL": "postgres://x", "PUBLIC_URL": "https://muasal.test"}
+	with := func(kv ...string) map[string]string {
+		m := map[string]string{}
+		for k, v := range base {
+			m[k] = v
+		}
+		for i := 0; i < len(kv); i += 2 {
+			m[kv[i]] = kv[i+1]
+		}
+		return m
+	}
+	if c, err := Load(env(base)); err != nil || c.SMTP.On() {
+		t.Fatalf("off by default: %+v %v", c.SMTP, err)
+	}
+	if c, err := Load(env(with("SMTP_HOST", "smtp.example.com", "SMTP_FROM", "muasal@example.com"))); err != nil || c.SMTP.Port != 587 || c.SMTP.TLS != "starttls" {
+		t.Fatalf("defaults: %+v %v", c.SMTP, err)
+	}
+	if c, err := Load(env(with("SMTP_HOST", "smtp.example.com", "SMTP_FROM", "m@example.com", "SMTP_TLS", "TLS"))); err != nil || c.SMTP.Port != 465 {
+		t.Fatalf("implicit TLS: %+v %v", c.SMTP, err)
+	}
+	for _, bad := range []map[string]string{
+		with("SMTP_HOST", "smtp.example.com"),
+		with("SMTP_HOST", "smtp.example.com", "SMTP_FROM", "m@example.com", "SMTP_TLS", "ssl"),
+		with("SMTP_HOST", "smtp.example.com", "SMTP_FROM", "m@example.com", "SMTP_PORT", "0"),
+	} {
+		if _, err := Load(env(bad)); err == nil {
+			t.Errorf("%v: want an error", bad)
+		}
+	}
+}

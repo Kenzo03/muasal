@@ -86,7 +86,7 @@ export default async function NodePage({
     );
   } else if (tab === "behaviors") {
     const { data } = await api.GET("/nodes/{id}/behaviors", { params: { path: { id }, query: { sub_nodes: subNodes } } });
-    content = <Behaviors items={data?.items ?? []} />;
+    content = <Behaviors items={data?.items ?? []} sections={data?.sections ?? []} />;
   } else {
     const canEdit = project.role === "admin";
     const others = canEdit ? ((await api.GET("/projects/{key}/nodes", { params: { path: { key } } })).data?.items ?? []) : [];

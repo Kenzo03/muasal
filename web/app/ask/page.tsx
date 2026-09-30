@@ -21,10 +21,15 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
   const t = await getTranslations("ask");
   const api = await serverApi();
   const threadId = Number(list(sp.thread)[0]) || undefined;
-  const [threads, detail] = await Promise.all([
+  const question = list(sp.q)[0];
+  const [threads, detail, updates] = await Promise.all([
     api.GET("/ask/threads"),
     threadId ? api.GET("/ask/threads/{id}", { params: { path: { id: threadId } } }) : Promise.resolve(undefined),
+    threadId || question ? Promise.resolve(undefined) : api.GET("/me/updates"),
   ]);
+  // A new thread offers examples, one about the ticket that changed last (MSL-37).
+  const latest = updates?.data?.items[0];
+  const examples = updates ? [t("exampleChanged"), ...(latest ? [t("exampleTicket", { key: latest.key })] : []), t("exampleDecisions")] : [];
   const history: Turn[] = (detail?.data?.queries ?? []).map((q) => ({
     question: q.question,
     streaming: false,
@@ -89,7 +94,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
           )}
         </aside>
         <main className="min-w-0 flex-1">
-          <AskPage key={threadId ?? "new"} threadId={detail?.data ? threadId : undefined} history={history} chips={chips} question={list(sp.q)[0]} />
+          <AskPage key={threadId ?? "new"} threadId={detail?.data ? threadId : undefined} history={history} chips={chips} question={question} examples={examples} />
         </main>
       </div>
     </>

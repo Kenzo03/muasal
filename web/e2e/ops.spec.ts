@@ -19,9 +19,7 @@ test("an admin checks the system and runs a backup", async ({ page }) => {
   await page.goto("/admin/backups");
   await page.getByRole("button", { name: "Cadangkan sekarang" }).click();
   await expect(page.getByRole("status")).toHaveText("Diminta; pencadangan dimulai dalam 30 detik.");
-  await expect
-    .poll(async () => (await (await page.request.get("/api/v1/admin/backups")).json()).items.length, { intervals: [5000], timeout: 90_000 })
-    .toBeGreaterThan(0);
-  await page.reload();
+  // The page lists the new dump by itself, without a reload (MSL-26).
+  await expect(page.getByRole("status")).toHaveText(/^Pencadangan selesai: db-\d{8}-\d{4}\.dump$/, { timeout: 90_000 });
   await expect(page.getByRole("cell", { name: /^db-\d{8}-\d{4}\.dump$/ }).first()).toBeVisible();
 });

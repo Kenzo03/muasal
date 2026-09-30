@@ -79,3 +79,21 @@ WHERE u.disabled_at IS NULL
         SELECT 1 FROM membership_clients mc
         WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = t.client_id))
 ORDER BY lower(u.name), u.id;
+
+-- name: PendingEmails :many
+-- MSL-10: notifications still unread two minutes on, from the last day, not
+-- yet emailed, for users who chose email; the sender groups them per user.
+SELECT n.id, n.user_id, n.type, n.payload, n.created_at, u.email, u.name AS user_name, u.locale,
+       t.key AS ticket_key, t.title AS ticket_title, a.name AS actor_name
+FROM notifications n
+JOIN users u ON u.id = n.user_id
+LEFT JOIN tickets t ON t.id = n.ticket_id
+LEFT JOIN users a ON a.id = n.actor_id
+WHERE n.emailed_at IS NULL AND n.read_at IS NULL
+  AND n.created_at > now() - interval '1 day' AND n.created_at < now() - interval '2 minutes'
+  AND u.disabled_at IS NULL AND coalesce((u.notify_prefs ->> 'email')::boolean, false)
+ORDER BY n.user_id, n.id
+LIMIT 500;
+
+-- name: MarkEmailed :exec
+UPDATE notifications SET emailed_at = now() WHERE id = ANY (sqlc.arg('ids')::bigint[]);

@@ -160,6 +160,23 @@ func Parse(provider, event string, payload []byte) (commits []Commit, mr *MergeR
 // keyRe is §14.1's ticket key pattern.
 var keyRe = regexp.MustCompile(`\b([A-Z][A-Z0-9]{1,9})-([0-9]{1,7})\b`)
 
+// fixRe finds "Fixes DMS-2", "closes: DMS-2, DMS-3" and the like (MSL-29).
+var fixRe = regexp.MustCompile(`(?i:\b(?:fix(?:e[sd])?|close[sd]?|resolve[sd]?))\b:?\s+((?:[A-Z][A-Z0-9]{1,9}-[0-9]{1,7}\b(?:\s*,\s*|\s+and\s+|\s+dan\s+)?)+)`)
+
+// Fixes lists the ticket keys a commit message says it fixes, closes or
+// resolves, in order.
+func Fixes(message string) []string {
+	var out []string
+	for _, m := range fixRe.FindAllStringSubmatch(message, -1) {
+		for _, k := range keyRe.FindAllString(m[1], -1) {
+			if !slices.Contains(out, k) {
+				out = append(out, k)
+			}
+		}
+	}
+	return out
+}
+
 // Keys lists the distinct ticket keys in the texts, in order.
 func Keys(texts ...string) []string {
 	var out []string

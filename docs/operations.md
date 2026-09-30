@@ -93,7 +93,7 @@ The dumps leave out the embedding vectors, since they can be rebuilt. Set `BACKU
 
 Admin → Backups shows the last backup's time, size and location, and has a "Run backup now" button; the backup starts within 30 seconds.
 
-Copying the backups volume off the server is up to you. For example, mount a NAS share at the volume's path, or copy `docker run --rm -v muasal_backups:/b alpine tar -C /b -c .` to tape.
+Copying the backups volume off the server is up to you. For example, mount a NAS share at the volume's path, or copy `docker run --rm -v muasal_backups:/b alpine tar -C /b -c .` to tape. Until the backups volume sits on another disk than the attachments volume, Admin → Backups warns that one disk failure would lose both.
 
 **Restore:**
 
@@ -109,6 +109,16 @@ The script stops the app and the web server and restores the database with `pg_r
 - **Logs:** `docker compose logs -f app` (JSON lines). Logs carry IDs, never ticket text or questions.
 - **Metrics:** Prometheus metrics at `http://app:8080/metrics` on the internal network. Caddy does not publish them; scrape them from a container on the `app` network.
 - **Ask log retention:** 365 days, set by `ASK_LOG_RETENTION_DAYS` in `.env` (0 keeps questions for good).
+
+## Email notifications
+
+Muasal can email people what they have not read in the app, so assignments and mentions reach those who do not keep it open. It is off until an admin sets it up.
+
+1. In `.env`, set `SMTP_HOST` and `SMTP_FROM` (the sender, e.g. `muasal@example.com`), plus `SMTP_USERNAME` and `SMTP_PASSWORD` if the server asks for them. `SMTP_TLS` is `starttls` (the default, port 587), `tls` (port 465) or `none` for a relay on your own network; `SMTP_PORT` overrides the port.
+2. Give the app a route to the mail server: run with `-f compose.host-ai.yaml`, or use a relay on the `app` network.
+3. Restart: `docker compose up -d app`. Admin → System status shows Email as on.
+
+Each person then ticks **Also email me** in their profile. Every minute, Muasal sends each of them one email listing their notifications of the last day that are still unread after two minutes, each with a link; nothing is sent twice.
 
 ## Offline guarantees
 

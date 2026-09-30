@@ -62,6 +62,12 @@ export default async function DocumentPage({ params }: { params: Promise<{ docKe
               <span className="font-bold">{doc.key}</span>
               {showsClients(clients.data?.items ?? []) && <ClientChip client={doc.client} coreLabel={t("allClients")} />}
               {t("uploadedBy", { name: doc.uploaded_by, date: dateTime(doc.created_at, locale, timeZone) })}
+              {/* MSL-14: a new version says what it replaced. */}
+              {(doc.replaces ?? []).map((o) => (
+                <Link key={o.key} href={`/documents/${o.key}`} className="text-muted underline hover:text-ink">
+                  {t("replaces", { key: o.key, title: o.title })}
+                </Link>
+              ))}
             </p>
             {doc.sections.map((s) => (
               <section

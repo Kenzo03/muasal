@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Icon from "@/components/Icon";
 import type { components } from "@/lib/api-types";
-import { documentExtensions, toMarkdown } from "@/lib/convert";
+import { documentExtensions, firstHeading, toMarkdown } from "@/lib/convert";
 import { fileSize } from "@/lib/format";
 import { useProblemText, type Client, type Problem } from "@/lib/problem";
 import { button, cx, field, panel } from "@/lib/ui";
@@ -22,6 +22,10 @@ export default function Upload({ projectKey, clients, documents }: { projectKey:
   const [file, setFile] = useState<File>();
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  // MSL-36: the file converts as soon as it is picked, so its first heading can
+  // title it until the user types a title; the upload reuses the conversion.
+  const converted = useRef<{ file: File; markdown: Promise<string> }>(undefined);
+  const typed = useRef(false);
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -32,7 +36,7 @@ export default function Upload({ projectKey, clients, documents }: { projectKey:
     setBusy(t("converting"));
     let markdown: string;
     try {
-      markdown = await toMarkdown(file);
+      markdown = await (converted.current?.file === file ? converted.current.markdown : toMarkdown(file));
     } catch {
       setBusy("");
       return setError(t("unreadable"));
@@ -70,14 +74,32 @@ export default function Upload({ projectKey, clients, documents }: { projectKey:
           onChange={(e) => {
             const f = e.target.files?.[0];
             setFile(f);
-            if (f && !title) setTitle(f.name.replace(/\.[^.]+$/, ""));
+            if (!f || f.size > 20 << 20) return;
+            const markdown = toMarkdown(f);
+            converted.current = { file: f, markdown };
+            if (typed.current) return;
+            setTitle(f.name.replace(/\.[^.]+$/, ""));
+            markdown.then(
+              (md) => firstHeading(md) && !typed.current && converted.current?.file === f && setTitle(firstHeading(md)),
+              () => {}, // the upload reports it
+            );
           }}
           className="absolute inset-0 cursor-pointer opacity-0"
         />
       </label>
       <label className={field.label}>
         {t("title")}
-        <input name="title" required maxLength={200} value={title} onChange={(e) => setTitle(e.target.value)} className={field.input} />
+        <input
+          name="title"
+          required
+          maxLength={200}
+          value={title}
+          onChange={(e) => {
+            typed.current = e.target.value !== "";
+            setTitle(e.target.value);
+          }}
+          className={field.input}
+        />
       </label>
       <label className={field.label}>
         {t("client")}

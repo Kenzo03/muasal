@@ -4,6 +4,12 @@
 
 export const documentExtensions = [".pdf", ".docx", ".md", ".markdown"];
 
+/** A document's first heading, the title its upload form suggests (MSL-36); "" without one. */
+export function firstHeading(md: string): string {
+  const m = /^#{1,6}[ \t]+(.+?)[ \t#]*$/m.exec(md);
+  return m ? m[1].replace(/[*`]/g, "").trim().slice(0, 200) : "";
+}
+
 export async function toMarkdown(file: File): Promise<string> {
   const name = file.name.toLowerCase();
   if (name.endsWith(".md") || name.endsWith(".markdown")) return file.text();

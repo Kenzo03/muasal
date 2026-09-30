@@ -4,14 +4,14 @@ import AuthCard from "@/components/AuthCard";
 import { getMe } from "@/lib/server-api";
 import LoginForm from "./LoginForm";
 
-export default async function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ email?: string }> }) {
   // Already signed in, as in a tab left here that reloads: go home. Switching
   // accounts starts with signing out.
   if (await getMe()) redirect("/");
   const t = await getTranslations("login");
   return (
     <AuthCard title={t("title")}>
-      <LoginForm />
+      <LoginForm email={(await searchParams).email} />
     </AuthCard>
   );
 }

@@ -2,11 +2,15 @@ package httpapi
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"strings"
+	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -157,7 +161,7 @@ func probeChat(ctx context.Context, c *llm.Client) AIProbe {
 		p.Models = &models
 	}
 	if err != nil {
-		p.Error = ptr(err.Error())
+		p.Error, p.Reason = ptr(err.Error()), probeReason(err)
 	}
 	return p
 }
@@ -169,11 +173,42 @@ func probeEmbed(ctx context.Context, c *llm.Client) AIProbe {
 	vecs, err := c.Embed(ctx, []string{"Muasal connection test"})
 	p := AIProbe{Ok: err == nil, LatencyMs: int(time.Since(start).Milliseconds())}
 	if err != nil {
-		p.Error = ptr(err.Error())
+		p.Error, p.Reason = ptr(err.Error()), probeReason(err)
 	} else {
 		p.Dim = ptr(len(vecs[0]))
 	}
 	return p
+}
+
+// probeReason names a failed probe's likely cause (MSL-31), or nil when the
+// raw error is all there is to say.
+func probeReason(err error) *AIProbeReason {
+	var dns *net.DNSError
+	var cert *tls.CertificateVerificationError
+	var timeout net.Error
+	var apiErr *llm.APIError
+	r := AIProbeReason("")
+	switch {
+	case errors.As(err, &dns):
+		r = AIProbeReasonUnknownHost
+	case errors.Is(err, syscall.ECONNREFUSED):
+		r = AIProbeReasonRefused
+	case errors.Is(err, context.DeadlineExceeded) || errors.As(err, &timeout) && timeout.Timeout():
+		r = AIProbeReasonTimeout
+	case errors.As(err, &cert):
+		r = AIProbeReasonTls
+	case !errors.As(err, &apiErr):
+		return nil
+	case apiErr.Status == http.StatusUnauthorized || apiErr.Status == http.StatusForbidden:
+		r = AIProbeReasonUnauthorized
+	case apiErr.Status == http.StatusNotFound && strings.Contains(strings.ToLower(apiErr.Body), "model"):
+		r = AIProbeReasonNoModel // Ollama, vLLM and OpenAI all name the model they lack
+	case apiErr.Status == http.StatusNotFound:
+		r = AIProbeReasonNotFound
+	default:
+		return nil
+	}
+	return &r
 }
 
 // aiSettingsFrom applies an update to the current settings: keys left out stay,

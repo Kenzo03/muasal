@@ -51,6 +51,10 @@ export default async function SystemPage() {
                 </p>
                 {data.model.error && <p className="text-xs text-muted">{data.model.error}</p>}
               </div>
+              <div>
+                <h2 className={sectionTitle}>{t("email")}</h2>
+                <p className="text-[13px]">{data.email?.enabled ? t("emailOn", { host: data.email.host ?? "" }) : t("emailOff")}</p>
+              </div>
             </section>
             <section className={cx(panel, "flex flex-col gap-3 p-4")}>
               <h2 className={sectionTitle}>{t("disks")}</h2>

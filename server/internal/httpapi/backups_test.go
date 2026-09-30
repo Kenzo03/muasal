@@ -30,7 +30,7 @@ func TestBackupsPage(t *testing.T) {
 	}
 	var list httpapi.BackupList
 	if code := e.call(admin, http.MethodGet, "/admin/backups", nil, &list); code != http.StatusOK || len(list.Items) != 2 ||
-		list.Items[0].File != "db-20260925-0100.dump" || list.Items[0].SizeBytes != 1024 || list.Requested {
+		list.Items[0].File != "db-20260925-0100.dump" || list.Items[0].SizeBytes != 1024 || list.Requested || !list.SameDisk {
 		t.Fatalf("list: %d %+v", code, list)
 	}
 	if code := e.call(admin, http.MethodPost, "/admin/backups/run", nil, nil); code != http.StatusAccepted {
@@ -54,7 +54,7 @@ func TestBackupsWithoutTheService(t *testing.T) {
 	e := newEnvWith(t, func(c *config.Config) { c.BackupsDir = filepath.Join(t.TempDir(), "missing") })
 	admin, _ := e.signedIn("admin@example.com", true)
 	var list httpapi.BackupList
-	if code := e.call(admin, http.MethodGet, "/admin/backups", nil, &list); code != http.StatusOK || len(list.Items) != 0 {
+	if code := e.call(admin, http.MethodGet, "/admin/backups", nil, &list); code != http.StatusOK || len(list.Items) != 0 || list.SameDisk {
 		t.Fatalf("list: %d %+v", code, list)
 	}
 	var p httpapi.Problem

@@ -1,6 +1,7 @@
 import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
+import { remarkMentions, type Person } from "@/lib/mentions";
 import { cx } from "@/lib/ui";
 
 // Descriptions and comments are markdown (FSD §8.1, §8.7). Raw HTML is never
@@ -26,6 +27,9 @@ const components: Components = {
     </div>
   ),
   a: ({ href, children }) => {
+    if (href?.startsWith("#mention-")) {
+      return <span title={`@${href.slice(9)}`} className="rounded bg-accent-soft px-1 font-semibold text-accent-strong">{children}</span>;
+    }
     const external = href !== undefined && /^https?:\/\//.test(href);
     return (
       <a href={href} {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
@@ -43,10 +47,11 @@ const components: Components = {
     ),
 };
 
-export default function Markdown({ text, className }: { text: string; className?: string }) {
+// people turns their @handles into name chips (MSL-30).
+export default function Markdown({ text, className, people }: { text: string; className?: string; people?: Person[] }) {
   return (
     <div className={cx("break-words text-sm leading-relaxed", className)}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]} components={components}>
+      <ReactMarkdown remarkPlugins={people?.length ? [remarkGfm, remarkMentions(people)] : [remarkGfm]} rehypePlugins={[rehypeSanitize]} components={components}>
         {text}
       </ReactMarkdown>
     </div>

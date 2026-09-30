@@ -118,6 +118,36 @@ func TestGitHubPushLinksCommits(t *testing.T) {
 	}
 }
 
+// MSL-29: "Fixes HRIS-1" in a push moves the open ticket to In review, once,
+// and its history says a webhook did it; it never closes the ticket.
+func TestFixesInACommitMovesTheTicketToReview(t *testing.T) {
+	e := newEnvWith(t, func(c *config.Config) { c.SecretKey = bytes.Repeat([]byte{7}, 32) })
+	w := newHRIS(e)
+	admin, _ := e.signedIn("admin@example.com", true)
+	tk := e.seedTicket(w.p, w.pmUser, "Supervisor skip", &w.a, w.ot)
+	var repo httpapi.Repo
+	if code := e.call(admin, http.MethodPost, "/projects/HRIS/repos", map[string]any{"provider": "github", "name": "hris-app", "web_url": "https://github.com/acme/hris-app"}, &repo); code != http.StatusCreated {
+		t.Fatalf("repo: %d", code)
+	}
+	push := []byte(`{"ref":"refs/heads/main","commits":[{"id":"abc1234def","message":"Fixes HRIS-1: skip the supervisor","timestamp":"2026-09-20T10:00:00Z","author":{"name":"PM","email":"pm@example.com"}}]}`)
+	for range 2 { // the second delivery is a re-delivery
+		if code := e.deliver(repo.Id, map[string]string{"X-GitHub-Event": "push", "X-Hub-Signature-256": sign(*repo.Secret, push)}, push); code != http.StatusAccepted {
+			t.Fatalf("delivery: %d", code)
+		}
+		e.processAll()
+	}
+	var got httpapi.Ticket
+	e.call(w.pm, http.MethodGet, "/tickets/"+tk.Key, nil, &got)
+	if got.Status.Name != "In review" || got.ClosedAt != nil {
+		t.Fatalf("status: %+v closed %v", got.Status, got.ClosedAt)
+	}
+	var n int
+	if err := e.d.Pool.QueryRow(t.Context(), `SELECT count(*) FROM audit_events
+		WHERE entity = 'ticket' AND entity_id = $1 AND action = 'transition' AND via = 'webhook' AND changes->'status'->>'new' = 'In review'`, tk.ID).Scan(&n); err != nil || n != 1 {
+		t.Fatalf("history: %v %d transitions", err, n)
+	}
+}
+
 // §14.1: GitLab authenticates with X-Gitlab-Token; a merge request links by
 // its title or branch and keeps its state.
 func TestGitLabMergeRequestLinks(t *testing.T) {

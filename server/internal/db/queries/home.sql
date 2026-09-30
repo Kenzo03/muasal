@@ -96,3 +96,33 @@ FROM (
 ) x
 LEFT JOIN users u ON u.id = x.actor_id
 ORDER BY x.ticket_id, x.at DESC, x.id DESC;
+
+-- name: ListAttention :many
+-- Home's Needs attention (MSL-9): for each project the user runs as project
+-- admin (every project for a system admin), the open tickets that need a
+-- lead's eye, counted as Workload counts them. Project admins see all clients.
+SELECT p.key, p.name,
+       count(*) FILTER (WHERE t.due_date < sqlc.arg('today')::date) AS overdue,
+       count(*) FILTER (WHERE t.due_date BETWEEN sqlc.arg('today')::date AND sqlc.arg('today')::date + 7) AS week,
+       count(*) FILTER (WHERE t.assignee_id IS NULL) AS unassigned,
+       count(*) FILTER (WHERE t.reason = '') AS no_reason,
+       count(*) FILTER (WHERE weak_reason(t.reason)) AS weak_reason,
+       count(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id)) AS no_menu,
+       count(*) FILTER (WHERE t.updated_at < now() - interval '7 days') AS stale
+FROM tickets t
+JOIN statuses s ON s.id = t.status_id
+JOIN projects p ON p.id = t.project_id
+WHERE s.category IN ('todo', 'in_progress')
+  AND (sqlc.arg('is_admin')::boolean OR EXISTS (
+        SELECT 1 FROM memberships m
+        WHERE m.user_id = sqlc.arg('user_id')::bigint AND m.project_id = t.project_id AND m.role = 'admin'))
+GROUP BY p.id, p.key, p.name
+ORDER BY p.key;
+
+-- name: SetupStatus :one
+-- How far a new server is set up, for Home's checklist (MSL-18).
+SELECT (SELECT count(*) FROM users WHERE disabled_at IS NULL) > 1 AS invited,
+       EXISTS (SELECT 1 FROM projects) AS project,
+       EXISTS (SELECT 1 FROM nodes) AS tree,
+       EXISTS (SELECT 1 FROM tickets) AS history,
+       coalesce((SELECT key FROM projects ORDER BY id LIMIT 1), '')::text AS first_project;

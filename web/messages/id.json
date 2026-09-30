@@ -16,7 +16,8 @@
     "mismatch": "Kata sandi tidak sama",
     "submit": "Simpan kata sandi",
     "done": "Kata sandi tersimpan. Silakan masuk.",
-    "toLogin": "Ke halaman masuk"
+    "toLogin": "Ke halaman masuk",
+    "forAccount": "Untuk {name} ({email})"
   },
   "nav": {
     "label": "Utama",
@@ -35,7 +36,7 @@
     "newTicket": "Tiket baru",
     "chooseProject": "Tiket baru di",
     "search": "Cari tiket atau menu",
-    "searchPlaceholder": "Cari tiket, menu, atau HRIS-231",
+    "searchPlaceholder": "Cari tiket, menu, atau {example}",
     "language": "Bahasa",
     "account": "Akun {name}",
     "newTicketShortcut": "Tiket baru (C)",
@@ -53,12 +54,13 @@
     "collapse": "Ringkas navigasi",
     "expand": "Lebarkan navigasi",
     "openMenu": "Buka navigasi",
-    "closeMenu": "Tutup navigasi"
+    "closeMenu": "Tutup navigasi",
+    "searchPlaceholderPlain": "Cari tiket atau menu"
   },
   "search": {
     "heading": "Pencarian",
     "title": "Hasil untuk “{q}”",
-    "hint": "Ketik kunci seperti HRIS-231 untuk langsung membuka tiketnya.",
+    "hint": "Ketik kunci seperti {example} untuk langsung membuka tiketnya.",
     "kinds": "Jenis hasil",
     "all": "Semua",
     "nodes": "Menu dan modul",
@@ -67,7 +69,9 @@
     "short": "Ketik minimal 2 karakter.",
     "aliases": "Alias: {aliases}",
     "core": "Inti",
-    "notes": "Notulen keputusan"
+    "notes": "Notulen keputusan",
+    "documents": "Dokumen",
+    "superseded": "versi lama"
   },
   "home": {
     "title": "Beranda",
@@ -115,7 +119,27 @@
     "projects": "Proyek saya",
     "yourTickets": "{count, plural, =0 {belum ada tiket Anda} other {# tiket Anda}}",
     "greeting": "{part, select, morning {Selamat pagi} midday {Selamat siang} afternoon {Selamat sore} other {Selamat malam}}, {name}",
-    "openCount": "{count, plural, =0 {Tidak ada tiket terbuka untuk Anda.} other {# tiket terbuka untuk Anda.}}"
+    "openCount": "{count, plural, =0 {Tidak ada tiket terbuka untuk Anda.} other {# tiket terbuka untuk Anda.}}",
+    "attention": "Perlu perhatian",
+    "attentionHint": "Tiket terbuka di proyek yang Anda kelola",
+    "attentionCount": {
+      "overdue": "{count} terlambat",
+      "week": "{count} jatuh tempo 7 hari",
+      "unassigned": "{count} belum ditugaskan",
+      "noReason": "{count} tanpa alasan",
+      "weakReason": "{count} alasan lemah",
+      "noMenu": "{count} tanpa menu",
+      "stale": "{count} tidak bergerak 7+ hari"
+    },
+    "setup": {
+      "title": "Siapkan Muasal",
+      "hint": "Lima langkah sebelum tim mulai memakai Muasal setiap hari.",
+      "ai": "Pilih mode AI dan uji koneksinya",
+      "invited": "Undang tim dan bagikan tautan pengaturannya",
+      "project": "Buat proyek pertama",
+      "tree": "Susun pohon modul dari dokumen spesifikasi, CSV, atau manual",
+      "history": "Masukkan riwayat tiket: impor Jira atau CSV, atau catat 20–50 permintaan terakhir"
+    }
   },
   "profile": {
     "title": "Profil",
@@ -145,7 +169,12 @@
     "enable": "Aktifkan",
     "resetPassword": "Reset kata sandi",
     "adminsOnly": "Hanya admin yang dapat mengelola pengguna.",
-    "back": "Kembali"
+    "back": "Kembali",
+    "invited": "Diundang",
+    "newLink": "Tautan baru",
+    "copy": "Salin",
+    "copied": "Tersalin",
+    "dismiss": "Tutup"
   },
   "projectList": {
     "heading": "Semua proyek",
@@ -214,12 +243,18 @@
     "allClients": "Semua klien",
     "someClients": "Klien tertentu",
     "remove": "Hapus",
-    "email": "Email",
+    "person": "Orang",
+    "pickPerson": "Pilih orang…",
+    "notListed": "Daftar berisi orang yang satu proyek dengan Anda. Untuk orang lain, pilih “Orang lain” lalu ketik emailnya; admin sistem menambahkan orang baru di Admin › Pengguna.",
+    "unsaved": "Ada perubahan yang belum disimpan",
+    "unsavedLeave": "Tinggalkan halaman tanpa menyimpan perubahan anggota?",
     "addMember": "Tambah anggota",
     "saveMembers": "Simpan anggota",
     "noMembers": "Belum ada anggota.",
     "unknownUserHint": "Minta admin sistem membuat akunnya di Admin › Pengguna, lalu tambahkan lagi.",
-    "alreadyListed": "Email ini sudah ada di daftar."
+    "email": "Email",
+    "someoneElse": "Orang lain (ketik emailnya)…",
+    "alreadyListed": "Orang ini sudah ada di daftar."
   },
   "clients": {
     "title": "Klien",
@@ -282,6 +317,15 @@
     "failed": "Gagal",
     "models": "Model",
     "dimension": "{dim} dimensi",
+    "reasons": {
+      "unknown_host": "Nama server tidak ditemukan. Periksa nama host di URL.",
+      "refused": "Tidak ada yang menjawab di alamat itu. Periksa port-nya, dan pastikan server model berjalan.",
+      "timeout": "Server tidak menjawab tepat waktu. Mungkin tidak terjangkau dari server ini, atau masih memuat model.",
+      "tls": "Sertifikat server tidak dipercaya.",
+      "unauthorized": "Server menolak API key. Periksa key-nya.",
+      "not_found": "Tidak ada apa pun di URL ini. Alamat yang kompatibel dengan OpenAI biasanya diakhiri /v1.",
+      "no_model": "Server tidak memiliki model ini. Periksa namanya, atau pull model tersebut di server terlebih dahulu."
+    },
     "reindexConfirm": "Model embedding baru akan meng-embed ulang {chunks} potongan. Sampai selesai, Ask memakai pencarian kata kunci dan potongan yang sudah selesai. Lanjutkan?",
     "indexStatus": "Status indeks",
     "reindexAll": "Indeks ulang semua",
@@ -349,7 +393,9 @@
       "end": "{name} diletakkan di {target}.",
       "cancel": "Pemindahan dibatalkan."
     },
-    "importCsv": "Impor CSV"
+    "importCsv": "Impor CSV",
+    "emptyFromDocument": "Susun draf dari dokumen spesifikasi",
+    "emptyFromCSV": "Impor CSV"
   },
   "nodePage": {
     "path": "Jejak",
@@ -390,7 +436,10 @@
     "attendees": "Bersama {names}",
     "supersededBy": "Digantikan oleh {key}",
     "spec": "Spesifikasi",
-    "specTitle": "Asal di dokumen"
+    "specTitle": "Asal di dokumen",
+    "unconfirmed": "Belum dikonfirmasi",
+    "unconfirmedHint": "Tiket selesai tanpa catatan keputusan, misalnya hasil impor. Buka tiketnya untuk memastikan apa yang berubah.",
+    "reasonOnly": "Alasan: {why}"
   },
   "errors": {
     "generic": "Terjadi kesalahan. Coba lagi.",
@@ -481,6 +530,8 @@
   },
   "ticketFilters": {
     "label": "Saring tiket",
+    "filters": "Filter",
+    "filtersSet": "Filter ({count})",
     "q": "Cari",
     "qPlaceholder": "Judul atau kunci",
     "client": "Klien",
@@ -506,6 +557,7 @@
     "nothingMissing": "—",
     "missingReason": "Tanpa alasan",
     "missingMenus": "Tanpa menu",
+    "weakReason": "Alasan lemah",
     "sort": "Urutkan",
     "sortUpdated": "Terakhir diubah",
     "sortCreated": "Terbaru",
@@ -576,7 +628,7 @@
     "due": "Tenggat",
     "create": "Buat",
     "createAnother": "Buat dan tambah lagi",
-    "created": "{key} dibuat.",
+    "created": "<link>{key}</link> dibuat.",
     "save": "Simpan",
     "cancel": "Batal",
     "reload": "Muat ulang",
@@ -641,7 +693,9 @@
     "draftWithAI": "Draf dengan AI",
     "drafting": "Menyusun draf…",
     "drafted": "Draf dari {model} berdasarkan percakapan tiket. Periksa setiap kolom; tidak ada yang tersimpan sebelum Tutup tiket.",
-    "noWhy": "Percakapan tiket tidak menyebut alasannya. Tanyakan kepada peminta lalu tulis alasannya di sini."
+    "noWhy": "Percakapan tiket tidak menyebut alasannya. Tanyakan kepada peminta lalu tulis alasannya di sini.",
+    "draftWhy": "Alasan versi draf:",
+    "useDraftWhy": "Pakai"
   },
   "decision": {
     "title": "Catatan keputusan",
@@ -668,10 +722,10 @@
     "save": "Tautkan",
     "cancel": "Batal",
     "remove": "Hapus tautan ke {key}",
-    "hint": "Tiket yang membatalkan tiket lain menggantikan keputusannya.",
+    "hint": "Tiket yang mencabut tiket lain menggantikan keputusannya.",
     "reverses": {
-      "out": "Membatalkan",
-      "in": "Dibatalkan oleh"
+      "out": "Mencabut",
+      "in": "Dicabut oleh"
     },
     "extends": {
       "out": "Memperluas",
@@ -738,8 +792,8 @@
     "unlinked": "{actor} menghapus tautan: {link} {key}",
     "links": {
       "reverses": {
-        "out": "Membatalkan",
-        "in": "Dibatalkan oleh"
+        "out": "Mencabut",
+        "in": "Dicabut oleh"
       },
       "extends": {
         "out": "Memperluas",
@@ -751,7 +805,9 @@
       }
     },
     "mentions": "Anggota yang dapat disebut",
-    "mentionHint": "Ketik @ untuk menyebut anggota."
+    "mentionHint": "Ketik @ untuk menyebut anggota.",
+    "imported": "{actor} mengimpor tiket dari {ref}",
+    "importUpdated": "{actor} memperbarui tiket dari impor {ref}"
   },
   "attachments": {
     "title": "Lampiran",
@@ -783,6 +839,10 @@
     "form": "Tanya",
     "question": "Pertanyaan",
     "placeholder": "Tanyakan tentang tiket, menu, atau keputusan…",
+    "examples": "Coba tanyakan",
+    "exampleChanged": "Apa yang berubah bulan lalu?",
+    "exampleTicket": "Apa yang diubah {key} dan kenapa?",
+    "exampleDecisions": "Keputusan apa saja yang dibuat tahun ini?",
     "homePlaceholder": "Tanyakan sesuatu tentang proyek Anda…",
     "send": "Tanya",
     "language": "Bahasa jawaban",
@@ -928,7 +988,35 @@
     "project": "Proyek",
     "changes": "Perubahan",
     "system": "Sistem",
-    "older": "Lebih lama"
+    "older": "Lebih lama",
+    "entities": {
+      "ticket": "Tiket",
+      "comment": "Komentar",
+      "node": "Menu atau modul",
+      "project": "Proyek",
+      "status": "Status",
+      "statuses": "Status",
+      "client": "Klien",
+      "contact": "Kontak",
+      "user": "Pengguna",
+      "ai_settings": "Pengaturan AI",
+      "summary_schedule": "Jadwal ringkasan",
+      "backup": "Cadangan",
+      "document": "Dokumen",
+      "import": "Impor",
+      "note": "Catatan keputusan",
+      "repo": "Repositori",
+      "token": "Token API"
+    },
+    "vias": {
+      "web": "Web",
+      "api": "API",
+      "system": "Sistem",
+      "import": "Impor",
+      "webhook": "Webhook",
+      "token": "API · token “{token}”"
+    },
+    "via": "Lewat"
   },
   "system": {
     "title": "Status sistem",
@@ -952,13 +1040,18 @@
       "disk_backups": "Disk cadangan terisi 80% atau lebih.",
       "model_unreachable": "Server model tidak terhubung; Tanya dan pengindeksan menunggu.",
       "jobs_failed": "Ada tugas latar yang gagal; lihat Admin → AI → Status indeks."
-    }
+    },
+    "email": "Email",
+    "emailOn": "Aktif lewat {host}",
+    "emailOff": "Mati. Isi SMTP_HOST dan SMTP_FROM di deploy/.env untuk mengirim pemberitahuan lewat email."
   },
   "backups": {
     "title": "Cadangan",
     "adminsOnly": "Hanya admin sistem yang dapat mengelola cadangan.",
     "runNow": "Cadangkan sekarang",
     "requested": "Diminta; pencadangan dimulai dalam 30 detik.",
+    "finished": "Pencadangan selesai: {file}",
+    "slow": "Belum ada cadangan baru. Jika berlanjut, periksa apakah layanan pencadangan berjalan di server.",
     "last": "Cadangan terakhir",
     "none": "Belum ada",
     "size": "Ukuran",
@@ -970,7 +1063,8 @@
     "restore1": "Masuk ke server, ke folder instalasi Muasal.",
     "restore2": "Jalankan",
     "restore3": "Skrip menghentikan aplikasi, memulihkan basis data dan lampiran, menyalakannya lagi, lalu mengindeks ulang.",
-    "offsite": "Menyalin folder cadangan ke luar server (NAS atau pita) adalah tanggung jawab Anda."
+    "offsite": "Menyalin folder cadangan ke luar server (NAS atau pita) adalah tanggung jawab Anda.",
+    "sameDisk": "Cadangan berada di disk yang sama dengan data, jadi satu kerusakan disk akan menghilangkan keduanya. Salin cadangan ke luar server secara rutin: panduan operasional (docs/operations.md, “Backups and restore”) menjelaskan caranya."
   },
   "notes": {
     "heading": "Notulen keputusan",
@@ -999,7 +1093,11 @@
     "save": "Simpan",
     "cancel": "Batal",
     "path": "Lokasi",
-    "byline": "Oleh {name} · diperbarui {at}"
+    "byline": "Oleh {name} · diperbarui {at}",
+    "actionItems": "Tindak lanjut",
+    "createTicket": "Buat tiket",
+    "actionReason": "Tindak lanjut dari notulen {key}: {title}",
+    "bodyHint": "Tulis tindak lanjut sebagai daftar, mis. \"- Bayu: rancang penanda, paling lambat 10 Okt\". Tiap butir bisa dijadikan tiket dari halaman notulen."
   },
   "tokens": {
     "title": "Token API",
@@ -1152,7 +1250,14 @@
     "comment": "{who} berkomentar di {ticket}",
     "mention": "{who} menyebut Anda di {ticket}",
     "status": "{who} memindahkan {ticket} ke {status}",
-    "jobDone": "{name} selesai"
+    "jobDone": "{name} selesai",
+    "also": "Juga: {actions}",
+    "did": {
+      "assigned": "menugaskan kepada Anda",
+      "comment": "berkomentar",
+      "mention": "menyebut Anda",
+      "status": "memindahkan ke {status}"
+    }
   },
   "notifyPrefs": {
     "title": "Notifikasi",
@@ -1164,14 +1269,16 @@
       "job_done": "Impor yang saya mulai selesai"
     },
     "browser": "Notifikasi browser saat aplikasi ada di tab latar",
-    "browserHint": "Aplikasi tidak mengirim email. Notifikasi butuh tab aplikasi yang terbuka.",
+    "browserHint": "Notifikasi browser butuh tab aplikasi yang terbuka.",
     "save": "Simpan",
     "saved": "Tersimpan.",
-    "failed": "Tidak dapat menyimpan."
+    "failed": "Tidak dapat menyimpan.",
+    "email": "Kirim juga ke email saya",
+    "emailHint": "Dikumpulkan jadi satu email tiap beberapa menit, bila admin sudah mengatur email server. Yang sudah Anda baca di aplikasi tidak dikirim."
   },
   "repos": {
     "title": "Repositori",
-    "intro": "Commit dan merge request yang menyebut kunci tiket (HRIS-123) tampil di tiket itu dan menjadi bahan Tanya. Tambahkan repositori, lalu tempel URL webhook dan rahasianya di server Git Anda.",
+    "intro": "Commit dan merge request yang menyebut kunci tiket ({example}) tampil di tiket itu dan menjadi bahan Tanya. Tambahkan repositori, lalu tempel URL webhook dan rahasianya di server Git Anda.",
     "none": "Belum ada repositori.",
     "name": "Nama",
     "provider": "Penyedia",
@@ -1260,7 +1367,8 @@
     "day": "Hari",
     "schedule": "Jadwalkan",
     "stop": "Hentikan",
-    "stopConfirm": "Hentikan ringkasan mingguan ini? Ringkasan yang sudah dibuat tetap ada."
+    "stopConfirm": "Hentikan ringkasan mingguan ini? Ringkasan yang sudah dibuat tetap ada.",
+    "allNodes": "Semua modul"
   },
   "documents": {
     "heading": "Dokumen",
@@ -1302,7 +1410,8 @@
     "replace": "Tandai digantikan",
     "makeCurrent": "Jadikan terkini lagi",
     "noNewer": "Belum ada dokumen lain yang terkini di proyek ini.",
-    "replacedBy": "Digantikan oleh"
+    "replacedBy": "Digantikan oleh",
+    "replaces": "Menggantikan {key} · {title}"
   },
   "treeDraft": {
     "heading": "Draf pohon",

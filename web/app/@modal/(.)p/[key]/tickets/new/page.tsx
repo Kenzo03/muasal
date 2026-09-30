@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { newTicketData } from "@/app/p/[key]/tickets/new/data";
+import { newTicketData, prefill, type NewTicketParams } from "@/app/p/[key]/tickets/new/data";
 import NewTicketModal from "./NewTicketModal";
 
 // The create form as a modal over the current page (FSD §8.3): a link or the
@@ -10,10 +10,10 @@ export default async function NewTicketModalPage({
   searchParams,
 }: {
   params: Promise<{ key: string }>;
-  searchParams: Promise<{ status_id?: string; node_id?: string }>;
+  searchParams: Promise<{ status_id?: string; node_id?: string } & NewTicketParams>;
 }) {
   const { key } = await params;
-  const { status_id, node_id } = await searchParams;
+  const { status_id, node_id, ...rest } = await searchParams;
   const data = await newTicketData(key);
   if (!data || data.project.role === "viewer") return null;
   const t = await getTranslations("ticketForm");
@@ -27,6 +27,7 @@ export default async function NewTicketModalPage({
       assignees={data.assignees}
       statusId={status_id ? Number(status_id) : undefined}
       nodeId={node_id ? Number(node_id) : undefined}
+      from={prefill(rest)}
     />
   );
 }

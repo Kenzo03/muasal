@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { typeIcon } from "@/components/Chips";
@@ -23,9 +24,13 @@ type Props = {
   ticket?: Ticket; // edit this ticket; without it the form creates one
   statusId?: number; // the board column a new ticket starts in
   nodeId?: number; // the menu a new ticket starts with (the node page's "New ticket for this menu")
+  from?: Prefill; // a new ticket's fields from elsewhere, such as a note's action item (MSL-11)
   onSaved?: () => void;
   onCancel?: () => void;
 };
+
+// MSL-11: what a note's action item fills in; noteKey links the ticket to that note.
+export type Prefill = { title?: string; assigneeId?: number; due?: string; clientId?: number | null; nodeIds?: number[]; reason?: string; noteKey?: string };
 
 const types: TicketType[] = ["change_request", "bug", "feature"];
 const priorities: Priority[] = ["low", "medium", "high", "urgent"];
@@ -44,7 +49,7 @@ function Row({ label, htmlFor, id, children }: { label: string; htmlFor?: string
 
 // The one form a PM fills while the client is on the phone (FSD §8.3):
 // Client → Requested by → Title → Affected menus → Reason → Type → Description, and More.
-export default function TicketForm({ projectKey, clients, nodes, assignees, ticket, statusId, nodeId, onSaved, onCancel }: Props) {
+export default function TicketForm({ projectKey, clients, nodes, assignees, ticket, statusId, nodeId, from, onSaved, onCancel }: Props) {
   const t = useTranslations("ticketForm");
   const tTypes = useTranslations("ticketTypes");
   const tPri = useTranslations("priorities");
@@ -54,35 +59,35 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
   const userRequester = ticket
     ? ticket.requester.kind === "user" ? { id: ticket.requester.id, name: ticket.requester.name } : ticket.reporter
     : undefined;
-  const [clientId, setClientId] = useState<number | null>(ticket?.client?.id ?? null);
+  const [clientId, setClientId] = useState<number | null>(ticket?.client?.id ?? from?.clientId ?? null);
   const [requester, setRequester] = useState<"user" | "contact">(ticket?.requester.kind === "contact" ? "contact" : "user");
   const [contactId, setContactId] = useState<number | null>(ticket?.requester.kind === "contact" ? ticket.requester.id : null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [newTitle, setNewTitle] = useState("");
-  const [nodeIds, setNodeIds] = useState<Set<number>>(() => new Set(ticket ? ticket.nodes.map((n) => n.id) : nodeId ? [nodeId] : []));
+  const [nodeIds, setNodeIds] = useState<Set<number>>(() => new Set(ticket ? ticket.nodes.map((n) => n.id) : from?.nodeIds?.length ? from.nodeIds : nodeId ? [nodeId] : []));
   const [recent, setRecent] = useState<number[]>([]);
   useEffect(() => {
     // Recently used menus first (§8.1); the picker works without them.
     api.GET("/projects/{key}/nodes/recent", { params: { path: { key: projectKey } } }).then(({ data }) => setRecent(data?.node_ids ?? []));
   }, [projectKey]);
-  const [reason, setReason] = useState(ticket?.reason ?? "");
+  const [reason, setReason] = useState(ticket?.reason ?? from?.reason ?? "");
   const [type, setType] = useState<TicketType>(ticket?.type ?? "change_request");
   const [error, setError] = useState("");
   const [stale, setStale] = useState(false);
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState<ReactNode>("");
 
   // A new ticket starts with the client picked last time (FSD §8.3).
   useEffect(() => {
-    if (ticket) return;
+    if (ticket || from) return; // a prefill brings its own client
     try {
       const last = localStorage.getItem(lastClientKey(projectKey));
       if (last && last !== "core" && clients.some((c) => c.id === Number(last))) setClientId(Number(last));
     } catch {
       // storage is a convenience
     }
-  }, [ticket, projectKey, clients]);
+  }, [ticket, from, projectKey, clients]);
 
   // The contacts of the chosen client, plus internal people.
   useEffect(() => {
@@ -96,6 +101,19 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
       live = false;
     };
   }, [clientId]);
+
+  // MSL-22: only people who may see the chosen client's tickets can own this one.
+  const [people, setPeople] = useState(assignees);
+  useEffect(() => {
+    if (clientId === null) return setPeople(assignees);
+    let live = true;
+    api
+      .GET("/projects/{key}/assignees", { params: { path: { key: projectKey }, query: { client_id: clientId } } })
+      .then(({ data }) => live && data && setPeople(data.items));
+    return () => {
+      live = false;
+    };
+  }, [clientId, projectKey, assignees]);
 
   // R-MR-10: warn, without blocking, when a chosen menu belongs to other clients only.
   const warnings = clientId === null ? [] : nodes.filter((n) => nodeIds.has(n.id) && n.client_specific && !n.clients.some((c) => c.id === clientId));
@@ -156,7 +174,7 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
     }
     const { data, error } = await api.POST("/projects/{key}/tickets", {
       params: { path: { key: projectKey } },
-      body: { ...body, status_id: statusId },
+      body: { ...body, status_id: statusId, note_key: from?.noteKey },
     });
     if (error) return setError(problemText(error));
     try {
@@ -169,7 +187,7 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
       setNodeIds(new Set());
       setReason("");
       setError("");
-      setNotice(t("created", { key: data.key }));
+      setNotice(t.rich("created", { key: data.key, link: (key) => <Link href={`/t/${data.key}`}>{key}</Link> })); // MSL-32
       return;
     }
     router.push(`/t/${data.key}`);
@@ -248,7 +266,7 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
           </div>
         )}
         <Row label={t("title")} htmlFor="tf-title">
-          <input id="tf-title" name="title" defaultValue={ticket?.title} required minLength={5} maxLength={200} className={field.input} />
+          <input id="tf-title" name="title" defaultValue={ticket?.title ?? from?.title} required minLength={5} maxLength={200} className={field.input} />
         </Row>
         <Row label={t("menus")} id="tf-menus">
           <NodePicker nodes={nodes} selected={nodeIds} onToggle={toggleNode} legend={t("menus")} recent={recent} />
@@ -323,7 +341,7 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
           />
           <p id="description-hint" className={field.hint}>{t(ticket ? "descriptionHint" : "descriptionHintNew")}</p>
         </Row>
-        <details className="group rounded-xl border border-line" open={Boolean(ticket?.assignee || ticket?.due_date)}>
+        <details className="group rounded-xl border border-line" open={Boolean(ticket?.assignee || ticket?.due_date || from?.assigneeId || from?.due)}>
           <summary className="flex cursor-pointer items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-[13px] font-bold hover:bg-paper">
             <Icon name="chevronRight" className="size-4 text-muted transition-transform group-open:rotate-90" />
             {t("more")}
@@ -331,9 +349,9 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
           <div className="grid gap-3 px-3.5 pb-3.5 pt-1 md:grid-cols-3">
             <label className={field.label}>
               {t("assignee")}
-              <select name="assignee_id" defaultValue={ticket?.assignee?.id ?? ""} className={field.input}>
+              <select name="assignee_id" defaultValue={ticket?.assignee?.id ?? from?.assigneeId ?? ""} className={field.input}>
                 <option value="">{t("nobody")}</option>
-                {assignees.map((a) => (
+                {people.map((a) => (
                   <option key={a.id} value={a.id}>{a.name}</option>
                 ))}
               </select>
@@ -348,7 +366,7 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
             </label>
             <label className={field.label}>
               {t("due")}
-              <input type="date" name="due_date" defaultValue={ticket?.due_date ?? ""} className={field.input} />
+              <input type="date" name="due_date" defaultValue={ticket?.due_date ?? from?.due ?? ""} className={field.input} />
             </label>
           </div>
         </details>

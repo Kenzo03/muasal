@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { problemKey } from "@/lib/problem";
@@ -13,6 +13,15 @@ export default function SetupForm({ token }: { token: string }) {
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
+  // MSL-20: say whose password this is, and that a dead link is dead, before any typing.
+  const [account, setAccount] = useState<{ name: string; email: string }>();
+  const [dead, setDead] = useState(false);
+  useEffect(() => {
+    api.POST("/auth/setup/account", { body: { token } }).then(({ data, error }) => {
+      if (data) setAccount(data);
+      else if (error && problemKey(error) === "setup_link_invalid") setDead(true);
+    });
+  }, [token]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -37,12 +46,14 @@ export default function SetupForm({ token }: { token: string }) {
     return (
       <div className="flex flex-col gap-3">
         <p role="status" className="text-sm text-ok">{t("done")}</p>
-        <Link className={cx(button.primary, "h-9 w-full")} href="/login">{t("toLogin")}</Link>
+        <Link className={cx(button.primary, "h-9 w-full")} href={account ? `/login?${new URLSearchParams({ email: account.email })}` : "/login"}>{t("toLogin")}</Link>
       </div>
     );
   }
+  if (dead) return <p role="alert" className={field.error}>{tErr("setup_link_invalid")}</p>;
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3.5">
+      {account && <p className="text-sm text-ink-soft">{t("forAccount", account)}</p>}
       <label className={field.label}>
         {t("password")}
         <input name="password" type="password" required minLength={12} autoComplete="new-password" className={field.input} />

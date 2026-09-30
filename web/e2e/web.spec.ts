@@ -38,6 +38,15 @@ test("a PM files a ticket from the keyboard, pastes a screenshot and reorganises
   await expect(modal).toHaveCount(0);
   await expect(page).toHaveURL(new RegExp(`/p/${key}/board$`));
 
+  // MSL-32: on a menu page, `c` starts the ticket with that menu ticked.
+  await page.goto(`/p/${key}/modules/${leave.id}`);
+  await expect(page.locator('[aria-keyshortcuts="c"]')).toBeVisible();
+  await page.keyboard.press("c");
+  await expect(page).toHaveURL(new RegExp(`/p/${key}/tickets/new\\?node_id=${leave.id}$`));
+  await expect(modal.getByRole("checkbox", { name: /HR › Leave Request/ })).toBeChecked();
+  await page.goto(`/p/${key}/board`);
+  await expect(page.locator('[aria-keyshortcuts="c"]')).toBeVisible();
+
   // The menu used last comes first, marked Terakhir.
   await page.keyboard.press("c");
   const form = modal.getByRole("form", { name: "Tiket baru" });

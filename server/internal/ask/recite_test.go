@@ -35,3 +35,16 @@ func TestReciteMovesACitationToWhatStatesTheFigures(t *testing.T) {
 		}
 	}
 }
+
+// MSL-5: a one-digit figure is no evidence, since dates, versions and keys all
+// hold one. The 1 of "H+1" once moved a claim onto the ticket it contradicted.
+func TestReciteIgnoresOneDigitFigures(t *testing.T) {
+	blocks := map[string]string{
+		"DMS-2":  "[DMS-2] Bug · open, created 2026-09-29\nTitle: Surat jalan mencetak alamat gudang pusat",
+		"DMS-13": "[DMS-13] Feature · closed 2025-06-10\nTitle: Jadwal pengiriman H+1 setelah SO disetujui",
+	}
+	c := ask.Claim{Text: "Tidak ada catatan yang menyatakan alasan pengiriman H+1.", Cites: []string{"DMS-2"}}
+	if got, moved := ask.Recite(c, blocks, []string{"DMS-13", "DMS-2"}); moved != nil || !slices.Equal(got.Cites, c.Cites) {
+		t.Errorf("cites %v moved %+v, want the claim unchanged", got.Cites, moved)
+	}
+}

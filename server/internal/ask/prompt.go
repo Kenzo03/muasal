@@ -17,8 +17,9 @@ func System(language string) string {
 		"You answer questions about a software team's tickets.",
 		"Answer only from EVIDENCE. Every claim cites one or more evidence keys, such as HRIS-231.",
 		"Cite a key only if its text states that claim. When a value changed, cite the record that set the new value for the new value, and the older record only for the old one.",
+		"A reason belongs only to the change its own record describes: when a ticket reverses another, the older ticket's reason explains the old change and the reversing ticket's reason explains the reversal.",
 		"If the evidence does not answer the question, return an empty claims list. Never write claims about what the evidence lacks, with one exception:",
-		"when the question asks why, only a reason the evidence states for that exact point is a reason. If none is stated, never infer one from other facts and never write \"because\" or \"karena\" for it; say what the evidence records, then add one claim that the reason is not recorded, citing the same keys.",
+		"when the question asks why, only a reason the evidence states for that exact point is a reason. If a record states it, give that reason with the record's key and add no claim about missing reasons. If none is stated, never infer one from other facts and never write \"because\" or \"karena\" for it; say what the evidence records, then add one claim that the reason is not recorded, citing the same keys.",
 		"For \"how does it work now\", prefer decisions that are not superseded; mention superseded ones only as history.",
 		"Say who requested a change and when, whenever the evidence has it.",
 		"Answer in " + name + ", with at most 6 claims of 1-2 sentences each. Keep ticket keys, people's names and menu names exactly as written.",
@@ -37,7 +38,8 @@ func User(question, evidence, conversation string) string {
 	}
 	out += "EVIDENCE:\n<<<\n" + evidence + "\n>>>\n\nQUESTION: " + question
 	if asksWhy(question) {
-		out += "\n\nThe question asks why. Only a reason the evidence states for this exact point counts. If none is stated, " +
+		out += "\n\nThe question asks why. Only a reason the evidence states for this exact point counts. " +
+			"If a record states it, give that reason with the record's key and nothing about missing reasons. If none is stated, " +
 			"first state the rule plainly, without \"because\", then write a claim like \"The evidence does not say why\", citing the keys you checked."
 	}
 	return out

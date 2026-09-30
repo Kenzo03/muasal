@@ -92,6 +92,9 @@ WHERE t.project_id = sqlc.arg('project_id')
   AND (sqlc.narg('node_ids')::bigint[] IS NULL OR EXISTS (
         SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id AND tn.node_id = ANY (sqlc.narg('node_ids')::bigint[])))
   AND (NOT sqlc.arg('missing_reason')::boolean OR t.reason = '')
+  -- Tickets filed through the API or an import never show the form's
+  -- weak-reason hint, so the list finds them (MSL-12, 00017).
+  AND (NOT sqlc.arg('weak_reason')::boolean OR weak_reason(t.reason))
   AND (NOT sqlc.arg('missing_menus')::boolean OR NOT EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id))
   AND (sqlc.arg('q')::text = '' OR t.title ILIKE '%' || sqlc.arg('q')::text || '%' OR t.key = upper(sqlc.arg('q')::text))
 ORDER BY

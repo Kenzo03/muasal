@@ -7,6 +7,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/kenzo03/muasal/server/internal/ai"
 	"github.com/kenzo03/muasal/server/internal/db"
 )
 
@@ -78,6 +79,56 @@ func (s *Server) ListMyTickets(w http.ResponseWriter, r *http.Request, params Li
 		out.Projects[i] = ProjectCount{Key: p.Key, Open: int(p.Open)}
 	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+// ListMyAttention serves Home's Needs attention (MSL-9): a project admin with
+// nothing assigned still sees what in their projects is late, unowned or
+// incomplete, counted from today on their calendar.
+func (s *Server) ListMyAttention(w http.ResponseWriter, r *http.Request) {
+	u := s.requireUser(w, r)
+	if u == nil {
+		return
+	}
+	rows, err := s.q.ListAttention(r.Context(), db.ListAttentionParams{IsAdmin: u.IsAdmin, UserID: u.ID, Today: s.today(u)})
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	out := AttentionList{Items: []ProjectAttention{}}
+	for _, p := range rows {
+		a := ProjectAttention{Key: p.Key, Name: p.Name, Overdue: int(p.Overdue), Week: int(p.Week), Unassigned: int(p.Unassigned),
+			NoReason: int(p.NoReason), WeakReason: int(p.WeakReason), NoMenu: int(p.NoMenu), Stale: int(p.Stale)}
+		if a.Overdue+a.Week+a.Unassigned+a.NoReason+a.WeakReason+a.NoMenu+a.Stale > 0 {
+			out.Items = append(out.Items, a)
+		}
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+// GetSetupStatus tells a system admin how far the server is set up, for
+// Home's first-run checklist (MSL-18).
+func (s *Server) GetSetupStatus(w http.ResponseWriter, r *http.Request) {
+	u := s.requireUser(w, r)
+	if u == nil {
+		return
+	}
+	if !u.IsAdmin {
+		writeProblem(w, http.StatusForbidden, "forbidden", "Only system admins see this")
+		return
+	}
+	ctx := r.Context()
+	st, err := s.q.SetupStatus(ctx)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	settings, err := s.ai.Store.Get(ctx)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ai": settings.Mode != ai.ModeOff, "invited": st.Invited, "project": st.Project,
+		"tree": st.Tree, "history": st.History, "first_project": st.FirstProject})
 }
 
 // ListMyUpdates serves Home's Recently updated (FSD §6.4): the tickets the

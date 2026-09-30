@@ -18,6 +18,7 @@ import { button, cx, field, panel, sectionTitle } from "@/lib/ui";
 import Code from "./Code";
 import DecisionCard from "./DecisionCard";
 import Links from "./Links";
+import type { Person } from "@/lib/mentions";
 
 type Props = {
   ticket: Ticket;
@@ -29,11 +30,12 @@ type Props = {
   canEditDecision: boolean; // project admin or the record's confirmer (R-DC-5)
   activity: React.ReactNode;
   attachments: React.ReactNode;
+  people: Person[]; // their @handles show as names (MSL-30)
 };
 
 const closing = (s: Status) => s.category === "done" || s.category === "cancelled";
 
-export default function TicketView({ ticket, statuses, clients, nodes, assignees, canEdit, canEditDecision, activity, attachments }: Props) {
+export default function TicketView({ ticket, statuses, clients, nodes, assignees, canEdit, canEditDecision, activity, attachments, people }: Props) {
   const t = useTranslations("ticket");
   const tp = useTranslations("project");
   const ta = useTranslations("ask");
@@ -179,7 +181,7 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
                 </div>
                 <div className={block}>
                   <h2 className={sectionTitle}>{t("description")}</h2>
-                  {ticket.description ? <Markdown text={ticket.description} /> : <p className="text-sm text-muted">{t("none")}</p>}
+                  {ticket.description ? <Markdown text={ticket.description} people={people} /> : <p className="text-sm text-muted">{t("none")}</p>}
                 </div>
               </section>
               <Links ticketKey={ticket.key} links={ticket.links} canEdit={canEdit} />

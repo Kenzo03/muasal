@@ -40,8 +40,9 @@ const wholeItems = 3
 // then do the best three lose theirs. So the item that answers keeps all of
 // it, such as a meeting note's follow-ups at the end of its body. It returns
 // the text, the keys packed in order (only those may be cited) and each
-// packed key's block.
-func Pack(items []Evidence, budgetTokens int) (string, []string, map[string]string) {
+// packed key's block. today is the asker's date: an open ticket due before it
+// is overdue.
+func Pack(items []Evidence, budgetTokens int, today time.Time) (string, []string, map[string]string) {
 	budget := int(float64(budgetTokens) * 3.5)
 	full := make([]string, len(items))
 	core := make([]string, len(items))
@@ -51,7 +52,7 @@ func Pack(items []Evidence, budgetTokens int) (string, []string, map[string]stri
 		} else if it.Section != nil {
 			core[i], full[i] = sectionBlock(*it.Section, false), sectionBlock(*it.Section, true)
 		} else {
-			core[i], full[i] = block(*it.Ticket, false), block(*it.Ticket, true)
+			core[i], full[i] = block(*it.Ticket, false, today), block(*it.Ticket, true, today)
 		}
 	}
 	use := append([]string(nil), full...)
@@ -92,7 +93,7 @@ func Pack(items []Evidence, budgetTokens int) (string, []string, map[string]stri
 
 // block is one ticket's evidence; with details, its description and newest
 // five comments too.
-func block(it indexer.Source, details bool) string {
+func block(it indexer.Source, details bool, today time.Time) string {
 	t := it.Ticket
 	var b strings.Builder
 	client := "All clients"
@@ -109,6 +110,19 @@ func block(it indexer.Source, details bool) string {
 	}
 	fmt.Fprintf(&b, "%s %s · %s · %s · requested by %s\n", key, typeNames[t.Type], client, when, indexer.Requester(t))
 	b.WriteString("Title: " + t.Title + "\n")
+	// Who has it and whether it is late: what PMs ask about open work (MSL-7).
+	assignee := "nobody"
+	if t.AssigneeName != nil {
+		assignee = *t.AssigneeName
+	}
+	fmt.Fprintf(&b, "Assigned to %s · priority %s", assignee, t.Priority)
+	if t.ClosedAt == nil && t.DueDate != nil {
+		fmt.Fprintf(&b, " · due %s", day(*t.DueDate))
+		if !today.IsZero() && t.DueDate.Before(today) {
+			b.WriteString(", overdue")
+		}
+	}
+	b.WriteString("\n")
 	if len(it.Menus) > 0 {
 		paths := make([]string, len(it.Menus))
 		for i, m := range it.Menus {
@@ -118,6 +132,14 @@ func block(it indexer.Source, details bool) string {
 	}
 	if s := strings.TrimSpace(t.Reason); s != "" {
 		b.WriteString("Reason: " + s + "\n")
+	}
+	// Links tell the model which change came first (MSL-6); only those to
+	// tickets every reader of this one may see: the same client, or core.
+	for _, l := range it.Links {
+		if l.OtherProjectID != t.ProjectID || (l.OtherClientID != nil && (t.ClientID == nil || *l.OtherClientID != *t.ClientID)) {
+			continue
+		}
+		fmt.Fprintf(&b, "%s %s: %s\n", linkLabel(l.Type, l.Outgoing), l.OtherKey, l.OtherTitle)
 	}
 	if d := it.Decision; d != nil {
 		r := d.DecisionRecord
@@ -142,6 +164,20 @@ func block(it indexer.Source, details bool) string {
 		}
 	}
 	return strings.TrimSpace(b.String())
+}
+
+func linkLabel(kind string, outgoing bool) string {
+	switch {
+	case kind == "reverses" && outgoing:
+		return "Reverses"
+	case kind == "reverses":
+		return "Reversed later by"
+	case kind == "extends" && outgoing:
+		return "Extends"
+	case kind == "extends":
+		return "Extended later by"
+	}
+	return "Related to"
 }
 
 // noteBlock is one decision note's evidence; with details, its body too.

@@ -19,7 +19,10 @@ export default function NoteForm({ projectKey, note, clients, nodes }: { project
   const [selected, setSelected] = useState(new Set(note?.nodes.map((n) => n.id) ?? []));
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
-  const template = locale === "id" ? "## Keputusan\n\n\n## Alasan\n\n\n## Alternatif yang ditolak\n" : "## Decision\n\n\n## Why\n\n\n## Alternatives rejected\n";
+  // MSL-11: action items get their own section; each one can become a ticket.
+  const template = locale === "id"
+    ? "## Keputusan\n\n\n## Alasan\n\n\n## Alternatif yang ditolak\n\n\n## Tindak lanjut\n"
+    : "## Decision\n\n\n## Why\n\n\n## Alternatives rejected\n\n\n## Action items\n";
 
   async function save(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -80,12 +83,13 @@ export default function NoteForm({ projectKey, note, clients, nodes }: { project
       </div>
       <label className={field.label}>
         {t("tickets")}
-        <input name="ticket_keys" defaultValue={note?.tickets.map((tk) => tk.key).join(", ")} placeholder="HRIS-231, HRIS-240" className={cx(field.input, "font-mono")} />
+        <input name="ticket_keys" defaultValue={note?.tickets.map((tk) => tk.key).join(", ")} placeholder={`${projectKey}-12, ${projectKey}-15`} className={cx(field.input, "font-mono")} />
         <span className={field.hint}>{t("ticketsHint")}</span>
       </label>
       <label className={field.label}>
         {t("body")}
         <textarea name="body" required rows={10} maxLength={50000} defaultValue={note?.body ?? template} className={field.textarea} />
+        <span className={field.hint}>{t("bodyHint")}</span>
       </label>
       {note && (
         <label className="flex items-center gap-2 text-[13px]">

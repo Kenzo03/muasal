@@ -20,13 +20,18 @@ export default async function BackupsPage() {
     <>
       <PageBar>
         <h1 className="text-base font-semibold">{t("title")}</h1>
-        {data && <RunBackup requested={data.requested} />}
+        {data && <RunBackup requested={data.requested} newest={last ? `${last.file}@${last.created_at}` : ""} />}
       </PageBar>
       <main className="flex max-w-4xl flex-col gap-4 p-4 md:p-5">
         {!data ? (
           <p className="text-muted">{t("adminsOnly")}</p>
         ) : (
           <>
+            {data.same_disk && (
+              <p role="alert" className="rounded border border-warn-line bg-warn-soft p-3 text-[13px] text-warn">
+                {t("sameDisk")}
+              </p>
+            )}
             <section className={cx(panel, "grid gap-4 p-4 sm:grid-cols-3")}>
               <div>
                 <h2 className={sectionTitle}>{t("last")}</h2>

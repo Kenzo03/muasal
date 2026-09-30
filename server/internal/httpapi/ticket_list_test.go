@@ -173,3 +173,27 @@ func TestTicketListExportsCSV(t *testing.T) {
 		}
 	}
 }
+
+// MSL-12: tickets filed through the API or an import never show the form's
+// weak-reason hint, so the list finds them by the same rule (R-DC-8). An
+// empty reason is missing, not weak.
+func TestTicketListFindsWeakReasons(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	admin, au := e.signedIn("admin@example.com", true)
+	for reason, title := range map[string]string{
+		"Permintaan klien.": "Invoice terms of 45 days",
+		"The client's auditor requires a 1% stock tolerance from 2027.": "Stock tolerance of 1%",
+		"": "No reason yet",
+	} {
+		tk := e.seedTicket(w.p, au, title, nil, w.ot)
+		if _, err := e.d.Pool.Exec(context.Background(), "UPDATE tickets SET reason = $1 WHERE id = $2", reason, tk.ID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var page httpapi.TicketPage
+	if code := e.call(admin, http.MethodGet, "/projects/HRIS/tickets?missing=weak_reason", nil, &page); code != http.StatusOK ||
+		len(page.Items) != 1 || page.Items[0].Title != "Invoice terms of 45 days" {
+		t.Fatalf("%d %+v", code, page.Items)
+	}
+}

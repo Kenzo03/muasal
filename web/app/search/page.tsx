@@ -5,7 +5,7 @@ import { ClientChip, StatusDot } from "@/components/Chips";
 import Icon from "@/components/Icon";
 import PageBar from "@/components/PageBar";
 import { day } from "@/lib/format";
-import { serverApi } from "@/lib/server-api";
+import { getProjects, serverApi } from "@/lib/server-api";
 import { one } from "@/lib/ticket-query";
 import { chip, cx, panel, sectionTitle } from "@/lib/ui";
 
@@ -28,6 +28,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const { q = "", kind } = one(await searchParams);
   const query = q.trim();
   const t = await getTranslations("search");
+  const example = (await getProjects())[0]?.key; // MSL-19: a key from the user's own projects
   const tm = await getTranslations("modules");
   const locale = await getLocale();
   const api = await serverApi();
@@ -35,16 +36,18 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const tickets = res?.tickets ?? [];
   const nodes = res?.nodes ?? [];
   const notes = res?.notes ?? [];
+  const sections = res?.sections ?? []; // MSL-15: words in documents too
   if (notes[0]?.key === query.toUpperCase() && tickets[0]?.key !== query.toUpperCase()) redirect(`/notes/${notes[0].key}`);
   if (tickets[0]?.key === query.toUpperCase()) redirect(`/t/${tickets[0].key}`);
-  const showNodes = kind !== "tickets" && kind !== "notes";
-  const showTickets = kind !== "nodes" && kind !== "notes";
-  const showNotes = kind !== "nodes" && kind !== "tickets";
+  const shows = (k: string) => !kind || kind === k;
+  const [showNodes, showTickets, showNotes, showSections] = [shows("nodes"), shows("tickets"), shows("notes"), shows("documents")];
+  const total = nodes.length + tickets.length + notes.length + sections.length;
   const kinds: [string | undefined, string, number][] = [
-    [undefined, t("all"), nodes.length + tickets.length + notes.length],
+    [undefined, t("all"), total],
     ["nodes", t("nodes"), nodes.length],
     ["tickets", t("tickets"), tickets.length],
     ["notes", t("notes"), notes.length],
+    ["documents", t("documents"), sections.length],
   ];
 
   // Each result is a row of a list card; the tile on its left says what it is.
@@ -56,11 +59,11 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       <PageBar>
         <div className="flex flex-col gap-0.5">
           <h1>{query ? t("title", { q: query }) : t("heading")}</h1>
-          <p className="text-[13px] text-muted">{t("hint")}</p>
+          {example && <p className="text-[13px] text-muted">{t("hint", { example: `${example}-12` })}</p>}
         </div>
       </PageBar>
       <main className="flex max-w-[1040px] flex-col gap-5 px-4 py-4 md:px-5">
-        {query.length < 2 || nodes.length + tickets.length + notes.length === 0 ? (
+        {query.length < 2 || total === 0 ? (
           <div className={cx(panel, "flex flex-col items-center gap-2.5 px-6 py-12 text-center")}>
             <span className="flex size-11 items-center justify-center rounded-full bg-well text-muted">
               <Icon name="search" className="size-5" />
@@ -151,6 +154,33 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                           </span>
                         </span>
                         <span className={project}>{n.project_key}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+            {showSections && sections.length > 0 && (
+              <section aria-labelledby="documents-title" className="flex flex-col gap-2">
+                <h2 id="documents-title" className={sectionTitle}>{t("documents")}</h2>
+                <ul className={cx(panel, "flex flex-col gap-0.5 p-1.5")}>
+                  {sections.map((sec) => (
+                    <li key={`${sec.document_key}/${sec.number}`}>
+                      <Link href={`/documents/${sec.document_key}#s-${sec.number}`} className={row}>
+                        <span className={tile}>
+                          <Icon name="file" />
+                        </span>
+                        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <span className="text-sm font-semibold">
+                            <Highlight text={sec.number.startsWith("s") ? sec.title : `${sec.number} ${sec.title}`} q={query} />
+                          </span>
+                          <span className="text-xs text-muted">
+                            <span className="font-bold">{sec.document_key}</span> · {sec.document_title}
+                            {sec.superseded && <> · {t("superseded")}</>}
+                          </span>
+                          <span className="text-xs text-ink-soft"><Highlight text={sec.excerpt} q={query} /></span>
+                        </span>
+                        <span className={project}>{sec.project_key}</span>
                       </Link>
                     </li>
                   ))}

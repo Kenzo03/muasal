@@ -66,3 +66,23 @@ WHERE tm.ticket_id = $1 ORDER BY m.id DESC;
 
 -- name: UserIDsByEmails :many
 SELECT id FROM users WHERE lower(email) = ANY (sqlc.arg('emails')::text[]);
+
+-- name: MoveFixedTickets :many
+-- MSL-29: "Fixes KEY" in a pushed commit moves the open ticket to its
+-- project's last working status, In review by default. Never back, and never
+-- closed: closing needs a decision record.
+WITH review AS (
+  SELECT DISTINCT ON (project_id) project_id, id, name, position FROM statuses
+  WHERE category = 'in_progress' ORDER BY project_id, position DESC
+), moved AS (
+  SELECT t.id, cur.name AS old_status, r.id AS review_id, r.name AS new_status
+  FROM tickets t
+  JOIN statuses cur ON cur.id = t.status_id
+  JOIN review r ON r.project_id = t.project_id
+  WHERE t.key = ANY (sqlc.arg('keys')::text[]) AND t.closed_at IS NULL
+    AND cur.category IN ('todo', 'in_progress') AND cur.position < r.position
+)
+UPDATE tickets t SET status_id = m.review_id, version = t.version + 1, updated_at = now()
+FROM moved m
+WHERE t.id = m.id
+RETURNING t.id, t.project_id, m.old_status, m.new_status;

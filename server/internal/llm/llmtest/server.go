@@ -26,6 +26,7 @@ type Server struct {
 	Down         bool                                                     // answer every call with 503
 	RejectSchema bool                                                     // answer json_schema requests with 400
 	Key          string                                                   // when set, require "Bearer <Key>"
+	Missing      string                                                   // a model this server lacks: 404 as Ollama says it
 
 	ChatCalls  int
 	EmbedCalls int
@@ -60,7 +61,7 @@ func (s *Server) Set(f func(s *Server)) {
 
 func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
-	down, key, dim, answer, reject := s.Down, s.Key, s.Dim, s.Answer, s.RejectSchema
+	down, key, dim, answer, reject, missing := s.Down, s.Key, s.Dim, s.Answer, s.RejectSchema, s.Missing
 	s.mu.Unlock()
 	if down {
 		http.Error(w, "model server stopped", http.StatusServiceUnavailable)
@@ -75,9 +76,14 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]any{"data": []map[string]string{{"id": "qwen3.5:4b"}, {"id": "bge-m3"}}})
 	case "/v1/embeddings":
 		var in struct {
+			Model string   `json:"model"`
 			Input []string `json:"input"`
 		}
 		_ = json.NewDecoder(r.Body).Decode(&in)
+		if missing != "" && in.Model == missing {
+			http.Error(w, `{"error":{"message":"model \"`+missing+`\" not found, try pulling it first"}}`, http.StatusNotFound)
+			return
+		}
 		s.mu.Lock()
 		s.EmbedCalls++
 		s.Embedded = append(s.Embedded, in.Input...)
@@ -90,6 +96,10 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 	case "/v1/chat/completions":
 		var body map[string]any
 		_ = json.NewDecoder(r.Body).Decode(&body)
+		if missing != "" && body["model"] == missing {
+			http.Error(w, `{"error":{"message":"model \"`+missing+`\" not found, try pulling it first"}}`, http.StatusNotFound)
+			return
+		}
 		rf, _ := body["response_format"].(map[string]any)
 		if reject && rf["type"] == "json_schema" {
 			http.Error(w, `{"error":{"message":"response_format json_schema is not supported"}}`, http.StatusBadRequest)
