@@ -80,11 +80,32 @@ var (
 		`|\b(does not|doesn't|do not|don't|did not|didn't|not)\b.{0,40}\b(say|says|state|states|stated|record|records|recorded|explain|explains|mention|mentions|give|gives)\b.{0,40}\b(why|reason)\b` +
 		`|\breasons?\b.{0,30}\b(is|are|was|were)\s+not\s+(recorded|stated|given|documented|mentioned)\b`)
 	// becauseRe finds a claim that gives a reason.
+	// lateRe and notLateRe spot a claim that calls a ticket late, and one that
+	// says it is not (MSL-43).
+	lateRe    = regexp.MustCompile(`(?i)\b(terlambat|telat|overdue|late|past due|lewat jatuh tempo|melewati (?:batas waktu|tenggat|jatuh tempo))\b`)
+	notLateRe = regexp.MustCompile(`(?i)\b(belum|tidak|tak|bukan|not|isn't|is not|no longer|tidak lagi)\s+(terlambat|telat|overdue|late|past due)\b`)
 	becauseRe = regexp.MustCompile(`(?i)\b(karena|sebab|disebabkan|akibat|agar|supaya|because|due to|so that)\b`)
 )
 
 // saysNoReason reports whether a claim says the reason is not recorded.
 func saysNoReason(text string) bool { return noReasonRe.MatchString(text) }
+
+// ContradictsDue reports whether a claim calls a ticket late whose own due note
+// says it is not: a small model does so even with "due tomorrow, not overdue"
+// in front of it (MSL-43).
+func ContradictsDue(c Claim, blocks map[string]string) bool {
+	if !lateRe.MatchString(c.Text) || notLateRe.MatchString(c.Text) {
+		return false
+	}
+	for _, key := range citeKeyRe.FindAllString(c.Text, -1) {
+		for k, b := range blocks {
+			if strings.EqualFold(k, key) && (strings.Contains(b, ", not overdue") || strings.Contains(b, ", due today")) {
+				return true
+			}
+		}
+	}
+	return false
+}
 
 // givesReason reports whether a claim gives a reason.
 func givesReason(text string) bool { return becauseRe.MatchString(text) && !saysNoReason(text) }

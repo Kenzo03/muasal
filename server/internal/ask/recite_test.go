@@ -67,3 +67,23 @@ func TestReciteChecksOneDigitFiguresWithUnits(t *testing.T) {
 		t.Errorf("a right citation moved: %v %+v", got.Cites, moved)
 	}
 }
+
+// MSL-43: a claim that calls a ticket late whose due note says otherwise goes;
+// a true one, or one saying it isn't late, stays.
+func TestContradictsDue(t *testing.T) {
+	blocks := map[string]string{
+		"HRIS-8": "[HRIS-8] Bug · open\nAssigned to Fajar · priority urgent · due 2026-10-01, due tomorrow, not overdue\n",
+		"HRIS-6": "[HRIS-6] Bug · open\nAssigned to Fajar · priority urgent · due 2026-09-28, overdue by 2 days\n",
+	}
+	for text, want := range map[string]bool{
+		"Tiket HRIS-8 terlambat karena jatuh tempo besok.":  true,
+		"HRIS-6 is overdue by two days.":                    false,
+		"HRIS-8 belum terlambat; jatuh tempo besok.":        false,
+		"HRIS-8 dipegang Fajar Nugroho.":                    false,
+		"Both HRIS-6 and HRIS-8 are late, both with Fajar.": true,
+	} {
+		if got := ask.ContradictsDue(ask.Claim{Text: text}, blocks); got != want {
+			t.Errorf("%q: %v, want %v", text, got, want)
+		}
+	}
+}
