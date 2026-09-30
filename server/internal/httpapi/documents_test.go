@@ -393,4 +393,10 @@ func TestReplacingADocumentKeepsItsMenus(t *testing.T) {
 	if !slices.Equal(menusOf(doc), []int64{w.ot.ID}) || len(doc.Replaces) != 1 || doc.Replaces[0].Key != "HRIS-DOC2" {
 		t.Fatalf("replaced later: %v %+v", menusOf(doc), doc.Replaces)
 	}
+	// MSL-39: Behaviours' baseline is the section of the document in force.
+	var b httpapi.BehaviorList
+	if code := e.call(lead, http.MethodGet, fmt.Sprintf("/nodes/%d/behaviors", w.ot.ID), nil, &b); code != http.StatusOK ||
+		len(b.Sections) != 1 || b.Sections[0].DocumentKey != "HRIS-DOC3" || b.Sections[0].Title != "Overtime Approval" {
+		t.Fatalf("behaviours baseline: %d %+v", code, b.Sections)
+	}
 }

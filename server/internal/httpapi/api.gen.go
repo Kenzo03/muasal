@@ -1490,6 +1490,9 @@ type Behavior struct {
 // BehaviorList defines model for BehaviorList.
 type BehaviorList struct {
 	Items []Behavior `json:"items"`
+
+	// Sections The linked sections of the documents in force, not replaced ones; the spec's baseline under the decisions (MSL-39).
+	Sections []TimelineSection `json:"sections"`
 }
 
 // Client defines model for Client.

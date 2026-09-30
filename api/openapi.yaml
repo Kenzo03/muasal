@@ -2276,11 +2276,15 @@ components:
         alternatives: { type: string }
     BehaviorList:
       type: object
-      required: [items]
+      required: [items, sections]
       properties:
         items:
           type: array
           items: { $ref: "#/components/schemas/Behavior" }
+        sections:
+          type: array
+          description: The linked sections of the documents in force, not replaced ones; the spec's baseline under the decisions (MSL-39).
+          items: { $ref: "#/components/schemas/TimelineSection" }
     Ref:
       type: object
       required: [id, name]

@@ -1861,6 +1861,8 @@ export interface components {
         };
         BehaviorList: {
             items: components["schemas"]["Behavior"][];
+            /** @description The linked sections of the documents in force, not replaced ones; the spec's baseline under the decisions (MSL-39). */
+            sections: components["schemas"]["TimelineSection"][];
         };
         Ref: {
             /** Format: int64 */
