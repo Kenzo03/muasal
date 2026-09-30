@@ -36,9 +36,9 @@ export default async function TicketFilters({ action, values, clients, assignees
       </label>
       <div className="hidden w-full flex-wrap items-center gap-2 peer-checked:flex md:flex md:w-auto">
         {showsClients(clients) && (
-          <label className={pick}>
+          <label htmlFor={`${action}-client`} className={pick}>
             {t("client")}
-            <select name="client" defaultValue={values.client ?? ""} className={select}>
+            <select id={`${action}-client`} name="client" defaultValue={values.client ?? ""} className={select}>
               <option value="">{t("allClients")}</option>
               <option value="core">{t("core")}</option>
               {clients.map((c) => (
@@ -47,18 +47,18 @@ export default async function TicketFilters({ action, values, clients, assignees
             </select>
           </label>
         )}
-        <label className={pick}>
+        <label htmlFor={`${action}-type`} className={pick}>
           {t("type")}
-          <select name="type" defaultValue={values.type ?? ""} className={select}>
+          <select id={`${action}-type`} name="type" defaultValue={values.type ?? ""} className={select}>
             <option value="">{t("anyType")}</option>
             {(["bug", "change_request", "feature"] as const).map((ty) => (
               <option key={ty} value={ty}>{tTypes(ty)}</option>
             ))}
           </select>
         </label>
-        <label className={pick}>
+        <label htmlFor={`${action}-assignee`} className={pick}>
           {t("assignee")}
-          <select name="assignee" defaultValue={values.assignee ?? ""} className={select}>
+          <select id={`${action}-assignee`} name="assignee" defaultValue={values.assignee ?? ""} className={select}>
             <option value="">{t("anyone")}</option>
             <option value="me">{t("mine")}</option>
             <option value="none">{t("unassigned")}</option>
@@ -68,9 +68,9 @@ export default async function TicketFilters({ action, values, clients, assignees
           </select>
         </label>
         {labels.length > 0 && (
-          <label className={pick}>
+          <label htmlFor={`${action}-label`} className={pick}>
             {t("label")}
-            <select name="label" defaultValue={values.label ?? ""} className={select}>
+            <select id={`${action}-label`} name="label" defaultValue={values.label ?? ""} className={select}>
               <option value="">{t("anyLabel")}</option>
               {labels.map((l) => (
                 <option key={l} value={l}>{l}</option>
@@ -80,9 +80,9 @@ export default async function TicketFilters({ action, values, clients, assignees
         )}
         {statuses && (
           <>
-            <label className={pick}>
+            <label htmlFor={`${action}-status`} className={pick}>
               {t("status")}
-              <select name="status" defaultValue={values.status ?? ""} className={select}>
+              <select id={`${action}-status`} name="status" defaultValue={values.status ?? ""} className={select}>
                 <option value="">{t("anyStatus")}</option>
                 <option value="open">{t("openStatuses")}</option>
                 {statuses.map((s) => (
@@ -90,17 +90,17 @@ export default async function TicketFilters({ action, values, clients, assignees
                 ))}
               </select>
             </label>
-            <label className={pick}>
+            <label htmlFor={`${action}-due`} className={pick}>
               {t("due")}
-              <select name="due" defaultValue={values.due ?? ""} className={select}>
+              <select id={`${action}-due`} name="due" defaultValue={values.due ?? ""} className={select}>
                 <option value="">{t("anyDue")}</option>
                 <option value="overdue">{t("overdue")}</option>
                 <option value="week">{t("dueWeek")}</option>
               </select>
             </label>
-            <label className={pick}>
+            <label htmlFor={`${action}-stale`} className={pick}>
               {t("stale")}
-              <select name="stale" defaultValue={values.stale ?? ""} className={select}>
+              <select id={`${action}-stale`} name="stale" defaultValue={values.stale ?? ""} className={select}>
                 <option value="">{t("anyActivity")}</option>
                 {/* A link from the workload page may carry another number of days. */}
                 {[...new Set([7, 14, 30, ...(/^\d+$/.test(values.stale ?? "") ? [Number(values.stale)] : [])])]
@@ -110,18 +110,18 @@ export default async function TicketFilters({ action, values, clients, assignees
                   ))}
               </select>
             </label>
-            <label className={pick}>
+            <label htmlFor={`${action}-missing`} className={pick}>
               {t("missing")}
-              <select name="missing" defaultValue={values.missing ?? ""} className={select}>
+              <select id={`${action}-missing`} name="missing" defaultValue={values.missing ?? ""} className={select}>
                 <option value="">{t("nothingMissing")}</option>
                 <option value="reason">{t("missingReason")}</option>
                 <option value="menus">{t("missingMenus")}</option>
                 <option value="weak_reason">{t("weakReason")}</option>
               </select>
             </label>
-            <label className={pick}>
+            <label htmlFor={`${action}-sort`} className={pick}>
               {t("sort")}
-              <select name="sort" defaultValue={values.sort ?? "updated"} className={select}>
+              <select id={`${action}-sort`} name="sort" defaultValue={values.sort ?? "updated"} className={select}>
                 <option value="updated">{t("sortUpdated")}</option>
                 <option value="created">{t("sortCreated")}</option>
                 <option value="key">{t("sortKey")}</option>
