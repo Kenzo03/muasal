@@ -1454,6 +1454,7 @@
     "applied": "Diterapkan: {created} node dibuat, {linked} tautan bagian.",
     "openTree": "Buka pohon modul",
     "discarded": "Draf ini dibuang.",
-    "alreadyApplied": "Draf ini sudah diterapkan."
+    "alreadyApplied": "Draf ini sudah diterapkan.",
+    "elapsed": "sudah {seconds} dtk"
   }
 }

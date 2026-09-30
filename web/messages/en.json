@@ -1454,6 +1454,7 @@
     "applied": "Applied: {created} nodes created, {linked} section links.",
     "openTree": "Open the module tree",
     "discarded": "This draft was discarded.",
-    "alreadyApplied": "This draft was applied."
+    "alreadyApplied": "This draft was applied.",
+    "elapsed": "{seconds} s so far"
   }
 }
