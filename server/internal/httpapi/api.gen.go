@@ -2225,6 +2225,11 @@ type Problem struct {
 
 // Project defines model for Project.
 type Project struct {
+	// ArchivedAt When it was archived (MSL-64): an archived project is read-only, so role reads viewer for everyone until it is restored.
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+
+	// CanRestore The caller may archive or restore it (a project admin or system admin).
+	CanRestore  *bool     `json:"can_restore,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 	Description string    `json:"description"`
 	Id          int64     `json:"id"`
@@ -3121,6 +3126,12 @@ type MarkNotificationsReadJSONBody struct {
 	Id *int64 `json:"id,omitempty"`
 }
 
+// ListProjectsParams defines parameters for ListProjects.
+type ListProjectsParams struct {
+	// Archived Also archived projects, as All projects lists them; pickers leave them out (MSL-64).
+	Archived *bool `form:"archived,omitempty" json:"archived,omitempty"`
+}
+
 // ListAssigneesParams defines parameters for ListAssignees.
 type ListAssigneesParams struct {
 	// ClientId Only those who may see this client's tickets (MSL-22).
@@ -3607,7 +3618,7 @@ type ServerInterface interface {
 	StreamNotifications(w http.ResponseWriter, r *http.Request)
 
 	// (GET /projects)
-	ListProjects(w http.ResponseWriter, r *http.Request)
+	ListProjects(w http.ResponseWriter, r *http.Request, params ListProjectsParams)
 
 	// (POST /projects)
 	CreateProject(w http.ResponseWriter, r *http.Request)
@@ -3617,6 +3628,9 @@ type ServerInterface interface {
 
 	// (PATCH /projects/{key})
 	UpdateProject(w http.ResponseWriter, r *http.Request, key string)
+
+	// (POST /projects/{key}/archive)
+	ArchiveProject(w http.ResponseWriter, r *http.Request, key string)
 
 	// (GET /projects/{key}/assignees)
 	ListAssignees(w http.ResponseWriter, r *http.Request, key string, params ListAssigneesParams)
@@ -3668,6 +3682,9 @@ type ServerInterface interface {
 
 	// (POST /projects/{key}/repos)
 	CreateRepo(w http.ResponseWriter, r *http.Request, key string)
+
+	// (POST /projects/{key}/restore)
+	RestoreProject(w http.ResponseWriter, r *http.Request, key string)
 
 	// (GET /projects/{key}/setup)
 	GetProjectSetup(w http.ResponseWriter, r *http.Request, key string)
@@ -5504,8 +5521,27 @@ func (siw *ServerInterfaceWrapper) StreamNotifications(w http.ResponseWriter, r 
 // ListProjects operation middleware
 func (siw *ServerInterfaceWrapper) ListProjects(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListProjectsParams
+
+	// ------------- Optional query parameter "archived" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "archived", r.URL.Query(), &params.Archived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "archived"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "archived", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListProjects(w, r)
+		siw.Handler.ListProjects(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -5572,6 +5608,32 @@ func (siw *ServerInterfaceWrapper) UpdateProject(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateProject(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ArchiveProject operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveProject(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveProject(w, r, key)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -6062,6 +6124,32 @@ func (siw *ServerInterfaceWrapper) CreateRepo(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateRepo(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RestoreProject operation middleware
+func (siw *ServerInterfaceWrapper) RestoreProject(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreProject(w, r, key)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -7428,6 +7516,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/projects/{key}/members", wrapper.SetProjectMembers)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/labels", wrapper.ListProjectLabels)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/setup", wrapper.GetProjectSetup)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/archive", wrapper.ArchiveProject)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/restore", wrapper.RestoreProject)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/member-candidates", wrapper.ListMemberCandidates)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/contacts", wrapper.ListContacts)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/contacts", wrapper.CreateContact)

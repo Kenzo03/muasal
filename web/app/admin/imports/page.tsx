@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getLocale, getTimeZone, getTranslations } from "next-intl/server";
 import PageBar from "@/components/PageBar";
 import { dateTime } from "@/lib/format";
+import { active } from "@/lib/projects";
 import { getMe, getProjects, serverApi } from "@/lib/server-api";
 import { cx, table } from "@/lib/ui";
 import NewImport from "./NewImport";
@@ -16,7 +17,7 @@ export default async function ImportsPage({ searchParams }: { searchParams: Prom
   const t = await getTranslations("imports");
   const locale = await getLocale();
   const timeZone = await getTimeZone();
-  const projects = (await getProjects()).filter((p) => me.is_admin || p.role === "admin");
+  const projects = active(await getProjects()).filter((p) => me.is_admin || p.role === "admin");
   const { data } = projects.length > 0 ? await (await serverApi()).GET("/imports") : { data: undefined };
   return (
     <>

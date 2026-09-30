@@ -108,6 +108,7 @@ WITH ins AS (
          jsonb_build_object('when', CASE t.due_date - d.today WHEN 0 THEN 'today' WHEN 1 THEN 'tomorrow' ELSE 'overdue' END,
                             'due', t.due_date, 'on', d.today)
   FROM tickets t
+  JOIN projects p ON p.id = t.project_id AND p.archived_at IS NULL -- MSL-64
   JOIN users u ON u.id = t.assignee_id AND u.disabled_at IS NULL
   CROSS JOIN LATERAL (
     SELECT (sqlc.arg('now')::timestamptz AT TIME ZONE u.timezone)::date AS today,

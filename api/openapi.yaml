@@ -336,6 +336,8 @@ paths:
     get:
       operationId: listProjects
       tags: [projects]
+      parameters:
+        - { name: archived, in: query, schema: { type: boolean }, description: "Also archived projects, as All projects lists them; pickers leave them out (MSL-64)." }
       responses:
         "200":
           description: The projects the user belongs to; system admins see every project.
@@ -534,6 +536,34 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ProjectSetup" }
+        default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/archive:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: archiveProject
+      tags: [projects]
+      description: Project admins only. Archives a finished project (MSL-64); archiving an archived project changes nothing.
+      responses:
+        "200":
+          description: The archived project.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+        default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/restore:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: restoreProject
+      tags: [projects]
+      description: Project admins only. Brings an archived project back (MSL-64).
+      responses:
+        "200":
+          description: The restored project.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
         default: { $ref: "#/components/responses/Problem" }
   /projects/{key}/member-candidates:
     parameters:
@@ -2059,6 +2089,8 @@ components:
         description: { type: string }
         role: { $ref: "#/components/schemas/ProjectRole" }
         created_at: { type: string, format: date-time }
+        archived_at: { type: string, format: date-time, description: "When it was archived (MSL-64): an archived project is read-only, so role reads viewer for everyone until it is restored." }
+        can_restore: { type: boolean, description: The caller may archive or restore it (a project admin or system admin). }
     ProjectList:
       type: object
       required: [items]

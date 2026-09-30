@@ -178,6 +178,7 @@
     "emailedTo": "Also emailed to {email}."
   },
   "projectList": {
+    "archived": "Archived",
     "heading": "All projects",
     "count": "{count, plural, one {# project} other {# projects}}",
     "find": "Find a project by name or key",
@@ -232,6 +233,7 @@
     "estimatedOf": "{estimated} of {open} open tickets have an estimate"
   },
   "settings": {
+    "archivedReadOnly": "This project is archived; restore it to change its settings.",
     "adminsOnly": "Only project admins can change settings.",
     "general": "General",
     "key": "Key",
@@ -1393,6 +1395,14 @@
     "copied": "Copied",
     "print": "Print",
     "link": "Weekly status"
+  },
+  "archive": {
+    "title": "Archive this project",
+    "hint": "When the work is done: the project becomes read-only for everyone and leaves pickers and Home. It stays under All projects, and a project admin can restore it.",
+    "archive": "Archive project",
+    "confirm": "Archive {name}? Nobody can change it until a project admin restores it.",
+    "restore": "Restore project",
+    "banner": "This project is archived: it's read-only and out of pickers and Home until a project admin restores it."
   },
   "summaries": {
     "heading": "Change summaries",

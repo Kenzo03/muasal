@@ -122,7 +122,7 @@ func (s *Server) DeleteSummarySchedule(w http.ResponseWriter, r *http.Request, i
 		return
 	}
 	if !pc.scope.Allows(access.Admin) {
-		writeProblem(w, http.StatusForbidden, "forbidden", "Your project role does not allow this")
+		denyRole(w, pc)
 		return
 	}
 	err = s.inTx(ctx, func(q *db.Queries) error {
@@ -192,7 +192,7 @@ func (s *Server) runSummarySchedule(ctx context.Context, sch db.SummarySchedule,
 	if err != nil {
 		return err
 	}
-	if !member || !scope.Allows(access.Admin) {
+	if !member || !scope.Allows(access.Admin) || p.ArchivedAt != nil { // MSL-64: an archived project has no weekly summaries
 		return skip()
 	}
 	pc := projectCtx{user: &u, project: p, scope: scope}

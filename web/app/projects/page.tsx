@@ -17,7 +17,8 @@ export default async function ProjectsPage() {
   const api = await serverApi();
   const [projects, mine] = await Promise.all([getProjects(), api.GET("/me/tickets", { params: { query: { limit: 1 } } })]);
   const open = Object.fromEntries((mine.data?.projects ?? []).map((p) => [p.key, p.open]));
-  const byName = [...projects].sort((a, b) => a.name.localeCompare(b.name));
+  // Archived projects stay readable here, after the rest (MSL-64).
+  const byName = [...projects].sort((a, b) => Number(!!a.archived_at) - Number(!!b.archived_at) || a.name.localeCompare(b.name));
   return (
     <>
       <PageBar>
@@ -34,7 +35,7 @@ export default async function ProjectsPage() {
         {projects.length === 0 ? (
           <p className="text-muted">{me.is_admin ? th("noProjectsAdmin") : th("noProjects")}</p>
         ) : (
-          <ProjectList projects={byName.map((p) => ({ key: p.key, name: p.name, description: p.description, role: p.role }))} open={open} />
+          <ProjectList projects={byName.map((p) => ({ key: p.key, name: p.name, description: p.description, role: p.role, archived: !!p.archived_at }))} open={open} />
         )}
       </main>
     </>

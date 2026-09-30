@@ -203,7 +203,7 @@ func (s *Server) noteFor(w http.ResponseWriter, r *http.Request, key, need strin
 		return projectCtx{}, db.GetNoteByKeyRow{}, false
 	}
 	if !pc.scope.Allows(need) {
-		writeProblem(w, http.StatusForbidden, "forbidden", "Your project role does not allow this")
+		denyRole(w, pc)
 		return projectCtx{}, db.GetNoteByKeyRow{}, false
 	}
 	return pc, row, true

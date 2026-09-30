@@ -12,7 +12,7 @@ import (
 const createProject = `-- name: CreateProject :one
 INSERT INTO projects (key, name, description)
 VALUES ($1, $2, $3)
-RETURNING id, key, name, description, created_at, ticket_seq, note_seq, doc_seq
+RETURNING id, key, name, description, created_at, ticket_seq, note_seq, doc_seq, archived_at
 `
 
 type CreateProjectParams struct {
@@ -33,12 +33,13 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 		&i.TicketSeq,
 		&i.NoteSeq,
 		&i.DocSeq,
+		&i.ArchivedAt,
 	)
 	return i, err
 }
 
 const getProjectByID = `-- name: GetProjectByID :one
-SELECT id, key, name, description, created_at, ticket_seq, note_seq, doc_seq FROM projects WHERE id = $1
+SELECT id, key, name, description, created_at, ticket_seq, note_seq, doc_seq, archived_at FROM projects WHERE id = $1
 `
 
 func (q *Queries) GetProjectByID(ctx context.Context, id int64) (Project, error) {
@@ -53,12 +54,13 @@ func (q *Queries) GetProjectByID(ctx context.Context, id int64) (Project, error)
 		&i.TicketSeq,
 		&i.NoteSeq,
 		&i.DocSeq,
+		&i.ArchivedAt,
 	)
 	return i, err
 }
 
 const getProjectByKey = `-- name: GetProjectByKey :one
-SELECT id, key, name, description, created_at, ticket_seq, note_seq, doc_seq FROM projects WHERE key = $1
+SELECT id, key, name, description, created_at, ticket_seq, note_seq, doc_seq, archived_at FROM projects WHERE key = $1
 `
 
 func (q *Queries) GetProjectByKey(ctx context.Context, key string) (Project, error) {
@@ -73,6 +75,7 @@ func (q *Queries) GetProjectByKey(ctx context.Context, key string) (Project, err
 		&i.TicketSeq,
 		&i.NoteSeq,
 		&i.DocSeq,
+		&i.ArchivedAt,
 	)
 	return i, err
 }
@@ -134,16 +137,18 @@ func (q *Queries) ListProjectClients(ctx context.Context, arg ListProjectClients
 }
 
 const listProjects = `-- name: ListProjects :many
-SELECT p.id, p.key, p.name, p.description, p.created_at, p.ticket_seq, p.note_seq, p.doc_seq, m.role
+SELECT p.id, p.key, p.name, p.description, p.created_at, p.ticket_seq, p.note_seq, p.doc_seq, p.archived_at, m.role
 FROM projects p
 LEFT JOIN memberships m ON m.project_id = p.id AND m.user_id = $1
-WHERE $2::boolean OR m.user_id IS NOT NULL
+WHERE ($2::boolean OR m.user_id IS NOT NULL)
+  AND ($3::boolean OR p.archived_at IS NULL)
 ORDER BY p.key
 `
 
 type ListProjectsParams struct {
-	UserID  int64
-	IsAdmin bool
+	UserID   int64
+	IsAdmin  bool
+	Archived bool
 }
 
 type ListProjectsRow struct {
@@ -152,8 +157,9 @@ type ListProjectsRow struct {
 }
 
 // System admins see every project; everyone else sees the projects they belong to.
+// Archived projects only with archived (MSL-64).
 func (q *Queries) ListProjects(ctx context.Context, arg ListProjectsParams) ([]ListProjectsRow, error) {
-	rows, err := q.db.Query(ctx, listProjects, arg.UserID, arg.IsAdmin)
+	rows, err := q.db.Query(ctx, listProjects, arg.UserID, arg.IsAdmin, arg.Archived)
 	if err != nil {
 		return nil, err
 	}
@@ -170,6 +176,7 @@ func (q *Queries) ListProjects(ctx context.Context, arg ListProjectsParams) ([]L
 			&i.Project.TicketSeq,
 			&i.Project.NoteSeq,
 			&i.Project.DocSeq,
+			&i.Project.ArchivedAt,
 			&i.Role,
 		); err != nil {
 			return nil, err
@@ -190,6 +197,33 @@ SELECT id FROM projects WHERE id = $1 FOR UPDATE
 func (q *Queries) LockProject(ctx context.Context, id int64) error {
 	_, err := q.db.Exec(ctx, lockProject, id)
 	return err
+}
+
+const setProjectArchived = `-- name: SetProjectArchived :one
+UPDATE projects SET archived_at = CASE WHEN $1::boolean THEN coalesce(archived_at, now()) END
+WHERE id = $2 RETURNING id, key, name, description, created_at, ticket_seq, note_seq, doc_seq, archived_at
+`
+
+type SetProjectArchivedParams struct {
+	Archived bool
+	ID       int64
+}
+
+func (q *Queries) SetProjectArchived(ctx context.Context, arg SetProjectArchivedParams) (Project, error) {
+	row := q.db.QueryRow(ctx, setProjectArchived, arg.Archived, arg.ID)
+	var i Project
+	err := row.Scan(
+		&i.ID,
+		&i.Key,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
+		&i.TicketSeq,
+		&i.NoteSeq,
+		&i.DocSeq,
+		&i.ArchivedAt,
+	)
+	return i, err
 }
 
 const unlinkClientsExcept = `-- name: UnlinkClientsExcept :exec
@@ -213,7 +247,7 @@ UPDATE projects SET
   name        = coalesce($2, name),
   description = coalesce($3, description)
 WHERE id = $4
-RETURNING id, key, name, description, created_at, ticket_seq, note_seq, doc_seq
+RETURNING id, key, name, description, created_at, ticket_seq, note_seq, doc_seq, archived_at
 `
 
 type UpdateProjectParams struct {
@@ -240,6 +274,7 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (P
 		&i.TicketSeq,
 		&i.NoteSeq,
 		&i.DocSeq,
+		&i.ArchivedAt,
 	)
 	return i, err
 }
