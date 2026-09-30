@@ -2810,6 +2810,13 @@ components:
           type: array
           items: { type: string }
         missing_reason: { type: boolean }
+        checklist:
+          type: object
+          description: The description's task list, when it has one (MSL-55).
+          required: [done, total]
+          properties:
+            done: { type: integer }
+            total: { type: integer }
         updated_at: { type: string, format: date-time }
     TicketPage:
       type: object

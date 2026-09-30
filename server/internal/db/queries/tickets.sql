@@ -64,7 +64,10 @@ SELECT t.id, t.key, t.title, t.type, t.priority, t.due_date, t.status_id, t.clie
        t.assignee_id, a.name AS assignee_name, coalesce(rc.name, ru.name, '')::text AS requester_name,
        t.reason = '' AS missing_reason, t.updated_at,
        ARRAY(SELECT n.name FROM ticket_nodes tn JOIN nodes n ON n.id = tn.node_id
-             WHERE tn.ticket_id = t.id ORDER BY lower(n.name), n.id)::text[] AS node_names
+             WHERE tn.ticket_id = t.id ORDER BY lower(n.name), n.id)::text[] AS node_names,
+       -- MSL-55: the description's task list, "- [ ] step" and "- [x] step".
+       (SELECT count(*) FROM regexp_matches(t.description, '^[ \t]*(?:[-*+]|[0-9]+[.)])[ \t]+\[[ xX]\]', 'gn'))::int AS checklist_total,
+       (SELECT count(*) FROM regexp_matches(t.description, '^[ \t]*(?:[-*+]|[0-9]+[.)])[ \t]+\[[xX]\]', 'gn'))::int AS checklist_done
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
 LEFT JOIN clients c ON c.id = t.client_id

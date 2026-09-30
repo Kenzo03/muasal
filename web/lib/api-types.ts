@@ -2418,6 +2418,11 @@ export interface components {
             requester_name: string;
             node_names: string[];
             missing_reason: boolean;
+            /** @description The description's task list, when it has one (MSL-55). */
+            checklist?: {
+                done: number;
+                total: number;
+            };
             /** Format: date-time */
             updated_at: string;
         };

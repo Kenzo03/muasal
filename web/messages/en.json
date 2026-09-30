@@ -590,7 +590,8 @@
     "showAll": "Show all",
     "showRecent": "Last 14 days",
     "moveTo": "Status of {key}",
-    "noClient": "Core"
+    "noClient": "Core",
+    "checklist": "Checklist steps done"
   },
   "tickets": {
     "new": "New ticket",
@@ -632,7 +633,8 @@
       "failed": "Not changed:",
       "select": "Select {key}",
       "selectAll": "Select all"
-    }
+    },
+    "checklist": "Checklist steps done"
   },
   "ticketForm": {
     "newTitle": "New ticket",

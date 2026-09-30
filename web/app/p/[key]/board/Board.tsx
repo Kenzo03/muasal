@@ -167,6 +167,11 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, s
                     )}
                     <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
                       {showClients && <ClientChip client={c.client} coreLabel={t("noClient")} />}
+                      {c.checklist && (
+                        <span title={t("checklist")} className={c.checklist.done === c.checklist.total ? "font-semibold text-ok" : ""}>
+                          ☑ {c.checklist.done}/{c.checklist.total}
+                        </span>
+                      )}
                       {c.due_date && (
                         <span className={c.due_date < today ? "font-semibold text-danger" : ""}>{day(c.due_date, locale, c.due_date.slice(0, 4) !== today.slice(0, 4))}</span>
                       )}
