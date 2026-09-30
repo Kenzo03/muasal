@@ -70,7 +70,7 @@ export default async function TicketFilters({ action, values, clients, assignees
         </label>
         {labels.length > 0 && (
           <label htmlFor={`${action}-label`} className={pick}>
-            {t("label")}
+            {t("labelFilter")}
             <select id={`${action}-label`} name="label" defaultValue={values.label ?? ""} className={select}>
               <option value="">{t("anyLabel")}</option>
               {labels.map((l) => (
