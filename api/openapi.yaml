@@ -933,6 +933,7 @@ paths:
         - { name: closed_days, in: query, schema: { type: integer, format: int32, minimum: 1 }, description: Closed tickets only when closed within this many days; the board asks for 14. }
         - { name: type, in: query, schema: { $ref: "#/components/schemas/TicketType" } }
         - { name: label, in: query, schema: { type: string, maxLength: 30 }, description: Tickets with this label (MSL-56). }
+        - { name: accepted, in: query, schema: { type: boolean }, description: "Tickets the client accepted (true) or not yet (false) (MSL-66)." }
         - { name: client_id, in: query, schema: { type: integer, format: int64 } }
         - { name: core, in: query, schema: { type: boolean }, description: Only core work (no client). }
         - { name: assignee_id, in: query, schema: { type: integer, format: int64 } }
@@ -1013,6 +1014,36 @@ paths:
       responses:
         "200":
           description: The updated ticket; ETag carries its new version.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Ticket" }
+        default: { $ref: "#/components/responses/Problem" }
+  /tickets/{key}/acceptance:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    put:
+      operationId: acceptTicket
+      tags: [tickets]
+      description: Members and project admins record who at the client accepted the ticket's work, and when (MSL-66); it replaces an earlier record.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AcceptanceInput" }
+      responses:
+        "200":
+          description: The ticket with its acceptance; ETag carries its version.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Ticket" }
+        default: { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: unacceptTicket
+      tags: [tickets]
+      description: Members and project admins remove a ticket's acceptance record, such as one recorded by mistake.
+      responses:
+        "200":
+          description: The ticket without an acceptance.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Ticket" }
@@ -2524,6 +2555,7 @@ components:
         estimate_hours: { type: number, format: double, nullable: true, description: The effort estimate in hours (MSL-54). }
         labels: { type: array, items: { type: string }, description: "Free-text labels, lowercased (MSL-56)." }
         following: { type: boolean, description: The caller follows the ticket (MSL-57). }
+        acceptance: { $ref: "#/components/schemas/TicketAcceptance" }
         nodes:
           type: array
           items: { $ref: "#/components/schemas/NodeRef" }
@@ -2735,6 +2767,8 @@ components:
         client: { type: string }
         requested_by: { type: string }
         cancelled: { type: boolean }
+        accepted_by: { type: string, description: The client contact who accepted it (MSL-66). }
+        accepted_on: { type: string, format: date }
     SummaryPreview:
       type: object
       required: [items, model, cloud]
@@ -2870,6 +2904,21 @@ components:
         title: { type: string }
         status: { $ref: "#/components/schemas/Status" }
         closed_at: { type: string, format: date-time, nullable: true }
+    TicketAcceptance:
+      type: object
+      description: Who at the client accepted the ticket's work, as in UAT sign-off, and when (MSL-66).
+      required: [contact, accepted_on, note]
+      properties:
+        contact: { $ref: "#/components/schemas/Ref" }
+        accepted_on: { type: string, format: date }
+        note: { type: string }
+    AcceptanceInput:
+      type: object
+      required: [contact_id, accepted_on]
+      properties:
+        contact_id: { type: integer, format: int64, description: "A contact of the ticket's client; any client's contact for core work." }
+        accepted_on: { type: string, format: date, description: Today or earlier. }
+        note: { type: string, maxLength: 2000 }
     TicketSummary:
       type: object
       required: [id, key, title, type, priority, due_date, status_id, requester_name, node_names, missing_reason, updated_at]
@@ -2889,6 +2938,7 @@ components:
           items: { type: string }
         missing_reason: { type: boolean }
         labels: { type: array, items: { type: string } }
+        accepted_on: { type: string, format: date, description: When the client accepted it (MSL-66). }
         checklist:
           type: object
           description: The description's task list, when it has one (MSL-55).

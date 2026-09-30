@@ -827,6 +827,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tickets/{key}/acceptance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /** @description Members and project admins record who at the client accepted the ticket's work, and when (MSL-66); it replaces an earlier record. */
+        put: operations["acceptTicket"];
+        post?: never;
+        /** @description Members and project admins remove a ticket's acceptance record, such as one recorded by mistake. */
+        delete: operations["unacceptTicket"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tickets/{key}/transition": {
         parameters: {
             query?: never;
@@ -2119,6 +2139,7 @@ export interface components {
             labels?: string[];
             /** @description The caller follows the ticket (MSL-57). */
             following?: boolean;
+            acceptance?: components["schemas"]["TicketAcceptance"];
             nodes: components["schemas"]["NodeRef"][];
             attachments: components["schemas"]["Attachment"][];
             /** Format: int32 */
@@ -2358,6 +2379,10 @@ export interface components {
             client?: string;
             requested_by?: string;
             cancelled?: boolean;
+            /** @description The client contact who accepted it (MSL-66). */
+            accepted_by?: string;
+            /** Format: date */
+            accepted_on?: string;
         };
         SummaryPreview: {
             items: components["schemas"]["SummaryItem"][];
@@ -2493,6 +2518,26 @@ export interface components {
             /** Format: date-time */
             closed_at?: string | null;
         };
+        /** @description Who at the client accepted the ticket's work, as in UAT sign-off, and when (MSL-66). */
+        TicketAcceptance: {
+            contact: components["schemas"]["Ref"];
+            /** Format: date */
+            accepted_on: string;
+            note: string;
+        };
+        AcceptanceInput: {
+            /**
+             * Format: int64
+             * @description A contact of the ticket's client; any client's contact for core work.
+             */
+            contact_id: number;
+            /**
+             * Format: date
+             * @description Today or earlier.
+             */
+            accepted_on: string;
+            note?: string;
+        };
         TicketSummary: {
             /** Format: int64 */
             id: number;
@@ -2510,6 +2555,11 @@ export interface components {
             node_names: string[];
             missing_reason: boolean;
             labels?: string[];
+            /**
+             * Format: date
+             * @description When the client accepted it (MSL-66).
+             */
+            accepted_on?: string;
             /** @description The description's task list, when it has one (MSL-55). */
             checklist?: {
                 done: number;
@@ -4741,6 +4791,8 @@ export interface operations {
                 type?: components["schemas"]["TicketType"];
                 /** @description Tickets with this label (MSL-56). */
                 label?: string;
+                /** @description Tickets the client accepted (true) or not yet (false) (MSL-66). */
+                accepted?: boolean;
                 client_id?: number;
                 /** @description Only core work (no client). */
                 core?: boolean;
@@ -4856,6 +4908,56 @@ export interface operations {
         };
         responses: {
             /** @description The updated ticket; ETag carries its new version. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ticket"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    acceptTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptanceInput"];
+            };
+        };
+        responses: {
+            /** @description The ticket with its acceptance; ETag carries its version. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ticket"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    unacceptTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The ticket without an acceptance. */
             200: {
                 headers: {
                     [name: string]: unknown;

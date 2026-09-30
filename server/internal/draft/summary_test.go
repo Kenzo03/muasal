@@ -64,3 +64,17 @@ func TestTitle(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+// MSL-66: the appendix names who at the client accepted an item, and when.
+func TestAppendixShowsAcceptance(t *testing.T) {
+	on := time.Date(2026, 12, 12, 0, 0, 0, 0, time.UTC)
+	md := Markdown("HRIS", Summary{}, []Item{
+		{Key: "HRIS-1", Title: "Clock-in radius", Date: on, RequestedBy: "Lina", AcceptedBy: "Lina Hartono", AcceptedOn: on},
+		{Key: "HRIS-2", Title: "Shift copy", Date: on, RequestedBy: "Rina"},
+	}, "en", true)
+	for _, want := range []string{"| Accepted by the client |", "| HRIS-1 | Clock-in radius | 12 Dec 2026 | Lina | Lina Hartono, 12 Dec 2026 |", "| HRIS-2 | Shift copy | 12 Dec 2026 | Rina |  |"} {
+		if !strings.Contains(md, want) {
+			t.Errorf("missing %q in:\n%s", want, md)
+		}
+	}
+}

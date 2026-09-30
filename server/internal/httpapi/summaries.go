@@ -127,6 +127,9 @@ func (s *Server) summaryItems(ctx context.Context, pc projectCtx, ids []int64, w
 		if isCancelled {
 			it.api.Cancelled = ptr(true)
 		}
+		if t.AcceptedOn != nil { // MSL-66
+			it.api.AcceptedBy, it.api.AcceptedOn = t.AcceptedContactName, &openapi_types.Date{Time: *t.AcceptedOn}
+		}
 		items = append(items, it)
 		ticketIDs = append(ticketIDs, t.ID)
 	}
@@ -311,7 +314,10 @@ func (s *Server) summaryInputs(ctx context.Context, items []summaryItem, client 
 		}
 		inputs[i] = draft.Item{Key: it.api.Key, Kind: string(it.api.Kind), Title: it.api.Title, Menu: it.api.Menu,
 			Client: deref(it.api.Client), RequestedBy: deref(it.api.RequestedBy), Date: it.api.Date.Time,
-			Cancelled: deref(it.api.Cancelled), Text: b.String()}
+			Cancelled: deref(it.api.Cancelled), Text: b.String(), AcceptedBy: deref(it.api.AcceptedBy)}
+		if it.api.AcceptedOn != nil {
+			inputs[i].AcceptedOn = it.api.AcceptedOn.Time
+		}
 		if d := it.decision; d != nil && d.State != nil {
 			inputs[i].Change, inputs[i].Why, inputs[i].ReversedBy = deref(d.WhatChanged), deref(d.Why), deref(d.SupersededByKey)
 		}

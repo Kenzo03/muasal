@@ -73,7 +73,7 @@ func (q *Queries) GetLink(ctx context.Context, id int64) (TicketLink, error) {
 }
 
 const getTicketByID = `-- name: GetTicketByID :one
-SELECT id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at, source, external_ref, external_meta, estimate_hours, labels FROM tickets WHERE id = $1
+SELECT id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at, source, external_ref, external_meta, estimate_hours, labels, accepted_contact_id, accepted_on, acceptance_note FROM tickets WHERE id = $1
 `
 
 func (q *Queries) GetTicketByID(ctx context.Context, id int64) (Ticket, error) {
@@ -105,6 +105,9 @@ func (q *Queries) GetTicketByID(ctx context.Context, id int64) (Ticket, error) {
 		&i.ExternalMeta,
 		&i.EstimateHours,
 		&i.Labels,
+		&i.AcceptedContactID,
+		&i.AcceptedOn,
+		&i.AcceptanceNote,
 	)
 	return i, err
 }

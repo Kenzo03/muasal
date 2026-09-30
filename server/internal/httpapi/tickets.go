@@ -642,6 +642,10 @@ func ticketFromRow(ctx context.Context, q *db.Queries, row db.GetTicketByKeyRow,
 	if t.DueDate != nil {
 		out.DueDate = &openapi_types.Date{Time: *t.DueDate}
 	}
+	if t.AcceptedContactID != nil && t.AcceptedOn != nil { // MSL-66
+		out.Acceptance = &TicketAcceptance{Contact: Ref{Id: *t.AcceptedContactID, Name: deref(row.AcceptedContactName)},
+			AcceptedOn: openapi_types.Date{Time: *t.AcceptedOn}, Note: t.AcceptanceNote}
+	}
 	for i, n := range nodes {
 		out.Nodes[i] = NodeRef{Id: n.ID, Name: n.Name, Archived: n.Archived}
 	}

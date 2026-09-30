@@ -41,8 +41,8 @@ func (s *Server) ListTickets(w http.ResponseWriter, r *http.Request, key string,
 		MissingMenus:  params.Missing != nil && *params.Missing == ListTicketsParamsMissingMenus,
 		WeakReason:    params.Missing != nil && *params.Missing == ListTicketsParamsMissingWeakReason,
 		ClosedDays:    params.ClosedDays, StaleDays: params.StaleDays, Today: s.today(pc.user),
-		Label: lowerPtr(params.Label),
-		Lim:   int32(limit + 1), Off: int32(offset),
+		Label: lowerPtr(params.Label), Accepted: params.Accepted,
+		Lim: int32(limit + 1), Off: int32(offset),
 	}
 	if params.Category != nil {
 		filter.Category = ptr(string(*params.Category))
@@ -153,6 +153,9 @@ func toTicketSummary(t db.ListTicketsRow) TicketSummary {
 	}
 	if t.DueDate != nil {
 		out.DueDate = &openapi_types.Date{Time: *t.DueDate}
+	}
+	if t.AcceptedOn != nil {
+		out.AcceptedOn = &openapi_types.Date{Time: *t.AcceptedOn}
 	}
 	if t.ClientID != nil {
 		out.Client = &Ref{Id: *t.ClientID, Name: deref(t.ClientName)}
