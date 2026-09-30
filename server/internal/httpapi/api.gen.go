@@ -1609,10 +1609,16 @@ type Document struct {
 		Id        int64           `json:"id"`
 		Status    TreeDraftStatus `json:"status"`
 	} `json:"drafts"`
-	Filename     string            `json:"filename"`
-	Key          string            `json:"key"`
-	Markdown     string            `json:"markdown"`
-	ProjectKey   string            `json:"project_key"`
+	Filename   string `json:"filename"`
+	Key        string `json:"key"`
+	Markdown   string `json:"markdown"`
+	ProjectKey string `json:"project_key"`
+
+	// Replaces The documents this one replaced (MSL-14).
+	Replaces []struct {
+		Key   string `json:"key"`
+		Title string `json:"title"`
+	} `json:"replaces"`
 	Sections     []DocumentSection `json:"sections"`
 	SupersededBy *string           `json:"superseded_by,omitempty"`
 	Title        string            `json:"title"`

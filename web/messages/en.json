@@ -1322,7 +1322,8 @@
     "replace": "Mark replaced",
     "makeCurrent": "Make current again",
     "noNewer": "No other current document in this project yet.",
-    "replacedBy": "Replaced by"
+    "replacedBy": "Replaced by",
+    "replaces": "Replaces {key} · {title}"
   },
   "treeDraft": {
     "heading": "Tree draft",

@@ -10,6 +10,33 @@ import (
 	"time"
 )
 
+const carrySectionLinks = `-- name: CarrySectionLinks :exec
+INSERT INTO document_section_nodes (section_id, node_id)
+SELECT m.id, l.node_id
+FROM document_section_nodes l
+JOIN document_sections os ON os.id = l.section_id AND os.document_id = $1::bigint
+JOIN LATERAL (
+  SELECT ns.id FROM document_sections ns
+  WHERE ns.document_id = $2::bigint AND (lower(ns.title) = lower(os.title) OR ns.number = os.number)
+  ORDER BY lower(ns.title) = lower(os.title) DESC, ns.position
+  LIMIT 1
+) m ON true
+ON CONFLICT DO NOTHING
+`
+
+type CarrySectionLinksParams struct {
+	OldID int64
+	NewID int64
+}
+
+// A document that replaces another keeps its menus (MSL-14): each old
+// section's links move to the new section with the same title, else the same
+// number. The old document keeps its links as history.
+func (q *Queries) CarrySectionLinks(ctx context.Context, arg CarrySectionLinksParams) error {
+	_, err := q.db.Exec(ctx, carrySectionLinks, arg.OldID, arg.NewID)
+	return err
+}
+
 const createDocument = `-- name: CreateDocument :one
 INSERT INTO documents (project_id, number, key, title, client_id, filename, content_type, size_bytes, sha256, markdown, uploaded_by)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -623,6 +650,36 @@ func (q *Queries) ListProjectDocuments(ctx context.Context, arg ListProjectDocum
 			&i.UploaderName,
 			&i.SupersededByKey,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listReplacedDocuments = `-- name: ListReplacedDocuments :many
+SELECT key, title FROM documents WHERE superseded_by = $1 AND archived_at IS NULL ORDER BY number
+`
+
+type ListReplacedDocumentsRow struct {
+	Key   string
+	Title string
+}
+
+// The documents this one replaced, for its Versions panel (MSL-14).
+func (q *Queries) ListReplacedDocuments(ctx context.Context, supersededBy *int64) ([]ListReplacedDocumentsRow, error) {
+	rows, err := q.db.Query(ctx, listReplacedDocuments, supersededBy)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListReplacedDocumentsRow
+	for rows.Next() {
+		var i ListReplacedDocumentsRow
+		if err := rows.Scan(&i.Key, &i.Title); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

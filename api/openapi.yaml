@@ -2439,7 +2439,7 @@ components:
         superseded_by: { type: string, nullable: true, description: A newer document's key, e.g. HRIS-DOC2; null makes this document current again. }
     Document:
       type: object
-      required: [key, project_key, title, filename, markdown, sections, drafts, uploaded_by, created_at]
+      required: [key, project_key, title, filename, markdown, sections, drafts, replaces, uploaded_by, created_at]
       properties:
         key: { type: string }
         project_key: { type: string }
@@ -2448,6 +2448,15 @@ components:
         filename: { type: string }
         markdown: { type: string }
         sections: { type: array, items: { $ref: "#/components/schemas/DocumentSection" } }
+        replaces:
+          type: array
+          description: The documents this one replaced (MSL-14).
+          items:
+            type: object
+            required: [key, title]
+            properties:
+              key: { type: string }
+              title: { type: string }
         drafts:
           type: array
           items:

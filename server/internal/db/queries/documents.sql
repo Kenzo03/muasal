@@ -180,3 +180,23 @@ WHERE d.archived_at IS NULL
        OR to_tsvector('simple', s.title || ' ' || s.body) @@ websearch_to_tsquery('simple', sqlc.arg('q')::text))
 ORDER BY d.superseded_by IS NOT NULL, d.id DESC, s.position
 LIMIT 20;
+
+-- name: CarrySectionLinks :exec
+-- A document that replaces another keeps its menus (MSL-14): each old
+-- section's links move to the new section with the same title, else the same
+-- number. The old document keeps its links as history.
+INSERT INTO document_section_nodes (section_id, node_id)
+SELECT m.id, l.node_id
+FROM document_section_nodes l
+JOIN document_sections os ON os.id = l.section_id AND os.document_id = sqlc.arg('old_id')::bigint
+JOIN LATERAL (
+  SELECT ns.id FROM document_sections ns
+  WHERE ns.document_id = sqlc.arg('new_id')::bigint AND (lower(ns.title) = lower(os.title) OR ns.number = os.number)
+  ORDER BY lower(ns.title) = lower(os.title) DESC, ns.position
+  LIMIT 1
+) m ON true
+ON CONFLICT DO NOTHING;
+
+-- name: ListReplacedDocuments :many
+-- The documents this one replaced, for its Versions panel (MSL-14).
+SELECT key, title FROM documents WHERE superseded_by = $1 AND archived_at IS NULL ORDER BY number;

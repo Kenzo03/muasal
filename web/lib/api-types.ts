@@ -2050,6 +2050,11 @@ export interface components {
             filename: string;
             markdown: string;
             sections: components["schemas"]["DocumentSection"][];
+            /** @description The documents this one replaced (MSL-14). */
+            replaces: {
+                key: string;
+                title: string;
+            }[];
             drafts: {
                 /** Format: int64 */
                 id: number;

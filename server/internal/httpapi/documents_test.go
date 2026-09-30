@@ -8,6 +8,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -353,5 +354,43 @@ func TestSearchFindsDocumentText(t *testing.T) {
 	}
 	if e.call(lead, http.MethodGet, "/search?q=zebra", nil, &found); len(found.Sections) != 1 {
 		t.Fatalf("the lead: %+v", found.Sections)
+	}
+}
+
+// MSL-14: a document that replaces another keeps its menus, section by
+// section, and says what it replaced; marking one replaced later does too.
+func TestReplacingADocumentKeepsItsMenus(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	lead, leadUser := e.signedIn("lead@example.com", false)
+	e.seedMember(leadUser, w.p, "admin")
+	fields := map[string]string{"title": "HRIS FSD", "markdown": hrisFSD}
+	e.uploadDoc(lead, fields, "fsd-v1.md", hrisFSD)
+	if _, err := e.d.Pool.Exec(t.Context(), `INSERT INTO document_section_nodes (section_id, node_id)
+		SELECT s.id, $1 FROM document_sections s JOIN documents d ON d.id = s.document_id WHERE d.key = 'HRIS-DOC1' AND s.title = 'Overtime Approval'`, w.ot.ID); err != nil {
+		t.Fatal(err)
+	}
+	menusOf := func(doc httpapi.Document) []int64 {
+		for _, sec := range doc.Sections {
+			if sec.Title == "Overtime Approval" {
+				ids := []int64{}
+				for _, n := range sec.Nodes {
+					ids = append(ids, n.Id)
+				}
+				return ids
+			}
+		}
+		return nil
+	}
+	v2 := strings.Replace(hrisFSD, "Supervisors approve", "HR approves", 1)
+	code, doc := e.uploadDoc(lead, map[string]string{"title": "HRIS FSD v2", "markdown": v2, "supersedes": "HRIS-DOC1"}, "fsd-v2.md", v2)
+	if code != http.StatusCreated || !slices.Equal(menusOf(doc), []int64{w.ot.ID}) || len(doc.Replaces) != 1 || doc.Replaces[0].Key != "HRIS-DOC1" {
+		t.Fatalf("upload replacing: %d %v %+v", code, menusOf(doc), doc.Replaces)
+	}
+	e.uploadDoc(lead, map[string]string{"title": "HRIS FSD v3", "markdown": hrisFSD}, "fsd-v3.md", hrisFSD)
+	e.call(lead, http.MethodPatch, "/documents/HRIS-DOC2", map[string]any{"superseded_by": "HRIS-DOC3"}, nil)
+	e.call(lead, http.MethodGet, "/documents/HRIS-DOC3", nil, &doc)
+	if !slices.Equal(menusOf(doc), []int64{w.ot.ID}) || len(doc.Replaces) != 1 || doc.Replaces[0].Key != "HRIS-DOC2" {
+		t.Fatalf("replaced later: %v %+v", menusOf(doc), doc.Replaces)
 	}
 }

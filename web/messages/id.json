@@ -1322,7 +1322,8 @@
     "replace": "Tandai digantikan",
     "makeCurrent": "Jadikan terkini lagi",
     "noNewer": "Belum ada dokumen lain yang terkini di proyek ini.",
-    "replacedBy": "Digantikan oleh"
+    "replacedBy": "Digantikan oleh",
+    "replaces": "Menggantikan {key} · {title}"
   },
   "treeDraft": {
     "heading": "Draf pohon",
