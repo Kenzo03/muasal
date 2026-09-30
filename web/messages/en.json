@@ -1373,6 +1373,27 @@
       "closed": "Closed"
     }
   },
+  "status": {
+    "heading": "Weekly status",
+    "intro": "Where the project stands this week, for the client update: what closed in the last 7 days, what's in progress, late, due in the next 7 days or without an owner. A ticket can sit in more than one group.",
+    "title": "{project} status, {date}",
+    "done": "Done in the last 7 days",
+    "inProgress": "In progress",
+    "overdue": "Overdue",
+    "dueSoon": "Due in the next 7 days",
+    "unassigned": "Open without an assignee",
+    "none": "None.",
+    "nobody": "unassigned",
+    "due": "due {date}",
+    "more": "Only the first 200 are listed; the ticket list has the rest.",
+    "client": "Client",
+    "allClients": "All clients",
+    "show": "Show",
+    "copy": "Copy as Markdown",
+    "copied": "Copied",
+    "print": "Print",
+    "link": "Weekly status"
+  },
   "summaries": {
     "heading": "Change summaries",
     "new": "New summary",

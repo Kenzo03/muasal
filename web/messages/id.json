@@ -1373,6 +1373,27 @@
       "closed": "Ditutup"
     }
   },
+  "status": {
+    "heading": "Status mingguan",
+    "intro": "Posisi proyek minggu ini, untuk laporan ke klien: yang selesai 7 hari terakhir, yang sedang dikerjakan, terlambat, jatuh tempo 7 hari ke depan atau belum ada penanggung jawabnya. Satu tiket bisa masuk lebih dari satu kelompok.",
+    "title": "Status {project}, {date}",
+    "done": "Selesai 7 hari terakhir",
+    "inProgress": "Sedang dikerjakan",
+    "overdue": "Terlambat",
+    "dueSoon": "Jatuh tempo 7 hari ke depan",
+    "unassigned": "Terbuka tanpa penanggung jawab",
+    "none": "Tidak ada.",
+    "nobody": "belum ditugaskan",
+    "due": "tenggat {date}",
+    "more": "Hanya 200 pertama yang tampil; sisanya ada di daftar tiket.",
+    "client": "Klien",
+    "allClients": "Semua klien",
+    "show": "Tampilkan",
+    "copy": "Salin sebagai Markdown",
+    "copied": "Tersalin",
+    "print": "Cetak",
+    "link": "Status mingguan"
+  },
   "summaries": {
     "heading": "Ringkasan perubahan",
     "new": "Ringkasan baru",
