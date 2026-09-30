@@ -119,6 +119,10 @@ func (s *Server) CreateProject(w http.ResponseWriter, r *http.Request) {
 		}); err != nil {
 			return err
 		}
+		// MSL-47: whoever creates a project runs it until they hand it over.
+		if err := q.UpsertMembership(ctx, db.UpsertMembershipParams{UserID: admin.ID, ProjectID: p.ID, Role: "admin", AllClients: true}); err != nil {
+			return err
+		}
 		change := projectAudit(p)
 		if template != nil {
 			if err := copyTemplate(ctx, q, template.ID, p.ID); err != nil {
