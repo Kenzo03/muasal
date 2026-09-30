@@ -64,8 +64,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
       <PageBar>
         <h1 className="text-base font-semibold">{t("title")}</h1>
       </PageBar>
-      <div className="flex flex-col gap-4 p-4 md:flex-row md:p-5">
-        <aside aria-label={t("threads")} className="flex w-full shrink-0 flex-col gap-3 md:w-64">
+      {/* MSL-42: side by side from lg; beside the thread list, a tablet's answer column was too narrow and overflowed. */}
+      <div className="flex flex-col gap-4 p-4 md:p-5 lg:flex-row">
+        <aside aria-label={t("threads")} className="flex w-full shrink-0 flex-col gap-3 lg:w-64">
           <Link href="/ask" className={button.secondary}>
             <Icon name="plus" className="size-4 text-accent" />
             {t("newThread")}
@@ -73,7 +74,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
           {(threads.data?.items ?? []).length === 0 ? (
             <p className="text-[13px] text-muted">{t("noThreads")}</p>
           ) : (
-            <ul className="flex flex-col gap-0.5 text-[13.5px]">
+            <ul className="flex max-h-56 flex-col gap-0.5 overflow-y-auto text-[13.5px] lg:max-h-none">
               {threads.data?.items.map((th) => (
                 <li key={th.id}>
                   <Link
