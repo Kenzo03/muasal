@@ -1460,6 +1460,23 @@
     "add": "Tambah rilis",
     "tickets": "Tiketnya"
   },
+  "handover": {
+    "heading": "Serah terima",
+    "link": "Serah terima",
+    "title": "Serah terima {project}, {date}",
+    "intro": "Semua yang dibutuhkan klien di akhir proyek, per modul dan menu: bagian spesifikasi yang berlaku, perilaku yang berlaku (keputusan selama proyek) dan yang masih terbuka. Cetak atau salin sebagai Markdown.",
+    "spec": "Spesifikasi",
+    "behaviors": "Perilaku yang berlaku",
+    "open": "Masih terbuka",
+    "why": "Alasan",
+    "nobody": "belum ditugaskan",
+    "due": "tenggat {date}",
+    "nothing": "Belum ada catatan.",
+    "noTree": "Proyek ini belum punya modul.",
+    "client": "Klien",
+    "allClients": "Semua klien",
+    "show": "Tampilkan"
+  },
   "summaries": {
     "release": "Rilis",
     "anyRelease": "Semua rilis, dengan catatan keputusan",

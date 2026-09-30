@@ -411,6 +411,24 @@ func (e DiskUseVolume) Valid() bool {
 	}
 }
 
+// Defines values for HandoverNodeType.
+const (
+	HandoverNodeTypeMenu   HandoverNodeType = "menu"
+	HandoverNodeTypeModule HandoverNodeType = "module"
+)
+
+// Valid indicates whether the value is a known member of the HandoverNodeType enum.
+func (e HandoverNodeType) Valid() bool {
+	switch e {
+	case HandoverNodeTypeMenu:
+		return true
+	case HandoverNodeTypeModule:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportRunStatus.
 const (
 	ImportRunStatusDone     ImportRunStatus = "done"
@@ -1744,6 +1762,37 @@ type FieldError struct {
 	Code    string `json:"code"`
 	Field   string `json:"field"`
 	Message string `json:"message"`
+}
+
+// Handover The project as it stands, per module and menu in tree order: the spec sections in force, the behaviours in force and the open tickets (MSL-68).
+type Handover struct {
+	Nodes []HandoverNode `json:"nodes"`
+}
+
+// HandoverNode defines model for HandoverNode.
+type HandoverNode struct {
+	Behaviors []Behavior `json:"behaviors"`
+	Code      *string    `json:"code,omitempty"`
+
+	// Depth 0 for a top module.
+	Depth    int               `json:"depth"`
+	Id       int64             `json:"id"`
+	Name     string            `json:"name"`
+	Open     []HandoverTicket  `json:"open"`
+	Sections []TimelineSection `json:"sections"`
+	Type     HandoverNodeType  `json:"type"`
+}
+
+// HandoverNodeType defines model for HandoverNode.Type.
+type HandoverNodeType string
+
+// HandoverTicket defines model for HandoverTicket.
+type HandoverTicket struct {
+	Assignee *string             `json:"assignee,omitempty"`
+	DueDate  *openapi_types.Date `json:"due_date,omitempty"`
+	Key      string              `json:"key"`
+	Status   string              `json:"status"`
+	Title    string              `json:"title"`
 }
 
 // ImportMapping defines model for ImportMapping.
@@ -3209,6 +3258,11 @@ type UploadDocumentMultipartBody struct {
 	Title      string  `json:"title"`
 }
 
+// GetHandoverParams defines parameters for GetHandover.
+type GetHandoverParams struct {
+	ClientId *int64 `form:"client_id,omitempty" json:"client_id,omitempty"`
+}
+
 // ListNodesParams defines parameters for ListNodes.
 type ListNodesParams struct {
 	// Archived Project admins only; also list archived nodes.
@@ -3721,6 +3775,9 @@ type ServerInterface interface {
 
 	// (POST /projects/{key}/documents)
 	UploadDocument(w http.ResponseWriter, r *http.Request, key string)
+
+	// (GET /projects/{key}/handover)
+	GetHandover(w http.ResponseWriter, r *http.Request, key string, params GetHandoverParams)
 
 	// (GET /projects/{key}/labels)
 	ListProjectLabels(w http.ResponseWriter, r *http.Request, key string)
@@ -5879,6 +5936,48 @@ func (siw *ServerInterfaceWrapper) UploadDocument(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// GetHandover operation middleware
+func (siw *ServerInterfaceWrapper) GetHandover(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetHandoverParams
+
+	// ------------- Optional query parameter "client_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "client_id", r.URL.Query(), &params.ClientId, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "client_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "client_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetHandover(w, r, key, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListProjectLabels operation middleware
 func (siw *ServerInterfaceWrapper) ListProjectLabels(w http.ResponseWriter, r *http.Request) {
 
@@ -7762,6 +7861,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/projects/{key}/members", wrapper.SetProjectMembers)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/labels", wrapper.ListProjectLabels)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/setup", wrapper.GetProjectSetup)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/handover", wrapper.GetHandover)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/releases", wrapper.ListReleases)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/releases", wrapper.CreateRelease)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/releases/{id}", wrapper.UpdateRelease)

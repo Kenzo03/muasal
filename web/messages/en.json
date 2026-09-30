@@ -1460,6 +1460,23 @@
     "add": "Add release",
     "tickets": "Its tickets"
   },
+  "handover": {
+    "heading": "Handover",
+    "link": "Handover",
+    "title": "{project} handover, {date}",
+    "intro": "Everything the client needs at the end of the project, per module and menu: the specification sections in force, the behaviours in force (decisions made along the way) and what is still open. Print it or copy it as Markdown.",
+    "spec": "Specification",
+    "behaviors": "Behaviours in force",
+    "open": "Still open",
+    "why": "Why",
+    "nobody": "unassigned",
+    "due": "due {date}",
+    "nothing": "Nothing recorded yet.",
+    "noTree": "This project has no modules yet.",
+    "client": "Client",
+    "allClients": "All clients",
+    "show": "Show"
+  },
   "summaries": {
     "release": "Release",
     "anyRelease": "Any release, with decision notes",

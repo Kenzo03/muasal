@@ -146,10 +146,7 @@ func (s *Server) GetNodeBehaviors(w http.ResponseWriter, r *http.Request, id int
 	}
 	out := BehaviorList{Items: make([]Behavior, len(rows)), Sections: []TimelineSection{}}
 	for i, b := range rows {
-		out.Items[i] = Behavior{Key: b.Key, Title: b.Title, ClosedAt: b.ClosedAt, WhatChanged: b.WhatChanged, Why: b.Why, Alternatives: b.Alternatives, Unconfirmed: b.Unconfirmed}
-		if b.ClientID != nil {
-			out.Items[i].Client = &Ref{Id: *b.ClientID, Name: deref(b.ClientName)}
-		}
+		out.Items[i] = toAPIBehavior(b)
 	}
 	for _, sec := range sections {
 		if sec.SupersededByKey == nil {
@@ -157,6 +154,14 @@ func (s *Server) GetNodeBehaviors(w http.ResponseWriter, r *http.Request, id int
 		}
 	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+func toAPIBehavior(b db.ListNodeBehaviorsRow) Behavior {
+	out := Behavior{Key: b.Key, Title: b.Title, ClosedAt: b.ClosedAt, WhatChanged: b.WhatChanged, Why: b.Why, Alternatives: b.Alternatives, Unconfirmed: b.Unconfirmed}
+	if b.ClientID != nil {
+		out.Client = &Ref{Id: *b.ClientID, Name: deref(b.ClientName)}
+	}
+	return out
 }
 
 func toTimelineSection(sec db.ListNodeSectionsRow) TimelineSection {
