@@ -1,6 +1,11 @@
 // Project lists grow long in a busy install, so every picker puts the
 // projects opened last first and filters by name or key.
 
+/** The projects still in use: pickers, Home and short lists leave archived ones out (MSL-64). */
+export function active<T extends { archived_at?: string }>(projects: T[]): T[] {
+  return projects.filter((p) => !p.archived_at);
+}
+
 /** The projects opened last come first, most recent first; the rest keep their order. */
 export function recentFirst<T extends { key: string }>(projects: T[], recent: string[]): T[] {
   const rank = (key: string) => (recent.includes(key) ? recent.indexOf(key) : recent.length);

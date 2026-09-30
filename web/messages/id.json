@@ -178,6 +178,7 @@
     "emailedTo": "Juga dikirim ke {email}."
   },
   "projectList": {
+    "archived": "Diarsipkan",
     "heading": "Semua proyek",
     "count": "{count} proyek",
     "find": "Cari proyek menurut nama atau kunci",
@@ -232,6 +233,7 @@
     "estimatedOf": "{estimated} dari {open} tiket terbuka punya estimasi"
   },
   "settings": {
+    "archivedReadOnly": "Proyek ini diarsipkan; pulihkan dulu untuk mengubah pengaturannya.",
     "adminsOnly": "Hanya admin proyek yang dapat mengubah pengaturan.",
     "general": "Umum",
     "key": "Kunci",
@@ -1393,6 +1395,14 @@
     "copied": "Tersalin",
     "print": "Cetak",
     "link": "Status mingguan"
+  },
+  "archive": {
+    "title": "Arsipkan proyek ini",
+    "hint": "Saat pekerjaan selesai: proyek menjadi hanya-baca untuk semua orang dan keluar dari pilihan proyek dan Beranda. Proyek tetap ada di Semua proyek, dan admin proyek dapat memulihkannya.",
+    "archive": "Arsipkan proyek",
+    "confirm": "Arsipkan {name}? Tidak ada yang dapat mengubahnya sampai admin proyek memulihkannya.",
+    "restore": "Pulihkan proyek",
+    "banner": "Proyek ini diarsipkan: hanya-baca dan tidak muncul di pilihan proyek dan Beranda sampai admin proyek memulihkannya."
   },
   "summaries": {
     "heading": "Ringkasan perubahan",

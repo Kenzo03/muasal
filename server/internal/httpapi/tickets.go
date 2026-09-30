@@ -445,7 +445,7 @@ func (s *Server) ticketFor(w http.ResponseWriter, r *http.Request, key, need str
 		return projectCtx{}, db.GetTicketByKeyRow{}, false
 	}
 	if !pc.scope.Allows(need) {
-		writeProblem(w, http.StatusForbidden, "forbidden", "Your project role does not allow this")
+		denyRole(w, pc)
 		return projectCtx{}, db.GetTicketByKeyRow{}, false
 	}
 	return pc, row, true

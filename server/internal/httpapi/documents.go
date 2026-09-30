@@ -216,7 +216,7 @@ func (s *Server) documentFor(w http.ResponseWriter, r *http.Request, key, need s
 		return projectCtx{}, db.GetDocumentByKeyRow{}, false
 	}
 	if !pc.scope.Allows(need) {
-		writeProblem(w, http.StatusForbidden, "forbidden", "Your project role does not allow this")
+		denyRole(w, pc)
 		return projectCtx{}, db.GetDocumentByKeyRow{}, false
 	}
 	return pc, d, true

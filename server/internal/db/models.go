@@ -318,6 +318,7 @@ type Project struct {
 	TicketSeq   int64
 	NoteSeq     int64
 	DocSeq      int64
+	ArchivedAt  *time.Time
 }
 
 type ProjectClient struct {

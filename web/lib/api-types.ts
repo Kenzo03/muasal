@@ -461,6 +461,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{key}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Project admins only. Archives a finished project (MSL-64); archiving an archived project changes nothing. */
+        post: operations["archiveProject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{key}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Project admins only. Brings an archived project back (MSL-64). */
+        post: operations["restoreProject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{key}/member-candidates": {
         parameters: {
             query?: never;
@@ -1714,6 +1752,13 @@ export interface components {
             role: components["schemas"]["ProjectRole"];
             /** Format: date-time */
             created_at: string;
+            /**
+             * Format: date-time
+             * @description When it was archived (MSL-64): an archived project is read-only, so role reads viewer for everyone until it is restored.
+             */
+            archived_at?: string;
+            /** @description The caller may archive or restore it (a project admin or system admin). */
+            can_restore?: boolean;
         };
         ProjectList: {
             items: components["schemas"]["Project"][];
@@ -3775,7 +3820,10 @@ export interface operations {
     };
     listProjects: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Also archived projects, as All projects lists them; pickers leave them out (MSL-64). */
+                archived?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -4088,6 +4136,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectSetup"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    archiveProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The archived project. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Project"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    restoreProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The restored project. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Project"];
                 };
             };
             default: components["responses"]["Problem"];

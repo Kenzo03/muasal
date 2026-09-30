@@ -20,6 +20,9 @@ type projectCtx struct {
 	user    *db.User
 	project db.Project
 	scope   access.Scope
+	// ownRole is the caller's role before an archive made the project
+	// read-only (MSL-64); it decides who restores it.
+	ownRole string
 }
 
 // projectFor resolves {key} for the signed-in user. A missing project and one
@@ -41,10 +44,20 @@ func (s *Server) projectFor(w http.ResponseWriter, r *http.Request, key, need st
 	}
 	pc, ok := s.memberOf(w, r, u, p)
 	if ok && !pc.scope.Allows(need) {
-		writeProblem(w, http.StatusForbidden, "forbidden", "Your project role does not allow this")
+		denyRole(w, pc)
 		return projectCtx{}, false
 	}
 	return pc, ok
+}
+
+// denyRole answers a role below what a request needs: 409 in an archived
+// project, which takes no changes until it is restored (MSL-64), else 403.
+func denyRole(w http.ResponseWriter, pc projectCtx) {
+	if pc.project.ArchivedAt != nil {
+		writeProblem(w, http.StatusConflict, "project_archived", "This project is archived; a project admin can restore it")
+		return
+	}
+	writeProblem(w, http.StatusForbidden, "forbidden", "Your project role does not allow this")
 }
 
 // memberOf reads u's scope in p and answers 404 when u is not a member.
@@ -58,15 +71,19 @@ func (s *Server) memberOf(w http.ResponseWriter, r *http.Request, u *db.User, p 
 		writeProblem(w, http.StatusNotFound, "not_found", "Project not found")
 		return projectCtx{}, false
 	}
-	return projectCtx{user: u, project: p, scope: scope}, true
+	pc := projectCtx{user: u, project: p, scope: scope, ownRole: scope.Role}
+	if p.ArchivedAt != nil {
+		pc.scope.Role = access.Viewer // every write checks the role (MSL-64)
+	}
+	return pc, true
 }
 
-func (s *Server) ListProjects(w http.ResponseWriter, r *http.Request) {
+func (s *Server) ListProjects(w http.ResponseWriter, r *http.Request, params ListProjectsParams) {
 	u := s.requireUser(w, r)
 	if u == nil {
 		return
 	}
-	rows, err := s.q.ListProjects(r.Context(), db.ListProjectsParams{UserID: u.ID, IsAdmin: u.IsAdmin})
+	rows, err := s.q.ListProjects(r.Context(), db.ListProjectsParams{UserID: u.ID, IsAdmin: u.IsAdmin, Archived: deref(params.Archived)})
 	if err != nil {
 		s.fail(w, r, err)
 		return
@@ -145,8 +162,48 @@ func (s *Server) CreateProject(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) GetProject(w http.ResponseWriter, r *http.Request, key string) {
 	if pc, ok := s.projectFor(w, r, key, access.Viewer); ok {
-		writeJSON(w, http.StatusOK, toAPIProject(pc.project, pc.scope.Role))
+		writeJSON(w, http.StatusOK, toAPIProject(pc.project, pc.ownRole))
 	}
+}
+
+// ArchiveProject makes a finished project read-only and takes it out of
+// pickers and Home; RestoreProject brings it back (MSL-64). Both need the
+// caller's own admin role, which the archive itself turns read-only.
+func (s *Server) ArchiveProject(w http.ResponseWriter, r *http.Request, key string) {
+	s.setArchived(w, r, key, true)
+}
+
+func (s *Server) RestoreProject(w http.ResponseWriter, r *http.Request, key string) {
+	s.setArchived(w, r, key, false)
+}
+
+func (s *Server) setArchived(w http.ResponseWriter, r *http.Request, key string, archived bool) {
+	pc, ok := s.projectFor(w, r, key, access.Viewer)
+	if !ok {
+		return
+	}
+	if pc.ownRole != access.Admin {
+		writeProblem(w, http.StatusForbidden, "forbidden", "Your project role does not allow this")
+		return
+	}
+	ctx := r.Context()
+	var updated db.Project
+	err := s.inTx(ctx, func(q *db.Queries) error {
+		var err error
+		if updated, err = q.SetProjectArchived(ctx, db.SetProjectArchivedParams{ID: pc.project.ID, Archived: archived}); err != nil {
+			return err
+		}
+		action := "restore"
+		if archived {
+			action = "archive"
+		}
+		return audit(ctx, q, webMeta(r).inProject(pc.project.ID), &pc.user.ID, "project", pc.project.ID, action, nil)
+	})
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, toAPIProject(updated, pc.ownRole))
 }
 
 func (s *Server) UpdateProject(w http.ResponseWriter, r *http.Request, key string) {
@@ -253,6 +310,13 @@ func copyTemplate(ctx context.Context, q *db.Queries, from, to int64) error {
 	return copyUnder(0, nil)
 }
 
+// toAPIProject shows the caller's own role, as viewer while the project is
+// archived (MSL-64).
 func toAPIProject(p db.Project, role string) Project {
-	return Project{Id: p.ID, Key: p.Key, Name: p.Name, Description: p.Description, Role: ProjectRole(role), CreatedAt: p.CreatedAt}
+	out := Project{Id: p.ID, Key: p.Key, Name: p.Name, Description: p.Description, Role: ProjectRole(role), CreatedAt: p.CreatedAt,
+		ArchivedAt: p.ArchivedAt, CanRestore: ptr(role == access.Admin)}
+	if p.ArchivedAt != nil {
+		out.Role = ProjectRole(access.Viewer)
+	}
+	return out
 }

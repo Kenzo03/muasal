@@ -17,6 +17,7 @@ SELECT count(*) AS all_open,
        count(*) FILTER (WHERE t.reason = '' OR NOT EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id)) AS incomplete
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
+JOIN projects p ON p.id = t.project_id AND p.archived_at IS NULL -- MSL-64
 WHERE t.assignee_id = $2::bigint
   AND s.category IN ('todo', 'in_progress')
   AND ($3::boolean OR EXISTS (
@@ -58,7 +59,7 @@ const countMyTicketsByProject = `-- name: CountMyTicketsByProject :many
 SELECT p.key, count(*) AS open
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
-JOIN projects p ON p.id = t.project_id
+JOIN projects p ON p.id = t.project_id AND p.archived_at IS NULL -- MSL-64
 WHERE t.assignee_id = $1::bigint
   AND s.category IN ('todo', 'in_progress')
   AND ($2::boolean OR EXISTS (
@@ -170,7 +171,7 @@ SELECT p.key, p.name,
        count(*) FILTER (WHERE t.updated_at < now() - interval '7 days') AS stale
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
-JOIN projects p ON p.id = t.project_id
+JOIN projects p ON p.id = t.project_id AND p.archived_at IS NULL -- MSL-64
 WHERE s.category IN ('todo', 'in_progress')
   AND ($2::boolean OR EXISTS (
         SELECT 1 FROM memberships m
@@ -239,6 +240,7 @@ SELECT t.id, t.key, t.title, t.type, t.priority, t.due_date, t.client_id, c.name
                  WHERE tn.ticket_id = t.id ORDER BY lower(n.name), n.id LIMIT 1), '')::text AS menu
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
+JOIN projects p ON p.id = t.project_id AND p.archived_at IS NULL -- MSL-64
 LEFT JOIN clients c ON c.id = t.client_id
 WHERE t.assignee_id = $1::bigint
   AND s.category IN ('todo', 'in_progress')
@@ -336,6 +338,7 @@ const listRecentTickets = `-- name: ListRecentTickets :many
 SELECT t.id, t.key, t.title, t.type, t.updated_at, s.id, s.project_id, s.name, s.category, s.position, s.color, s.is_default
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
+JOIN projects p ON p.id = t.project_id AND p.archived_at IS NULL -- MSL-64
 WHERE ($1::boolean OR EXISTS (
         SELECT 1 FROM memberships m
         WHERE m.user_id = $2::bigint AND m.project_id = t.project_id

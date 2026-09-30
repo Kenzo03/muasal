@@ -6,6 +6,7 @@ import { ClientChip, PriorityChip, StatusDot, TypeIcon, initials } from "@/compo
 import Icon from "@/components/Icon";
 import { describeChange } from "@/lib/activity";
 import { dateIn, day, dayOf } from "@/lib/format";
+import { active } from "@/lib/projects";
 import { getMe, getProjects, serverApi } from "@/lib/server-api";
 import { one } from "@/lib/ticket-query";
 import { button, cx, panel } from "@/lib/ui";
@@ -27,7 +28,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const tPri = await getTranslations("priorities");
   const locale = await getLocale();
   const timeZone = await getTimeZone();
-  const projects = await getProjects();
+  const projects = active(await getProjects());
   const api = await serverApi();
   const [mine, updates, attention] = await Promise.all([
     api.GET("/me/tickets", { params: { query: { view, cursor: values.cursor } } }),

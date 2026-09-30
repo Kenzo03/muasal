@@ -146,6 +146,10 @@ func (s *Server) CreateImport(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, http.StatusForbidden, "forbidden", "Only system admins and this project's admins import tickets")
 		return
 	}
+	if p.ArchivedAt != nil {
+		denyRole(w, projectCtx{project: p})
+		return
+	}
 	m := ticketimport.Mapping{Columns: map[string]string{}}
 	if preset == "jira" {
 		m = ticketimport.JiraPreset()
@@ -234,7 +238,16 @@ func (s *Server) RunImport(w http.ResponseWriter, r *http.Request, id int64) {
 		return
 	}
 	ctx := r.Context()
-	err := s.inJobTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
+	p, err := s.q.GetProjectByID(ctx, row.ImportRun.ProjectID)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	if p.ArchivedAt != nil { // archived after the upload (MSL-64)
+		denyRole(w, projectCtx{project: p})
+		return
+	}
+	err = s.inJobTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		// Progress starts over; the dry run's counts stay.
 		var st ticketimport.Stats
 		_ = json.Unmarshal(row.ImportRun.Stats, &st)
