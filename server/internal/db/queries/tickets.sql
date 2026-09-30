@@ -14,7 +14,7 @@ RETURNING *;
 -- name: GetTicketByKey :one
 SELECT sqlc.embed(t), sqlc.embed(s), p.key AS project_key, rp.name AS reporter_name, c.name AS client_name,
        rc.name AS requester_contact_name, rc.title AS requester_contact_title,
-       ru.name AS requester_user_name, a.name AS assignee_name
+       ru.name AS requester_user_name, a.name AS assignee_name, ac.name AS accepted_contact_name
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
 JOIN projects p ON p.id = t.project_id
@@ -23,7 +23,16 @@ LEFT JOIN clients c ON c.id = t.client_id
 LEFT JOIN contacts rc ON rc.id = t.requester_contact_id
 LEFT JOIN users ru ON ru.id = t.requester_user_id
 LEFT JOIN users a ON a.id = t.assignee_id
+LEFT JOIN contacts ac ON ac.id = t.accepted_contact_id
 WHERE t.key = $1;
+
+-- name: SetTicketAcceptance :one
+-- MSL-66: records or clears the client's acceptance; like any edit it moves
+-- the version on (FSD §8.6).
+UPDATE tickets SET accepted_contact_id = sqlc.narg('contact_id'), accepted_on = sqlc.narg('accepted_on'),
+  acceptance_note = sqlc.arg('note'), version = version + 1, updated_at = now()
+WHERE id = sqlc.arg('id') AND version = sqlc.arg('version')
+RETURNING *;
 
 -- name: UpdateTicket :one
 -- Optimistic locking: no row comes back when the version moved on (FSD §8.6).
@@ -73,7 +82,7 @@ SELECT t.id, t.key, t.title, t.type, t.priority, t.due_date, t.status_id, t.clie
        -- MSL-55: the description's task list, "- [ ] step" and "- [x] step".
        (SELECT count(*) FROM regexp_matches(t.description, '^[ \t]*(?:[-*+]|[0-9]+[.)])[ \t]+\[[ xX]\]', 'gn'))::int AS checklist_total,
        (SELECT count(*) FROM regexp_matches(t.description, '^[ \t]*(?:[-*+]|[0-9]+[.)])[ \t]+\[[xX]\]', 'gn'))::int AS checklist_done,
-       t.labels
+       t.labels, t.accepted_on
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
 LEFT JOIN clients c ON c.id = t.client_id
@@ -88,6 +97,7 @@ WHERE t.project_id = sqlc.arg('project_id')
   AND (sqlc.narg('closed_days')::int IS NULL OR t.closed_at IS NULL OR t.closed_at >= now() - make_interval(days => sqlc.narg('closed_days')::int))
   AND (sqlc.narg('type')::text IS NULL OR t.type = sqlc.narg('type')::text)
   AND (sqlc.narg('label')::text IS NULL OR sqlc.narg('label')::text = ANY (t.labels))
+  AND (sqlc.narg('accepted')::boolean IS NULL OR (t.accepted_on IS NOT NULL) = sqlc.narg('accepted')::boolean)
   AND (sqlc.narg('client_id')::bigint IS NULL OR t.client_id = sqlc.narg('client_id')::bigint)
   AND (NOT sqlc.arg('core_only')::boolean OR t.client_id IS NULL)
   AND (sqlc.narg('assignee_id')::bigint IS NULL OR t.assignee_id = sqlc.narg('assignee_id')::bigint)

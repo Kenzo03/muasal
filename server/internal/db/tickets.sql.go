@@ -41,7 +41,7 @@ VALUES ($1, $2, $3, $4, $5, $6,
         $7, $8, $9, $10, $11,
         $12, $13, $14, $15, $16,
         coalesce($17::text[], '{}'))
-RETURNING id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at, source, external_ref, external_meta, estimate_hours, labels
+RETURNING id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at, source, external_ref, external_meta, estimate_hours, labels, accepted_contact_id, accepted_on, acceptance_note
 `
 
 type CreateTicketParams struct {
@@ -111,14 +111,17 @@ func (q *Queries) CreateTicket(ctx context.Context, arg CreateTicketParams) (Tic
 		&i.ExternalMeta,
 		&i.EstimateHours,
 		&i.Labels,
+		&i.AcceptedContactID,
+		&i.AcceptedOn,
+		&i.AcceptanceNote,
 	)
 	return i, err
 }
 
 const getTicketByKey = `-- name: GetTicketByKey :one
-SELECT t.id, t.project_id, t.number, t.key, t.type, t.title, t.description, t.reason, t.status_id, t.client_id, t.requester_contact_id, t.requester_user_id, t.reporter_id, t.assignee_id, t.priority, t.due_date, t.version, t.created_at, t.updated_at, t.closed_at, t.source, t.external_ref, t.external_meta, t.estimate_hours, t.labels, s.id, s.project_id, s.name, s.category, s.position, s.color, s.is_default, p.key AS project_key, rp.name AS reporter_name, c.name AS client_name,
+SELECT t.id, t.project_id, t.number, t.key, t.type, t.title, t.description, t.reason, t.status_id, t.client_id, t.requester_contact_id, t.requester_user_id, t.reporter_id, t.assignee_id, t.priority, t.due_date, t.version, t.created_at, t.updated_at, t.closed_at, t.source, t.external_ref, t.external_meta, t.estimate_hours, t.labels, t.accepted_contact_id, t.accepted_on, t.acceptance_note, s.id, s.project_id, s.name, s.category, s.position, s.color, s.is_default, p.key AS project_key, rp.name AS reporter_name, c.name AS client_name,
        rc.name AS requester_contact_name, rc.title AS requester_contact_title,
-       ru.name AS requester_user_name, a.name AS assignee_name
+       ru.name AS requester_user_name, a.name AS assignee_name, ac.name AS accepted_contact_name
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
 JOIN projects p ON p.id = t.project_id
@@ -127,6 +130,7 @@ LEFT JOIN clients c ON c.id = t.client_id
 LEFT JOIN contacts rc ON rc.id = t.requester_contact_id
 LEFT JOIN users ru ON ru.id = t.requester_user_id
 LEFT JOIN users a ON a.id = t.assignee_id
+LEFT JOIN contacts ac ON ac.id = t.accepted_contact_id
 WHERE t.key = $1
 `
 
@@ -140,6 +144,7 @@ type GetTicketByKeyRow struct {
 	RequesterContactTitle *string
 	RequesterUserName     *string
 	AssigneeName          *string
+	AcceptedContactName   *string
 }
 
 func (q *Queries) GetTicketByKey(ctx context.Context, key string) (GetTicketByKeyRow, error) {
@@ -171,6 +176,9 @@ func (q *Queries) GetTicketByKey(ctx context.Context, key string) (GetTicketByKe
 		&i.Ticket.ExternalMeta,
 		&i.Ticket.EstimateHours,
 		&i.Ticket.Labels,
+		&i.Ticket.AcceptedContactID,
+		&i.Ticket.AcceptedOn,
+		&i.Ticket.AcceptanceNote,
 		&i.Status.ID,
 		&i.Status.ProjectID,
 		&i.Status.Name,
@@ -185,6 +193,7 @@ func (q *Queries) GetTicketByKey(ctx context.Context, key string) (GetTicketByKe
 		&i.RequesterContactTitle,
 		&i.RequesterUserName,
 		&i.AssigneeName,
+		&i.AcceptedContactName,
 	)
 	return i, err
 }
@@ -267,7 +276,7 @@ SELECT t.id, t.key, t.title, t.type, t.priority, t.due_date, t.status_id, t.clie
        -- MSL-55: the description's task list, "- [ ] step" and "- [x] step".
        (SELECT count(*) FROM regexp_matches(t.description, '^[ \t]*(?:[-*+]|[0-9]+[.)])[ \t]+\[[ xX]\]', 'gn'))::int AS checklist_total,
        (SELECT count(*) FROM regexp_matches(t.description, '^[ \t]*(?:[-*+]|[0-9]+[.)])[ \t]+\[[xX]\]', 'gn'))::int AS checklist_done,
-       t.labels
+       t.labels, t.accepted_on
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
 LEFT JOIN clients c ON c.id = t.client_id
@@ -282,32 +291,33 @@ WHERE t.project_id = $1
   AND ($7::int IS NULL OR t.closed_at IS NULL OR t.closed_at >= now() - make_interval(days => $7::int))
   AND ($8::text IS NULL OR t.type = $8::text)
   AND ($9::text IS NULL OR $9::text = ANY (t.labels))
-  AND ($10::bigint IS NULL OR t.client_id = $10::bigint)
-  AND (NOT $11::boolean OR t.client_id IS NULL)
-  AND ($12::bigint IS NULL OR t.assignee_id = $12::bigint)
-  AND (NOT $13::boolean OR t.assignee_id IS NULL)
+  AND ($10::boolean IS NULL OR (t.accepted_on IS NOT NULL) = $10::boolean)
+  AND ($11::bigint IS NULL OR t.client_id = $11::bigint)
+  AND (NOT $12::boolean OR t.client_id IS NULL)
+  AND ($13::bigint IS NULL OR t.assignee_id = $13::bigint)
+  AND (NOT $14::boolean OR t.assignee_id IS NULL)
   -- due and stale_days count open tickets only, as Home and the workload page do;
   -- due counts from today on the caller's calendar.
-  AND ($14::text IS NULL OR (s.category IN ('todo', 'in_progress') AND (
-        ($14::text = 'overdue' AND t.due_date < $15::date)
-        OR ($14::text = 'week' AND t.due_date BETWEEN $15::date AND $15::date + 7))))
-  AND ($16::int IS NULL OR (s.category IN ('todo', 'in_progress')
-        AND t.updated_at < now() - make_interval(days => $16::int)))
-  AND ($17::bigint[] IS NULL OR EXISTS (
-        SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id AND tn.node_id = ANY ($17::bigint[])))
-  AND (NOT $18::boolean OR t.reason = '')
+  AND ($15::text IS NULL OR (s.category IN ('todo', 'in_progress') AND (
+        ($15::text = 'overdue' AND t.due_date < $16::date)
+        OR ($15::text = 'week' AND t.due_date BETWEEN $16::date AND $16::date + 7))))
+  AND ($17::int IS NULL OR (s.category IN ('todo', 'in_progress')
+        AND t.updated_at < now() - make_interval(days => $17::int)))
+  AND ($18::bigint[] IS NULL OR EXISTS (
+        SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id AND tn.node_id = ANY ($18::bigint[])))
+  AND (NOT $19::boolean OR t.reason = '')
   -- Tickets filed through the API or an import never show the form's
   -- weak-reason hint, so the list finds them (MSL-12, 00017).
-  AND (NOT $19::boolean OR weak_reason(t.reason))
-  AND (NOT $20::boolean OR NOT EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id))
-  AND ($21::text = '' OR t.title ILIKE '%' || $21::text || '%' OR t.key = upper($21::text))
+  AND (NOT $20::boolean OR weak_reason(t.reason))
+  AND (NOT $21::boolean OR NOT EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id))
+  AND ($22::text = '' OR t.title ILIKE '%' || $22::text || '%' OR t.key = upper($22::text))
 ORDER BY
-  CASE WHEN $22::text = 'priority' THEN array_position(ARRAY['urgent', 'high', 'medium', 'low'], t.priority) END,
-  CASE WHEN $22::text IN ('priority', 'due') THEN t.due_date END NULLS LAST,
-  CASE WHEN $22::text = 'updated' THEN t.updated_at END DESC,
-  CASE WHEN $22::text = 'created' THEN t.number END DESC,
+  CASE WHEN $23::text = 'priority' THEN array_position(ARRAY['urgent', 'high', 'medium', 'low'], t.priority) END,
+  CASE WHEN $23::text IN ('priority', 'due') THEN t.due_date END NULLS LAST,
+  CASE WHEN $23::text = 'updated' THEN t.updated_at END DESC,
+  CASE WHEN $23::text = 'created' THEN t.number END DESC,
   t.number
-LIMIT $24 OFFSET $23
+LIMIT $25 OFFSET $24
 `
 
 type ListTicketsParams struct {
@@ -320,6 +330,7 @@ type ListTicketsParams struct {
 	ClosedDays    *int32
 	Type          *string
 	Label         *string
+	Accepted      *bool
 	ClientID      *int64
 	CoreOnly      bool
 	AssigneeID    *int64
@@ -356,6 +367,7 @@ type ListTicketsRow struct {
 	ChecklistTotal int32
 	ChecklistDone  int32
 	Labels         []string
+	AcceptedOn     *time.Time
 }
 
 // One project's tickets that the scope may see (R-AC-2, R-AC-3), for the list
@@ -371,6 +383,7 @@ func (q *Queries) ListTickets(ctx context.Context, arg ListTicketsParams) ([]Lis
 		arg.ClosedDays,
 		arg.Type,
 		arg.Label,
+		arg.Accepted,
 		arg.ClientID,
 		arg.CoreOnly,
 		arg.AssigneeID,
@@ -413,6 +426,7 @@ func (q *Queries) ListTickets(ctx context.Context, arg ListTicketsParams) ([]Lis
 			&i.ChecklistTotal,
 			&i.ChecklistDone,
 			&i.Labels,
+			&i.AcceptedOn,
 		); err != nil {
 			return nil, err
 		}
@@ -436,6 +450,65 @@ func (q *Queries) NextTicketNumber(ctx context.Context, id int64) (int64, error)
 	return ticket_seq, err
 }
 
+const setTicketAcceptance = `-- name: SetTicketAcceptance :one
+UPDATE tickets SET accepted_contact_id = $1, accepted_on = $2,
+  acceptance_note = $3, version = version + 1, updated_at = now()
+WHERE id = $4 AND version = $5
+RETURNING id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at, source, external_ref, external_meta, estimate_hours, labels, accepted_contact_id, accepted_on, acceptance_note
+`
+
+type SetTicketAcceptanceParams struct {
+	ContactID  *int64
+	AcceptedOn *time.Time
+	Note       string
+	ID         int64
+	Version    int32
+}
+
+// MSL-66: records or clears the client's acceptance; like any edit it moves
+// the version on (FSD §8.6).
+func (q *Queries) SetTicketAcceptance(ctx context.Context, arg SetTicketAcceptanceParams) (Ticket, error) {
+	row := q.db.QueryRow(ctx, setTicketAcceptance,
+		arg.ContactID,
+		arg.AcceptedOn,
+		arg.Note,
+		arg.ID,
+		arg.Version,
+	)
+	var i Ticket
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Number,
+		&i.Key,
+		&i.Type,
+		&i.Title,
+		&i.Description,
+		&i.Reason,
+		&i.StatusID,
+		&i.ClientID,
+		&i.RequesterContactID,
+		&i.RequesterUserID,
+		&i.ReporterID,
+		&i.AssigneeID,
+		&i.Priority,
+		&i.DueDate,
+		&i.Version,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ClosedAt,
+		&i.Source,
+		&i.ExternalRef,
+		&i.ExternalMeta,
+		&i.EstimateHours,
+		&i.Labels,
+		&i.AcceptedContactID,
+		&i.AcceptedOn,
+		&i.AcceptanceNote,
+	)
+	return i, err
+}
+
 const setTicketReason = `-- name: SetTicketReason :exec
 UPDATE tickets SET reason = $2 WHERE id = $1
 `
@@ -456,7 +529,7 @@ UPDATE tickets SET status_id = $1,
   version    = version + 1,
   updated_at = now()
 WHERE id = $3 AND ($4::int IS NULL OR version = $4::int)
-RETURNING id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at, source, external_ref, external_meta, estimate_hours, labels
+RETURNING id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at, source, external_ref, external_meta, estimate_hours, labels, accepted_contact_id, accepted_on, acceptance_note
 `
 
 type SetTicketStatusParams struct {
@@ -502,6 +575,9 @@ func (q *Queries) SetTicketStatus(ctx context.Context, arg SetTicketStatusParams
 		&i.ExternalMeta,
 		&i.EstimateHours,
 		&i.Labels,
+		&i.AcceptedContactID,
+		&i.AcceptedOn,
+		&i.AcceptanceNote,
 	)
 	return i, err
 }
@@ -513,7 +589,7 @@ UPDATE tickets SET type = $1, title = $2, description = $3,
   due_date = $10, estimate_hours = $11, labels = coalesce($12::text[], '{}'),
   version = version + 1, updated_at = now()
 WHERE id = $13 AND version = $14
-RETURNING id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at, source, external_ref, external_meta, estimate_hours, labels
+RETURNING id, project_id, number, key, type, title, description, reason, status_id, client_id, requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, version, created_at, updated_at, closed_at, source, external_ref, external_meta, estimate_hours, labels, accepted_contact_id, accepted_on, acceptance_note
 `
 
 type UpdateTicketParams struct {
@@ -578,6 +654,9 @@ func (q *Queries) UpdateTicket(ctx context.Context, arg UpdateTicketParams) (Tic
 		&i.ExternalMeta,
 		&i.EstimateHours,
 		&i.Labels,
+		&i.AcceptedContactID,
+		&i.AcceptedOn,
+		&i.AcceptanceNote,
 	)
 	return i, err
 }

@@ -411,6 +411,9 @@ type Ticket struct {
 	ExternalMeta       []byte
 	EstimateHours      *float64
 	Labels             []string
+	AcceptedContactID  *int64
+	AcceptedOn         *time.Time
+	AcceptanceNote     string
 }
 
 type TicketCommit struct {

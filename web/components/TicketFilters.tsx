@@ -98,6 +98,14 @@ export default async function TicketFilters({ action, values, clients, assignees
                 <option value="week">{t("dueWeek")}</option>
               </select>
             </label>
+            <label htmlFor={`${action}-accepted`} className={pick}>
+              {t("accepted")}
+              <select id={`${action}-accepted`} name="accepted" defaultValue={values.accepted ?? ""} className={select}>
+                <option value="">{t("anyAcceptance")}</option>
+                <option value="yes">{t("acceptedYes")}</option>
+                <option value="no">{t("acceptedNo")}</option>
+              </select>
+            </label>
             <label htmlFor={`${action}-stale`} className={pick}>
               {t("stale")}
               <select id={`${action}-stale`} name="stale" defaultValue={values.stale ?? ""} className={select}>

@@ -545,6 +545,10 @@
     "urgent": "Urgent"
   },
   "ticketFilters": {
+    "accepted": "Client",
+    "anyAcceptance": "Any",
+    "acceptedYes": "Accepted",
+    "acceptedNo": "Not accepted yet",
     "label": "Label",
     "filters": "Filters",
     "filtersSet": "Filters ({count})",
@@ -1424,6 +1428,21 @@
       "off": "AI is off: prefilled from the title and reason",
       "failed": "No draft: prefilled from the title and reason"
     }
+  },
+  "acceptance": {
+    "title": "Client acceptance",
+    "accepted": "Accepted by {name} on {date}",
+    "none": "Not accepted yet.",
+    "record": "Record acceptance",
+    "contact": "Accepted by",
+    "pick": "Choose a contact",
+    "date": "Date",
+    "note": "Note",
+    "notePlaceholder": "Such as where it was signed off",
+    "save": "Save",
+    "cancel": "Cancel",
+    "remove": "Remove",
+    "noContacts": "This client has no contacts yet; add one on the ticket form first."
   },
   "summaries": {
     "heading": "Change summaries",

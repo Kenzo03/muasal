@@ -15,6 +15,7 @@ import { dateTime, day } from "@/lib/format";
 import { nodePaths } from "@/lib/nodes";
 import { useProblemText, type Client, type Node, type Ref, type Status, type Ticket } from "@/lib/problem";
 import { button, cx, field, panel, sectionTitle } from "@/lib/ui";
+import Acceptance from "./Acceptance";
 import Code from "./Code";
 import DecisionCard from "./DecisionCard";
 import Links from "./Links";
@@ -286,6 +287,7 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
                   {t("updated")} {dateTime(ticket.updated_at, locale, timeZone)}
                 </p>
               </section>
+              <Acceptance ticket={ticket} canEdit={canEdit} />
               {attachments}
             </aside>
           </div>

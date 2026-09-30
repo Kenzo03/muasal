@@ -545,6 +545,10 @@
     "urgent": "Mendesak"
   },
   "ticketFilters": {
+    "accepted": "Klien",
+    "anyAcceptance": "Semua",
+    "acceptedYes": "Sudah diterima",
+    "acceptedNo": "Belum diterima",
     "label": "Label",
     "filters": "Filter",
     "filtersSet": "Filter ({count})",
@@ -1424,6 +1428,21 @@
       "off": "AI nonaktif: diisi dari judul dan alasan",
       "failed": "Tanpa draf: diisi dari judul dan alasan"
     }
+  },
+  "acceptance": {
+    "title": "Penerimaan klien",
+    "accepted": "Diterima oleh {name} pada {date}",
+    "none": "Belum diterima.",
+    "record": "Catat penerimaan",
+    "contact": "Diterima oleh",
+    "pick": "Pilih kontak",
+    "date": "Tanggal",
+    "note": "Catatan",
+    "notePlaceholder": "Misalnya di mana disetujui",
+    "save": "Simpan",
+    "cancel": "Batal",
+    "remove": "Hapus",
+    "noContacts": "Klien ini belum punya kontak; tambahkan dulu di formulir tiket."
   },
   "summaries": {
     "heading": "Ringkasan perubahan",

@@ -1120,6 +1120,16 @@ type APITokenList struct {
 	Items []APIToken `json:"items"`
 }
 
+// AcceptanceInput defines model for AcceptanceInput.
+type AcceptanceInput struct {
+	// AcceptedOn Today or earlier.
+	AcceptedOn openapi_types.Date `json:"accepted_on"`
+
+	// ContactId A contact of the ticket's client; any client's contact for core work.
+	ContactId int64   `json:"contact_id"`
+	Note      *string `json:"note,omitempty"`
+}
+
 // ActivityItem defines model for ActivityItem.
 type ActivityItem struct {
 	// Action Example: transition
@@ -2552,8 +2562,11 @@ type SummaryCreate struct {
 
 // SummaryItem defines model for SummaryItem.
 type SummaryItem struct {
-	Cancelled *bool   `json:"cancelled,omitempty"`
-	Client    *string `json:"client,omitempty"`
+	// AcceptedBy The client contact who accepted it (MSL-66).
+	AcceptedBy *string             `json:"accepted_by,omitempty"`
+	AcceptedOn *openapi_types.Date `json:"accepted_on,omitempty"`
+	Cancelled  *bool               `json:"cancelled,omitempty"`
+	Client     *string             `json:"client,omitempty"`
 
 	// Date The close date
 	Date        openapi_types.Date `json:"date"`
@@ -2674,9 +2687,11 @@ type SystemStatusWarnings string
 
 // Ticket defines model for Ticket.
 type Ticket struct {
-	Assignee    *Ref         `json:"assignee,omitempty"`
-	Attachments []Attachment `json:"attachments"`
-	Client      *Ref         `json:"client,omitempty"`
+	// Acceptance Who at the client accepted the ticket's work, as in UAT sign-off, and when (MSL-66).
+	Acceptance  *TicketAcceptance `json:"acceptance,omitempty"`
+	Assignee    *Ref              `json:"assignee,omitempty"`
+	Attachments []Attachment      `json:"attachments"`
+	Client      *Ref              `json:"client,omitempty"`
 
 	// ClosedAt Set on close
 	ClosedAt    *time.Time          `json:"closed_at,omitempty"`
@@ -2712,6 +2727,13 @@ type Ticket struct {
 	Type       TicketType      `json:"type"`
 	UpdatedAt  time.Time       `json:"updated_at"`
 	Version    int32           `json:"version"`
+}
+
+// TicketAcceptance Who at the client accepted the ticket's work, as in UAT sign-off, and when (MSL-66).
+type TicketAcceptance struct {
+	AcceptedOn openapi_types.Date `json:"accepted_on"`
+	Contact    Ref                `json:"contact"`
+	Note       string             `json:"note"`
 }
 
 // TicketCode defines model for TicketCode.
@@ -2782,7 +2804,9 @@ type TicketRequesterKind string
 
 // TicketSummary defines model for TicketSummary.
 type TicketSummary struct {
-	Assignee *Ref `json:"assignee,omitempty"`
+	// AcceptedOn When the client accepted it (MSL-66).
+	AcceptedOn *openapi_types.Date `json:"accepted_on,omitempty"`
+	Assignee   *Ref                `json:"assignee,omitempty"`
 
 	// Checklist The description's task list, when it has one (MSL-55).
 	Checklist *struct {
@@ -3180,8 +3204,11 @@ type ListTicketsParams struct {
 	Type       *TicketType `form:"type,omitempty" json:"type,omitempty"`
 
 	// Label Tickets with this label (MSL-56).
-	Label    *string `form:"label,omitempty" json:"label,omitempty"`
-	ClientId *int64  `form:"client_id,omitempty" json:"client_id,omitempty"`
+	Label *string `form:"label,omitempty" json:"label,omitempty"`
+
+	// Accepted Tickets the client accepted (true) or not yet (false) (MSL-66).
+	Accepted *bool  `form:"accepted,omitempty" json:"accepted,omitempty"`
+	ClientId *int64 `form:"client_id,omitempty" json:"client_id,omitempty"`
 
 	// Core Only core work (no client).
 	Core       *bool  `form:"core,omitempty" json:"core,omitempty"`
@@ -3397,6 +3424,9 @@ type UpdateSummaryJSONRequestBody = SummaryUpdate
 
 // UpdateTicketJSONRequestBody defines body for UpdateTicket for application/json ContentType.
 type UpdateTicketJSONRequestBody = TicketUpdate
+
+// AcceptTicketJSONRequestBody defines body for AcceptTicket for application/json ContentType.
+type AcceptTicketJSONRequestBody = AcceptanceInput
 
 // UploadAttachmentMultipartRequestBody defines body for UploadAttachment for multipart/form-data ContentType.
 type UploadAttachmentMultipartRequestBody UploadAttachmentMultipartBody
@@ -3742,6 +3772,12 @@ type ServerInterface interface {
 
 	// (PUT /tickets/{key})
 	UpdateTicket(w http.ResponseWriter, r *http.Request, key string, params UpdateTicketParams)
+
+	// (DELETE /tickets/{key}/acceptance)
+	UnacceptTicket(w http.ResponseWriter, r *http.Request, key string)
+
+	// (PUT /tickets/{key}/acceptance)
+	AcceptTicket(w http.ResponseWriter, r *http.Request, key string)
 
 	// (GET /tickets/{key}/activity)
 	GetTicketActivity(w http.ResponseWriter, r *http.Request, key string)
@@ -6385,6 +6421,19 @@ func (siw *ServerInterfaceWrapper) ListTickets(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	// ------------- Optional query parameter "accepted" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "accepted", r.URL.Query(), &params.Accepted, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "accepted"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "accepted", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "client_id" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "client_id", r.URL.Query(), &params.ClientId, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
@@ -6974,6 +7023,58 @@ func (siw *ServerInterfaceWrapper) UpdateTicket(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// UnacceptTicket operation middleware
+func (siw *ServerInterfaceWrapper) UnacceptTicket(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnacceptTicket(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AcceptTicket operation middleware
+func (siw *ServerInterfaceWrapper) AcceptTicket(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcceptTicket(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetTicketActivity operation middleware
 func (siw *ServerInterfaceWrapper) GetTicketActivity(w http.ResponseWriter, r *http.Request) {
 
@@ -7543,6 +7644,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/tickets", wrapper.CreateTicket)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/tickets/{key}", wrapper.GetTicket)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/tickets/{key}", wrapper.UpdateTicket)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/tickets/{key}/acceptance", wrapper.UnacceptTicket)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/tickets/{key}/acceptance", wrapper.AcceptTicket)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/transition", wrapper.TransitionTicket)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/documents", wrapper.ListDocuments)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/projects/{key}/documents", wrapper.UploadDocument)
