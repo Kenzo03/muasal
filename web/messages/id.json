@@ -604,7 +604,8 @@
     "due": "Tenggat",
     "none": "Tidak ada tiket yang cocok dengan saringan ini.",
     "next": "Halaman berikutnya",
-    "exportCsv": "Ekspor CSV"
+    "exportCsv": "Ekspor CSV",
+    "importTickets": "Impor tiket"
   },
   "ticketForm": {
     "newTitle": "Tiket baru",

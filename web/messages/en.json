@@ -604,7 +604,8 @@
     "due": "Due",
     "none": "No tickets match these filters.",
     "next": "Next page",
-    "exportCsv": "Export CSV"
+    "exportCsv": "Export CSV",
+    "importTickets": "Import tickets"
   },
   "ticketForm": {
     "newTitle": "New ticket",
