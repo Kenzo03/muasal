@@ -58,6 +58,12 @@ export default async function TicketsPage({
           <Icon name="download" />
           {t("exportCsv")}
         </a>
+        {project.role === "admin" && (
+          <Link href={`/admin/imports?project=${key}`} className={button.secondary}>
+            <Icon name="upload" />
+            {t("importTickets")}
+          </Link>
+        )}
       </PageBar>
       <main className="flex flex-col gap-3 px-4 py-4 md:px-5">
         {items.length === 0 ? (
