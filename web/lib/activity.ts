@@ -32,6 +32,10 @@ export function describeChange(t: Translate, it: ActivityItem, meId?: number): s
       return t("attachmentAdded", { actor, file: shown(c.filename) });
     case "attachment_delete":
       return t("attachmentDeleted", { actor, file: shown(c.filename) });
+    case "import_create": // MSL-41: not the raw action name
+      return t("imported", { actor, ref: shown(c.external_ref) });
+    case "import_update":
+      return t("importUpdated", { actor, ref: shown(c.external_ref) });
     case "decision_confirm":
       return t("decisionConfirmed", { actor });
     case "decision_draft":

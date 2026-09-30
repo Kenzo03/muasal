@@ -766,7 +766,9 @@
       }
     },
     "mentions": "Members to mention",
-    "mentionHint": "Type @ to mention a member."
+    "mentionHint": "Type @ to mention a member.",
+    "imported": "{actor} imported the ticket from {ref}",
+    "importUpdated": "{actor} updated the ticket from import {ref}"
   },
   "attachments": {
     "title": "Attachments",

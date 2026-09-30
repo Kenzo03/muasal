@@ -766,7 +766,9 @@
       }
     },
     "mentions": "Anggota yang dapat disebut",
-    "mentionHint": "Ketik @ untuk menyebut anggota."
+    "mentionHint": "Ketik @ untuk menyebut anggota.",
+    "imported": "{actor} mengimpor tiket dari {ref}",
+    "importUpdated": "{actor} memperbarui tiket dari impor {ref}"
   },
   "attachments": {
     "title": "Lampiran",
