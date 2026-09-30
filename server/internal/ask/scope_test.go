@@ -60,6 +60,11 @@ func TestDetectNamesClientsNodesPeopleAndKeys(t *testing.T) {
 		{q: "Is Indah still the rule for payroll?", nodes: []int64{9}}, // no cue word: not a person
 		{q: "Tickets requested by Indah Permata", us: []int64{8}},
 		{q: "What did hris-231 and HRIS-240 change?", keys: []string{"HRIS-231", "HRIS-240"}},
+		// MSL-38: a question about other or every client keeps them all in scope.
+		{q: "Berapa toleransi selisih stok untuk Client A dan untuk klien lain?"},
+		{q: "Is Bumi Logistik's tolerance the same as for other clients?"},
+		{q: "Apa bedanya Arunika dengan semua klien?"},
+		{q: "Which clients other than CLA skip the step?"},
 	} {
 		d := ask.Detect(catalog(), c.q, now)
 		if !slices.Equal(d.ClientIDs, c.clients) || !slices.Equal(d.NodeIDs, c.nodes) || !slices.Equal(d.UserIDs, c.us) ||
@@ -122,5 +127,16 @@ func TestDetectLabelsItsChips(t *testing.T) {
 	}
 	if !slices.Equal(d.Labels, want) {
 		t.Fatalf("labels: %+v, want %+v", d.Labels, want)
+	}
+}
+
+// MSL-38: "And for the other clients?" drops the earlier client instead of
+// carrying it over, and keeps the menu.
+func TestCarryOverStopsAtOtherClients(t *testing.T) {
+	prev := ask.Detect(catalog(), "Why does overtime approval skip the supervisor for Client A?", now)
+	next := ask.CarryOver(prev, ask.Detect(catalog(), "And for the other clients?", now))
+	if next.ClientIDs != nil || !next.AllClients || !slices.Equal(next.NodeIDs, []int64{3}) ||
+		slices.ContainsFunc(next.Labels, func(l ask.Label) bool { return l.Kind == "client" }) {
+		t.Fatalf("%+v", next)
 	}
 }

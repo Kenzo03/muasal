@@ -55,6 +55,10 @@ type Detected struct {
 	To         *time.Time `json:"to,omitempty"`
 	Keys       []string   `json:"keys,omitempty"`
 	Labels     []Label    `json:"labels,omitempty"` // names for the chips above, in that order
+	// AllClients: the question asks about other or every client too, so a
+	// client it names doesn't narrow the scope, nor does an earlier one carry
+	// over (MSL-38).
+	AllClients bool `json:"all_clients,omitempty"`
 }
 
 // Label names one detected chip: a client, a node (by its path) or a person.
@@ -67,15 +71,17 @@ type Label struct {
 var (
 	tokenRe = regexp.MustCompile(`\d{4}-\d{2}-\d{2}|[\p{L}\p{N}]+`)
 	keyRe   = regexp.MustCompile(`(?i)\b([a-z][a-z0-9]{1,9}-(?:dn)?\d+)\b`)
+	// othersRe spots "and for other clients", "semua klien" and the like.
+	othersRe = regexp.MustCompile(`(?i)\b(?:(?:other|all|every|each)\s+(?:clients?|customers?)|(?:clients?|customers?)\s+other\s+than|(?:klien|pelanggan)\s+(?:lain(?:nya)?|selain)|(?:semua|seluruh|setiap|tiap|masing-masing)\s+(?:klien|pelanggan))\b`)
 )
 
 // Detect finds the clients, nodes, people, dates and ticket keys a question
 // names, without a model call (§11.2). now is the asker's current time.
 func Detect(cat Catalog, question string, now time.Time) Detected {
 	toks := tokenRe.FindAllString(strings.ToLower(question), -1)
-	var d Detected
+	d := Detected{AllClients: othersRe.MatchString(question)}
 	for _, c := range cat.Clients {
-		if matches(toks, append([]string{c.Name, deref(c.Code)}, c.Aliases...), true) {
+		if !d.AllClients && matches(toks, append([]string{c.Name, deref(c.Code)}, c.Aliases...), true) {
 			d.ClientIDs = append(d.ClientIDs, c.ID)
 		}
 	}

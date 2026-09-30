@@ -58,7 +58,7 @@ func (e *Engine) history(ctx context.Context, threadID *int64) ([]turn, error) {
 func CarryOver(prev, now Detected) Detected {
 	out := now
 	keep := map[string]bool{}
-	if len(now.ClientIDs) == 0 && len(prev.ClientIDs) > 0 {
+	if len(now.ClientIDs) == 0 && !now.AllClients && len(prev.ClientIDs) > 0 {
 		out.ClientIDs, keep["client"] = prev.ClientIDs, true
 	}
 	if len(now.NodeIDs) == 0 && len(prev.NodeIDs) > 0 {
