@@ -143,7 +143,8 @@ function Cite({ itemKey, item }: { itemKey: string; item?: AskItem }) {
         <span
           id={`cite-${itemKey}`}
           role="tooltip"
-          className="pointer-events-none invisible absolute bottom-full left-0 z-20 mb-1.5 w-64 rounded-xl border border-line bg-white p-3 text-xs leading-snug text-ink opacity-0 shadow-[0_12px_32px_rgba(43,36,32,0.12),0_2px_6px_rgba(43,36,32,0.06)] group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100"
+          // MSL-42: hidden, not invisible: an invisible card near the right edge widened the page on tablets.
+          className="pointer-events-none absolute bottom-full left-0 z-20 mb-1.5 hidden w-64 rounded-xl border border-line bg-white p-3 text-xs leading-snug text-ink shadow-[0_12px_32px_rgba(43,36,32,0.12),0_2px_6px_rgba(43,36,32,0.06)] group-focus-within:block group-hover:block"
         >
           <span className="block font-semibold">{item.title}</span>
           <span className="block text-muted">{item.client ?? t("core")}</span>
