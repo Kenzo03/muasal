@@ -27,7 +27,8 @@ type Props = {
 const closes = (s: Status) => s.category === "done" || s.category === "cancelled";
 
 // A status column that takes dropped cards. From 1024 px, five columns fit
-// beside the open sidebar (MSL-61); narrower screens scroll sideways.
+// beside the open sidebar (MSL-61): below 1280 px they drop the add button
+// (New ticket still adds) so status names fit; narrower screens scroll.
 function Column({ status, canEdit, children }: { status: Status; canEdit: boolean; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id: `status-${status.id}`, data: { statusId: status.id }, disabled: !canEdit });
   return (
@@ -116,7 +117,7 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, s
             const droppable = canEdit;
             return (
               <Column key={s.id} status={s} canEdit={canEdit}>
-                <h2 className="flex min-h-9 items-center gap-2 pl-2 pr-0.5 text-sm font-extrabold leading-tight">
+                <h2 className="flex min-h-9 items-center gap-2 pl-2 pr-0.5 text-sm font-extrabold leading-tight lg:max-xl:gap-1.5 lg:max-xl:pl-1">
                   <StatusDot color={s.color} className="size-2.5 shrink-0" />
                   <span className="min-w-0 break-words">{s.name}</span>
                   <span className="text-[13px] font-bold text-muted">{cards.length}</span>
@@ -124,7 +125,7 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, s
                     <Link
                       href={`/p/${projectKey}/tickets/new?status_id=${s.id}`}
                       aria-label={t("addHere", { status: s.name })}
-                      className="ml-auto inline-flex size-7 shrink-0 items-center justify-center rounded-lg text-ink-soft hover:bg-white hover:text-ink"
+                      className="ml-auto inline-flex size-7 shrink-0 items-center justify-center rounded-lg text-ink-soft lg:max-xl:hidden hover:bg-white hover:text-ink"
                     >
                       <Icon name="plus" />
                     </Link>
@@ -145,9 +146,9 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, s
                     canEdit={canEdit}
                     className="flex flex-col gap-2 rounded-[14px] bg-white p-3.5 lg:max-xl:p-2.5 shadow-[0_1px_2px_rgba(43,36,32,0.06),0_0_0_1px_rgba(43,36,32,0.04)]"
                   >
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-muted">
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold text-muted">
                       <TypeIcon type={c.type} label={tTypes(c.type)} />
-                      <span>{c.key}</span>
+                      <span className="whitespace-nowrap">{c.key}</span>
                       {(c.missing_reason || c.node_names.length === 0) && (
                         <span role="img" title={t("missing")} aria-label={t("missing")} className="size-[7px] rounded-full bg-[#D97706]" />
                       )}
