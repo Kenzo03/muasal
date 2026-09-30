@@ -543,7 +543,7 @@
     "urgent": "Urgent"
   },
   "ticketFilters": {
-    "label": "Filter tickets",
+    "label": "Label",
     "filters": "Filters",
     "filtersSet": "Filters ({count})",
     "q": "Search",
@@ -579,7 +579,8 @@
     "sortPriority": "Priority",
     "sortDue": "Due date",
     "apply": "Apply",
-    "reset": "Reset"
+    "reset": "Reset",
+    "anyLabel": "Any label"
   },
   "board": {
     "newTicket": "New ticket",
@@ -679,7 +680,9 @@
     "bugBehaviors": "Is it a bug, or how the menu was agreed to work? See the behaviors of",
     "newIn": "New ticket in {project}",
     "close": "Close",
-    "estimate": "Estimate (hours)"
+    "estimate": "Estimate (hours)",
+    "labels": "Labels",
+    "labelsHint": "Comma-separated, such as pilot, uat"
   },
   "ticket": {
     "edit": "Edit",
@@ -703,7 +706,8 @@
     "path": "Path",
     "closed": "Closed",
     "estimate": "Estimate",
-    "hours": "{hours} h"
+    "hours": "{hours} h",
+    "labels": "Labels"
   },
   "close": {
     "title": "Close {key} as {status}",

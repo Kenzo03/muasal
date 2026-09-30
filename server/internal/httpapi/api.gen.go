@@ -2688,6 +2688,9 @@ type Ticket struct {
 	// Key Example: HRIS-231
 	Key string `json:"key"`
 
+	// Labels Free-text labels, lowercased (MSL-56).
+	Labels *[]string `json:"labels,omitempty"`
+
 	// Links Links to tickets the reader can see, oldest first (FSD §8.8).
 	Links      []TicketLink    `json:"links"`
 	Nodes      []NodeRef       `json:"nodes"`
@@ -2720,7 +2723,10 @@ type TicketCreate struct {
 
 	// EstimateHours Hours of effort; omitted means no estimate (MSL-54).
 	EstimateHours *float64 `json:"estimate_hours,omitempty"`
-	NodeIds       []int64  `json:"node_ids"`
+
+	// Labels Up to 10 labels of 1 to 30 characters; omitted means none (MSL-56).
+	Labels  *[]string `json:"labels,omitempty"`
+	NodeIds []int64   `json:"node_ids"`
 
 	// NoteKey A decision note of this project the caller may see, e.g. HRIS-DN7: the ticket joins its tickets, as when filed from one of its action items (MSL-11).
 	NoteKey            *string   `json:"note_key,omitempty"`
@@ -2779,6 +2785,7 @@ type TicketSummary struct {
 	DueDate       *openapi_types.Date `json:"due_date"`
 	Id            int64               `json:"id"`
 	Key           string              `json:"key"`
+	Labels        *[]string           `json:"labels,omitempty"`
 	MissingReason bool                `json:"missing_reason"`
 	NodeNames     []string            `json:"node_names"`
 	Priority      Priority            `json:"priority"`
@@ -2802,7 +2809,10 @@ type TicketUpdate struct {
 	DueDate     *openapi_types.Date `json:"due_date,omitempty"`
 
 	// EstimateHours Hours of effort; omitted means no estimate (MSL-54).
-	EstimateHours      *float64  `json:"estimate_hours,omitempty"`
+	EstimateHours *float64 `json:"estimate_hours,omitempty"`
+
+	// Labels Up to 10 labels of 1 to 30 characters; omitted means none (MSL-56).
+	Labels             *[]string `json:"labels,omitempty"`
 	NodeIds            []int64   `json:"node_ids"`
 	Priority           *Priority `json:"priority,omitempty"`
 	Reason             *string   `json:"reason,omitempty"`
@@ -3154,7 +3164,10 @@ type ListTicketsParams struct {
 	// ClosedDays Closed tickets only when closed within this many days; the board asks for 14.
 	ClosedDays *int32      `form:"closed_days,omitempty" json:"closed_days,omitempty"`
 	Type       *TicketType `form:"type,omitempty" json:"type,omitempty"`
-	ClientId   *int64      `form:"client_id,omitempty" json:"client_id,omitempty"`
+
+	// Label Tickets with this label (MSL-56).
+	Label    *string `form:"label,omitempty" json:"label,omitempty"`
+	ClientId *int64  `form:"client_id,omitempty" json:"client_id,omitempty"`
 
 	// Core Only core work (no client).
 	Core       *bool  `form:"core,omitempty" json:"core,omitempty"`
@@ -3616,6 +3629,9 @@ type ServerInterface interface {
 
 	// (POST /projects/{key}/documents)
 	UploadDocument(w http.ResponseWriter, r *http.Request, key string)
+
+	// (GET /projects/{key}/labels)
+	ListProjectLabels(w http.ResponseWriter, r *http.Request, key string)
 
 	// (GET /projects/{key}/member-candidates)
 	ListMemberCandidates(w http.ResponseWriter, r *http.Request, key string)
@@ -5702,6 +5718,32 @@ func (siw *ServerInterfaceWrapper) UploadDocument(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ListProjectLabels operation middleware
+func (siw *ServerInterfaceWrapper) ListProjectLabels(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProjectLabels(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListMemberCandidates operation middleware
 func (siw *ServerInterfaceWrapper) ListMemberCandidates(w http.ResponseWriter, r *http.Request) {
 
@@ -6229,6 +6271,19 @@ func (siw *ServerInterfaceWrapper) ListTickets(w http.ResponseWriter, r *http.Re
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "type"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "label" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "label", r.URL.Query(), &params.Label, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "label"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "label", Err: err})
 		}
 		return
 	}
@@ -7310,6 +7365,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/clients/{id}", wrapper.UpdateClient)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/members", wrapper.ListProjectMembers)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/projects/{key}/members", wrapper.SetProjectMembers)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/labels", wrapper.ListProjectLabels)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/setup", wrapper.GetProjectSetup)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/projects/{key}/member-candidates", wrapper.ListMemberCandidates)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/contacts", wrapper.ListContacts)

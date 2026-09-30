@@ -244,6 +244,18 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
                       <dd className="font-semibold">{day(ticket.due_date, locale)}</dd>
                     </>
                   )}
+                  {(ticket.labels?.length ?? 0) > 0 && (
+                    <>
+                      <dt className="text-muted">{t("labels")}</dt>
+                      <dd className="flex flex-wrap gap-1">
+                        {ticket.labels!.map((l) => (
+                          <a key={l} href={`/p/${ticket.project_key}/tickets?label=${encodeURIComponent(l)}`} className="rounded-full bg-well px-2 text-xs font-semibold text-ink-soft no-underline hover:text-ink">
+                            {l}
+                          </a>
+                        ))}
+                      </dd>
+                    </>
+                  )}
                   {ticket.estimate_hours != null && (
                     <>
                       <dt className="text-muted">{t("estimate")}</dt>

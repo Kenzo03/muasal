@@ -21,6 +21,7 @@ export function updateBody(t: Ticket, c: BulkChange) {
     priority: c.priority ?? t.priority,
     due_date: c.due === undefined ? (t.due_date ?? undefined) : c.due || undefined,
     estimate_hours: t.estimate_hours ?? undefined,
+    labels: t.labels ?? [],
   };
 }
 

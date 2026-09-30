@@ -423,6 +423,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{key}/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description The labels the project's tickets use, most used first (MSL-56). */
+        get: operations["listProjectLabels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{key}/setup": {
         parameters: {
             query?: never;
@@ -2032,6 +2051,8 @@ export interface components {
              * @description The effort estimate in hours (MSL-54).
              */
             estimate_hours?: number | null;
+            /** @description Free-text labels, lowercased (MSL-56). */
+            labels?: string[];
             nodes: components["schemas"]["NodeRef"][];
             attachments: components["schemas"]["Attachment"][];
             /** Format: int32 */
@@ -2078,6 +2099,8 @@ export interface components {
              * @description Hours of effort; omitted means no estimate (MSL-54).
              */
             estimate_hours?: number;
+            /** @description Up to 10 labels of 1 to 30 characters; omitted means none (MSL-56). */
+            labels?: string[];
             /**
              * Format: int64
              * @description An open status; omitted means the project's default.
@@ -2115,6 +2138,8 @@ export interface components {
              * @description Hours of effort; omitted means no estimate (MSL-54).
              */
             estimate_hours?: number;
+            /** @description Up to 10 labels of 1 to 30 characters; omitted means none (MSL-56). */
+            labels?: string[];
         };
         TransitionRequest: {
             /** Format: int64 */
@@ -2418,6 +2443,7 @@ export interface components {
             requester_name: string;
             node_names: string[];
             missing_reason: boolean;
+            labels?: string[];
             /** @description The description's task list, when it has one (MSL-55). */
             checklist?: {
                 done: number;
@@ -3995,6 +4021,34 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    listProjectLabels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Labels with how many tickets carry each. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            label: string;
+                            uses: number;
+                        }[];
+                    };
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     getProjectSetup: {
         parameters: {
             query?: never;
@@ -4570,6 +4624,8 @@ export interface operations {
                 /** @description Closed tickets only when closed within this many days; the board asks for 14. */
                 closed_days?: number;
                 type?: components["schemas"]["TicketType"];
+                /** @description Tickets with this label (MSL-56). */
+                label?: string;
                 client_id?: number;
                 /** @description Only core work (no client). */
                 core?: boolean;

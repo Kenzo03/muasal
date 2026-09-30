@@ -147,6 +147,7 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
     if (requester === "contact" && contactId === null) return setError(t("chooseContact"));
     const due = String(form.get("due_date") ?? "");
     const estimate = String(form.get("estimate_hours") ?? "");
+    const labels = String(form.get("labels") ?? "").split(",").map((l) => l.trim()).filter(Boolean); // MSL-56
     const assignee = String(form.get("assignee_id") ?? "");
     const body = {
       type: String(form.get("type")) as TicketType,
@@ -161,6 +162,7 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
       priority: String(form.get("priority")) as Priority,
       due_date: due || undefined,
       estimate_hours: estimate ? Number(estimate) : undefined, // MSL-54
+      labels,
     };
     if (ticket) {
       const { error } = await api.PUT("/tickets/{key}", {
@@ -373,6 +375,10 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
             <label className={field.label}>
               {t("estimate")}
               <input type="number" name="estimate_hours" min={0} max={9999} step={0.5} defaultValue={ticket?.estimate_hours ?? ""} className={field.input} />
+            </label>
+            <label className={cx(field.label, "md:col-span-4")}>
+              {t("labels")}
+              <input name="labels" defaultValue={ticket?.labels?.join(", ") ?? ""} placeholder={t("labelsHint")} className={field.input} />
             </label>
           </div>
         </details>

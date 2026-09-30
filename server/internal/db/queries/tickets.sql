@@ -4,8 +4,11 @@ UPDATE projects SET ticket_seq = ticket_seq + 1 WHERE id = $1 RETURNING ticket_s
 
 -- name: CreateTicket :one
 INSERT INTO tickets (project_id, number, key, type, title, description, reason, status_id, client_id,
-                     requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, estimate_hours)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+                     requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, estimate_hours, labels)
+VALUES (sqlc.arg('project_id'), sqlc.arg('number'), sqlc.arg('key'), sqlc.arg('type'), sqlc.arg('title'), sqlc.arg('description'),
+        sqlc.arg('reason'), sqlc.arg('status_id'), sqlc.narg('client_id'), sqlc.narg('requester_contact_id'), sqlc.narg('requester_user_id'),
+        sqlc.arg('reporter_id'), sqlc.narg('assignee_id'), sqlc.arg('priority'), sqlc.narg('due_date'), sqlc.narg('estimate_hours'),
+        coalesce(sqlc.narg('labels')::text[], '{}'))
 RETURNING *;
 
 -- name: GetTicketByKey :one
@@ -24,10 +27,12 @@ WHERE t.key = $1;
 
 -- name: UpdateTicket :one
 -- Optimistic locking: no row comes back when the version moved on (FSD §8.6).
-UPDATE tickets SET type = $3, title = $4, description = $5, reason = $6, client_id = $7,
-  requester_contact_id = $8, requester_user_id = $9, assignee_id = $10, priority = $11, due_date = $12,
-  estimate_hours = $13, version = version + 1, updated_at = now()
-WHERE id = $1 AND version = $2
+UPDATE tickets SET type = sqlc.arg('type'), title = sqlc.arg('title'), description = sqlc.arg('description'),
+  reason = sqlc.arg('reason'), client_id = sqlc.narg('client_id'), requester_contact_id = sqlc.narg('requester_contact_id'),
+  requester_user_id = sqlc.narg('requester_user_id'), assignee_id = sqlc.narg('assignee_id'), priority = sqlc.arg('priority'),
+  due_date = sqlc.narg('due_date'), estimate_hours = sqlc.narg('estimate_hours'), labels = coalesce(sqlc.narg('labels')::text[], '{}'),
+  version = version + 1, updated_at = now()
+WHERE id = sqlc.arg('id') AND version = sqlc.arg('version')
 RETURNING *;
 
 -- name: SetTicketStatus :one
@@ -67,7 +72,8 @@ SELECT t.id, t.key, t.title, t.type, t.priority, t.due_date, t.status_id, t.clie
              WHERE tn.ticket_id = t.id ORDER BY lower(n.name), n.id)::text[] AS node_names,
        -- MSL-55: the description's task list, "- [ ] step" and "- [x] step".
        (SELECT count(*) FROM regexp_matches(t.description, '^[ \t]*(?:[-*+]|[0-9]+[.)])[ \t]+\[[ xX]\]', 'gn'))::int AS checklist_total,
-       (SELECT count(*) FROM regexp_matches(t.description, '^[ \t]*(?:[-*+]|[0-9]+[.)])[ \t]+\[[xX]\]', 'gn'))::int AS checklist_done
+       (SELECT count(*) FROM regexp_matches(t.description, '^[ \t]*(?:[-*+]|[0-9]+[.)])[ \t]+\[[xX]\]', 'gn'))::int AS checklist_done,
+       t.labels
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
 LEFT JOIN clients c ON c.id = t.client_id
@@ -81,6 +87,7 @@ WHERE t.project_id = sqlc.arg('project_id')
   AND (NOT sqlc.arg('open_only')::boolean OR s.category IN ('todo', 'in_progress'))
   AND (sqlc.narg('closed_days')::int IS NULL OR t.closed_at IS NULL OR t.closed_at >= now() - make_interval(days => sqlc.narg('closed_days')::int))
   AND (sqlc.narg('type')::text IS NULL OR t.type = sqlc.narg('type')::text)
+  AND (sqlc.narg('label')::text IS NULL OR sqlc.narg('label')::text = ANY (t.labels))
   AND (sqlc.narg('client_id')::bigint IS NULL OR t.client_id = sqlc.narg('client_id')::bigint)
   AND (NOT sqlc.arg('core_only')::boolean OR t.client_id IS NULL)
   AND (sqlc.narg('assignee_id')::bigint IS NULL OR t.assignee_id = sqlc.narg('assignee_id')::bigint)
@@ -107,3 +114,12 @@ ORDER BY
   CASE WHEN sqlc.arg('sort')::text = 'created' THEN t.number END DESC,
   t.number
 LIMIT sqlc.arg('lim') OFFSET sqlc.arg('off');
+
+-- name: ListProjectLabels :many
+-- MSL-56: the labels a project's tickets use, most used first, for filters and the form.
+SELECT l::text AS label, count(*) AS uses
+FROM tickets t, unnest(t.labels) AS l
+WHERE t.project_id = sqlc.arg('project_id')
+GROUP BY l
+ORDER BY count(*) DESC, l
+LIMIT 200;
