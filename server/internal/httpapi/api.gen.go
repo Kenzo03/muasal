@@ -2683,7 +2683,10 @@ type Ticket struct {
 
 	// EstimateHours The effort estimate in hours (MSL-54).
 	EstimateHours *float64 `json:"estimate_hours,omitempty"`
-	Id            int64    `json:"id"`
+
+	// Following The caller follows the ticket (MSL-57).
+	Following *bool `json:"following,omitempty"`
+	Id        int64 `json:"id"`
 
 	// Key Example: HRIS-231
 	Key string `json:"key"`
@@ -3737,6 +3740,12 @@ type ServerInterface interface {
 
 	// (POST /tickets/{key}/decision-draft)
 	DraftDecision(w http.ResponseWriter, r *http.Request, key string)
+
+	// (DELETE /tickets/{key}/follow)
+	UnfollowTicket(w http.ResponseWriter, r *http.Request, key string)
+
+	// (POST /tickets/{key}/follow)
+	FollowTicket(w http.ResponseWriter, r *http.Request, key string)
 
 	// (POST /tickets/{key}/links)
 	CreateLink(w http.ResponseWriter, r *http.Request, key string)
@@ -7007,6 +7016,58 @@ func (siw *ServerInterfaceWrapper) DraftDecision(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// UnfollowTicket operation middleware
+func (siw *ServerInterfaceWrapper) UnfollowTicket(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnfollowTicket(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// FollowTicket operation middleware
+func (siw *ServerInterfaceWrapper) FollowTicket(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", r.PathValue("key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.FollowTicket(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateLink operation middleware
 func (siw *ServerInterfaceWrapper) CreateLink(w http.ResponseWriter, r *http.Request) {
 
@@ -7410,6 +7471,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/summaries/{id}", wrapper.GetSummary)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/summaries/{id}", wrapper.UpdateSummary)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/tickets/{key}/decision", wrapper.UpdateDecision)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/tickets/{key}/follow", wrapper.UnfollowTicket)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/follow", wrapper.FollowTicket)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/tickets/{key}/links", wrapper.CreateLink)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/links/{id}", wrapper.DeleteLink)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/tickets/{key}/activity", wrapper.GetTicketActivity)

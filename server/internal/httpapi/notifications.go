@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kenzo03/muasal/server/internal/access"
 	"github.com/kenzo03/muasal/server/internal/db"
 )
 
@@ -225,7 +226,11 @@ func notifyComment(ctx context.Context, q *db.Queries, t db.Ticket, author int64
 	if err != nil {
 		return err
 	}
-	users := append([]int64{t.ReporterID, deref(t.AssigneeID)}, commenters...)
+	followers, err := q.ListFollowers(ctx, t.ID) // MSL-57
+	if err != nil {
+		return err
+	}
+	users := append(append([]int64{t.ReporterID, deref(t.AssigneeID)}, commenters...), followers...)
 	users = slices.DeleteFunc(users, func(id int64) bool { return slices.Contains(mentioned, id) }) // a mention says it already
 	return notify(ctx, q, "comment", t.ID, &author, users, payload)
 }
@@ -237,4 +242,31 @@ func notifyPrefs(u db.User) *NotifyPrefs {
 		return &NotifyPrefs{}
 	}
 	return &p
+}
+
+// FollowTicket makes the caller a follower: they hear the ticket's comments
+// and status changes like those on it (MSL-57).
+func (s *Server) FollowTicket(w http.ResponseWriter, r *http.Request, key string) {
+	pc, row, ok := s.ticketFor(w, r, key, access.Viewer)
+	if !ok {
+		return
+	}
+	if err := s.q.FollowTicket(r.Context(), db.FollowTicketParams{TicketID: row.Ticket.ID, UserID: pc.user.ID}); err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// UnfollowTicket stops that.
+func (s *Server) UnfollowTicket(w http.ResponseWriter, r *http.Request, key string) {
+	pc, row, ok := s.ticketFor(w, r, key, access.Viewer)
+	if !ok {
+		return
+	}
+	if err := s.q.UnfollowTicket(r.Context(), db.UnfollowTicketParams{TicketID: row.Ticket.ID, UserID: pc.user.ID}); err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -144,5 +145,45 @@ func TestNotificationsStreamToOpenTabs(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("no notification within 5 seconds")
+	}
+}
+
+// MSL-57: someone not on a ticket follows it, hears its comments and status
+// changes, and stops hearing them after unfollowing.
+func TestFollowersHearATicket(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	qa, qu := e.signedIn("qa@example.com", false)
+	e.seedMember(qu, w.p, "member")
+	tk := e.seedTicket(w.p, w.pmUser, "Cut-off payroll uses the 30th", &w.a, w.ot)
+	if code := e.call(qa, http.MethodPost, "/tickets/"+tk.Key+"/follow", nil, nil); code != http.StatusNoContent {
+		t.Fatalf("follow: %d", code)
+	}
+	var got httpapi.Ticket
+	if e.call(qa, http.MethodGet, "/tickets/"+tk.Key, nil, &got); got.Following == nil || !*got.Following {
+		t.Fatalf("following: %+v", got.Following)
+	}
+	admin, _ := e.signedIn("admin@example.com", true)
+	e.call(admin, http.MethodPost, "/tickets/"+tk.Key+"/comments", map[string]any{"body": "Fixed on staging."}, nil)
+	var statuses httpapi.StatusList
+	e.call(admin, http.MethodGet, "/projects/HRIS/statuses", nil, &statuses)
+	var inProgress int64
+	for _, s := range statuses.Items {
+		if s.Category == httpapi.StatusCategoryInProgress {
+			inProgress = s.Id
+			break
+		}
+	}
+	e.call(admin, http.MethodPost, "/tickets/"+tk.Key+"/transition", map[string]any{"status_id": inProgress}, nil)
+	if got := types(notes(e, qa)); !slices.Contains(got, "comment") || !slices.Contains(got, "status") {
+		t.Fatalf("a follower's notifications: %v", got)
+	}
+	if code := e.call(qa, http.MethodDelete, "/tickets/"+tk.Key+"/follow", nil, nil); code != http.StatusNoContent {
+		t.Fatalf("unfollow: %d", code)
+	}
+	before := len(notes(e, qa).Items)
+	e.call(admin, http.MethodPost, "/tickets/"+tk.Key+"/comments", map[string]any{"body": "Released."}, nil)
+	if after := len(notes(e, qa).Items); after != before {
+		t.Fatalf("an unfollower still hears: %d → %d", before, after)
 	}
 }

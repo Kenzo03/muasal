@@ -1307,6 +1307,22 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/DecisionRecord" }
         default: { $ref: "#/components/responses/Problem" }
+  /tickets/{key}/follow:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: followTicket
+      tags: [tickets]
+      description: The caller follows the ticket and hears its comments and status changes (MSL-57).
+      responses:
+        "204": { description: Following. }
+        default: { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: unfollowTicket
+      tags: [tickets]
+      responses:
+        "204": { description: No longer following. }
+        default: { $ref: "#/components/responses/Problem" }
   /tickets/{key}/links:
     parameters:
       - { name: key, in: path, required: true, schema: { type: string } }
@@ -2475,6 +2491,7 @@ components:
         due_date: { type: string, format: date, nullable: true }
         estimate_hours: { type: number, format: double, nullable: true, description: The effort estimate in hours (MSL-54). }
         labels: { type: array, items: { type: string }, description: "Free-text labels, lowercased (MSL-56)." }
+        following: { type: boolean, description: The caller follows the ticket (MSL-57). }
         nodes:
           type: array
           items: { $ref: "#/components/schemas/NodeRef" }

@@ -45,6 +45,12 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
   const tPri = useTranslations("priorities");
   const tf = useTranslations("ticketForm");
   const [taskError, setTaskError] = useState("");
+  const [following, setFollowing] = useState(Boolean(ticket.following));
+  async function toggleFollow() {
+    const path = { params: { path: { key: ticket.key } } };
+    const { error } = following ? await api.DELETE("/tickets/{key}/follow", path) : await api.POST("/tickets/{key}/follow", path);
+    if (!error) setFollowing(!following);
+  }
   // MSL-55: a ticked step saves the description, through the same update as an edit.
   async function tickTask(line: number, checked: boolean) {
     const description = toggleTask(ticket.description, line, checked);
@@ -95,6 +101,11 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
           <Icon name="sparkle" className="size-4 text-accent" />
           {ta("askAboutTicket")}
         </Link>
+        {/* MSL-57: anyone who can see the ticket follows it to hear its comments and status. */}
+        <button type="button" onClick={toggleFollow} aria-pressed={following} className={button.secondary}>
+          <Icon name="bell" className={following ? "size-4 text-accent" : "size-4"} />
+          {following ? t("following") : t("follow")}
+        </button>
         {canEdit && !editing && (
           <button type="button" onClick={() => setEditing(true)} className={button.secondary}>
             <Icon name="edit" />

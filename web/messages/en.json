@@ -707,7 +707,9 @@
     "closed": "Closed",
     "estimate": "Estimate",
     "hours": "{hours} h",
-    "labels": "Labels"
+    "labels": "Labels",
+    "follow": "Follow",
+    "following": "Following"
   },
   "close": {
     "title": "Close {key} as {status}",

@@ -417,6 +417,12 @@ type TicketCommit struct {
 	CommitID int64
 }
 
+type TicketFollower struct {
+	TicketID  int64
+	UserID    int64
+	CreatedAt time.Time
+}
+
 type TicketLink struct {
 	ID        int64
 	FromID    int64
