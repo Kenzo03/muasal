@@ -683,10 +683,10 @@
     "save": "Tautkan",
     "cancel": "Batal",
     "remove": "Hapus tautan ke {key}",
-    "hint": "Tiket yang membatalkan tiket lain menggantikan keputusannya.",
+    "hint": "Tiket yang mencabut tiket lain menggantikan keputusannya.",
     "reverses": {
-      "out": "Membatalkan",
-      "in": "Dibatalkan oleh"
+      "out": "Mencabut",
+      "in": "Dicabut oleh"
     },
     "extends": {
       "out": "Memperluas",
@@ -753,8 +753,8 @@
     "unlinked": "{actor} menghapus tautan: {link} {key}",
     "links": {
       "reverses": {
-        "out": "Membatalkan",
-        "in": "Dibatalkan oleh"
+        "out": "Mencabut",
+        "in": "Dicabut oleh"
       },
       "extends": {
         "out": "Memperluas",
