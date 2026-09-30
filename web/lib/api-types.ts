@@ -1814,6 +1814,8 @@ export interface components {
             author: string;
         };
         Behavior: {
+            /** @description A done ticket without a confirmed decision record, such as an imported one: what_changed is its title and why its reason (MSL-13). */
+            unconfirmed: boolean;
             key: string;
             title: string;
             client?: components["schemas"]["Ref"];

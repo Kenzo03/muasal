@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getLocale, getTimeZone, getTranslations } from "next-intl/server";
 import { dayOf } from "@/lib/format";
 import type { Behavior } from "@/lib/problem";
-import { cx, panel, sectionTitle } from "@/lib/ui";
+import { chip, cx, panel, sectionTitle } from "@/lib/ui";
 
 // The Behaviors tab (FSD §7.4, story 5): the decisions in force, "All clients"
 // first, then each client in the user's scope, so QA checks what a client
@@ -30,10 +30,12 @@ export default async function Behaviors({ items }: { items: Behavior[] }) {
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
                   <Link href={`/t/${b.key}`} className="text-[13px] font-bold no-underline">{b.key}</Link>
                   <span className="text-sm font-bold text-ink">{b.title}</span>
+                  {/* MSL-13: imported history has no confirmed record yet; it counts, marked. */}
+                  {b.unconfirmed && <span className={cx(chip, "bg-warn-soft text-warn")} title={t("unconfirmedHint")}>{t("unconfirmed")}</span>}
                   {b.closed_at && <span className="ml-auto">{dayOf(b.closed_at, locale, timeZone)}</span>}
                 </div>
-                <p className="whitespace-pre-wrap text-sm leading-relaxed">{b.what_changed}</p>
-                <p className="whitespace-pre-wrap text-[13px] text-muted">{t("because", { why: b.why })}</p>
+                {!b.unconfirmed && <p className="whitespace-pre-wrap text-sm leading-relaxed">{b.what_changed}</p>}
+                {b.why && <p className="whitespace-pre-wrap text-[13px] text-muted">{t(b.unconfirmed ? "reasonOnly" : "because", { why: b.why })}</p>}
               </li>
             ))}
           </ul>

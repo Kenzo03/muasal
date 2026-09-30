@@ -404,7 +404,10 @@
     "attendees": "With {names}",
     "supersededBy": "Superseded by {key}",
     "spec": "Specification",
-    "specTitle": "Where it started in the documents"
+    "specTitle": "Where it started in the documents",
+    "unconfirmed": "Unconfirmed",
+    "unconfirmedHint": "A done ticket without a decision record, such as an imported one. Open it to confirm what changed.",
+    "reasonOnly": "Reason: {why}"
   },
   "errors": {
     "generic": "Something went wrong. Try again.",

@@ -143,7 +143,7 @@ func (s *Server) GetNodeBehaviors(w http.ResponseWriter, r *http.Request, id int
 	}
 	out := BehaviorList{Items: make([]Behavior, len(rows))}
 	for i, b := range rows {
-		out.Items[i] = Behavior{Key: b.Key, Title: b.Title, ClosedAt: b.ClosedAt, WhatChanged: b.WhatChanged, Why: b.Why, Alternatives: b.Alternatives}
+		out.Items[i] = Behavior{Key: b.Key, Title: b.Title, ClosedAt: b.ClosedAt, WhatChanged: b.WhatChanged, Why: b.Why, Alternatives: b.Alternatives, Unconfirmed: b.Unconfirmed}
 		if b.ClientID != nil {
 			out.Items[i].Client = &Ref{Id: *b.ClientID, Name: deref(b.ClientName)}
 		}

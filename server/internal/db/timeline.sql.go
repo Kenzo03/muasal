@@ -11,15 +11,27 @@ import (
 )
 
 const listNodeBehaviors = `-- name: ListNodeBehaviors :many
-SELECT t.key, t.title, t.client_id, c.name AS client_name, t.closed_at, d.what_changed, d.why, d.alternatives
-FROM tickets t
-JOIN decision_records d ON d.ticket_id = t.id
-LEFT JOIN clients c ON c.id = t.client_id
-WHERE t.project_id = $1
-  AND d.state = 'confirmed' AND d.outcome = 'implemented' AND d.superseded_by IS NULL
-  AND EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id AND tn.node_id = ANY ($2::bigint[]))
-  AND ($3::boolean OR t.client_id IS NULL OR t.client_id = ANY ($4::bigint[]))
-ORDER BY t.client_id IS NOT NULL, lower(c.name), t.client_id, t.closed_at DESC, t.id DESC
+SELECT b.key, b.title, b.client_id, b.client_name, b.closed_at, b.what_changed, b.why, b.alternatives, b.unconfirmed
+FROM (
+  SELECT t.id, t.key, t.title, t.client_id, c.name AS client_name, t.closed_at, d.what_changed, d.why, d.alternatives, false AS unconfirmed
+  FROM tickets t
+  JOIN decision_records d ON d.ticket_id = t.id
+  LEFT JOIN clients c ON c.id = t.client_id
+  WHERE t.project_id = $1
+    AND d.state = 'confirmed' AND d.outcome = 'implemented' AND d.superseded_by IS NULL
+    AND EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id AND tn.node_id = ANY ($2::bigint[]))
+    AND ($3::boolean OR t.client_id IS NULL OR t.client_id = ANY ($4::bigint[]))
+  UNION ALL
+  SELECT t.id, t.key, t.title, t.client_id, c.name, t.closed_at, t.title, t.reason, '', true
+  FROM tickets t
+  JOIN statuses st ON st.id = t.status_id AND st.category = 'done'
+  LEFT JOIN clients c ON c.id = t.client_id
+  WHERE t.project_id = $1
+    AND NOT EXISTS (SELECT 1 FROM decision_records d WHERE d.ticket_id = t.id AND d.state = 'confirmed')
+    AND EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id AND tn.node_id = ANY ($2::bigint[]))
+    AND ($3::boolean OR t.client_id IS NULL OR t.client_id = ANY ($4::bigint[]))
+) b
+ORDER BY b.client_id IS NOT NULL, lower(b.client_name), b.client_id, b.closed_at DESC, b.id DESC
 LIMIT 500
 `
 
@@ -39,12 +51,15 @@ type ListNodeBehaviorsRow struct {
 	WhatChanged  string
 	Why          string
 	Alternatives string
+	Unconfirmed  bool
 }
 
 // The decisions in force on these nodes: confirmed and implemented, on tickets
 // the scope may see; core work first, then by client, newest first (FSD §7.4).
 // A decision another ticket reverses is no longer in force (R-TK-5).
 // ponytail: at most 500.
+// Done tickets without a confirmed record, which come from imports, count too,
+// marked unconfirmed, with their title and reason (MSL-13).
 func (q *Queries) ListNodeBehaviors(ctx context.Context, arg ListNodeBehaviorsParams) ([]ListNodeBehaviorsRow, error) {
 	rows, err := q.db.Query(ctx, listNodeBehaviors,
 		arg.ProjectID,
@@ -68,6 +83,7 @@ func (q *Queries) ListNodeBehaviors(ctx context.Context, arg ListNodeBehaviorsPa
 			&i.WhatChanged,
 			&i.Why,
 			&i.Alternatives,
+			&i.Unconfirmed,
 		); err != nil {
 			return nil, err
 		}

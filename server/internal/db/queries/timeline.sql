@@ -32,13 +32,27 @@ LIMIT sqlc.arg('lim') OFFSET sqlc.arg('off');
 -- the scope may see; core work first, then by client, newest first (FSD §7.4).
 -- A decision another ticket reverses is no longer in force (R-TK-5).
 -- ponytail: at most 500.
-SELECT t.key, t.title, t.client_id, c.name AS client_name, t.closed_at, d.what_changed, d.why, d.alternatives
-FROM tickets t
-JOIN decision_records d ON d.ticket_id = t.id
-LEFT JOIN clients c ON c.id = t.client_id
-WHERE t.project_id = sqlc.arg('project_id')
-  AND d.state = 'confirmed' AND d.outcome = 'implemented' AND d.superseded_by IS NULL
-  AND EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id AND tn.node_id = ANY (sqlc.arg('node_ids')::bigint[]))
-  AND (sqlc.arg('all_clients')::boolean OR t.client_id IS NULL OR t.client_id = ANY (sqlc.arg('client_ids')::bigint[]))
-ORDER BY t.client_id IS NOT NULL, lower(c.name), t.client_id, t.closed_at DESC, t.id DESC
+-- Done tickets without a confirmed record, which come from imports, count too,
+-- marked unconfirmed, with their title and reason (MSL-13).
+SELECT b.key, b.title, b.client_id, b.client_name, b.closed_at, b.what_changed, b.why, b.alternatives, b.unconfirmed
+FROM (
+  SELECT t.id, t.key, t.title, t.client_id, c.name AS client_name, t.closed_at, d.what_changed, d.why, d.alternatives, false AS unconfirmed
+  FROM tickets t
+  JOIN decision_records d ON d.ticket_id = t.id
+  LEFT JOIN clients c ON c.id = t.client_id
+  WHERE t.project_id = sqlc.arg('project_id')
+    AND d.state = 'confirmed' AND d.outcome = 'implemented' AND d.superseded_by IS NULL
+    AND EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id AND tn.node_id = ANY (sqlc.arg('node_ids')::bigint[]))
+    AND (sqlc.arg('all_clients')::boolean OR t.client_id IS NULL OR t.client_id = ANY (sqlc.arg('client_ids')::bigint[]))
+  UNION ALL
+  SELECT t.id, t.key, t.title, t.client_id, c.name, t.closed_at, t.title, t.reason, '', true
+  FROM tickets t
+  JOIN statuses st ON st.id = t.status_id AND st.category = 'done'
+  LEFT JOIN clients c ON c.id = t.client_id
+  WHERE t.project_id = sqlc.arg('project_id')
+    AND NOT EXISTS (SELECT 1 FROM decision_records d WHERE d.ticket_id = t.id AND d.state = 'confirmed')
+    AND EXISTS (SELECT 1 FROM ticket_nodes tn WHERE tn.ticket_id = t.id AND tn.node_id = ANY (sqlc.arg('node_ids')::bigint[]))
+    AND (sqlc.arg('all_clients')::boolean OR t.client_id IS NULL OR t.client_id = ANY (sqlc.arg('client_ids')::bigint[]))
+) b
+ORDER BY b.client_id IS NOT NULL, lower(b.client_name), b.client_id, b.closed_at DESC, b.id DESC
 LIMIT 500;

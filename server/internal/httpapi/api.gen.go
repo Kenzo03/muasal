@@ -1438,8 +1438,11 @@ type Behavior struct {
 	ClosedAt     *time.Time `json:"closed_at,omitempty"`
 	Key          string     `json:"key"`
 	Title        string     `json:"title"`
-	WhatChanged  string     `json:"what_changed"`
-	Why          string     `json:"why"`
+
+	// Unconfirmed A done ticket without a confirmed decision record, such as an imported one: what_changed is its title and why its reason (MSL-13).
+	Unconfirmed bool   `json:"unconfirmed"`
+	WhatChanged string `json:"what_changed"`
+	Why         string `json:"why"`
 }
 
 // BehaviorList defines model for BehaviorList.

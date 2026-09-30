@@ -404,7 +404,10 @@
     "attendees": "Bersama {names}",
     "supersededBy": "Digantikan oleh {key}",
     "spec": "Spesifikasi",
-    "specTitle": "Asal di dokumen"
+    "specTitle": "Asal di dokumen",
+    "unconfirmed": "Belum dikonfirmasi",
+    "unconfirmedHint": "Tiket selesai tanpa catatan keputusan, misalnya hasil impor. Buka tiketnya untuk memastikan apa yang berubah.",
+    "reasonOnly": "Alasan: {why}"
   },
   "errors": {
     "generic": "Terjadi kesalahan. Coba lagi.",
