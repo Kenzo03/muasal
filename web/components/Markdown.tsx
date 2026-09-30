@@ -1,3 +1,4 @@
+import { Children, isValidElement, type ReactElement } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
@@ -47,11 +48,47 @@ const components: Components = {
     ),
 };
 
-// people turns their @handles into name chips (MSL-30).
-export default function Markdown({ text, className, people }: { text: string; className?: string; people?: Person[] }) {
+// A task item that ticks (MSL-55): onTask gets the item's line in the text.
+const taskItem =
+  (onTask: (line: number, checked: boolean) => void): Components["li"] =>
+  ({ node, className, children }) => {
+    if (!className?.includes("task-list-item")) return <li className={className}>{children}</li>;
+    const kids = Children.toArray(children);
+    const box = kids.find((c) => isValidElement(c) && c.type === "input") as ReactElement<{ checked?: boolean }> | undefined;
+    const checked = Boolean(box?.props.checked);
+    return (
+      <li className={cx(className, "list-none")}>
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={() => onTask(node?.position?.start.line ?? 0, !checked)}
+          className="mr-1.5 size-4 cursor-pointer align-[-3px] accent-accent"
+        />
+        {kids.filter((c) => c !== box)}
+      </li>
+    );
+  };
+
+// people turns their @handles into name chips (MSL-30); onTask makes task
+// list items tick (MSL-55).
+export default function Markdown({
+  text,
+  className,
+  people,
+  onTask,
+}: {
+  text: string;
+  className?: string;
+  people?: Person[];
+  onTask?: (line: number, checked: boolean) => void;
+}) {
   return (
     <div className={cx("break-words text-sm leading-relaxed", className)}>
-      <ReactMarkdown remarkPlugins={people?.length ? [remarkGfm, remarkMentions(people)] : [remarkGfm]} rehypePlugins={[rehypeSanitize]} components={components}>
+      <ReactMarkdown
+        remarkPlugins={people?.length ? [remarkGfm, remarkMentions(people)] : [remarkGfm]}
+        rehypePlugins={[rehypeSanitize]}
+        components={onTask ? { ...components, li: taskItem(onTask) } : components}
+      >
         {text}
       </ReactMarkdown>
     </div>

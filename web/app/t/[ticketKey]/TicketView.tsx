@@ -19,6 +19,8 @@ import Code from "./Code";
 import DecisionCard from "./DecisionCard";
 import Links from "./Links";
 import type { Person } from "@/lib/mentions";
+import { updateBody } from "@/lib/bulk";
+import { toggleTask } from "@/lib/tasks";
 
 type Props = {
   ticket: Ticket;
@@ -42,6 +44,18 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
   const tTypes = useTranslations("ticketTypes");
   const tPri = useTranslations("priorities");
   const tf = useTranslations("ticketForm");
+  const [taskError, setTaskError] = useState("");
+  // MSL-55: a ticked step saves the description, through the same update as an edit.
+  async function tickTask(line: number, checked: boolean) {
+    const description = toggleTask(ticket.description, line, checked);
+    if (description === ticket.description) return;
+    const { error } = await api.PUT("/tickets/{key}", {
+      params: { path: { key: ticket.key }, header: { "If-Match": `"${ticket.version}"` } },
+      body: { ...updateBody(ticket, {}), description },
+    });
+    setTaskError(error ? problemText(error) : "");
+    if (!error) router.refresh();
+  }
   const locale = useLocale();
   const timeZone = useTimeZone();
   const problemText = useProblemText();
@@ -181,7 +195,12 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
                 </div>
                 <div className={block}>
                   <h2 className={sectionTitle}>{t("description")}</h2>
-                  {ticket.description ? <Markdown text={ticket.description} people={people} /> : <p className="text-sm text-muted">{t("none")}</p>}
+                  {ticket.description ? (
+                    <Markdown text={ticket.description} people={people} onTask={canEdit ? tickTask : undefined} />
+                  ) : (
+                    <p className="text-sm text-muted">{t("none")}</p>
+                  )}
+                  {taskError && <p role="alert" className="text-xs text-danger">{taskError}</p>}
                 </div>
               </section>
               <Links ticketKey={ticket.key} links={ticket.links} canEdit={canEdit} />

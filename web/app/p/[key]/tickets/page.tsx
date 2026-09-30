@@ -111,6 +111,7 @@ export default async function TicketsPage({
                             <span className="text-[12.5px] text-muted">
                               {it.node_names[0] ?? "—"}
                               {it.node_names.length > 1 ? ` +${it.node_names.length - 1}` : ""}
+                              {it.checklist && <span title={t("checklist")}> · ☑ {it.checklist.done}/{it.checklist.total}</span>}
                             </span>
                           </span>
                         </span>

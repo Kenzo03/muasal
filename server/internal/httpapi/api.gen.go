@@ -2768,7 +2768,13 @@ type TicketRequesterKind string
 
 // TicketSummary defines model for TicketSummary.
 type TicketSummary struct {
-	Assignee      *Ref                `json:"assignee,omitempty"`
+	Assignee *Ref `json:"assignee,omitempty"`
+
+	// Checklist The description's task list, when it has one (MSL-55).
+	Checklist *struct {
+		Done  int `json:"done"`
+		Total int `json:"total"`
+	} `json:"checklist,omitempty"`
 	Client        *Ref                `json:"client,omitempty"`
 	DueDate       *openapi_types.Date `json:"due_date"`
 	Id            int64               `json:"id"`

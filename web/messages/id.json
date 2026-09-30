@@ -590,7 +590,8 @@
     "showAll": "Tampilkan semua",
     "showRecent": "14 hari terakhir",
     "moveTo": "Status {key}",
-    "noClient": "Inti"
+    "noClient": "Inti",
+    "checklist": "Langkah checklist yang selesai"
   },
   "tickets": {
     "new": "Tiket baru",
@@ -632,7 +633,8 @@
       "failed": "Tidak berubah:",
       "select": "Pilih {key}",
       "selectAll": "Pilih semua"
-    }
+    },
+    "checklist": "Langkah checklist yang selesai"
   },
   "ticketForm": {
     "newTitle": "Tiket baru",

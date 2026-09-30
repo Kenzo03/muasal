@@ -144,6 +144,12 @@ func toTicketSummary(t db.ListTicketsRow) TicketSummary {
 		StatusId: t.StatusID, RequesterName: t.RequesterName, NodeNames: orEmpty(t.NodeNames),
 		MissingReason: t.MissingReason, UpdatedAt: t.UpdatedAt,
 	}
+	if t.ChecklistTotal > 0 {
+		out.Checklist = &struct {
+			Done  int `json:"done"`
+			Total int `json:"total"`
+		}{int(t.ChecklistDone), int(t.ChecklistTotal)}
+	}
 	if t.DueDate != nil {
 		out.DueDate = &openapi_types.Date{Time: *t.DueDate}
 	}
