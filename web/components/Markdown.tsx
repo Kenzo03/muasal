@@ -1,5 +1,5 @@
-import { Children, isValidElement, type ReactElement } from "react";
-import ReactMarkdown, { type Components } from "react-markdown";
+import { Children, isValidElement, useId, type ReactElement } from "react";
+import ReactMarkdown, { type Components, type ExtraProps } from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 import { remarkMentions, type Person } from "@/lib/mentions";
@@ -49,25 +49,29 @@ const components: Components = {
 };
 
 // A task item that ticks (MSL-55): onTask gets the item's line in the text.
+type LiProps = React.ComponentProps<"li"> & ExtraProps;
+function TaskItem({ node, className, children, onTask }: LiProps & { onTask: (line: number, checked: boolean) => void }) {
+  const id = useId(); // the box is named by its step (MSL-62)
+  if (!className?.includes("task-list-item")) return <li className={className}>{children}</li>;
+  const kids = Children.toArray(children);
+  const box = kids.find((c) => isValidElement(c) && c.type === "input") as ReactElement<{ checked?: boolean }> | undefined;
+  const checked = Boolean(box?.props.checked);
+  return (
+    <li className={cx(className, "list-none")}>
+      <input
+        type="checkbox"
+        checked={checked}
+        aria-labelledby={id}
+        onChange={() => onTask(node?.position?.start.line ?? 0, !checked)}
+        className="mr-1.5 size-4 cursor-pointer align-[-3px] accent-accent"
+      />
+      <span id={id}>{kids.filter((c) => c !== box)}</span>
+    </li>
+  );
+}
 const taskItem =
   (onTask: (line: number, checked: boolean) => void): Components["li"] =>
-  ({ node, className, children }) => {
-    if (!className?.includes("task-list-item")) return <li className={className}>{children}</li>;
-    const kids = Children.toArray(children);
-    const box = kids.find((c) => isValidElement(c) && c.type === "input") as ReactElement<{ checked?: boolean }> | undefined;
-    const checked = Boolean(box?.props.checked);
-    return (
-      <li className={cx(className, "list-none")}>
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={() => onTask(node?.position?.start.line ?? 0, !checked)}
-          className="mr-1.5 size-4 cursor-pointer align-[-3px] accent-accent"
-        />
-        {kids.filter((c) => c !== box)}
-      </li>
-    );
-  };
+  (props) => <TaskItem {...props} onTask={onTask} />;
 
 // people turns their @handles into name chips (MSL-30); onTask makes task
 // list items tick (MSL-55).
