@@ -16,9 +16,9 @@ export default function UsersAdmin({ users, meId }: { users: User[]; meId: numbe
   const timeZone = useTimeZone();
   const router = useRouter();
   // MSL-20: every link made here stays listed until dismissed, newest first.
-  const [links, setLinks] = useState<{ name: string; url: string }[]>([]);
+  const [links, setLinks] = useState<{ name: string; url: string; emailedTo?: string }[]>([]);
   const [copied, setCopied] = useState("");
-  const addLink = (name: string, url: string) => setLinks((ls) => [{ name, url }, ...ls.filter((l) => l.name !== name)]);
+  const addLink = (name: string, url: string, emailedTo?: string) => setLinks((ls) => [{ name, url, emailedTo }, ...ls.filter((l) => l.name !== name)]);
   const [error, setError] = useState("");
 
   function show(p: Problem) {
@@ -35,7 +35,7 @@ export default function UsersAdmin({ users, meId }: { users: User[]; meId: numbe
     });
     if (error) return show(error);
     setError("");
-    addLink(data.user.name, data.setup_link.url);
+    addLink(data.user.name, data.setup_link.url, data.setup_link.emailed_to);
     formEl.reset();
     router.refresh();
   }
@@ -49,7 +49,7 @@ export default function UsersAdmin({ users, meId }: { users: User[]; meId: numbe
   async function resetPassword(u: User) {
     const { data, error } = await api.POST("/admin/users/{id}/setup-link", { params: { path: { id: u.id } } });
     if (error) return show(error);
-    addLink(u.name, data.url);
+    addLink(u.name, data.url, data.emailed_to);
     router.refresh();
   }
 
@@ -85,6 +85,8 @@ export default function UsersAdmin({ users, meId }: { users: User[]; meId: numbe
           <button type="button" aria-label={t("dismiss")} className={button.quiet} onClick={() => setLinks((ls) => ls.filter((l) => l.url !== link.url))}>
             ×
           </button>
+          {/* MSL-50: with email set up, the link is on its way too. */}
+          {link.emailedTo && <span className="basis-full text-xs text-ink-soft">{t("emailedTo", { email: link.emailedTo })}</span>}
         </p>
       ))}
       <div className={table.wrap}>

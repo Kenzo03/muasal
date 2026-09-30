@@ -1644,6 +1644,8 @@ export interface components {
             url: string;
             /** Format: date-time */
             expires_at: string;
+            /** @description With email set up */
+            emailed_to?: string;
         };
         CreatedUser: {
             user: components["schemas"]["User"];

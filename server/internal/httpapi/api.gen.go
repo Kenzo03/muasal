@@ -2443,6 +2443,8 @@ type SearchTicket struct {
 
 // SetupLink defines model for SetupLink.
 type SetupLink struct {
+	// EmailedTo With email set up
+	EmailedTo *string   `json:"emailed_to,omitempty"`
 	ExpiresAt time.Time `json:"expires_at"`
 	Url       string    `json:"url"`
 }
