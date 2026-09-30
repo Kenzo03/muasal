@@ -545,6 +545,8 @@
     "urgent": "Urgent"
   },
   "ticketFilters": {
+    "release": "Release",
+    "anyRelease": "Any",
     "accepted": "Client",
     "anyAcceptance": "Any",
     "acceptedYes": "Accepted",
@@ -637,6 +639,8 @@
       "status": "Status",
       "apply": "Apply to {count}",
       "closeOut": "Close out {count}…",
+      "release": "Release",
+      "noRelease": "None",
       "progress": "Updating {done} of {total}…",
       "failed": "Not changed:",
       "select": "Select {key}",
@@ -688,7 +692,9 @@
     "close": "Close",
     "estimate": "Estimate (hours)",
     "labels": "Labels",
-    "labelsHint": "Comma-separated, such as pilot, uat"
+    "labelsHint": "Comma-separated, such as pilot, uat",
+    "release": "Release",
+    "noRelease": "None"
   },
   "ticket": {
     "edit": "Edit",
@@ -715,6 +721,7 @@
     "hours": "{hours} h",
     "labels": "Labels",
     "follow": "Follow",
+    "release": "Release",
     "following": "Following"
   },
   "close": {
@@ -1444,7 +1451,18 @@
     "remove": "Remove",
     "noContacts": "This client has no contacts yet; add one on the ticket form first."
   },
+  "releases": {
+    "title": "Releases",
+    "intro": "Name the releases this project ships, such as v1.0; tickets then name their release, the list filters by it, and a summary can cover one release.",
+    "name": "Name",
+    "releasedOn": "Released on",
+    "save": "Save",
+    "add": "Add release",
+    "tickets": "Its tickets"
+  },
   "summaries": {
+    "release": "Release",
+    "anyRelease": "Any release, with decision notes",
     "heading": "Change summaries",
     "new": "New summary",
     "newTitle": "New change summary",

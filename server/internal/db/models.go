@@ -326,6 +326,14 @@ type ProjectClient struct {
 	ClientID  int64
 }
 
+type Release struct {
+	ID         int64
+	ProjectID  int64
+	Name       string
+	ReleasedOn *time.Time
+	CreatedAt  time.Time
+}
+
 type Session struct {
 	TokenHash  []byte
 	UserID     int64
@@ -414,6 +422,7 @@ type Ticket struct {
 	AcceptedContactID  *int64
 	AcceptedOn         *time.Time
 	AcceptanceNote     string
+	ReleaseID          *int64
 }
 
 type TicketCommit struct {

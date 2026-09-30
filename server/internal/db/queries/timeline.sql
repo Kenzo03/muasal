@@ -7,7 +7,7 @@ SELECT t.id, t.key, t.title, t.type, t.client_id, c.name AS client_name,
        t.requester_contact_id, rc.name AS requester_contact_name, rc.title AS requester_contact_title,
        t.requester_user_id, ru.name AS requester_user_name, t.created_at, t.closed_at, sqlc.embed(s),
        d.what_changed, d.why, d.alternatives, d.outcome, d.state, d.confirmed_by, cu.name AS confirmer_name, d.confirmed_at,
-       sk.key AS superseded_by_key, t.accepted_on, ac.name AS accepted_contact_name
+       sk.key AS superseded_by_key, t.accepted_on, ac.name AS accepted_contact_name, t.release_id
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
 LEFT JOIN clients c ON c.id = t.client_id

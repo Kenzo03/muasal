@@ -102,6 +102,16 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
     };
   }, [clientId]);
 
+  // MSL-67: the project's releases, when it has any.
+  const [releases, setReleases] = useState<{ id: number; name: string }[]>([]);
+  useEffect(() => {
+    let live = true;
+    api.GET("/projects/{key}/releases", { params: { path: { key: projectKey } } }).then(({ data }) => live && data && setReleases(data.items));
+    return () => {
+      live = false;
+    };
+  }, [projectKey]);
+
   // MSL-22: only people who may see the chosen client's tickets can own this one.
   const [people, setPeople] = useState(assignees);
   useEffect(() => {
@@ -163,6 +173,8 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
       due_date: due || undefined,
       estimate_hours: estimate ? Number(estimate) : undefined, // MSL-54
       labels,
+      // MSL-67: before the releases load there is no menu, so an edit keeps the ticket's.
+      release_id: form.has("release_id") ? Number(form.get("release_id")) || undefined : ticket?.release?.id,
     };
     if (ticket) {
       const { error } = await api.PUT("/tickets/{key}", {
@@ -373,7 +385,18 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
             {t("estimate")}
             <input id="tf-estimate" type="number" name="estimate_hours" min={0} max={9999} step={0.5} defaultValue={ticket?.estimate_hours ?? ""} className={field.input} />
           </label>
-          <label htmlFor="tf-labels" className={cx(field.label, "md:col-span-4")}>
+          {releases.length > 0 && (
+            <label htmlFor="tf-release" className={field.label}>
+              {t("release")}
+              <select id="tf-release" name="release_id" defaultValue={ticket?.release?.id ?? ""} className={field.input}>
+                <option value="">{t("noRelease")}</option>
+                {releases.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </select>
+            </label>
+          )}
+          <label htmlFor="tf-labels" className={cx(field.label, releases.length > 0 ? "md:col-span-3" : "md:col-span-4")}>
             {t("labels")}
             <input id="tf-labels" name="labels" defaultValue={ticket?.labels?.join(", ") ?? ""} placeholder={t("labelsHint")} className={field.input} />
           </label>

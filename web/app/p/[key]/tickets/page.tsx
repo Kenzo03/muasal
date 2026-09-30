@@ -31,12 +31,13 @@ export default async function TicketsPage({
   const tPri = await getTranslations("priorities");
   const api = await serverApi();
   const path = { params: { path: { key } } };
-  const [clients, statuses, assignees, page, labels] = await Promise.all([
+  const [clients, statuses, assignees, page, labels, releases] = await Promise.all([
     api.GET("/projects/{key}/clients", path),
     api.GET("/projects/{key}/statuses", path),
     api.GET("/projects/{key}/assignees", path),
     api.GET("/projects/{key}/tickets", { params: { path: { key }, query: ticketQuery(values) } }),
     api.GET("/projects/{key}/labels", path),
+    api.GET("/projects/{key}/releases", path),
   ]);
   const statusOf = new Map((statuses.data?.items ?? []).map((s) => [s.id, s]));
   const canEdit = project.role !== "viewer"; // MSL-53: members change tickets together
@@ -57,6 +58,7 @@ export default async function TicketsPage({
           assignees={assignees.data?.items ?? []}
           statuses={statuses.data?.items ?? []}
           labels={(labels.data?.items ?? []).map((l) => l.label)}
+          releases={releases.data?.items ?? []}
         />
         <a href={`/api/v1/projects/${key}/tickets?${new URLSearchParams({ ...exportQuery(ticketQuery(values)), format: "csv" })}`} download className={button.secondary}>
           <Icon name="download" />
@@ -70,7 +72,7 @@ export default async function TicketsPage({
         )}
       </PageBar>
       <main className="flex flex-col gap-3 px-4 py-4 md:px-5">
-        {canEdit && items.length > 0 && <BulkBar people={assignees.data?.items ?? []} statuses={statuses.data?.items ?? []} />}
+        {canEdit && items.length > 0 && <BulkBar people={assignees.data?.items ?? []} statuses={statuses.data?.items ?? []} releases={releases.data?.items ?? []} />}
         {items.length === 0 ? (
           <p className="text-muted">{t("none")}</p>
         ) : (

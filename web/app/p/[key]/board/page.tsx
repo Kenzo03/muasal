@@ -27,7 +27,7 @@ export default async function BoardPage({
   const api = await serverApi();
   const path = { params: { path: { key } } };
   const showAll = values.closed === "all";
-  const [clients, statuses, assignees, nodes, page, setup, labels] = await Promise.all([
+  const [clients, statuses, assignees, nodes, page, setup, labels, releases] = await Promise.all([
     api.GET("/projects/{key}/clients", path),
     api.GET("/projects/{key}/statuses", path),
     api.GET("/projects/{key}/assignees", path),
@@ -39,6 +39,7 @@ export default async function BoardPage({
     }),
     project.role === "admin" ? api.GET("/projects/{key}/setup", path) : Promise.resolve(undefined),
     api.GET("/projects/{key}/labels", path),
+    api.GET("/projects/{key}/releases", path),
   ]);
   // MSL-48: a project admin's setup guide, until the steps the team needs are done.
   const st = setup?.data;
@@ -64,6 +65,7 @@ export default async function BoardPage({
           clients={clients.data?.items ?? []}
           assignees={assignees.data?.items ?? []}
           labels={(labels.data?.items ?? []).map((l) => l.label)}
+          releases={releases.data?.items ?? []}
         />
       </PageBar>
       <main className="px-4 py-4 md:px-5">

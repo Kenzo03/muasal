@@ -38,6 +38,7 @@ type ticketInput struct {
 	DueDate     *openapi_types.Date
 	Estimate    *float64  // hours (MSL-54)
 	Labels      *[]string // MSL-56
+	ReleaseID   *int64    // MSL-67
 }
 
 func (s *Server) CreateTicket(w http.ResponseWriter, r *http.Request, key string, params CreateTicketParams) {
@@ -58,7 +59,7 @@ func (s *Server) CreateTicket(w http.ResponseWriter, r *http.Request, key string
 	draft, nodeIDs, fields, err := s.checkTicket(ctx, pc, ticketInput{
 		Type: in.Type, Title: in.Title, ClientID: in.ClientId, ContactID: in.RequesterContactId, UserID: in.RequesterUserId,
 		NodeIDs: in.NodeIds, Reason: in.Reason, Description: in.Description, AssigneeID: in.AssigneeId,
-		Priority: in.Priority, DueDate: in.DueDate, Estimate: in.EstimateHours, Labels: in.Labels,
+		Priority: in.Priority, DueDate: in.DueDate, Estimate: in.EstimateHours, Labels: in.Labels, ReleaseID: in.ReleaseId,
 	})
 	if err != nil {
 		s.fail(w, r, err)
@@ -194,7 +195,7 @@ func (s *Server) UpdateTicket(w http.ResponseWriter, r *http.Request, key string
 	draft, nodeIDs, fields, err := s.checkTicket(ctx, pc, ticketInput{
 		Type: in.Type, Title: in.Title, ClientID: in.ClientId, ContactID: in.RequesterContactId, UserID: in.RequesterUserId,
 		NodeIDs: in.NodeIds, Reason: in.Reason, Description: in.Description, AssigneeID: in.AssigneeId,
-		Priority: in.Priority, DueDate: in.DueDate, Estimate: in.EstimateHours, Labels: in.Labels,
+		Priority: in.Priority, DueDate: in.DueDate, Estimate: in.EstimateHours, Labels: in.Labels, ReleaseID: in.ReleaseId,
 	})
 	if err != nil {
 		s.fail(w, r, err)
@@ -221,7 +222,7 @@ func (s *Server) UpdateTicket(w http.ResponseWriter, r *http.Request, key string
 			ID: row.Ticket.ID, Version: version, Type: draft.Type, Title: draft.Title, Description: draft.Description,
 			Reason: draft.Reason, ClientID: draft.ClientID, RequesterContactID: draft.RequesterContactID,
 			RequesterUserID: draft.RequesterUserID, AssigneeID: draft.AssigneeID, Priority: draft.Priority, DueDate: draft.DueDate,
-			EstimateHours: draft.EstimateHours, Labels: draft.Labels,
+			EstimateHours: draft.EstimateHours, Labels: draft.Labels, ReleaseID: draft.ReleaseID,
 		})
 		if errors.Is(err, pgx.ErrNoRows) {
 			return errStale
@@ -495,6 +496,16 @@ func (s *Server) checkTicket(ctx context.Context, pc projectCtx, in ticketInput)
 		}
 		t.EstimateHours = in.Estimate
 	}
+	if in.ReleaseID != nil {
+		rl, err := s.q.GetRelease(ctx, *in.ReleaseID)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return t, nil, nil, err
+		}
+		if err != nil || rl.ProjectID != pc.project.ID {
+			f = append(f, FieldError{Field: "release_id", Code: "invalid", Message: "Choose a release of this project"})
+		}
+		t.ReleaseID = in.ReleaseID
+	}
 	// The client is in the caller's scope; the database checks it is linked (AC-TK-4).
 	if !pc.scope.Sees(in.ClientID) {
 		f = append(f, clientIDField)
@@ -642,6 +653,9 @@ func ticketFromRow(ctx context.Context, q *db.Queries, row db.GetTicketByKeyRow,
 	if t.DueDate != nil {
 		out.DueDate = &openapi_types.Date{Time: *t.DueDate}
 	}
+	if t.ReleaseID != nil { // MSL-67
+		out.Release = &Ref{Id: *t.ReleaseID, Name: deref(row.ReleaseName)}
+	}
 	if t.AcceptedContactID != nil && t.AcceptedOn != nil { // MSL-66
 		out.Acceptance = &TicketAcceptance{Contact: Ref{Id: *t.AcceptedContactID, Name: deref(row.AcceptedContactName)},
 			AcceptedOn: openapi_types.Date{Time: *t.AcceptedOn}, Note: t.AcceptanceNote}
@@ -664,7 +678,10 @@ func ticketAudit(t Ticket) map[string]any {
 	m := map[string]any{
 		"title": t.Title, "type": string(t.Type), "priority": string(t.Priority), "reason": t.Reason,
 		"description": t.Description, "status": t.Status.Name, "requester": t.Requester.Name, "menus": menus,
-		"client": nil, "assignee": nil, "due_date": nil, "estimate_hours": t.EstimateHours, "labels": deref(t.Labels),
+		"client": nil, "assignee": nil, "due_date": nil, "estimate_hours": t.EstimateHours, "labels": deref(t.Labels), "release": nil,
+	}
+	if t.Release != nil {
+		m["release"] = t.Release.Name
 	}
 	if t.Client != nil {
 		m["client"] = t.Client.Name

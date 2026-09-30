@@ -12,7 +12,11 @@ export default async function NewSummaryPage({ params }: { params: Promise<{ key
   const locale = await getLocale();
   const api = await serverApi();
   const path = { params: { path: { key } } };
-  const [clients, nodes] = await Promise.all([api.GET("/projects/{key}/clients", path), api.GET("/projects/{key}/nodes", path)]);
+  const [clients, nodes, releases] = await Promise.all([
+    api.GET("/projects/{key}/clients", path),
+    api.GET("/projects/{key}/nodes", path),
+    api.GET("/projects/{key}/releases", path),
+  ]);
   return (
     <>
       <PageBar>
@@ -20,7 +24,7 @@ export default async function NewSummaryPage({ params }: { params: Promise<{ key
         <span className="text-[13px] text-muted">{project.name}</span>
       </PageBar>
       <main className="px-4 py-4 md:px-5">
-        <Builder projectKey={key} clients={clients.data?.items ?? []} nodes={nodes.data?.items ?? []} locale={locale === "en" ? "en" : "id"} />
+        <Builder projectKey={key} clients={clients.data?.items ?? []} nodes={nodes.data?.items ?? []} releases={releases.data?.items ?? []} locale={locale === "en" ? "en" : "id"} />
       </main>
     </>
   );
