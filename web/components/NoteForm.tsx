@@ -80,7 +80,7 @@ export default function NoteForm({ projectKey, note, clients, nodes }: { project
       </div>
       <label className={field.label}>
         {t("tickets")}
-        <input name="ticket_keys" defaultValue={note?.tickets.map((tk) => tk.key).join(", ")} placeholder="HRIS-231, HRIS-240" className={cx(field.input, "font-mono")} />
+        <input name="ticket_keys" defaultValue={note?.tickets.map((tk) => tk.key).join(", ")} placeholder={`${projectKey}-12, ${projectKey}-15`} className={cx(field.input, "font-mono")} />
         <span className={field.hint}>{t("ticketsHint")}</span>
       </label>
       <label className={field.label}>

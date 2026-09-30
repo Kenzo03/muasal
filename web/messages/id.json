@@ -35,7 +35,7 @@
     "newTicket": "Tiket baru",
     "chooseProject": "Tiket baru di",
     "search": "Cari tiket atau menu",
-    "searchPlaceholder": "Cari tiket, menu, atau HRIS-231",
+    "searchPlaceholder": "Cari tiket, menu, atau {example}",
     "language": "Bahasa",
     "account": "Akun {name}",
     "newTicketShortcut": "Tiket baru (C)",
@@ -53,12 +53,13 @@
     "collapse": "Ringkas navigasi",
     "expand": "Lebarkan navigasi",
     "openMenu": "Buka navigasi",
-    "closeMenu": "Tutup navigasi"
+    "closeMenu": "Tutup navigasi",
+    "searchPlaceholderPlain": "Cari tiket atau menu"
   },
   "search": {
     "heading": "Pencarian",
     "title": "Hasil untuk “{q}”",
-    "hint": "Ketik kunci seperti HRIS-231 untuk langsung membuka tiketnya.",
+    "hint": "Ketik kunci seperti {example} untuk langsung membuka tiketnya.",
     "kinds": "Jenis hasil",
     "all": "Semua",
     "nodes": "Menu dan modul",
@@ -1185,7 +1186,7 @@
   },
   "repos": {
     "title": "Repositori",
-    "intro": "Commit dan merge request yang menyebut kunci tiket (HRIS-123) tampil di tiket itu dan menjadi bahan Tanya. Tambahkan repositori, lalu tempel URL webhook dan rahasianya di server Git Anda.",
+    "intro": "Commit dan merge request yang menyebut kunci tiket ({example}) tampil di tiket itu dan menjadi bahan Tanya. Tambahkan repositori, lalu tempel URL webhook dan rahasianya di server Git Anda.",
     "none": "Belum ada repositori.",
     "name": "Nama",
     "provider": "Penyedia",

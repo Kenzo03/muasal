@@ -18,6 +18,8 @@ type Props = { me: User; projects: Project[]; project?: Project; recent: string[
 // The light bar over every page: the sidebar's button on phones, search, Ask,
 // New ticket and the bell.
 export default function TopBar({ me, projects, project, recent, drawer, onMenu }: Props) {
+  // MSL-19: the example key is one of the user's own projects, not the demo's HRIS.
+  const example = project?.key ?? recent[0] ?? projects[0]?.key;
   const t = useTranslations("nav");
   const router = useRouter();
   const search = useRef<HTMLInputElement>(null);
@@ -72,7 +74,7 @@ export default function TopBar({ me, projects, project, recent, drawer, onMenu }
             required
             aria-label={t("search")}
             aria-keyshortcuts={shortcut ? "/" : undefined}
-            placeholder={t("searchPlaceholder")}
+            placeholder={example ? t("searchPlaceholder", { example: `${example}-12` }) : t("searchPlaceholderPlain")}
             className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted"
           />
           {shortcut && <kbd className="hidden rounded-md border border-line bg-well px-1.5 font-sans text-xs font-bold text-ink-soft md:inline">/</kbd>}

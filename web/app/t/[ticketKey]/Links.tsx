@@ -82,7 +82,7 @@ export default function Links({ ticketKey, links, canEdit }: { ticketKey: string
           </label>
           <label className={field.label}>
             {t("key")}
-            <input name="key" required placeholder="HRIS-88" className={cx(field.compact, "w-32")} />
+            <input name="key" required placeholder={`${ticketKey.replace(/-\d+$/, "")}-8`} className={cx(field.compact, "w-32")} />
           </label>
           <button className={button.primary}>{t("save")}</button>
           <button type="button" onClick={() => { setAdding(false); setError(""); }} className={button.secondary}>{t("cancel")}</button>

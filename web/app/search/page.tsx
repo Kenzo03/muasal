@@ -5,7 +5,7 @@ import { ClientChip, StatusDot } from "@/components/Chips";
 import Icon from "@/components/Icon";
 import PageBar from "@/components/PageBar";
 import { day } from "@/lib/format";
-import { serverApi } from "@/lib/server-api";
+import { getProjects, serverApi } from "@/lib/server-api";
 import { one } from "@/lib/ticket-query";
 import { chip, cx, panel, sectionTitle } from "@/lib/ui";
 
@@ -28,6 +28,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const { q = "", kind } = one(await searchParams);
   const query = q.trim();
   const t = await getTranslations("search");
+  const example = (await getProjects())[0]?.key; // MSL-19: a key from the user's own projects
   const tm = await getTranslations("modules");
   const locale = await getLocale();
   const api = await serverApi();
@@ -56,7 +57,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       <PageBar>
         <div className="flex flex-col gap-0.5">
           <h1>{query ? t("title", { q: query }) : t("heading")}</h1>
-          <p className="text-[13px] text-muted">{t("hint")}</p>
+          {example && <p className="text-[13px] text-muted">{t("hint", { example: `${example}-12` })}</p>}
         </div>
       </PageBar>
       <main className="flex max-w-[1040px] flex-col gap-5 px-4 py-4 md:px-5">

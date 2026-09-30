@@ -59,7 +59,7 @@ export default function Repos({ projectKey, repos }: { projectKey: string; repos
   return (
     <section aria-labelledby="repos-title" className={cx(panel, "flex flex-col gap-3 p-4")}>
       <h2 id="repos-title" className={sectionTitle}>{t("title")}</h2>
-      <p className="text-[13px] text-muted">{t("intro")}</p>
+      <p className="text-[13px] text-muted">{t("intro", { example: `${projectKey}-123` })}</p>
       {shown?.secret && (
         <div role="status" className="flex flex-col gap-2 rounded border border-warn-line bg-warn-soft p-3 text-[13px]">
           <p className="font-semibold text-warn">{t("once", { name: shown.name })}</p>
