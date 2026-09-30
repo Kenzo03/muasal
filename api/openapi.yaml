@@ -2940,7 +2940,7 @@ components:
         attendees: { type: string, maxLength: 500 }
         node_ids:
           type: array
-          description: One or more menus or modules of the project.
+          description: Menus or modules of the project; none makes a project-wide note, such as a kickoff (MSL-59).
           items: { type: integer, format: int64 }
         ticket_keys:
           type: array

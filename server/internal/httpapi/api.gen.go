@@ -2108,7 +2108,7 @@ type NoteInput struct {
 	ClientId  *int64             `json:"client_id,omitempty"`
 	DecidedOn openapi_types.Date `json:"decided_on"`
 
-	// NodeIds One or more menus or modules of the project.
+	// NodeIds Menus or modules of the project; none makes a project-wide note, such as a kickoff (MSL-59).
 	NodeIds []int64 `json:"node_ids"`
 
 	// TicketKeys Tickets the decision relates to, in any project the author can see.
@@ -2149,7 +2149,7 @@ type NoteUpdate struct {
 	ClientId  *int64             `json:"client_id,omitempty"`
 	DecidedOn openapi_types.Date `json:"decided_on"`
 
-	// NodeIds One or more menus or modules of the project.
+	// NodeIds Menus or modules of the project; none makes a project-wide note, such as a kickoff (MSL-59).
 	NodeIds []int64 `json:"node_ids"`
 
 	// TicketKeys Tickets the decision relates to, in any project the author can see.

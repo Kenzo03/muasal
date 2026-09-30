@@ -254,10 +254,9 @@ func (s *Server) checkNote(ctx context.Context, pc projectCtx, in NoteInput) (no
 	if err != nil {
 		return v, nil, err
 	}
-	switch {
-	case len(ids) == 0:
-		f = append(f, FieldError{Field: "node_ids", Code: "min_items", Message: "Link at least one menu or module"})
-	case !live:
+	// No menu is fine: a kickoff or weekly status meeting is about the whole
+	// project; Ask and search still find it (MSL-59).
+	if !live {
 		f = append(f, nodeIDsField)
 	}
 	v.nodeIDs = ids

@@ -94,6 +94,7 @@ export default async function NotePage({ params, searchParams }: {
                 </div>
                 <div>
                   <h2 className={sectionTitle}>{t("menus")}</h2>
+                  {note.nodes.length === 0 && <p>{t("wholeProject")}</p>}
                   <ul className="flex flex-wrap gap-1.5">
                     {note.nodes.map((n) => (
                       <li key={n.id}><Link href={`/p/${note.project_key}/modules/${n.id}`}>{n.name}</Link></li>
