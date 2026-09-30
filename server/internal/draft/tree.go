@@ -69,7 +69,7 @@ func ExtractTree(ctx context.Context, rt *ai.Runtime, title string, parts [][]do
 		all = append(all, part...)
 	}
 	head := "DOCUMENT: " + title + "\nOUTLINE:\n" + outline(all) + "\n"
-	prefixes := docs.Prefixes(all)
+	prefixes, ids := docs.Prefixes(all), docs.IDs(all)
 	var out []docs.Candidate
 	for i, part := range parts {
 		var b strings.Builder
@@ -93,11 +93,15 @@ func ExtractTree(ctx context.Context, rt *ai.Runtime, title string, parts [][]do
 			return nil, err
 		}
 		for _, n := range a.Nodes {
-			sec, code := linkSection(part, n.Path, n.Section)
+			path := cleanPath(n.Path, prefixes, ids)
+			if len(path) == 0 {
+				continue
+			}
+			sec, code := linkSection(part, path, n.Section)
 			if !contains(numbers, sec) {
 				sec = ""
 			}
-			out = append(out, docs.Candidate{Path: cleanPath(n.Path, prefixes), Type: n.Type, Aliases: n.Aliases, Description: n.Description, Section: sec, Code: code})
+			out = append(out, docs.Candidate{Path: path, Type: n.Type, Aliases: n.Aliases, Description: n.Description, Section: sec, Code: code})
 		}
 		if done != nil {
 			done(i + 1)
@@ -106,12 +110,17 @@ func ExtractTree(ctx context.Context, rt *ai.Runtime, title string, parts [][]do
 	return unwrap(out, all, title), nil
 }
 
-// cleanPath takes heading IDs out of the model's names, as from headings: the
-// model sometimes keeps them despite the prompt (MSL-46). The ID is the code.
-func cleanPath(path []string, prefixes map[string]bool) []string {
-	out := make([]string, len(path))
-	for i, p := range path {
-		out[i], _ = docs.NameIn(p, prefixes)
+// cleanPath takes heading IDs out of the model's path, which it adds despite
+// the prompt: in a name, as "Clock In (ATT-01)", or as a level of its own, as
+// "Absensi › ATT" (MSL-46). The heading's ID becomes the code instead.
+func cleanPath(path []string, prefixes, ids map[string]bool) []string {
+	var out []string
+	for _, p := range path {
+		if ids[strings.TrimSpace(p)] {
+			continue
+		}
+		name, _ := docs.NameIn(p, prefixes)
+		out = append(out, name)
 	}
 	return out
 }
