@@ -63,6 +63,9 @@ func evidenceKey(evidence []string, k string) string {
 var (
 	// figureRe finds the figures a text states: days, amounts, times, shares.
 	figureRe = regexp.MustCompile(`\d+`)
+	// unitRe finds a one-digit figure that carries its unit, such as "3 jam"
+	// (MSL-44); the 1 of "H+1" carries none.
+	unitRe = regexp.MustCompile(`(?i)(?:^|[^\d.,])(\d)\s*(%|persen|percent|jam|hari|minggu|bulan|tahun|menit|kali|orang|toko|hours?|days?|weeks?|months?|years?|minutes?|times?)\b`)
 	// citeKeyRe finds citation keys in a claim's text, whose digits are no figures:
 	// HRIS-231, HRIS-DN7, HRIS-DOC1/7.4, and FSD menu IDs such as PAY-PR-03.
 	citeKeyRe = regexp.MustCompile(`(?i)\b[a-z][a-z0-9]{1,9}-(?:doc\d+/[\w.]+|dn\d+|[a-z]{1,5}-\d+|\d+)\b`)
@@ -87,14 +90,22 @@ func saysNoReason(text string) bool { return noReasonRe.MatchString(text) }
 func givesReason(text string) bool { return becauseRe.MatchString(text) && !saysNoReason(text) }
 
 // figures lists a text's numbers of two digits or more, without leading
-// zeros, so 09 and 9 match. One digit is no evidence: dates, versions and
-// keys all hold one, as does the 1 of "H+1" (MSL-5).
+// zeros, so 09 and 9 match. A bare digit is no evidence: dates, versions and
+// keys all hold one, as does the 1 of "H+1" (MSL-5). A digit with its unit is:
+// "3 jam" is the rule, kept as "3 jam" so it never matches "3 hari" (MSL-44).
 func figures(s string) map[string]bool {
 	out := map[string]bool{}
 	for _, n := range figureRe.FindAllString(s, -1) {
 		if t := strings.TrimLeft(n, "0"); len(t) > 1 {
 			out[t] = true
 		}
+	}
+	for _, m := range unitRe.FindAllStringSubmatch(s, -1) {
+		unit := strings.ToLower(m[2])
+		if len(unit) > 3 && strings.HasSuffix(unit, "s") {
+			unit = strings.TrimSuffix(unit, "s") // hours and hour are one unit
+		}
+		out[m[1]+" "+unit] = true
 	}
 	return out
 }

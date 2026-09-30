@@ -48,3 +48,22 @@ func TestReciteIgnoresOneDigitFigures(t *testing.T) {
 		t.Errorf("cites %v moved %+v, want the claim unchanged", got.Cites, moved)
 	}
 }
+
+// MSL-44: a one-digit figure with its unit is checked; the claim moves to the
+// section that states it, and a bare digit such as the 1 of H+1 still is not.
+func TestReciteChecksOneDigitFiguresWithUnits(t *testing.T) {
+	blocks := map[string]string{
+		"HRIS-DOC1/2.1": "[HRIS-DOC1/2.1] Pengajuan Lembur (OT-01)\nLembur diajukan sebelum dikerjakan. Maksimal 3 jam per hari dan 14 jam per minggu.",
+		"HRIS-DOC1/2.2": "[HRIS-DOC1/2.2] Persetujuan Lembur (OT-02)\nLembur disetujui oleh Kepala Toko, lalu Area Manager bila lebih dari 2 jam dalam satu hari.",
+		"HRIS-DOC1/3.1": "[HRIS-DOC1/3.1] Pengajuan Cuti (LV-01)\nHak cuti tahunan 12 hari; sisa cuti maksimal 3 hari dibawa.",
+	}
+	order := []string{"HRIS-DOC1/2.2", "HRIS-DOC1/3.1", "HRIS-DOC1/2.1"}
+	c := ask.Claim{Text: "Maksimal jam lembur per hari adalah 3 jam.", Cites: []string{"HRIS-DOC1/2.2"}}
+	if got, moved := ask.Recite(c, blocks, order); moved == nil || !slices.Equal(got.Cites, []string{"HRIS-DOC1/2.1"}) {
+		t.Errorf("cites %v moved %+v, want HRIS-DOC1/2.1 (3 jam, not 3 hari)", got.Cites, moved)
+	}
+	ok := ask.Claim{Text: "Area Manager menyetujui lembur lebih dari 2 jam.", Cites: []string{"HRIS-DOC1/2.2"}}
+	if got, moved := ask.Recite(ok, blocks, order); moved != nil || !slices.Equal(got.Cites, ok.Cites) {
+		t.Errorf("a right citation moved: %v %+v", got.Cites, moved)
+	}
+}
