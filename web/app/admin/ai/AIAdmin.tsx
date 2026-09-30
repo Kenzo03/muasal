@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTimeZone, useTranslations } from "next-intl";
 import { api } from "@/lib/api";
@@ -20,6 +20,7 @@ export default function AIAdmin({ settings, status }: { settings: AISettings; st
   const timeZone = useTimeZone();
   const problemText = useProblemText();
   const router = useRouter();
+  const id = useId(); // explicit label ids: some assistive tech misses wrapping labels (MSL-34)
   const [mode, setMode] = useState<AIMode>(settings.mode);
   const [provider, setProvider] = useState(settings.provider);
   const [acknowledged, setAcknowledged] = useState(settings.acknowledged);
@@ -94,19 +95,20 @@ export default function AIAdmin({ settings, status }: { settings: AISettings; st
   const endpointFields = (name: "chat" | "embed", e: Endpoint, set: (e: Endpoint) => void, keySet: boolean) => (
     <fieldset className="flex flex-col gap-3" disabled={mode === "off"}>
       <legend className={cx(sectionTitle, "mb-2")}>{t(name)}</legend>
-      <label className={field.label}>
+      <label htmlFor={`${id}-${name}-url`} className={field.label}>
         {t("url")}
-        <input value={e.url} onChange={(ev) => set({ ...e, url: ev.target.value })} className={field.input} />
+        <input id={`${id}-${name}-url`} value={e.url} onChange={(ev) => set({ ...e, url: ev.target.value })} className={field.input} />
         {fieldError(`${name}.url`)}
       </label>
-      <label className={field.label}>
+      <label htmlFor={`${id}-${name}-model`} className={field.label}>
         {t("model")}
-        <input value={e.model} onChange={(ev) => set({ ...e, model: ev.target.value })} className={cx(field.input, "font-mono")} />
+        <input id={`${id}-${name}-model`} value={e.model} onChange={(ev) => set({ ...e, model: ev.target.value })} className={cx(field.input, "font-mono")} />
         {fieldError(`${name}.model`)}
       </label>
-      <label className={field.label}>
+      <label htmlFor={`${id}-${name}-key`} className={field.label}>
         {t("apiKey")}
         <input
+          id={`${id}-${name}-key`}
           type="password"
           autoComplete="off"
           value={e.key}
@@ -117,8 +119,8 @@ export default function AIAdmin({ settings, status }: { settings: AISettings; st
         {fieldError(`${name}.api_key`)}
       </label>
       {keySet && (
-        <label className="flex items-center gap-2 text-[13px]">
-          <input type="checkbox" checked={e.clearKey} onChange={(ev) => set({ ...e, clearKey: ev.target.checked, key: "" })} className="size-4 accent-accent" />
+        <label htmlFor={`${id}-${name}-clear`} className="flex items-center gap-2 text-[13px]">
+          <input id={`${id}-${name}-clear`} type="checkbox" checked={e.clearKey} onChange={(ev) => set({ ...e, clearKey: ev.target.checked, key: "" })} className="size-4 accent-accent" />
           {t("removeKey")}
         </label>
       )}
@@ -126,9 +128,10 @@ export default function AIAdmin({ settings, status }: { settings: AISettings; st
   );
 
   const number = (name: keyof typeof tuning, step = 1) => (
-    <label className={field.label}>
+    <label htmlFor={`${id}-${name}`} className={field.label}>
       {t(`tuning.${name}`)}
       <input
+        id={`${id}-${name}`}
         type="number"
         step={step}
         value={tuning[name]}
@@ -145,24 +148,34 @@ export default function AIAdmin({ settings, status }: { settings: AISettings; st
         <h2 id="ai-mode" className="text-sm font-semibold">{t("mode")}</h2>
         <div role="radiogroup" aria-labelledby="ai-mode" className="grid gap-2 md:grid-cols-3">
           {(["off", "local", "byok"] as const).map((m) => (
-            <label key={m} className={cx("flex cursor-pointer flex-col gap-1 rounded border p-3 text-[13px]", mode === m ? "border-accent bg-accent-soft" : "border-line")}>
+            <label key={m} htmlFor={`${id}-mode-${m}`} className={cx("flex cursor-pointer flex-col gap-1 rounded border p-3 text-[13px]", mode === m ? "border-accent bg-accent-soft" : "border-line")}>
               <span className="flex items-center gap-2 font-semibold">
-                <input type="radio" name="mode" value={m} checked={mode === m} onChange={() => setMode(m)} className="size-4 accent-accent" />
-                {t(`modes.${m}`)}
+                <input
+                  id={`${id}-mode-${m}`}
+                  type="radio"
+                  name="mode"
+                  value={m}
+                  checked={mode === m}
+                  onChange={() => setMode(m)}
+                  aria-labelledby={`${id}-mode-${m}-name`}
+                  aria-describedby={`${id}-mode-${m}-hint`}
+                  className="size-4 accent-accent"
+                />
+                <span id={`${id}-mode-${m}-name`}>{t(`modes.${m}`)}</span>
               </span>
-              <span className="text-muted">{t(`modes.${m}Hint`)}</span>
+              <span id={`${id}-mode-${m}-hint`} className="text-muted">{t(`modes.${m}Hint`)}</span>
             </label>
           ))}
         </div>
         {mode === "byok" && (
           <div className="flex flex-col gap-2 rounded border border-warn-line bg-warn-soft p-3">
-            <label className={field.label}>
+            <label htmlFor={`${id}-provider`} className={field.label}>
               {t("provider")}
-              <input value={provider} onChange={(e) => setProvider(e.target.value)} maxLength={100} placeholder="OpenAI" className={cx(field.input, "w-64")} />
+              <input id={`${id}-provider`} value={provider} onChange={(e) => setProvider(e.target.value)} maxLength={100} placeholder="OpenAI" className={cx(field.input, "w-64")} />
               {fieldError("provider")}
             </label>
-            <label className="flex items-start gap-2 text-[13px]">
-              <input type="checkbox" checked={acknowledged} onChange={(e) => setAcknowledged(e.target.checked)} className="mt-0.5 size-4 accent-accent" />
+            <label htmlFor={`${id}-ack`} className="flex items-start gap-2 text-[13px]">
+              <input id={`${id}-ack`} type="checkbox" checked={acknowledged} onChange={(e) => setAcknowledged(e.target.checked)} className="mt-0.5 size-4 accent-accent" />
               {t("acknowledge", { provider: provider.trim() || t("theProvider") })}
             </label>
             {fieldError("acknowledged")}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import Icon from "./Icon";
 import { nodePaths } from "@/lib/nodes";
@@ -22,6 +22,7 @@ type Props = {
 // never hides a selection (MSL-33); a tick doesn't move the row under the pointer.
 export default function NodePicker({ nodes, selected, onToggle, legend, recent = [] }: Props) {
   const t = useTranslations("ticketForm");
+  const id = useId(); // explicit label ids: some assistive tech misses wrapping labels (MSL-34)
   const [filter, setFilter] = useState("");
   const [pinned, setPinned] = useState(() => new Set(selected));
   const pathOf = useMemo(() => nodePaths(nodes), [nodes]);
@@ -53,12 +54,13 @@ export default function NodePicker({ nodes, selected, onToggle, legend, recent =
         {choices.map((n) => (
           <label
             key={n.id}
+            htmlFor={`${id}-${n.id}`}
             className={cx(
               "flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2",
               selected.has(n.id) ? "bg-accent-soft font-semibold text-accent-strong" : "hover:bg-paper",
             )}
           >
-            <input type="checkbox" checked={selected.has(n.id)} onChange={(e) => onToggle(n.id, e.target.checked)} className="size-4 shrink-0 accent-accent" />
+            <input id={`${id}-${n.id}`} type="checkbox" checked={selected.has(n.id)} onChange={(e) => onToggle(n.id, e.target.checked)} className="size-4 shrink-0 accent-accent" />
             {pathOf(n.id)}
             {recent.includes(n.id) && <span className="rounded-full bg-well px-2 text-[11px] font-semibold leading-[18px] text-muted">{t("recent")}</span>}
             {n.code && <span className="ml-auto text-[11.5px] font-medium text-muted">{n.code}</span>}
