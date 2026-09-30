@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import type { components } from "@/lib/api-types";
@@ -34,6 +34,7 @@ export function SelectAll({ label }: { label: string }) {
 export default function BulkBar({ people, statuses }: { people: Ref[]; statuses: Status[] }) {
   const t = useTranslations("tickets.bulk");
   const router = useRouter();
+  const { key: projectKey } = useParams<{ key: string }>();
   const problemText = useProblemText();
   const [count, setCount] = useState(0);
   const [busy, setBusy] = useState("");
@@ -125,6 +126,14 @@ export default function BulkBar({ people, statuses }: { people: Ref[]; statuses:
           </select>
         </label>
         <button className={button.secondary}>{busy || t("apply", { count })}</button>
+        {/* MSL-65: closing needs a decision record each, so the ticked tickets go to the close-out queue. */}
+        <button
+          type="button"
+          onClick={() => router.push(`/p/${projectKey}/closeout?keys=${[...rows()].filter((c) => c.checked).map((c) => c.value).join(",")}`)}
+          className={button.secondary}
+        >
+          {t("closeOut", { count })}
+        </button>
       </fieldset>
       {failed.length > 0 && (
         <div role="alert" className="basis-full text-xs text-danger">

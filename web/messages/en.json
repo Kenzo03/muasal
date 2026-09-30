@@ -632,6 +632,7 @@
       "clearDue": "Clear due date",
       "status": "Status",
       "apply": "Apply to {count}",
+      "closeOut": "Close out {count}…",
       "progress": "Updating {done} of {total}…",
       "failed": "Not changed:",
       "select": "Select {key}",
@@ -1403,6 +1404,26 @@
     "confirm": "Archive {name}? Nobody can change it until a project admin restores it.",
     "restore": "Restore project",
     "banner": "This project is archived: it's read-only and out of pickers and Home until a project admin restores it."
+  },
+  "closeout": {
+    "heading": "Close out",
+    "intro": "Close several tickets, each with its own decision record. The records are drafted with AI one after another in the background; open each to confirm or edit it, and closing one opens the next.",
+    "empty": "No tickets picked. Tick them in the ticket list, then choose Close out.",
+    "viewers": "Viewers can't close tickets.",
+    "closeAs": "Close as",
+    "start": "Review and close {count}",
+    "progress": "{closed} of {total} closed",
+    "review": "Review and close",
+    "state": {
+      "loading": "Loading…",
+      "missing": "Not found",
+      "closed": "Closed",
+      "waiting": "Waiting for its draft",
+      "drafting": "Drafting…",
+      "drafted": "Draft ready",
+      "off": "AI is off: prefilled from the title and reason",
+      "failed": "No draft: prefilled from the title and reason"
+    }
   },
   "summaries": {
     "heading": "Change summaries",
