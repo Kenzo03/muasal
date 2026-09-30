@@ -606,7 +606,30 @@
     "none": "No tickets match these filters.",
     "next": "Next page",
     "exportCsv": "Export CSV",
-    "importTickets": "Import tickets"
+    "importTickets": "Import tickets",
+    "bulk": {
+      "label": "Change several tickets",
+      "hint": "Tick tickets to change them together.",
+      "selected": "{count, plural, one {# ticket selected} other {# tickets selected}}",
+      "assignee": "Assignee",
+      "keep": "Keep",
+      "nobody": "Nobody",
+      "priority": "Priority",
+      "priorities": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "urgent": "Urgent"
+      },
+      "due": "Due date",
+      "clearDue": "Clear due date",
+      "status": "Status",
+      "apply": "Apply to {count}",
+      "progress": "Updating {done} of {total}…",
+      "failed": "Not changed:",
+      "select": "Select {key}",
+      "selectAll": "Select all"
+    }
   },
   "ticketForm": {
     "newTitle": "New ticket",
