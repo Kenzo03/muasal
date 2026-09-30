@@ -55,12 +55,26 @@ func TestUnwrapDropsAnUnnamedSharedRoot(t *testing.T) {
 		{Path: []string{"HRIS", "Absensi"}, Type: "module", Section: "1"},
 		{Path: []string{"HRIS", "Absensi", "Clock In dan Clock Out"}, Type: "menu", Section: "1.1"},
 	}
-	got := unwrap(cands, sections)
+	got := unwrap(cands, sections, "Spesifikasi Fungsional HRIS PT Sinar Retail v1.0")
 	if len(got) != 2 || strings.Join(got[0].Path, "/") != "Absensi" || strings.Join(got[1].Path, "/") != "Absensi/Clock In dan Clock Out" {
 		t.Fatalf("unwrapped: %+v", got)
 	}
 	named := []docs.Candidate{{Path: []string{"Absensi"}}, {Path: []string{"Absensi", "Clock In dan Clock Out"}}}
-	if got := unwrap(named, []docs.Section{{Number: "1", Title: "Absensi"}}); len(got) != 2 || got[0].Path[0] != "Absensi" {
+	if got := unwrap(named, []docs.Section{{Number: "1", Title: "Absensi"}}, "HRIS Absensi"); len(got) != 2 || got[0].Path[0] != "Absensi" {
 		t.Fatalf("a named top module was dropped: %+v", got)
+	}
+	// A module the headings word differently is not the product's name.
+	other := []docs.Candidate{{Path: []string{"Registry", "Node page"}}}
+	if got := unwrap(other, sections, "Muasal FSD"); len(got) != 1 || len(got[0].Path) != 2 {
+		t.Fatalf("a module not in the title was dropped: %+v", got)
+	}
+}
+
+// MSL-46: model names lose their heading IDs; an acronym stays.
+func TestCleanPath(t *testing.T) {
+	prefixes := map[string]bool{"ATT": true}
+	got := cleanPath([]string{"Absensi (ATT)", "Clock In dan Clock Out (ATT-01)", "Upload Foto (JPG)"}, prefixes)
+	if strings.Join(got, "|") != "Absensi|Clock In dan Clock Out|Upload Foto (JPG)" {
+		t.Fatalf("%q", got)
 	}
 }

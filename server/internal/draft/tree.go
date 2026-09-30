@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/kenzo03/muasal/server/internal/ai"
@@ -68,6 +69,7 @@ func ExtractTree(ctx context.Context, rt *ai.Runtime, title string, parts [][]do
 		all = append(all, part...)
 	}
 	head := "DOCUMENT: " + title + "\nOUTLINE:\n" + outline(all) + "\n"
+	prefixes := docs.Prefixes(all)
 	var out []docs.Candidate
 	for i, part := range parts {
 		var b strings.Builder
@@ -95,19 +97,30 @@ func ExtractTree(ctx context.Context, rt *ai.Runtime, title string, parts [][]do
 			if !contains(numbers, sec) {
 				sec = ""
 			}
-			out = append(out, docs.Candidate{Path: n.Path, Type: n.Type, Aliases: n.Aliases, Description: n.Description, Section: sec, Code: code})
+			out = append(out, docs.Candidate{Path: cleanPath(n.Path, prefixes), Type: n.Type, Aliases: n.Aliases, Description: n.Description, Section: sec, Code: code})
 		}
 		if done != nil {
 			done(i + 1)
 		}
 	}
-	return unwrap(out, all), nil
+	return unwrap(out, all, title), nil
 }
 
-// unwrap drops a first level every node shares when no heading names it: a
-// small model tends to put the whole tree under the product's name, such as
-// "HRIS › Absensi › Clock In" (MSL-45). A top module the document names stays.
-func unwrap(cands []docs.Candidate, sections []docs.Section) []docs.Candidate {
+// cleanPath takes heading IDs out of the model's names, as from headings: the
+// model sometimes keeps them despite the prompt (MSL-46). The ID is the code.
+func cleanPath(path []string, prefixes map[string]bool) []string {
+	out := make([]string, len(path))
+	for i, p := range path {
+		out[i], _ = docs.NameIn(p, prefixes)
+	}
+	return out
+}
+
+// unwrap drops a first level every node shares when it is the product's name:
+// a word of the document's title that no heading names, such as "HRIS" in
+// "Spesifikasi Fungsional HRIS …" put over "Absensi › Clock In" (MSL-45). A top
+// module the document names, or words differently, stays.
+func unwrap(cands []docs.Candidate, sections []docs.Section, title string) []docs.Candidate {
 	if len(cands) == 0 || len(cands[0].Path) == 0 {
 		return cands
 	}
@@ -118,7 +131,8 @@ func unwrap(cands []docs.Candidate, sections []docs.Section) []docs.Candidate {
 		}
 		nested = nested || len(c.Path) > 1
 	}
-	if n, _ := docs.SectionFor(sections, root); !nested || n != "" {
+	inTitle := slices.ContainsFunc(strings.Fields(title), func(w string) bool { return strings.EqualFold(w, root) })
+	if n, _ := docs.SectionFor(sections, root); !nested || n != "" || !inTitle {
 		return cands
 	}
 	out := cands[:0:0]
