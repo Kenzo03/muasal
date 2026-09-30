@@ -461,6 +461,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{key}/releases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description The project's releases, unreleased ones first, then the latest (MSL-67). */
+        get: operations["listReleases"];
+        put?: never;
+        /** @description Members and project admins add a release; names are unique in the project, ignoring case. */
+        post: operations["createRelease"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/releases/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Members and project admins rename a release or set the day it shipped. */
+        patch: operations["updateRelease"];
+        trace?: never;
+    };
     "/projects/{key}/archive": {
         parameters: {
             query?: never;
@@ -2140,6 +2179,7 @@ export interface components {
             /** @description The caller follows the ticket (MSL-57). */
             following?: boolean;
             acceptance?: components["schemas"]["TicketAcceptance"];
+            release?: components["schemas"]["Ref"];
             nodes: components["schemas"]["NodeRef"][];
             attachments: components["schemas"]["Attachment"][];
             /** Format: int32 */
@@ -2190,6 +2230,11 @@ export interface components {
             labels?: string[];
             /**
              * Format: int64
+             * @description A release of this project; omitted means none (MSL-67).
+             */
+            release_id?: number;
+            /**
+             * Format: int64
              * @description An open status; omitted means the project's default.
              */
             status_id?: number;
@@ -2227,6 +2272,11 @@ export interface components {
             estimate_hours?: number;
             /** @description Up to 10 labels of 1 to 30 characters; omitted means none (MSL-56). */
             labels?: string[];
+            /**
+             * Format: int64
+             * @description A release of this project; omitted means none (MSL-67).
+             */
+            release_id?: number;
         };
         TransitionRequest: {
             /** Format: int64 */
@@ -2356,6 +2406,11 @@ export interface components {
              * @description One client; omitted for all.
              */
             client_id?: number;
+            /**
+             * Format: int64
+             * @description Only this release's tickets, without decision notes (MSL-67).
+             */
+            release_id?: number;
             /** Format: date */
             from: string;
             /** Format: date */
@@ -2518,6 +2573,25 @@ export interface components {
             /** Format: date-time */
             closed_at?: string | null;
         };
+        /** @description A project release, such as v1.0 (MSL-67). */
+        Release: {
+            /** Format: int64 */
+            id: number;
+            name: string;
+            /**
+             * Format: date
+             * @description Omitted while it is still to ship.
+             */
+            released_on?: string;
+        };
+        ReleaseList: {
+            items: components["schemas"]["Release"][];
+        };
+        ReleaseInput: {
+            name: string;
+            /** Format: date */
+            released_on?: string;
+        };
         /** @description Who at the client accepted the ticket's work, as in UAT sign-off, and when (MSL-66). */
         TicketAcceptance: {
             contact: components["schemas"]["Ref"];
@@ -2560,6 +2634,8 @@ export interface components {
              * @description When the client accepted it (MSL-66).
              */
             accepted_on?: string;
+            /** @description Its release's name (MSL-67). */
+            release?: string;
             /** @description The description's task list, when it has one (MSL-55). */
             checklist?: {
                 done: number;
@@ -4191,6 +4267,83 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    listReleases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The releases. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReleaseList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createRelease: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReleaseInput"];
+            };
+        };
+        responses: {
+            /** @description The new release. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Release"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateRelease: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReleaseInput"];
+            };
+        };
+        responses: {
+            /** @description The release. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Release"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     archiveProject: {
         parameters: {
             query?: never;
@@ -4793,6 +4946,8 @@ export interface operations {
                 label?: string;
                 /** @description Tickets the client accepted (true) or not yet (false) (MSL-66). */
                 accepted?: boolean;
+                /** @description Tickets of this release (MSL-67). */
+                release_id?: number;
                 client_id?: number;
                 /** @description Only core work (no client). */
                 core?: boolean;

@@ -545,6 +545,8 @@
     "urgent": "Mendesak"
   },
   "ticketFilters": {
+    "release": "Rilis",
+    "anyRelease": "Semua",
     "accepted": "Klien",
     "anyAcceptance": "Semua",
     "acceptedYes": "Sudah diterima",
@@ -637,6 +639,8 @@
       "status": "Status",
       "apply": "Terapkan ke {count}",
       "closeOut": "Tutup {count}…",
+      "release": "Rilis",
+      "noRelease": "Tidak ada",
       "progress": "Memperbarui {done} dari {total}…",
       "failed": "Tidak berubah:",
       "select": "Pilih {key}",
@@ -688,7 +692,9 @@
     "close": "Tutup",
     "estimate": "Estimasi (jam)",
     "labels": "Label",
-    "labelsHint": "Pisahkan dengan koma, mis. pilot, uat"
+    "labelsHint": "Pisahkan dengan koma, mis. pilot, uat",
+    "release": "Rilis",
+    "noRelease": "Tidak ada"
   },
   "ticket": {
     "edit": "Ubah",
@@ -715,6 +721,7 @@
     "hours": "{hours} jam",
     "labels": "Label",
     "follow": "Ikuti",
+    "release": "Rilis",
     "following": "Diikuti"
   },
   "close": {
@@ -1444,7 +1451,18 @@
     "remove": "Hapus",
     "noContacts": "Klien ini belum punya kontak; tambahkan dulu di formulir tiket."
   },
+  "releases": {
+    "title": "Rilis",
+    "intro": "Beri nama rilis yang dikirim proyek ini, misalnya v1.0; tiket lalu menyebut rilisnya, daftar tiket bisa disaring per rilis, dan ringkasan bisa mencakup satu rilis.",
+    "name": "Nama",
+    "releasedOn": "Dirilis pada",
+    "save": "Simpan",
+    "add": "Tambah rilis",
+    "tickets": "Tiketnya"
+  },
   "summaries": {
+    "release": "Rilis",
+    "anyRelease": "Semua rilis, dengan catatan keputusan",
     "heading": "Ringkasan perubahan",
     "new": "Ringkasan baru",
     "newTitle": "Ringkasan perubahan baru",

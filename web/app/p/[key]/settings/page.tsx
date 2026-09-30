@@ -6,6 +6,7 @@ import { cx, panel } from "@/lib/ui";
 import ProjectClients from "./ProjectClients";
 import ProjectForm from "./ProjectForm";
 import ProjectMembers from "./ProjectMembers";
+import Releases from "./Releases";
 import Repos from "./Repos";
 import StatusesForm from "./StatusesForm";
 import ArchiveButton from "../ArchiveButton";
@@ -33,13 +34,14 @@ export default async function SettingsPage({ params }: { params: Promise<{ key: 
   }
   const api = await serverApi();
   const path = { params: { path: { key } } };
-  const [all, linked, members, people, statuses, repos] = await Promise.all([
+  const [all, linked, members, people, statuses, repos, releases] = await Promise.all([
     api.GET("/clients"),
     api.GET("/projects/{key}/clients", path),
     api.GET("/projects/{key}/members", path),
     api.GET("/projects/{key}/member-candidates", path),
     api.GET("/projects/{key}/statuses", path),
     api.GET("/projects/{key}/repos", path),
+    api.GET("/projects/{key}/releases", path),
   ]);
   const linkedClients = linked.data?.items ?? [];
   return (
@@ -50,6 +52,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ key: 
         <StatusesForm projectKey={key} statuses={statuses.data?.items ?? []} />
         <ProjectClients projectKey={key} all={all.data?.items ?? []} linked={linkedClients} />
         <ProjectMembers projectKey={key} members={members.data?.items ?? []} clients={linkedClients} people={people.data?.items ?? []} />
+        <Releases projectKey={key} releases={releases.data?.items ?? []} />
         <Repos projectKey={key} repos={repos.data?.items ?? []} />
         {/* MSL-64: a finished project leaves pickers and Home, read-only until restored. */}
         <section aria-labelledby="archive-title" className={cx(panel, "flex flex-col items-start gap-2 px-5 py-4")}>

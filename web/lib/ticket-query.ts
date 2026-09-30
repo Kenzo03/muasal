@@ -27,6 +27,7 @@ export function ticketQuery(v: Record<string, string>) {
     type: v.type as TicketType | undefined,
     label: v.label || undefined, // MSL-56
     accepted: v.accepted === "yes" ? true : v.accepted === "no" ? false : undefined, // MSL-66
+    release_id: id(v.release), // MSL-67
     mine: v.assignee === "me" ? true : undefined,
     unassigned: v.assignee === "none" ? true : undefined,
     assignee_id: id(v.assignee),

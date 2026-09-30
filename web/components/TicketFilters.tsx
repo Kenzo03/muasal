@@ -11,17 +11,18 @@ type Props = {
   assignees: Ref[]; // who can own tickets, so a lead can look at one person's work
   statuses?: Status[]; // the list filters by status; the board shows every status anyway
   labels?: string[]; // the project's labels, most used first (MSL-56)
+  releases?: { id: number; name: string }[]; // MSL-67
 };
 
 // The filter bar of the board and the list (FSD §8.4, §8.5). It is a GET form,
 // so every view is a URL people can share.
-export default async function TicketFilters({ action, values, clients, assignees, statuses, labels = [] }: Props) {
+export default async function TicketFilters({ action, values, clients, assignees, statuses, labels = [], releases = [] }: Props) {
   const t = await getTranslations("ticketFilters");
   const tTypes = await getTranslations("ticketTypes");
   // Each filter is a chip: its name, then a borderless select.
   const pick = "flex h-9 items-center gap-1 rounded-[10px] border border-line bg-white pl-3 text-[13.5px] font-semibold text-ink focus-within:border-accent";
   const select = "h-full cursor-pointer rounded-[10px] bg-transparent text-[13.5px] font-medium text-muted outline-none";
-  const set = ["client", "type", "assignee", "label", "status", "due", "stale", "missing"].filter((k) => values[k]).length;
+  const set = ["client", "type", "assignee", "label", "release", "accepted", "status", "due", "stale", "missing"].filter((k) => values[k]).length;
   return (
     <form method="get" action={action} aria-label={t("label")} className="flex flex-wrap items-center gap-2">
       <label className="flex h-9 items-center gap-2 rounded-[10px] border border-line bg-white px-3 text-muted focus-within:border-accent">
@@ -74,6 +75,17 @@ export default async function TicketFilters({ action, values, clients, assignees
               <option value="">{t("anyLabel")}</option>
               {labels.map((l) => (
                 <option key={l} value={l}>{l}</option>
+              ))}
+            </select>
+          </label>
+        )}
+        {releases.length > 0 && (
+          <label htmlFor={`${action}-release`} className={pick}>
+            {t("release")}
+            <select id={`${action}-release`} name="release" defaultValue={values.release ?? ""} className={select}>
+              <option value="">{t("anyRelease")}</option>
+              {releases.map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
               ))}
             </select>
           </label>

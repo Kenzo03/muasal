@@ -268,6 +268,12 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
                       </dd>
                     </>
                   )}
+                  {ticket.release && (
+                    <>
+                      <dt className="text-muted">{t("release")}</dt>
+                      <dd><a href={`/p/${ticket.project_key}/tickets?release=${ticket.release.id}`} className="font-semibold">{ticket.release.name}</a></dd>
+                    </>
+                  )}
                   {ticket.estimate_hours != null && (
                     <>
                       <dt className="text-muted">{t("estimate")}</dt>

@@ -31,7 +31,7 @@ export function SelectAll({ label }: { label: string }) {
 // Bulk changes on the ticket list (MSL-53): assignee, priority, due date or an
 // open status for every ticked ticket. Each goes through the same API as the
 // ticket page, so permissions, history and notifications stay as they are.
-export default function BulkBar({ people, statuses }: { people: Ref[]; statuses: Status[] }) {
+export default function BulkBar({ people, statuses, releases }: { people: Ref[]; statuses: Status[]; releases: { id: number; name: string }[] }) {
   const t = useTranslations("tickets.bulk");
   const router = useRouter();
   const { key: projectKey } = useParams<{ key: string }>();
@@ -56,6 +56,8 @@ export default function BulkBar({ people, statuses }: { people: Ref[]; statuses:
     if (form.get("clear_due") === "on") c.due = "";
     else if (form.get("due")) c.due = String(form.get("due"));
     if (form.get("status")) c.status = Number(form.get("status"));
+    const release = String(form.get("release") ?? "keep"); // MSL-67
+    if (release !== "keep") c.release = release === "none" ? "" : release;
     if (keys.length === 0 || Object.keys(c).length === 0) return;
     const bad: string[] = [];
     for (const [i, key] of keys.entries()) {
@@ -125,6 +127,18 @@ export default function BulkBar({ people, statuses }: { people: Ref[]; statuses:
             ))}
           </select>
         </label>
+        {releases.length > 0 && (
+          <label htmlFor="bulk-release" className={field.label}>
+            {t("release")}
+            <select id="bulk-release" name="release" defaultValue="keep" className={field.compact}>
+              <option value="keep">{t("keep")}</option>
+              <option value="none">{t("noRelease")}</option>
+              {releases.map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </select>
+          </label>
+        )}
         <button className={button.secondary}>{busy || t("apply", { count })}</button>
         {/* MSL-65: closing needs a decision record each, so the ticked tickets go to the close-out queue. */}
         <button

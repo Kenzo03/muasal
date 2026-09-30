@@ -206,7 +206,7 @@ func (s *Server) runSummarySchedule(ctx context.Context, sch db.SummarySchedule,
 		ids[i], names[n.ID] = n.ID, n.Name
 	}
 	from, to := today.AddDate(0, 0, -7), today.AddDate(0, 0, -1)
-	items, err := s.summaryItems(ctx, pc, ids, true, sch.ClientID, from, to, false, names)
+	items, err := s.summaryItems(ctx, pc, ids, true, sch.ClientID, nil, from, to, false, names)
 	if err != nil {
 		return err
 	}
