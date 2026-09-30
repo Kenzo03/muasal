@@ -31,7 +31,8 @@ export default async function HandoverPage({ params, searchParams }: {
   const { data } = await api.GET("/projects/{key}/handover", { params: { path: { key }, query: picked ? { client_id: picked.id } : {} } });
   const nodes = data?.nodes ?? [];
   const title = t("title", { project: project.name, date: day(dateIn(new Date(), await getTimeZone()), locale) }) + (picked ? ` · ${picked.name}` : "");
-  const name = (n: HandoverNode) => (n.code ? `${n.name} (${n.code})` : n.name);
+  // Trees drafted before MSL-46 may still carry the code in the name.
+  const name = (n: HandoverNode) => (n.code && !n.name.includes(n.code) ? `${n.name} (${n.code})` : n.name);
   const empty = (n: HandoverNode) => n.sections.length + n.behaviors.length + n.open.length === 0;
   const behavior = (b: HandoverNode["behaviors"][number]) =>
     `${b.what_changed}${b.why ? ` ${t("why")}: ${b.why}` : ""}${b.client ? ` (${b.client.name})` : ""}`;
