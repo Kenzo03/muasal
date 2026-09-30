@@ -395,7 +395,7 @@
     },
     "importCsv": "Impor CSV",
     "emptyFromDocument": "Susun draf dari dokumen spesifikasi",
-    "emptyFromCSV": "Impor CSV"
+    "emptyFromCSV": "Impor dari file CSV"
   },
   "nodePage": {
     "path": "Jejak",

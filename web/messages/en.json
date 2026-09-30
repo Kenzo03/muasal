@@ -395,7 +395,7 @@
     },
     "importCsv": "Import CSV",
     "emptyFromDocument": "Draft it from a specification",
-    "emptyFromCSV": "Import a CSV"
+    "emptyFromCSV": "Import it from a CSV file"
   },
   "nodePage": {
     "path": "Path",
