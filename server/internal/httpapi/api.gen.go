@@ -2917,6 +2917,11 @@ type ExportAuditParams struct {
 	To      *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
 }
 
+// GetSetupAccountJSONBody defines parameters for GetSetupAccount.
+type GetSetupAccountJSONBody struct {
+	Token string `json:"token"`
+}
+
 // ListContactsParams defines parameters for ListContacts.
 type ListContactsParams struct {
 	Q        *string `form:"q,omitempty" json:"q,omitempty"`
@@ -3146,6 +3151,9 @@ type LoginJSONRequestBody = LoginRequest
 // SetupPasswordJSONRequestBody defines body for SetupPassword for application/json ContentType.
 type SetupPasswordJSONRequestBody = SetupRequest
 
+// GetSetupAccountJSONRequestBody defines body for GetSetupAccount for application/json ContentType.
+type GetSetupAccountJSONRequestBody GetSetupAccountJSONBody
+
 // CreateClientJSONRequestBody defines body for CreateClient for application/json ContentType.
 type CreateClientJSONRequestBody = ClientCreate
 
@@ -3340,6 +3348,9 @@ type ServerInterface interface {
 
 	// (POST /auth/setup)
 	SetupPassword(w http.ResponseWriter, r *http.Request)
+
+	// (POST /auth/setup/account)
+	GetSetupAccount(w http.ResponseWriter, r *http.Request)
 
 	// (GET /clients)
 	ListClients(w http.ResponseWriter, r *http.Request)
@@ -4312,6 +4323,20 @@ func (siw *ServerInterfaceWrapper) SetupPassword(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SetupPassword(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSetupAccount operation middleware
+func (siw *ServerInterfaceWrapper) GetSetupAccount(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSetupAccount(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -7057,6 +7082,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/login", wrapper.Login)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/logout", wrapper.Logout)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/setup", wrapper.SetupPassword)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/setup/account", wrapper.GetSetupAccount)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me", wrapper.GetMe)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/me", wrapper.UpdateMe)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/tickets", wrapper.ListMyTickets)

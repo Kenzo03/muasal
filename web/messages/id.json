@@ -16,7 +16,8 @@
     "mismatch": "Kata sandi tidak sama",
     "submit": "Simpan kata sandi",
     "done": "Kata sandi tersimpan. Silakan masuk.",
-    "toLogin": "Ke halaman masuk"
+    "toLogin": "Ke halaman masuk",
+    "forAccount": "Untuk {name} ({email})"
   },
   "nav": {
     "label": "Utama",
@@ -159,7 +160,12 @@
     "enable": "Aktifkan",
     "resetPassword": "Reset kata sandi",
     "adminsOnly": "Hanya admin yang dapat mengelola pengguna.",
-    "back": "Kembali"
+    "back": "Kembali",
+    "invited": "Diundang",
+    "newLink": "Tautan baru",
+    "copy": "Salin",
+    "copied": "Tersalin",
+    "dismiss": "Tutup"
   },
   "projectList": {
     "heading": "Semua proyek",

@@ -15,7 +15,10 @@ export default function UsersAdmin({ users, meId }: { users: User[]; meId: numbe
   const locale = useLocale();
   const timeZone = useTimeZone();
   const router = useRouter();
-  const [link, setLink] = useState<{ name: string; url: string } | null>(null);
+  // MSL-20: every link made here stays listed until dismissed, newest first.
+  const [links, setLinks] = useState<{ name: string; url: string }[]>([]);
+  const [copied, setCopied] = useState("");
+  const addLink = (name: string, url: string) => setLinks((ls) => [{ name, url }, ...ls.filter((l) => l.name !== name)]);
   const [error, setError] = useState("");
 
   function show(p: Problem) {
@@ -32,7 +35,7 @@ export default function UsersAdmin({ users, meId }: { users: User[]; meId: numbe
     });
     if (error) return show(error);
     setError("");
-    setLink({ name: data.user.name, url: data.setup_link.url });
+    addLink(data.user.name, data.setup_link.url);
     formEl.reset();
     router.refresh();
   }
@@ -46,7 +49,7 @@ export default function UsersAdmin({ users, meId }: { users: User[]; meId: numbe
   async function resetPassword(u: User) {
     const { data, error } = await api.POST("/admin/users/{id}/setup-link", { params: { path: { id: u.id } } });
     if (error) return show(error);
-    setLink({ name: u.name, url: data.url });
+    addLink(u.name, data.url);
     router.refresh();
   }
 
@@ -68,12 +71,22 @@ export default function UsersAdmin({ users, meId }: { users: User[]; meId: numbe
         <button className={cx(button.primary, "h-[34px]")}>{t("create")}</button>
       </form>
       {error && <p role="alert" className={field.error}>{error}</p>}
-      {link && (
-        <p role="status" className="rounded border border-warn-line bg-warn-soft p-3 text-[13px] text-warn">
-          {t("linkFor", { name: link.name })}{" "}
-          <code data-testid="setup-link" className="break-all font-mono text-ink">{link.url}</code>
+      {links.map((link) => (
+        <p key={link.url} role="status" className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded border border-warn-line bg-warn-soft p-3 text-[13px] text-warn">
+          {t("linkFor", { name: link.name })}
+          <code data-testid="setup-link" className="min-w-0 flex-1 break-all font-mono text-ink">{link.url}</code>
+          <button
+            type="button"
+            className={button.quiet}
+            onClick={() => navigator.clipboard?.writeText(link.url).then(() => setCopied(link.url), () => {})}
+          >
+            {copied === link.url ? t("copied") : t("copy")}
+          </button>
+          <button type="button" aria-label={t("dismiss")} className={button.quiet} onClick={() => setLinks((ls) => ls.filter((l) => l.url !== link.url))}>
+            ×
+          </button>
         </p>
-      )}
+      ))}
       <div className={table.wrap}>
         <table className={table.table}>
           <thead className={table.head}>
@@ -98,7 +111,10 @@ export default function UsersAdmin({ users, meId }: { users: User[]; meId: numbe
                 <td className={table.td}>{u.email}</td>
                 <td className={table.td}>{u.is_admin && <span className={cx(chip, "bg-accent-soft text-accent-strong")}>{t("admin")}</span>}</td>
                 <td className={table.td}>
-                  <span className={cx(chip, u.disabled ? "bg-well text-muted" : "bg-ok-soft text-ok")}>{u.disabled ? t("disabled") : t("active")}</span>
+                  {/* MSL-20: a user without a password yet is invited, not active. */}
+                  <span className={cx(chip, u.disabled ? "bg-well text-muted" : u.has_password ? "bg-ok-soft text-ok" : "bg-warn-soft text-warn")}>
+                    {u.disabled ? t("disabled") : u.has_password ? t("active") : t("invited")}
+                  </span>
                 </td>
                 <td className={cx(table.td, "whitespace-nowrap text-muted")}>{u.last_login_at ? dateTime(u.last_login_at, locale, timeZone) : t("never")}</td>
                 <td className={cx(table.td, "whitespace-nowrap text-right")}>
@@ -108,7 +124,7 @@ export default function UsersAdmin({ users, meId }: { users: User[]; meId: numbe
                         {u.disabled ? t("enable") : t("disable")}
                       </button>
                       <button type="button" className={button.quiet} onClick={() => resetPassword(u)}>
-                        {t("resetPassword")}
+                        {u.has_password ? t("resetPassword") : t("newLink")}
                       </button>
                     </span>
                   )}

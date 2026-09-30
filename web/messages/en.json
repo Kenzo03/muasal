@@ -16,7 +16,8 @@
     "mismatch": "The passwords do not match",
     "submit": "Save password",
     "done": "Password saved. You can sign in now.",
-    "toLogin": "Go to sign in"
+    "toLogin": "Go to sign in",
+    "forAccount": "For {name} ({email})"
   },
   "nav": {
     "label": "Main",
@@ -159,7 +160,12 @@
     "enable": "Enable",
     "resetPassword": "Reset password",
     "adminsOnly": "Only admins can manage users.",
-    "back": "Back"
+    "back": "Back",
+    "invited": "Invited",
+    "newLink": "New link",
+    "copy": "Copy",
+    "copied": "Copied",
+    "dismiss": "Dismiss"
   },
   "projectList": {
     "heading": "All projects",

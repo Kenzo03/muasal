@@ -48,6 +48,34 @@ paths:
       responses:
         "204": { description: Password set; every session of the user is revoked. }
         default: { $ref: "#/components/responses/Problem" }
+  /auth/setup/account:
+    post:
+      operationId: getSetupAccount
+      tags: [auth]
+      description: >-
+        The account a live setup link belongs to, so the setup page can name it (MSL-20). The token goes in the body,
+        never the URL, to stay out of access logs.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        "200":
+          description: The account.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [name, email]
+                properties:
+                  name: { type: string }
+                  email: { type: string }
+        default: { $ref: "#/components/responses/Problem" }
   /me:
     get:
       operationId: getMe

@@ -211,6 +211,25 @@ func (s *Server) SetupPassword(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// GetSetupAccount names the account a live setup link belongs to, so its page
+// says whose password is being set (MSL-20); a dead link is 410 at once.
+func (s *Server) GetSetupAccount(w http.ResponseWriter, r *http.Request) {
+	var in GetSetupAccountJSONBody
+	if !decodeJSON(w, r, &in) {
+		return
+	}
+	u, err := s.q.GetSetupTokenUser(r.Context(), auth.HashToken(in.Token))
+	if errors.Is(err, pgx.ErrNoRows) {
+		writeProblem(w, http.StatusGone, "setup_link_invalid", "This link has expired or was already used. Ask your admin for a new one.")
+		return
+	}
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"name": u.Name, "email": u.Email})
+}
+
 // UpdateMe edits the signed-in user's own profile and password.
 func (s *Server) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	u := s.requireUser(w, r)

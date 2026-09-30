@@ -34,6 +34,11 @@ func TestAdminCreatesAUserWhoSetsAPasswordAndSignsIn(t *testing.T) {
 	}
 	token := setupToken(t, created.SetupLink.Url)
 	budi := e.client()
+	var account struct{ Name, Email string } // MSL-20: the setup page names the account
+	if code := e.call(budi, http.MethodPost, "/auth/setup/account", map[string]string{"token": token}, &account); code != http.StatusOK ||
+		account.Name != "Budi" || account.Email != "budi@example.com" {
+		t.Fatalf("setup account: %d %+v", code, account)
+	}
 	if code := e.call(budi, http.MethodPost, "/auth/setup", map[string]string{"token": token, "password": "nasi-goreng-pedas-99"}, nil); code != http.StatusNoContent {
 		t.Fatalf("setup %d", code)
 	}
@@ -43,6 +48,9 @@ func TestAdminCreatesAUserWhoSetsAPasswordAndSignsIn(t *testing.T) {
 	var p httpapi.Problem
 	if code := e.call(budi, http.MethodPost, "/auth/setup", map[string]string{"token": token, "password": "nasi-goreng-pedas-99"}, &p); code != http.StatusGone || p.Code != "setup_link_invalid" {
 		t.Fatalf("second use: %d %s", code, p.Code)
+	}
+	if code := e.call(budi, http.MethodPost, "/auth/setup/account", map[string]string{"token": token}, &p); code != http.StatusGone {
+		t.Fatalf("a used link still names its account: %d", code)
 	}
 	var list httpapi.UserList
 	if code := e.call(admin, http.MethodGet, "/admin/users", nil, &list); code != http.StatusOK || len(list.Items) != 2 {
