@@ -26,14 +26,15 @@ type Props = {
 
 const closes = (s: Status) => s.category === "done" || s.category === "cancelled";
 
-// A status column that takes dropped cards.
+// A status column that takes dropped cards. From 1024 px, five columns fit
+// beside the open sidebar (MSL-61); narrower screens scroll sideways.
 function Column({ status, canEdit, children }: { status: Status; canEdit: boolean; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id: `status-${status.id}`, data: { statusId: status.id }, disabled: !canEdit });
   return (
     <section
       ref={setNodeRef}
       aria-label={status.name}
-      className={cx("flex min-w-[220px] flex-1 basis-0 flex-col gap-2 self-start rounded-2xl bg-sidebar p-2", isOver && "outline-2 -outline-offset-2 outline-accent")}
+      className={cx("flex min-w-[220px] flex-1 basis-0 flex-col gap-2 self-start rounded-2xl bg-sidebar p-2 lg:min-w-[136px] lg:max-xl:p-1.5", isOver && "outline-2 -outline-offset-2 outline-accent")}
     >
       {children}
     </section>
@@ -109,21 +110,21 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, s
           if (statusId !== undefined) move(Number(e.active.id), statusId);
         }}
       >
-        <div className="flex gap-3 overflow-x-auto pb-2">
+        <div className="flex gap-3 overflow-x-auto pb-2 lg:max-xl:gap-2">
           {statuses.map((s) => {
             const cards = items.filter((x) => x.status_id === s.id);
             const droppable = canEdit;
             return (
               <Column key={s.id} status={s} canEdit={canEdit}>
-                <h2 className="flex h-9 items-center gap-2 pl-2 pr-0.5 text-sm font-extrabold">
-                  <StatusDot color={s.color} className="size-2.5" />
-                  <span className="truncate">{s.name}</span>
+                <h2 className="flex min-h-9 items-center gap-2 pl-2 pr-0.5 text-sm font-extrabold leading-tight">
+                  <StatusDot color={s.color} className="size-2.5 shrink-0" />
+                  <span className="min-w-0 break-words">{s.name}</span>
                   <span className="text-[13px] font-bold text-muted">{cards.length}</span>
                   {droppable && (
                     <Link
                       href={`/p/${projectKey}/tickets/new?status_id=${s.id}`}
                       aria-label={t("addHere", { status: s.name })}
-                      className="ml-auto inline-flex size-7 items-center justify-center rounded-lg text-ink-soft hover:bg-white hover:text-ink"
+                      className="ml-auto inline-flex size-7 shrink-0 items-center justify-center rounded-lg text-ink-soft hover:bg-white hover:text-ink"
                     >
                       <Icon name="plus" />
                     </Link>
@@ -142,7 +143,7 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, s
                     key={c.id}
                     id={c.id}
                     canEdit={canEdit}
-                    className="flex flex-col gap-2 rounded-[14px] bg-white p-3.5 shadow-[0_1px_2px_rgba(43,36,32,0.06),0_0_0_1px_rgba(43,36,32,0.04)]"
+                    className="flex flex-col gap-2 rounded-[14px] bg-white p-3.5 lg:max-xl:p-2.5 shadow-[0_1px_2px_rgba(43,36,32,0.06),0_0_0_1px_rgba(43,36,32,0.04)]"
                   >
                     <div className="flex items-center gap-1.5 text-xs font-bold text-muted">
                       <TypeIcon type={c.type} label={tTypes(c.type)} />
@@ -183,7 +184,7 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, s
                           aria-label={t("moveTo", { key: c.key })}
                           value={c.status_id}
                           onChange={(e) => move(c.id, Number(e.target.value))}
-                          className="ml-auto h-7 max-w-32 cursor-pointer rounded-lg bg-well pl-2 text-xs font-semibold text-ink-soft hover:text-ink"
+                          className="ml-auto h-7 max-w-[min(8rem,100%)] cursor-pointer rounded-lg bg-well pl-2 text-xs font-semibold text-ink-soft hover:text-ink"
                         >
                           {statuses.map((o) => (
                             <option key={o.id} value={o.id}>{o.name}</option>
