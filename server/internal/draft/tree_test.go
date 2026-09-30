@@ -45,3 +45,22 @@ func TestLinkSection(t *testing.T) {
 		}
 	}
 }
+
+// MSL-45: a level every node shares and no heading names goes; a top module
+// the document names stays.
+func TestUnwrapDropsAnUnnamedSharedRoot(t *testing.T) {
+	sections := []docs.Section{{Number: "1", Title: "Absensi (ATT)"}, {Number: "1.1", Title: "Clock In dan Clock Out (ATT-01)"}}
+	cands := []docs.Candidate{
+		{Path: []string{"HRIS"}, Type: "module"},
+		{Path: []string{"HRIS", "Absensi"}, Type: "module", Section: "1"},
+		{Path: []string{"HRIS", "Absensi", "Clock In dan Clock Out"}, Type: "menu", Section: "1.1"},
+	}
+	got := unwrap(cands, sections)
+	if len(got) != 2 || strings.Join(got[0].Path, "/") != "Absensi" || strings.Join(got[1].Path, "/") != "Absensi/Clock In dan Clock Out" {
+		t.Fatalf("unwrapped: %+v", got)
+	}
+	named := []docs.Candidate{{Path: []string{"Absensi"}}, {Path: []string{"Absensi", "Clock In dan Clock Out"}}}
+	if got := unwrap(named, []docs.Section{{Number: "1", Title: "Absensi"}}); len(got) != 2 || got[0].Path[0] != "Absensi" {
+		t.Fatalf("a named top module was dropped: %+v", got)
+	}
+}
