@@ -2413,7 +2413,7 @@ type SummaryCreate struct {
 	Keys             []string           `json:"keys"`
 	Language         SummaryLanguage    `json:"language"`
 
-	// NodeId The node, with its sub-nodes; 0 in a weekly summary, which covers the whole project.
+	// NodeId The node, with its sub-nodes; 0 covers the whole project, as a weekly summary does.
 	NodeId     int64              `json:"node_id"`
 	ProjectKey string             `json:"project_key"`
 	To         openapi_types.Date `json:"to"`
@@ -2503,7 +2503,7 @@ type SummaryScope struct {
 	IncludeCancelled *bool              `json:"include_cancelled,omitempty"`
 	Language         SummaryLanguage    `json:"language"`
 
-	// NodeId The node, with its sub-nodes; 0 in a weekly summary, which covers the whole project.
+	// NodeId The node, with its sub-nodes; 0 covers the whole project, as a weekly summary does.
 	NodeId     int64              `json:"node_id"`
 	ProjectKey string             `json:"project_key"`
 	To         openapi_types.Date `json:"to"`

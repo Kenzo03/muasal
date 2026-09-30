@@ -2113,7 +2113,7 @@ export interface components {
             project_key: string;
             /**
              * Format: int64
-             * @description The node, with its sub-nodes; 0 in a weekly summary, which covers the whole project.
+             * @description The node, with its sub-nodes; 0 covers the whole project, as a weekly summary does.
              */
             node_id: number;
             /**

@@ -31,7 +31,7 @@ export default function Builder({ projectKey, clients, nodes, locale }: {
   const pathOf = useMemo(() => nodePaths(nodes), [nodes]);
   const sorted = useMemo(() => [...nodes].sort((a, b) => pathOf(a.id).localeCompare(pathOf(b.id))), [nodes, pathOf]);
   const [scope, setScope] = useState<Scope>({
-    project_key: projectKey, node_id: sorted[0]?.id ?? 0, from: `${today.slice(0, 4)}-01-01`, to: today, include_cancelled: false, language: locale, audience: "client",
+    project_key: projectKey, node_id: 0, from: `${today.slice(0, 4)}-01-01`, to: today, include_cancelled: false, language: locale, audience: "client",
   });
   const [preview, setPreview] = useState<Preview>();
   const [ticked, setTicked] = useState<Set<string>>(new Set());
@@ -74,6 +74,8 @@ export default function Builder({ projectKey, clients, nodes, locale }: {
         <label className={field.label}>
           {t("node")}
           <select value={scope.node_id} onChange={(e) => set({ node_id: Number(e.target.value) })} className={field.input}>
+            {/* MSL-16: a monthly release note spans modules. */}
+            <option value={0}>{t("allNodes")}</option>
             {sorted.map((n) => (
               <option key={n.id} value={n.id}>{pathOf(n.id)}</option>
             ))}

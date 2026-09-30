@@ -1277,7 +1277,8 @@
     "day": "Hari",
     "schedule": "Jadwalkan",
     "stop": "Hentikan",
-    "stopConfirm": "Hentikan ringkasan mingguan ini? Ringkasan yang sudah dibuat tetap ada."
+    "stopConfirm": "Hentikan ringkasan mingguan ini? Ringkasan yang sudah dibuat tetap ada.",
+    "allNodes": "Semua modul"
   },
   "documents": {
     "heading": "Dokumen",

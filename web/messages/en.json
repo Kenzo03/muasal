@@ -1277,7 +1277,8 @@
     "day": "Day",
     "schedule": "Schedule",
     "stop": "Stop",
-    "stopConfirm": "Stop this weekly summary? Summaries already written stay."
+    "stopConfirm": "Stop this weekly summary? Summaries already written stay.",
+    "allNodes": "All modules"
   },
   "documents": {
     "heading": "Documents",
