@@ -345,43 +345,38 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
           />
           <p id="description-hint" className={field.hint}>{t(ticket ? "descriptionHint" : "descriptionHintNew")}</p>
         </Row>
-        <details className="group rounded-xl border border-line" open={Boolean(ticket?.assignee || ticket?.due_date || from?.assigneeId || from?.due)}>
-          <summary className="flex cursor-pointer items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-[13px] font-bold hover:bg-paper">
-            <Icon name="chevronRight" className="size-4 text-muted transition-transform group-open:rotate-90" />
-            {t("more")}
-          </summary>
-          <div className="grid gap-3 px-3.5 pb-3.5 pt-1 md:grid-cols-4">
-            <label className={field.label}>
-              {t("assignee")}
-              <select name="assignee_id" defaultValue={ticket?.assignee?.id ?? from?.assigneeId ?? ""} className={field.input}>
-                <option value="">{t("nobody")}</option>
-                {people.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name}</option>
-                ))}
-              </select>
-            </label>
-            <label className={field.label}>
-              {t("priority")}
-              <select name="priority" defaultValue={ticket?.priority ?? "medium"} className={field.input}>
-                {priorities.map((p) => (
-                  <option key={p} value={p}>{tPri(p)}</option>
-                ))}
-              </select>
-            </label>
-            <label className={field.label}>
-              {t("due")}
-              <input type="date" name="due_date" defaultValue={ticket?.due_date ?? from?.due ?? ""} className={field.input} />
-            </label>
-            <label className={field.label}>
-              {t("estimate")}
-              <input type="number" name="estimate_hours" min={0} max={9999} step={0.5} defaultValue={ticket?.estimate_hours ?? ""} className={field.input} />
-            </label>
-            <label className={cx(field.label, "md:col-span-4")}>
-              {t("labels")}
-              <input name="labels" defaultValue={ticket?.labels?.join(", ") ?? ""} placeholder={t("labelsHint")} className={field.input} />
-            </label>
-          </div>
-        </details>
+        {/* MSL-58: set on nearly every ticket, so in view rather than under "More". */}
+        <div className="grid gap-3 md:grid-cols-4">
+          <label className={field.label}>
+            {t("assignee")}
+            <select name="assignee_id" defaultValue={ticket?.assignee?.id ?? from?.assigneeId ?? ""} className={field.input}>
+              <option value="">{t("nobody")}</option>
+              {people.map((a) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className={field.label}>
+            {t("priority")}
+            <select name="priority" defaultValue={ticket?.priority ?? "medium"} className={field.input}>
+              {priorities.map((p) => (
+                <option key={p} value={p}>{tPri(p)}</option>
+              ))}
+            </select>
+          </label>
+          <label className={field.label}>
+            {t("due")}
+            <input type="date" name="due_date" defaultValue={ticket?.due_date ?? from?.due ?? ""} className={field.input} />
+          </label>
+          <label className={field.label}>
+            {t("estimate")}
+            <input type="number" name="estimate_hours" min={0} max={9999} step={0.5} defaultValue={ticket?.estimate_hours ?? ""} className={field.input} />
+          </label>
+          <label className={cx(field.label, "md:col-span-4")}>
+            {t("labels")}
+            <input name="labels" defaultValue={ticket?.labels?.join(", ") ?? ""} placeholder={t("labelsHint")} className={field.input} />
+          </label>
+        </div>
         {error && (
           <p role="alert" className={field.error}>
             {error}{" "}

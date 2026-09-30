@@ -662,7 +662,6 @@
     "weakReason": "Say why the client needs this, e.g. their policy or the problem it solves",
     "type": "Type",
     "description": "Description",
-    "more": "More",
     "assignee": "Assignee",
     "nobody": "Nobody",
     "priority": "Priority",
