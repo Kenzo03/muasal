@@ -245,6 +245,10 @@ func (e *Engine) Ask(ctx context.Context, r Request, sink Sink) (Result, error) 
 				valid = recited
 				logRow.dropped = append(logRow.dropped, *moved)
 			}
+			if ContradictsDue(valid, blocks) {
+				logRow.dropped = append(logRow.dropped, Dropped{Claim: valid, Reason: "contradicts_due"})
+				return
+			}
 			if why && saysNoReason(valid.Text) {
 				noReason = append(noReason, valid)
 				return
