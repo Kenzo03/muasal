@@ -461,6 +461,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{key}/handover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description The handover pack's content for everyone who may see the project (MSL-68); with client_id, that client's items and the core work. */
+        get: operations["getHandover"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{key}/releases": {
         parameters: {
             query?: never;
@@ -2573,6 +2592,31 @@ export interface components {
             /** Format: date-time */
             closed_at?: string | null;
         };
+        /** @description The project as it stands, per module and menu in tree order: the spec sections in force, the behaviours in force and the open tickets (MSL-68). */
+        Handover: {
+            nodes: components["schemas"]["HandoverNode"][];
+        };
+        HandoverNode: {
+            /** Format: int64 */
+            id: number;
+            name: string;
+            code?: string;
+            /** @enum {string} */
+            type: "module" | "menu";
+            /** @description 0 for a top module. */
+            depth: number;
+            sections: components["schemas"]["TimelineSection"][];
+            behaviors: components["schemas"]["Behavior"][];
+            open: components["schemas"]["HandoverTicket"][];
+        };
+        HandoverTicket: {
+            key: string;
+            title: string;
+            status: string;
+            assignee?: string;
+            /** Format: date */
+            due_date?: string;
+        };
         /** @description A project release, such as v1.0 (MSL-67). */
         Release: {
             /** Format: int64 */
@@ -4262,6 +4306,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectSetup"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getHandover: {
+        parameters: {
+            query?: {
+                client_id?: number;
+            };
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The live modules and menus, each with its own items. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Handover"];
                 };
             };
             default: components["responses"]["Problem"];

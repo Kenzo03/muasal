@@ -14,6 +14,7 @@ export default async function SummariesPage({ params }: { params: Promise<{ key:
   if (!project) notFound();
   const t = await getTranslations("summaries");
   const ts = await getTranslations("status"); // MSL-63: work in flight, beside the summaries of closed work
+  const th = await getTranslations("handover"); // MSL-68
   const locale = await getLocale();
   const timeZone = await getTimeZone();
   const api = await serverApi();
@@ -31,6 +32,7 @@ export default async function SummariesPage({ params }: { params: Promise<{ key:
         <h1 className="text-base font-semibold">{t("heading")}</h1>
         <span className="text-[13px] text-muted">{project.name}</span>
         <Link href={`/p/${key}/status`} className={cx(button.secondary, "ml-auto")}>{ts("link")}</Link>
+        <Link href={`/p/${key}/handover`} className={button.secondary}>{th("link")}</Link>
         {project.role !== "viewer" && (
           <Link href={`/p/${key}/summaries/new`} className={button.primary}>{t("new")}</Link>
         )}
