@@ -46,3 +46,14 @@ WHERE m.project_id = sqlc.arg('project_id') AND m.role IN ('admin', 'member') AN
         SELECT 1 FROM membership_clients mc
         WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = sqlc.narg('client_id')::bigint))
 ORDER BY lower(u.name), u.id;
+
+-- name: ListMemberCandidates :many
+-- MSL-21: who a project admin can pick as a member: the active users who
+-- already share a project with them. A system admin picks from everyone.
+SELECT u.id, u.name, u.email FROM users u
+WHERE u.disabled_at IS NULL
+  AND (sqlc.arg('everyone')::boolean OR EXISTS (
+    SELECT 1 FROM memberships mine
+    JOIN memberships theirs ON theirs.project_id = mine.project_id
+    WHERE mine.user_id = sqlc.arg('user_id') AND theirs.user_id = u.id))
+ORDER BY lower(u.name), u.id;

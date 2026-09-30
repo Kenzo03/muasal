@@ -432,7 +432,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** @description Project admins only. The active users a project admin can add as members, by name (MSL-21). */
+        /** @description Project admins only (MSL-21). The active users who share a project with the caller, by name; a system admin gets every active user. Anyone else is added by exact email. */
         get: operations["listMemberCandidates"];
         put?: never;
         post?: never;
@@ -3939,7 +3939,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Users by name, members included. */
+            /** @description The people to pick from, members included. */
             200: {
                 headers: {
                     [name: string]: unknown;

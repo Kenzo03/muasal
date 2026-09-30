@@ -245,13 +245,16 @@
     "remove": "Hapus",
     "person": "Orang",
     "pickPerson": "Pilih orang…",
-    "notListed": "Tidak ada di daftar? Admin sistem menambahkan orang di Admin › Pengguna.",
+    "notListed": "Daftar berisi orang yang satu proyek dengan Anda. Untuk orang lain, pilih “Orang lain” lalu ketik emailnya; admin sistem menambahkan orang baru di Admin › Pengguna.",
     "unsaved": "Ada perubahan yang belum disimpan",
     "unsavedLeave": "Tinggalkan halaman tanpa menyimpan perubahan anggota?",
     "addMember": "Tambah anggota",
     "saveMembers": "Simpan anggota",
     "noMembers": "Belum ada anggota.",
-    "unknownUserHint": "Minta admin sistem membuat akunnya di Admin › Pengguna, lalu tambahkan lagi."
+    "unknownUserHint": "Minta admin sistem membuat akunnya di Admin › Pengguna, lalu tambahkan lagi.",
+    "email": "Email",
+    "someoneElse": "Orang lain (ketik emailnya)…",
+    "alreadyListed": "Orang ini sudah ada di daftar."
   },
   "clients": {
     "title": "Klien",

@@ -26,22 +26,23 @@ func (s *Server) ListProjectMembers(w http.ResponseWriter, r *http.Request, key 
 	writeJSON(w, http.StatusOK, MemberList{Items: toAPIMembers(rows)})
 }
 
-// ListMemberCandidates lists the active users a project admin can add, so
-// adding a member is a pick, not a typed email (MSL-21).
+// ListMemberCandidates lists who a project admin can pick as a member, so
+// adding one is a pick, not a typed email (MSL-21). It shows only the people
+// who already share a project with the admin, not the whole directory; a
+// system admin sees every active user. Anyone else is added by exact email.
 func (s *Server) ListMemberCandidates(w http.ResponseWriter, r *http.Request, key string) {
-	if _, ok := s.projectFor(w, r, key, access.Admin); !ok {
+	pc, ok := s.projectFor(w, r, key, access.Admin)
+	if !ok {
 		return
 	}
-	users, err := s.q.ListUsers(r.Context())
+	users, err := s.q.ListMemberCandidates(r.Context(), db.ListMemberCandidatesParams{Everyone: pc.user.IsAdmin, UserID: pc.user.ID})
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
-	out := PersonList{Items: []Person{}}
-	for _, u := range users {
-		if u.DisabledAt == nil {
-			out.Items = append(out.Items, Person{Id: u.ID, Name: u.Name, Email: u.Email})
-		}
+	out := PersonList{Items: make([]Person, len(users))}
+	for i, u := range users {
+		out.Items[i] = Person{Id: u.ID, Name: u.Name, Email: u.Email}
 	}
 	writeJSON(w, http.StatusOK, out)
 }

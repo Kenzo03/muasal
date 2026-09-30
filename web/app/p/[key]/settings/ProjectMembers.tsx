@@ -15,8 +15,8 @@ const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 
 // Edits the whole member list locally and saves it in one request (FSD §15.2: one by one or in bulk).
 // A save the server refuses marks the rows it names, such as an email no user has.
-// Members are picked from the active users (MSL-21); leaving with unsaved
-// changes asks first.
+// Members are picked from the people who share a project with the admin, or
+// added by exact email (MSL-21); leaving with unsaved changes asks first.
 export default function ProjectMembers({
   projectKey,
   members,
@@ -32,6 +32,7 @@ export default function ProjectMembers({
   const problemText = useProblemText();
   const [rows, setRows] = useState<Row[]>(() => members.map(toRow));
   const [saved, setSaved] = useState(rows);
+  const [other, setOther] = useState(false); // "Someone else": type the email
   const dirty = JSON.stringify(rows) !== JSON.stringify(saved);
   const [status, setStatus] = useState("");
   const [rowErrors, setRowErrors] = useState<Record<number, { text: string; unknownUser: boolean }>>({}); // by row, from the last save
@@ -66,10 +67,14 @@ export default function ProjectMembers({
 
   function add(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const person = people.find((p) => same(p.email, String(new FormData(e.currentTarget).get("email"))));
-    if (!person) return;
-    edit((rs) => [...rs, { email: person.email, name: person.name, role: "member", all_clients: true, client_ids: [] }]);
-    setStatus("");
+    const form = new FormData(e.currentTarget);
+    const pick = String(form.get("pick") ?? "");
+    const email = (pick === "other" ? String(form.get("email") ?? "") : pick).trim();
+    if (!email) return;
+    if (rows.some((r) => same(r.email, email))) return setStatus(t("alreadyListed"));
+    const person = people.find((p) => same(p.email, email));
+    edit((rs) => [...rs, { email: person?.email ?? email, name: person?.name ?? email, role: "member", all_clients: true, client_ids: [] }]);
+    setOther(false);
     e.currentTarget.reset();
   }
 
@@ -185,15 +190,29 @@ export default function ProjectMembers({
       <form aria-label={t("addMember")} onSubmit={add} className="flex flex-wrap items-end gap-2">
         <label className={field.label}>
           {t("person")}
-          <select name="email" required defaultValue="" aria-describedby="members-not-listed" className={cx(field.input, "w-80")}>
+          <select
+            name="pick"
+            required
+            defaultValue=""
+            onChange={(e) => setOther(e.target.value === "other")}
+            aria-describedby="members-not-listed"
+            className={cx(field.input, "w-80")}
+          >
             <option value="" disabled>{t("pickPerson")}</option>
             {people
               .filter((p) => !rows.some((r) => same(r.email, p.email)))
               .map((p) => (
                 <option key={p.id} value={p.email}>{p.name} · {p.email}</option>
               ))}
+            <option value="other">{t("someoneElse")}</option>
           </select>
         </label>
+        {other && (
+          <label className={field.label}>
+            {t("email")}
+            <input name="email" type="email" required autoFocus className={cx(field.input, "w-72")} />
+          </label>
+        )}
         <button className={cx(button.secondary, "h-[34px]")}>{t("addMember")}</button>
         <p id="members-not-listed" className={cx(field.hint, "basis-full")}>{t("notListed")}</p>
       </form>

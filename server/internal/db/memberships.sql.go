@@ -135,6 +135,49 @@ func (q *Queries) ListAssignees(ctx context.Context, arg ListAssigneesParams) ([
 	return items, nil
 }
 
+const listMemberCandidates = `-- name: ListMemberCandidates :many
+SELECT u.id, u.name, u.email FROM users u
+WHERE u.disabled_at IS NULL
+  AND ($1::boolean OR EXISTS (
+    SELECT 1 FROM memberships mine
+    JOIN memberships theirs ON theirs.project_id = mine.project_id
+    WHERE mine.user_id = $2 AND theirs.user_id = u.id))
+ORDER BY lower(u.name), u.id
+`
+
+type ListMemberCandidatesParams struct {
+	Everyone bool
+	UserID   int64
+}
+
+type ListMemberCandidatesRow struct {
+	ID    int64
+	Name  string
+	Email string
+}
+
+// MSL-21: who a project admin can pick as a member: the active users who
+// already share a project with them. A system admin picks from everyone.
+func (q *Queries) ListMemberCandidates(ctx context.Context, arg ListMemberCandidatesParams) ([]ListMemberCandidatesRow, error) {
+	rows, err := q.db.Query(ctx, listMemberCandidates, arg.Everyone, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListMemberCandidatesRow
+	for rows.Next() {
+		var i ListMemberCandidatesRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.Email); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProjectMembers = `-- name: ListProjectMembers :many
 SELECT u.id AS user_id, u.name, u.email, m.role, m.all_clients,
        coalesce(array_agg(mc.client_id ORDER BY mc.client_id) FILTER (WHERE mc.client_id IS NOT NULL), '{}')::bigint[] AS client_ids

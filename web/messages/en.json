@@ -245,13 +245,16 @@
     "remove": "Remove",
     "person": "Person",
     "pickPerson": "Choose a person…",
-    "notListed": "Not listed? A system admin adds people in Admin › Users.",
+    "notListed": "The list shows the people who share a project with you. For anyone else, choose “Someone else” and type their email; a system admin adds new people in Admin › Users.",
     "unsaved": "Unsaved changes",
     "unsavedLeave": "Leave without saving the member changes?",
     "addMember": "Add member",
     "saveMembers": "Save members",
     "noMembers": "No members yet.",
-    "unknownUserHint": "Ask a system admin to create the account in Admin › Users, then add it again."
+    "unknownUserHint": "Ask a system admin to create the account in Admin › Users, then add it again.",
+    "email": "Email",
+    "someoneElse": "Someone else (type their email)…",
+    "alreadyListed": "This person is already listed."
   },
   "clients": {
     "title": "Clients",
