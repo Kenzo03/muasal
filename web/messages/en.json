@@ -547,7 +547,7 @@
   "ticketFilters": {
     "release": "Release",
     "anyRelease": "Any",
-    "accepted": "Client",
+    "accepted": "Acceptance",
     "anyAcceptance": "Any",
     "acceptedYes": "Accepted",
     "acceptedNo": "Not accepted yet",
