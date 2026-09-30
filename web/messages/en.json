@@ -1247,7 +1247,14 @@
     "comment": "{who} commented on {ticket}",
     "mention": "{who} mentioned you on {ticket}",
     "status": "{who} moved {ticket} to {status}",
-    "jobDone": "{name} finished"
+    "jobDone": "{name} finished",
+    "also": "Also: {actions}",
+    "did": {
+      "assigned": "assigned you",
+      "comment": "commented",
+      "mention": "mentioned you",
+      "status": "moved it to {status}"
+    }
   },
   "notifyPrefs": {
     "title": "Notifications",

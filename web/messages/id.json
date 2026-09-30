@@ -1247,7 +1247,14 @@
     "comment": "{who} berkomentar di {ticket}",
     "mention": "{who} menyebut Anda di {ticket}",
     "status": "{who} memindahkan {ticket} ke {status}",
-    "jobDone": "{name} selesai"
+    "jobDone": "{name} selesai",
+    "also": "Juga: {actions}",
+    "did": {
+      "assigned": "menugaskan kepada Anda",
+      "comment": "berkomentar",
+      "mention": "menyebut Anda",
+      "status": "memindahkan ke {status}"
+    }
   },
   "notifyPrefs": {
     "title": "Notifikasi",
