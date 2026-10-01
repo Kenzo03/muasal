@@ -63,15 +63,24 @@ export default function UsersAdmin({ users, meId }: { users: User[]; meId: numbe
   async function runConfirm(c: Confirm) {
     const problem = c.kind === "disable" ? await setDisabled(c.user, true) : await newLink(c.user);
     if (!problem) {
+      setError("");
       setConfirm(null);
       setPanel(null);
     }
     return problem;
   }
-  // Enable needs no confirmation; a failure shows in the page's alert line.
+  // Enable needs no confirmation. From the menu a failure shows in the page's alert line.
   async function enable(u: User) {
+    setError((await setDisabled(u, false)) ?? "");
+  }
+  // From the panel the failure is returned, to show inside the panel; success closes it.
+  async function enableFromPanel(u: User) {
     const problem = await setDisabled(u, false);
-    setError(problem ?? "");
+    if (!problem) {
+      setError("");
+      setPanel(null);
+    }
+    return problem;
   }
   const ask = (u: User, kind: Confirm["kind"]) => setConfirm({ user: u, kind });
   const askLink = (u: User) => ask(u, u.has_password ? "reset" : "link");
@@ -174,17 +183,19 @@ export default function UsersAdmin({ users, meId }: { users: User[]; meId: numbe
           lastLogin={panel === "new" ? "" : lastLogin(panel)}
           onClose={() => setPanel(null)}
           onCreated={(name, url) => {
+            setError("");
             addLink(name, url);
             setPanel(null);
             router.refresh();
           }}
           onSaved={() => {
+            setError("");
             setPanel(null);
             router.refresh();
           }}
           onLink={askLink}
           onDisable={(u) => ask(u, "disable")}
-          onEnable={enable}
+          onEnable={enableFromPanel}
         />
       )}
       {confirm && (
@@ -210,7 +221,7 @@ type PanelProps = {
   onSaved: () => void;
   onLink: (u: User) => void;
   onDisable: (u: User) => void;
-  onEnable: (u: User) => void;
+  onEnable: (u: User) => Promise<string | undefined>;
 };
 
 function UserPanel({ user, isMe, lastLogin, onClose, onCreated, onSaved, onLink, onDisable, onEnable }: PanelProps) {
@@ -221,6 +232,7 @@ function UserPanel({ user, isMe, lastLogin, onClose, onCreated, onSaved, onLink,
   const [admin, setAdmin] = useState(user?.is_admin ?? false);
   const [problem, setProblem] = useState<Problem>();
   const [busy, setBusy] = useState(false);
+  const [enableProblem, setEnableProblem] = useState<string>();
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -294,7 +306,7 @@ function UserPanel({ user, isMe, lastLogin, onClose, onCreated, onSaved, onLink,
             <span className="text-[12.5px] text-muted">{t("systemAdminHelp")}</span>
           </span>
         </label>
-        {problem && <p role="alert" className={field.error}>{problemText(problem)}</p>}
+        {(problem || enableProblem) && <p role="alert" className={field.error}>{problem ? problemText(problem) : enableProblem}</p>}
         {user && !isMe && (
           <section aria-labelledby="access-title" className="mt-2 flex flex-col gap-3 border-t border-line-soft pt-4">
             <h3 id="access-title" className="text-[13px] font-bold text-muted">{t("access")}</h3>
@@ -311,7 +323,7 @@ function UserPanel({ user, isMe, lastLogin, onClose, onCreated, onSaved, onLink,
                 <span className="text-[12.5px] text-muted">{user.disabled ? t("enableHelp") : t("disableHelp")}</span>
               </span>
               {user.disabled ? (
-                <button type="button" className={button.secondary} onClick={() => onEnable(user)}>{t("enable")}</button>
+                <button type="button" className={button.secondary} onClick={async () => setEnableProblem(await onEnable(user))}>{t("enable")}</button>
               ) : (
                 <button type="button" className={button.danger} onClick={() => onDisable(user)}>{t("disable")}</button>
               )}
