@@ -2038,6 +2038,10 @@ components:
           type: array
           items: { type: string }
         archived: { type: boolean }
+        projects:
+          type: array
+          items: { type: string }
+          description: Keys of the projects linked to this client. Only GET /clients fills it.
     ClientList:
       type: object
       required: [items]
