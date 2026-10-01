@@ -7,7 +7,15 @@ RETURNING *;
 SELECT * FROM clients WHERE id = $1;
 
 -- name: ListClients :many
-SELECT * FROM clients ORDER BY lower(name), id;
+-- The admin list (GET /clients): each client with the keys of the projects
+-- linked to it, in key order; none gives an empty array.
+SELECT sqlc.embed(c),
+       coalesce(array_agg(p.key ORDER BY p.key) FILTER (WHERE p.key IS NOT NULL), '{}')::text[] AS projects
+FROM clients c
+LEFT JOIN project_clients pc ON pc.client_id = c.id
+LEFT JOIN projects p ON p.id = pc.project_id
+GROUP BY c.id
+ORDER BY lower(c.name), c.id;
 
 -- name: UpdateClient :one
 -- NULL keeps a field; an empty code clears it.

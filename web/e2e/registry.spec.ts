@@ -17,19 +17,22 @@ test("an admin builds the HRIS tree and a member scoped to one client sees only 
 
   // A user who will be scoped to Client B.
   await page.getByRole("link", { name: "Pengguna" }).click();
-  await page.getByLabel("Nama").fill("Budi Tree");
-  await page.getByLabel("Email").fill(budiEmail);
-  await page.getByRole("button", { name: "Buat pengguna" }).click();
+  await page.getByRole("button", { name: "Pengguna baru" }).click();
+  const panel = page.getByRole("dialog", { name: "Pengguna baru" });
+  await panel.getByLabel("Nama", { exact: true }).fill("Budi Tree");
+  await panel.getByLabel("Email", { exact: true }).fill(budiEmail);
+  await panel.getByRole("button", { name: "Buat pengguna" }).click();
   const budiLink = await page.getByTestId("setup-link").textContent();
 
-  // Two clients. The form is scoped: the users page also has a "Nama" field,
-  // and it is still on screen while the navigation runs.
+  // Two clients, each from the New client panel.
   await page.getByRole("link", { name: "Klien", exact: true }).click();
-  const newClient = page.getByRole("form", { name: "Buat klien" });
   for (const name of [clientA, clientB]) {
-    await newClient.getByLabel("Nama").fill(name);
-    await newClient.getByRole("button", { name: "Buat klien" }).click();
-    await expect(page.getByRole("cell", { name, exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Klien baru" }).click();
+    const panel = page.getByRole("dialog", { name: "Klien baru" });
+    await panel.getByLabel("Nama", { exact: true }).fill(name);
+    await panel.getByRole("button", { name: "Buat klien" }).click();
+    await expect(panel).toBeHidden();
+    await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
   }
 
   // The project; creating it opens its settings.
@@ -46,6 +49,13 @@ test("an admin builds the HRIS tree and a member scoped to one client sees only 
   await links.getByRole("checkbox", { name: clientB }).check();
   await links.getByRole("button", { name: "Simpan klien" }).click();
   await expect(links.getByRole("status")).toHaveText("Tersimpan");
+
+  // The client list now shows the project key on the linked client.
+  await page.getByRole("link", { name: "Muasal" }).click();
+  await page.getByRole("link", { name: "Klien", exact: true }).click();
+  await expect(page.locator("tbody tr").filter({ hasText: clientA })).toContainText(key);
+  await page.goto(`/p/${key}/settings`);
+  await expect(page).toHaveURL(new RegExp(`/p/${key}/settings$`));
 
   await page.getByRole("form", { name: "Tambah anggota" }).getByLabel("Orang").selectOption(budiEmail); // MSL-21: a pick
   await page.getByRole("button", { name: "Tambah anggota" }).click();

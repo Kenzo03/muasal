@@ -126,6 +126,7 @@ const paths = {
   ),
   pulse: <path d="M2 8.5h2.5L6 5l2.5 7L10 8.5h4" />,
   menu: <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" />,
+  more: <path d="M3.4 8h.8M7.6 8h.8M11.8 8h.8" strokeWidth={2.4} />,
   message: <path d="M3 3.5h10v7H7.2L4 13v-2.5H3z" />,
   thumbUp: <path d="M5 7.5v6H3v-6zM5 7.5 7.6 3a1.4 1.4 0 0 1 1.6 1.7l-.5 2.3h3.6a1.3 1.3 0 0 1 1.3 1.5l-.8 4.3a1.4 1.4 0 0 1-1.4 1.2H5" />,
   calendar: (
