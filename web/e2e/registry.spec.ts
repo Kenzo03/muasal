@@ -17,9 +17,11 @@ test("an admin builds the HRIS tree and a member scoped to one client sees only 
 
   // A user who will be scoped to Client B.
   await page.getByRole("link", { name: "Pengguna" }).click();
-  await page.getByLabel("Nama").fill("Budi Tree");
-  await page.getByLabel("Email").fill(budiEmail);
-  await page.getByRole("button", { name: "Buat pengguna" }).click();
+  await page.getByRole("button", { name: "Pengguna baru" }).click();
+  const panel = page.getByRole("dialog", { name: "Pengguna baru" });
+  await panel.getByLabel("Nama", { exact: true }).fill("Budi Tree");
+  await panel.getByLabel("Email", { exact: true }).fill(budiEmail);
+  await panel.getByRole("button", { name: "Buat pengguna" }).click();
   const budiLink = await page.getByTestId("setup-link").textContent();
 
   // Two clients. The form is scoped: the users page also has a "Nama" field,
