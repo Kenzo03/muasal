@@ -24,14 +24,15 @@ test("an admin builds the HRIS tree and a member scoped to one client sees only 
   await panel.getByRole("button", { name: "Buat pengguna" }).click();
   const budiLink = await page.getByTestId("setup-link").textContent();
 
-  // Two clients. The form is scoped: the users page also has a "Nama" field,
-  // and it is still on screen while the navigation runs.
+  // Two clients, each from the New client panel.
   await page.getByRole("link", { name: "Klien", exact: true }).click();
-  const newClient = page.getByRole("form", { name: "Buat klien" });
   for (const name of [clientA, clientB]) {
-    await newClient.getByLabel("Nama").fill(name);
-    await newClient.getByRole("button", { name: "Buat klien" }).click();
-    await expect(page.getByRole("cell", { name, exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Klien baru" }).click();
+    const panel = page.getByRole("dialog", { name: "Klien baru" });
+    await panel.getByLabel("Nama", { exact: true }).fill(name);
+    await panel.getByRole("button", { name: "Buat klien" }).click();
+    await expect(panel).toBeHidden();
+    await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
   }
 
   // The project; creating it opens its settings.
