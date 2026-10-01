@@ -79,7 +79,7 @@ export default function ClientsAdmin({ clients }: { clients: Client[] }) {
               <th className={table.th}>{t("aliases")}</th>
               <th className={table.th}>{t("projects")}</th>
               <th className={table.th}>{t("status")}</th>
-              <th className={cx(table.th, "w-14")}><span className="sr-only">{t("actionsFor", { name: "" })}</span></th>
+              <th className={cx(table.th, "w-14")}><span className="sr-only">{t("actions")}</span></th>
             </tr>
           </thead>
           <tbody>

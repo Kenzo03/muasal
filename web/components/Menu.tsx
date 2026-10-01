@@ -46,7 +46,11 @@ export default function Menu({ label, summary, summaryClassName, align = "left",
       </summary>
       <div
         onClick={(e) => {
-          if ((e.target as HTMLElement).closest("a, button") && ref.current) ref.current.open = false;
+          if ((e.target as HTMLElement).closest("a, button") && ref.current) {
+            // Focus the summary first, so a dialog opened from an item returns focus here.
+            ref.current.querySelector("summary")?.focus();
+            ref.current.open = false;
+          }
         }}
         className={cx(
           "absolute z-30 min-w-60 overflow-hidden rounded-xl border border-line bg-white py-1.5 text-ink shadow-[0_12px_32px_rgba(43,36,32,0.12),0_2px_6px_rgba(43,36,32,0.06)]",
