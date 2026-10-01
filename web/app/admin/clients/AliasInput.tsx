@@ -22,7 +22,7 @@ export default function AliasInput({ id, value, onChange, labels }: Props) {
     setDraft("");
   };
   return (
-    <div className="flex min-h-[42px] flex-wrap items-center gap-1.5 rounded-[10px] border border-field bg-white px-2 py-1.5 focus-within:outline-2 focus-within:outline-accent">
+    <div className="flex min-h-[42px] flex-wrap items-center gap-1.5 rounded-[10px] border border-field bg-white px-2 py-1.5 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
       {value.map((alias) => (
         <span key={alias} className="inline-flex h-7 items-center gap-0.5 rounded-lg bg-well pl-2.5 pr-1 text-[13px] font-semibold text-ink">
           {alias}

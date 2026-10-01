@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { setPassword, signIn } from "./helpers";
 
 // The admin Users and Clients screens: edit in the side panel, confirm before
-// a reset, search, archive from the row menu, and a client's projects.
+// a reset, search, and archive a client from the row menu.
 test("an admin edits a user, confirms a reset, searches, and archives a client", async ({ page }) => {
   test.setTimeout(120_000);
   const run = Date.now().toString(36);
@@ -42,7 +42,7 @@ test("an admin edits a user, confirms a reset, searches, and archives a client",
   await confirm.getByRole("button", { name: "Batal" }).click();
   await expect(confirm).toBeHidden();
 
-  // A client linked to a project shows the project; archiving asks, then moves it to Archived.
+  // An unlinked client shows "—" for its project; archiving asks, then moves it to Archived.
   const client = `Klien ${run}`;
   await page.getByRole("link", { name: "Klien", exact: true }).click();
   await page.getByRole("button", { name: "Klien baru" }).click();
