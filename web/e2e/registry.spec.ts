@@ -50,6 +50,13 @@ test("an admin builds the HRIS tree and a member scoped to one client sees only 
   await links.getByRole("button", { name: "Simpan klien" }).click();
   await expect(links.getByRole("status")).toHaveText("Tersimpan");
 
+  // The client list now shows the project key on the linked client.
+  await page.getByRole("link", { name: "Muasal" }).click();
+  await page.getByRole("link", { name: "Klien", exact: true }).click();
+  await expect(page.locator("tbody tr").filter({ hasText: clientA })).toContainText(key);
+  await page.goto(`/p/${key}/settings`);
+  await expect(page).toHaveURL(new RegExp(`/p/${key}/settings$`));
+
   await page.getByRole("form", { name: "Tambah anggota" }).getByLabel("Orang").selectOption(budiEmail); // MSL-21: a pick
   await page.getByRole("button", { name: "Tambah anggota" }).click();
   const budiRow = page.getByRole("row", { name: budiEmail });
