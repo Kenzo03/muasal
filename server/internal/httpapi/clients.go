@@ -41,7 +41,12 @@ func (s *Server) ListClients(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, ClientList{Items: toAPIClients(rows)})
+	items := make([]Client, len(rows))
+	for i, row := range rows {
+		items[i] = toAPIClient(row.Client)
+		items[i].Projects = &row.Projects
+	}
+	writeJSON(w, http.StatusOK, ClientList{Items: items})
 }
 
 func (s *Server) CreateClient(w http.ResponseWriter, r *http.Request) {

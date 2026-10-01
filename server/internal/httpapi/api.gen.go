@@ -1510,6 +1510,9 @@ type Client struct {
 	Code *string `json:"code"`
 	Id   int64   `json:"id"`
 	Name string  `json:"name"`
+
+	// Projects Keys of the projects linked to this client. Only GET /clients fills it.
+	Projects *[]string `json:"projects,omitempty"`
 }
 
 // ClientCreate defines model for ClientCreate.

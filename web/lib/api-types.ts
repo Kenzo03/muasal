@@ -1680,6 +1680,8 @@ export interface components {
             code: string | null;
             aliases: string[];
             archived: boolean;
+            /** @description Keys of the projects linked to this client. Only GET /clients fills it. */
+            projects?: string[];
         };
         ClientList: {
             items: components["schemas"]["Client"][];

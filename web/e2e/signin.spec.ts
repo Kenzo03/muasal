@@ -13,9 +13,11 @@ test("an admin creates a user who sets a password and signs in", async ({ page, 
 
   await page.getByRole("link", { name: "Pengguna" }).click();
   const email = `budi-${Date.now()}@example.com`;
-  await page.getByLabel("Nama").fill("Budi");
-  await page.getByLabel("Email").fill(email);
-  await page.getByRole("button", { name: "Buat pengguna" }).click();
+  await page.getByRole("button", { name: "Pengguna baru" }).click();
+  const panel = page.getByRole("dialog", { name: "Pengguna baru" });
+  await panel.getByLabel("Nama", { exact: true }).fill("Budi");
+  await panel.getByLabel("Email", { exact: true }).fill(email);
+  await panel.getByRole("button", { name: "Buat pengguna" }).click();
   const link = await page.getByTestId("setup-link").textContent();
   expect(link).toContain("/setup/");
 
