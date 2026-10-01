@@ -6,6 +6,8 @@ It covers the module tree, tickets with decision records, menu history, search, 
 
 **Documentation:** https://kenzo03.github.io/muasal/
 
+> **Status: alpha (v0.1).** Muasal is looking for its first pilot teams. It is not yet production-ready: the first pilot has not run and the code has had no external security review. Try it on test data, and report problems as issues or vulnerabilities privately as [SECURITY.md](SECURITY.md) explains. Until 1.0, an upgrade may need manual steps, which each release's notes will name.
+
 ## Install a release
 
 Download a release from [GitHub releases](https://github.com/Kenzo03/muasal/releases). It includes the offline bundle, the deploy files for online installs, and signed checksums; its images are signed and built for amd64 and arm64. Then follow [docs/operations.md](docs/operations.md#get-a-release).
