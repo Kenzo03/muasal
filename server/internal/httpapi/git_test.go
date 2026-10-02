@@ -206,8 +206,9 @@ func TestWebhookTouchesOnlyItsProject(t *testing.T) {
 }
 
 // An unknown repository answers like a bad signature; rejections are audited
-// once a minute per repository; over 60 requests a minute from one address
-// answers 429 and audits nothing.
+// once a minute per repository; over 60 rejected requests a minute from one
+// address answers 429 and audits nothing, while a correctly signed delivery
+// from that address is still taken.
 func TestWebhookLimits(t *testing.T) {
 	e := newEnvWith(t, func(c *config.Config) { c.SecretKey = bytes.Repeat([]byte{7}, 32) })
 	newHRIS(e)
@@ -249,9 +250,13 @@ func TestWebhookLimits(t *testing.T) {
 		}
 	}
 	if code := e.deliver(repo.Id, bad, body); code != http.StatusTooManyRequests {
-		t.Fatalf("61st request: %d", code)
+		t.Fatalf("61st rejected request: %d", code)
 	}
 	if n := rejected(); n != 1 {
 		t.Fatalf("rejections audited after the limit: %d", n)
+	}
+	good := map[string]string{"X-GitHub-Event": "push", "X-Hub-Signature-256": sign(*repo.Secret, body)}
+	if code := e.deliver(repo.Id, good, body); code != http.StatusAccepted {
+		t.Fatalf("signed delivery after the limit: %d", code)
 	}
 }

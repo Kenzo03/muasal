@@ -137,34 +137,43 @@ func (s *Server) DeleteRepo(w http.ResponseWriter, r *http.Request, id int64) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// gitWebhook takes a delivery (§14.1): over 60 requests a minute from one
-// address is 429, a body over 5 MB is 413 (checked before the repository, so
-// the answer is the same for every id), an unknown repository or a bad
-// signature is 401, with at most one audit event per repository a minute. A
-// good one is stored and answered 202 at once; a job does the work.
+// gitWebhook takes a delivery (§14.1): a body over 5 MB is 413 (checked
+// before the repository, so the answer is the same for every id), an unknown
+// repository or a bad signature is 401, with at most one audit event per
+// repository a minute. Only rejections count against an address: past 60 a
+// minute, its rejected requests answer 429, while a delivery that verifies is
+// always taken. A good one is stored and answered 202 at once; a job does the
+// work.
 func (s *Server) gitWebhook(w http.ResponseWriter, r *http.Request) {
-	if !s.hookIP.Allow(clientIP(r)) {
-		writeProblem(w, http.StatusTooManyRequests, "rate_limited", "Too many webhook requests from this address; wait a minute")
-		return
+	ctx := r.Context()
+	reject := func(status int, code, detail string, repo *db.GitRepo) {
+		if !s.hookIP.Allow(clientIP(r)) {
+			writeProblem(w, http.StatusTooManyRequests, "rate_limited", "Too many rejected webhook requests from this address; wait a minute")
+			return
+		}
+		if repo != nil && s.hookRej.Allow(strconv.FormatInt(repo.ID, 10)) {
+			_ = audit(ctx, s.q, auditMeta{via: "webhook", requestID: ptr(requestIDFrom(ctx)), ip: ipAddr(r), projectID: &repo.ProjectID},
+				nil, "repo", repo.ID, "webhook_rejected", map[string]any{"reason": "bad signature"})
+		}
+		writeProblem(w, status, code, detail)
 	}
 	body, err := io.ReadAll(io.LimitReader(r.Body, webhookMaxBytes+1))
 	if err != nil {
-		writeProblem(w, http.StatusBadRequest, "invalid_body", "The body could not be read")
+		reject(http.StatusBadRequest, "invalid_body", "The body could not be read", nil)
 		return
 	}
 	if len(body) > webhookMaxBytes {
-		writeProblem(w, http.StatusRequestEntityTooLarge, "too_large", "Deliveries take at most 5 MB")
+		reject(http.StatusRequestEntityTooLarge, "too_large", "Deliveries take at most 5 MB", nil)
 		return
 	}
 	id, err := strconv.ParseInt(r.PathValue("repo_id"), 10, 64)
 	if err != nil {
-		writeProblem(w, http.StatusUnauthorized, "bad_signature", "The webhook signature does not match")
+		reject(http.StatusUnauthorized, "bad_signature", "The webhook signature does not match", nil)
 		return
 	}
-	ctx := r.Context()
 	repo, err := s.q.GetRepo(ctx, id)
 	if errors.Is(err, pgx.ErrNoRows) {
-		writeProblem(w, http.StatusUnauthorized, "bad_signature", "The webhook signature does not match")
+		reject(http.StatusUnauthorized, "bad_signature", "The webhook signature does not match", nil)
 		return
 	}
 	if err != nil {
@@ -176,11 +185,7 @@ func (s *Server) gitWebhook(w http.ResponseWriter, r *http.Request) {
 		err = gitlink.Verify(repo.Provider, key, r.Header, body)
 	}
 	if err != nil {
-		if s.hookRej.Allow(strconv.FormatInt(repo.ID, 10)) {
-			_ = audit(ctx, s.q, auditMeta{via: "webhook", requestID: ptr(requestIDFrom(ctx)), ip: ipAddr(r), projectID: &repo.ProjectID},
-				nil, "repo", repo.ID, "webhook_rejected", map[string]any{"reason": "bad signature"})
-		}
-		writeProblem(w, http.StatusUnauthorized, "bad_signature", "The webhook signature does not match")
+		reject(http.StatusUnauthorized, "bad_signature", "The webhook signature does not match", &repo)
 		return
 	}
 	event := gitlink.Event(repo.Provider, r.Header)
