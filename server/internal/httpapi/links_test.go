@@ -134,4 +134,27 @@ func TestReversingNeedsMemberOnTheOtherProject(t *testing.T) {
 	if code := e.call(w.pm, http.MethodPost, path, map[string]any{"type": "related_to", "key": theirs.Key}, nil); code != http.StatusCreated {
 		t.Fatalf("related to: %d", code)
 	}
+
+	// Removing a reversal makes the other decision current again, so it needs
+	// the same role.
+	lead, leadUser := e.signedIn("lead@example.com", false)
+	e.seedMember(leadUser, w.p, "member")
+	e.seedMember(leadUser, ops, "member")
+	var done int64
+	if err := e.d.Pool.QueryRow(t.Context(), "SELECT id FROM statuses WHERE project_id = $1 AND name = 'Done'", ops.ID).Scan(&done); err != nil {
+		t.Fatal(err)
+	}
+	e.seedClose(theirs, done, leadUser, "Orders ship from the north warehouse.")
+	var link httpapi.TicketLink
+	if code := e.call(lead, http.MethodPost, path, map[string]any{"type": "reverses", "key": theirs.Key}, &link); code != http.StatusCreated {
+		t.Fatalf("reverses as a member of both: %d", code)
+	}
+	if code := e.call(w.pm, http.MethodDelete, fmt.Sprintf("/links/%d", link.Id), nil, nil); code != http.StatusForbidden {
+		t.Fatalf("unlink as a viewer of the other project: %d", code)
+	}
+	var got httpapi.Ticket
+	e.call(lead, http.MethodGet, "/tickets/"+theirs.Key, nil, &got)
+	if got.Decision == nil || got.Decision.SupersededBy == nil || *got.Decision.SupersededBy != mine.Key {
+		t.Fatalf("the reversal was undone: %+v", got.Decision)
+	}
 }
