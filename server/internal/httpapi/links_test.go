@@ -116,3 +116,22 @@ func TestLinksNeedTwoVisibleDistinctTickets(t *testing.T) {
 		t.Fatalf("admin sees: %+v", all.Links)
 	}
 }
+
+// A reverses link supersedes the other ticket's decision, so it needs the
+// Member role in that ticket's project too; seeing the ticket is enough for
+// other links.
+func TestReversingNeedsMemberOnTheOtherProject(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	ops := e.seedProject("OPS")
+	e.seedMember(w.pmUser, ops, "viewer")
+	theirs := e.seedTicket(ops, w.pmUser, "Ship from the north warehouse", nil)
+	mine := e.seedTicket(w.p, w.pmUser, "Bring back supervisor approval", &w.a, w.ot)
+	path := "/tickets/" + mine.Key + "/links"
+	if code := e.call(w.pm, http.MethodPost, path, map[string]any{"type": "reverses", "key": theirs.Key}, nil); code != http.StatusForbidden {
+		t.Fatalf("reverses as a viewer of the other project: %d", code)
+	}
+	if code := e.call(w.pm, http.MethodPost, path, map[string]any{"type": "related_to", "key": theirs.Key}, nil); code != http.StatusCreated {
+		t.Fatalf("related to: %d", code)
+	}
+}

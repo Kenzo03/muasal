@@ -84,6 +84,17 @@ func (s *Server) CreateLink(w http.ResponseWriter, r *http.Request, key string) 
 			FieldError{Field: "key", Code: "self_link", Message: "A ticket cannot link to itself"})
 		return
 	}
+	if in.Type == LinkTypeReverses { // it supersedes the other ticket's decision
+		scope, _, err := access.ForProject(ctx, s.q, pc.user, other.Ticket.ProjectID)
+		if err != nil {
+			s.fail(w, r, err)
+			return
+		}
+		if !scope.Allows(access.Member) {
+			writeProblem(w, http.StatusForbidden, "forbidden", "Your role in the other ticket's project does not allow this")
+			return
+		}
+	}
 	var out TicketLink
 	err = s.inJobTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		l, err := q.CreateLink(ctx, db.CreateLinkParams{FromID: row.Ticket.ID, ToID: other.Ticket.ID, Type: string(in.Type), CreatedBy: pc.user.ID})
