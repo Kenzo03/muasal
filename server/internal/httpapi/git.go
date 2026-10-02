@@ -138,12 +138,22 @@ func (s *Server) DeleteRepo(w http.ResponseWriter, r *http.Request, id int64) {
 }
 
 // gitWebhook takes a delivery (§14.1): over 60 requests a minute from one
-// address is 429, a body over 5 MB is 413, an unknown repository or a bad
+// address is 429, a body over 5 MB is 413 (checked before the repository, so
+// the answer is the same for every id), an unknown repository or a bad
 // signature is 401, with at most one audit event per repository a minute. A
 // good one is stored and answered 202 at once; a job does the work.
 func (s *Server) gitWebhook(w http.ResponseWriter, r *http.Request) {
 	if !s.hookIP.Allow(clientIP(r)) {
 		writeProblem(w, http.StatusTooManyRequests, "rate_limited", "Too many webhook requests from this address; wait a minute")
+		return
+	}
+	body, err := io.ReadAll(io.LimitReader(r.Body, webhookMaxBytes+1))
+	if err != nil {
+		writeProblem(w, http.StatusBadRequest, "invalid_body", "The body could not be read")
+		return
+	}
+	if len(body) > webhookMaxBytes {
+		writeProblem(w, http.StatusRequestEntityTooLarge, "too_large", "Deliveries take at most 5 MB")
 		return
 	}
 	id, err := strconv.ParseInt(r.PathValue("repo_id"), 10, 64)
@@ -159,15 +169,6 @@ func (s *Server) gitWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		s.fail(w, r, err)
-		return
-	}
-	body, err := io.ReadAll(io.LimitReader(r.Body, webhookMaxBytes+1))
-	if err != nil {
-		writeProblem(w, http.StatusBadRequest, "invalid_body", "The body could not be read")
-		return
-	}
-	if len(body) > webhookMaxBytes {
-		writeProblem(w, http.StatusRequestEntityTooLarge, "too_large", "Deliveries take at most 5 MB")
 		return
 	}
 	key, err := secret.Open(s.cfg.SecretKey, repo.SecretEnc)

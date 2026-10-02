@@ -213,7 +213,9 @@ func TestWebhookLimits(t *testing.T) {
 	newHRIS(e)
 	admin, _ := e.signedIn("admin@example.com", true)
 	var repo httpapi.Repo
-	e.call(admin, http.MethodPost, "/projects/HRIS/repos", map[string]any{"provider": "github", "name": "hris-app", "web_url": "https://github.com/acme/hris-app"}, &repo)
+	if code := e.call(admin, http.MethodPost, "/projects/HRIS/repos", map[string]any{"provider": "github", "name": "hris-app", "web_url": "https://github.com/acme/hris-app"}, &repo); code != http.StatusCreated {
+		t.Fatalf("repo: %d", code)
+	}
 	bad := map[string]string{"X-GitHub-Event": "push", "X-Hub-Signature-256": "sha256=00"}
 	body := []byte(`{}`)
 	rejected := func() int {
@@ -229,7 +231,19 @@ func TestWebhookLimits(t *testing.T) {
 	if n := rejected(); n != 1 {
 		t.Fatalf("rejections audited: %d", n)
 	}
-	for i := 3; i <= 60; i++ {
+	big := bytes.Repeat([]byte("x"), 5<<20+1)
+	if known, unknown := e.deliver(repo.Id, bad, big), e.deliver(999999, bad, big); known != unknown {
+		t.Fatalf("oversized body: known repo %d, unknown repo %d", known, unknown)
+	}
+	res, err := http.Post(e.url+"/webhooks/git/abc", "application/json", bytes.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if res.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("non-numeric repo id: %d", res.StatusCode)
+	}
+	for i := 6; i <= 60; i++ {
 		if code := e.deliver(999999, bad, body); code != http.StatusUnauthorized {
 			t.Fatalf("unknown repo, request %d: %d", i, code)
 		}
