@@ -163,7 +163,7 @@ func (s *Server) ListMyUpdates(w http.ResponseWriter, r *http.Request) {
 				s.fail(w, r, err)
 				return
 			}
-			if c.Action == "comment_edit" && !u.IsAdmin {
+			if c.Action == "comment_edit" {
 				delete(fields, "body") // a comment change carries no text
 			}
 			item.Kind, item.Action, item.Changes = ActivityItemKindEvent, ptr(c.Action), &fields

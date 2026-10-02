@@ -117,7 +117,8 @@ func TestActivityInterleavesCommentsAndHistory(t *testing.T) {
 }
 
 // FSD §8.7: once a comment is deleted, its edits no longer carry its text for
-// readers other than system admins; Home's latest change never carries it.
+// readers other than system admins, nor does an edit of a comment not on the
+// ticket; Home's latest change never carries it.
 func TestDeletedCommentsLeaveNoTextInTheirEdits(t *testing.T) {
 	e := newEnv(t)
 	w := newHRIS(e)
@@ -129,13 +130,17 @@ func TestDeletedCommentsLeaveNoTextInTheirEdits(t *testing.T) {
 	if code := e.call(w.pm, http.MethodPatch, path, map[string]any{"body": "Budi confirmed"}, nil); code != http.StatusOK {
 		t.Fatalf("edit: %d", code)
 	}
-	var home httpapi.RecentTicketList
-	e.call(w.pm, http.MethodGet, "/me/updates", nil, &home)
-	if len(home.Items) != 1 || home.Items[0].Change == nil || home.Items[0].Change.Changes == nil {
-		t.Fatalf("home: %+v", home.Items)
-	} else if _, ok := (*home.Items[0].Change.Changes)["body"]; ok {
-		t.Fatalf("home carries the text: %+v", *home.Items[0].Change.Changes)
+	for _, reader := range []*http.Client{w.pm, admin} {
+		var home httpapi.RecentTicketList
+		e.call(reader, http.MethodGet, "/me/updates", nil, &home)
+		if len(home.Items) != 1 || home.Items[0].Change == nil || home.Items[0].Change.Changes == nil {
+			t.Fatalf("home: %+v", home.Items)
+		} else if _, ok := (*home.Items[0].Change.Changes)["body"]; ok {
+			t.Fatalf("home carries the text: %+v", *home.Items[0].Change.Changes)
+		}
 	}
+	e.exec(`INSERT INTO audit_events (actor_id, via, entity, entity_id, project_id, action, changes)
+		VALUES ($1, 'web', 'ticket', $2, $3, 'comment_edit', '{"comment_id": 999999, "body": {"old": "x", "new": "y"}}')`, w.pmUser.ID, tk.ID, w.p.ID)
 	if code := e.call(w.pm, http.MethodDelete, path, nil, nil); code != http.StatusNoContent {
 		t.Fatalf("delete: %d", code)
 	}
@@ -152,7 +157,7 @@ func TestDeletedCommentsLeaveNoTextInTheirEdits(t *testing.T) {
 				}
 			}
 		}
-		if edits != 1 {
+		if edits != 2 {
 			t.Errorf("edits: %d", edits)
 		}
 	}
