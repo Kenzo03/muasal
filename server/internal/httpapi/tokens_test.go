@@ -171,3 +171,26 @@ func TestIdempotentTicketCreation(t *testing.T) {
 		t.Fatalf("%d tickets", n)
 	}
 }
+
+// A replayed key answers with its ticket only in the project it was created
+// in and only while the caller still sees it; otherwise it is a conflict.
+func TestIdempotentReplayNeedsTheTicketsProject(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	ops := e.seedProject("OPS")
+	opsNode := e.seedNode(ops, nil, "menu", "Shipping")
+	e.seedMember(w.pmUser, ops, "member")
+	key := map[string]string{"Idempotency-Key": "sync-42"}
+	var first httpapi.Ticket
+	if code, _ := e.callWith(w.pm, http.MethodPost, "/projects/HRIS/tickets", key,
+		map[string]any{"type": "bug", "title": "Created by a flaky network", "node_ids": []int64{w.ot.ID}, "client_id": w.a.ID}, &first); code != http.StatusCreated {
+		t.Fatalf("first: %d", code)
+	}
+	e.exec("DELETE FROM memberships WHERE user_id = $1 AND project_id = $2", w.pmUser.ID, w.p.ID)
+	var p httpapi.Problem
+	code, _ := e.callWith(w.pm, http.MethodPost, "/projects/OPS/tickets", key,
+		map[string]any{"type": "bug", "title": "Created by a flaky network", "node_ids": []int64{opsNode.ID}}, &p)
+	if code != http.StatusConflict || p.Code != "idempotency_conflict" {
+		t.Fatalf("replay after removal: %d %+v", code, p)
+	}
+}
