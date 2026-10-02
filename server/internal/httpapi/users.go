@@ -44,6 +44,9 @@ func (s *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &in) {
 		return
 	}
+	if in.IsAdmin != nil && *in.IsAdmin && !needSession(w, r) {
+		return
+	}
 	email := strings.TrimSpace(in.Email)
 	fields := validateProfile(&in.Name, in.Locale, in.Timezone)
 	if !validEmail(email) {
@@ -56,9 +59,6 @@ func (s *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
 	params := db.CreateUserParams{
 		Email: email, Name: strings.TrimSpace(in.Name), IsAdmin: in.IsAdmin != nil && *in.IsAdmin,
 		Locale: "id", Timezone: "Asia/Jakarta",
-	}
-	if params.IsAdmin && !needSession(w, r) {
-		return
 	}
 	if in.Locale != nil {
 		params.Locale = string(*in.Locale)
@@ -100,6 +100,9 @@ func (s *Server) UpdateUser(w http.ResponseWriter, r *http.Request, id int64) {
 	}
 	var in UserUpdate
 	if !decodeJSON(w, r, &in) {
+		return
+	}
+	if in.IsAdmin != nil && *in.IsAdmin && !needSession(w, r) {
 		return
 	}
 	if id == admin.ID && ((in.Disabled != nil && *in.Disabled) || (in.IsAdmin != nil && !*in.IsAdmin)) {

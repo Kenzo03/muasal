@@ -269,6 +269,7 @@ export interface paths {
         };
         get: operations["listUsers"];
         put?: never;
+        /** @description Creating an admin needs a signed-in session (403 session_required). */
         post: operations["createUser"];
         delete?: never;
         options?: never;
@@ -289,6 +290,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /** @description Making a user an admin needs a signed-in session (403 session_required). */
         patch: operations["updateUser"];
         trace?: never;
     };
@@ -301,7 +303,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Resets the password; the old one stops working and every session ends. */
+        /** @description Resets the password; the old one stops working and every session and API token ends. Needs a signed-in session (403 session_required). */
         post: operations["createSetupLink"];
         delete?: never;
         options?: never;

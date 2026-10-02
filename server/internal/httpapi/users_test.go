@@ -246,8 +246,17 @@ func TestAdminCredentialActionsNeedASession(t *testing.T) {
 	if code := e.bearer(tok, http.MethodPost, "/admin/users", map[string]any{"email": "boss@example.com", "name": "Boss", "is_admin": true}, &p); code != http.StatusForbidden || p.Code != "session_required" {
 		t.Fatalf("create admin with a token: %d %+v", code, p)
 	}
+	if code := e.bearer(tok, http.MethodPost, "/admin/users", map[string]any{"email": "not-an-email", "name": "", "is_admin": true}, &p); code != http.StatusForbidden || p.Code != "session_required" {
+		t.Fatalf("invalid admin create with a token: %d %+v", code, p)
+	}
 	if code := e.bearer(tok, http.MethodPost, "/admin/users", map[string]any{"email": "sari@example.com", "name": "Sari"}, nil); code != http.StatusCreated {
 		t.Fatalf("create member with a token: %d", code)
+	}
+	if code := e.bearer(tok, http.MethodPatch, fmt.Sprintf("/admin/users/%d", budiUser.ID), map[string]any{"is_admin": true}, &p); code != http.StatusForbidden || p.Code != "session_required" {
+		t.Fatalf("promote with a token: %d %+v", code, p)
+	}
+	if u, err := e.q.GetUserByID(t.Context(), budiUser.ID); err != nil || u.IsAdmin {
+		t.Fatalf("budi was promoted: %+v %v", u.IsAdmin, err)
 	}
 }
 
@@ -276,7 +285,9 @@ func TestDisabledUserCannotUseSetupLink(t *testing.T) {
 	e := newEnv(t)
 	admin, _ := e.signedIn("admin@example.com", true)
 	var created httpapi.CreatedUser
-	e.call(admin, http.MethodPost, "/admin/users", map[string]any{"email": "budi@example.com", "name": "Budi"}, &created)
+	if code := e.call(admin, http.MethodPost, "/admin/users", map[string]any{"email": "budi@example.com", "name": "Budi"}, &created); code != http.StatusCreated {
+		t.Fatalf("create: %d", code)
+	}
 	e.exec(`UPDATE users SET disabled_at = now() WHERE id = $1`, created.User.Id)
 	if code := e.call(e.client(), http.MethodPost, "/auth/setup", map[string]string{"token": setupToken(t, created.SetupLink.Url), "password": "nasi-goreng-pedas-99"}, nil); code != http.StatusGone {
 		t.Fatalf("a disabled user's link: %d", code)

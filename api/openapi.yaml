@@ -282,6 +282,7 @@ paths:
     post:
       operationId: createUser
       tags: [admin]
+      description: Creating an admin needs a signed-in session (403 session_required).
       requestBody:
         required: true
         content:
@@ -298,6 +299,7 @@ paths:
     patch:
       operationId: updateUser
       tags: [admin]
+      description: Making a user an admin needs a signed-in session (403 session_required).
       parameters:
         - name: id
           in: path
@@ -319,7 +321,9 @@ paths:
     post:
       operationId: createSetupLink
       tags: [admin]
-      description: Resets the password; the old one stops working and every session ends.
+      description: >-
+        Resets the password; the old one stops working and every session and API token ends. Needs a signed-in
+        session (403 session_required).
       parameters:
         - name: id
           in: path
