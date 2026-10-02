@@ -66,7 +66,7 @@ func (q *Queries) DeleteRepo(ctx context.Context, id int64) error {
 }
 
 const getDelivery = `-- name: GetDelivery :one
-SELECT d.id, d.repo_id, d.event, d.payload, d.received_at, r.provider FROM webhook_deliveries d JOIN git_repos r ON r.id = d.repo_id WHERE d.id = $1
+SELECT d.id, d.repo_id, d.event, d.payload, d.received_at, r.provider, r.project_id FROM webhook_deliveries d JOIN git_repos r ON r.id = d.repo_id WHERE d.id = $1
 `
 
 type GetDeliveryRow struct {
@@ -76,6 +76,7 @@ type GetDeliveryRow struct {
 	Payload    []byte
 	ReceivedAt time.Time
 	Provider   string
+	ProjectID  int64
 }
 
 func (q *Queries) GetDelivery(ctx context.Context, id int64) (GetDeliveryRow, error) {
@@ -88,6 +89,7 @@ func (q *Queries) GetDelivery(ctx context.Context, id int64) (GetDeliveryRow, er
 		&i.Payload,
 		&i.ReceivedAt,
 		&i.Provider,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -291,7 +293,7 @@ WITH review AS (
   FROM tickets t
   JOIN statuses cur ON cur.id = t.status_id
   JOIN review r ON r.project_id = t.project_id
-  WHERE t.key = ANY ($1::text[]) AND t.closed_at IS NULL
+  WHERE t.project_id = $1 AND t.key = ANY ($2::text[]) AND t.closed_at IS NULL
     AND cur.category IN ('todo', 'in_progress') AND cur.position < r.position
 )
 UPDATE tickets t SET status_id = m.review_id, version = t.version + 1, updated_at = now()
@@ -299,6 +301,11 @@ FROM moved m
 WHERE t.id = m.id
 RETURNING t.id, t.project_id, m.old_status, m.new_status
 `
+
+type MoveFixedTicketsParams struct {
+	ProjectID int64
+	Keys      []string
+}
 
 type MoveFixedTicketsRow struct {
 	ID        int64
@@ -309,9 +316,10 @@ type MoveFixedTicketsRow struct {
 
 // MSL-29: "Fixes KEY" in a pushed commit moves the open ticket to its
 // project's last working status, In review by default. Never back, and never
-// closed: closing needs a decision record.
-func (q *Queries) MoveFixedTickets(ctx context.Context, keys []string) ([]MoveFixedTicketsRow, error) {
-	rows, err := q.db.Query(ctx, moveFixedTickets, keys)
+// closed: closing needs a decision record. Only tickets in the repository's
+// project move.
+func (q *Queries) MoveFixedTickets(ctx context.Context, arg MoveFixedTicketsParams) ([]MoveFixedTicketsRow, error) {
+	rows, err := q.db.Query(ctx, moveFixedTickets, arg.ProjectID, arg.Keys)
 	if err != nil {
 		return nil, err
 	}
@@ -336,12 +344,17 @@ func (q *Queries) MoveFixedTickets(ctx context.Context, keys []string) ([]MoveFi
 }
 
 const ticketIDsByKeys = `-- name: TicketIDsByKeys :many
-SELECT id FROM tickets WHERE key = ANY ($1::text[])
+SELECT id FROM tickets WHERE project_id = $1 AND key = ANY ($2::text[])
 `
 
-// Keys that name an existing ticket; a key counts only when the project and the ticket exist (§14.1).
-func (q *Queries) TicketIDsByKeys(ctx context.Context, keys []string) ([]int64, error) {
-	rows, err := q.db.Query(ctx, ticketIDsByKeys, keys)
+type TicketIDsByKeysParams struct {
+	ProjectID int64
+	Keys      []string
+}
+
+// Keys that name an existing ticket in the repository's project (§14.1).
+func (q *Queries) TicketIDsByKeys(ctx context.Context, arg TicketIDsByKeysParams) ([]int64, error) {
+	rows, err := q.db.Query(ctx, ticketIDsByKeys, arg.ProjectID, arg.Keys)
 	if err != nil {
 		return nil, err
 	}

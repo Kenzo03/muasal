@@ -137,19 +137,24 @@ func (s *Server) DeleteRepo(w http.ResponseWriter, r *http.Request, id int64) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// gitWebhook takes a delivery (§14.1): an unknown repository is 404, a body
-// over 5 MB is 413, a bad signature is 401 with an audit event. A good one is
-// stored and answered 202 at once; a job does the work.
+// gitWebhook takes a delivery (§14.1): over 60 requests a minute from one
+// address is 429, a body over 5 MB is 413, an unknown repository or a bad
+// signature is 401, with at most one audit event per repository a minute. A
+// good one is stored and answered 202 at once; a job does the work.
 func (s *Server) gitWebhook(w http.ResponseWriter, r *http.Request) {
+	if !s.hookIP.Allow(clientIP(r)) {
+		writeProblem(w, http.StatusTooManyRequests, "rate_limited", "Too many webhook requests from this address; wait a minute")
+		return
+	}
 	id, err := strconv.ParseInt(r.PathValue("repo_id"), 10, 64)
 	if err != nil {
-		writeProblem(w, http.StatusNotFound, "not_found", "Repository not found")
+		writeProblem(w, http.StatusUnauthorized, "bad_signature", "The webhook signature does not match")
 		return
 	}
 	ctx := r.Context()
 	repo, err := s.q.GetRepo(ctx, id)
 	if errors.Is(err, pgx.ErrNoRows) {
-		writeProblem(w, http.StatusNotFound, "not_found", "Repository not found")
+		writeProblem(w, http.StatusUnauthorized, "bad_signature", "The webhook signature does not match")
 		return
 	}
 	if err != nil {
@@ -170,8 +175,10 @@ func (s *Server) gitWebhook(w http.ResponseWriter, r *http.Request) {
 		err = gitlink.Verify(repo.Provider, key, r.Header, body)
 	}
 	if err != nil {
-		_ = audit(ctx, s.q, auditMeta{via: "webhook", requestID: ptr(requestIDFrom(ctx)), ip: ipAddr(r), projectID: &repo.ProjectID},
-			nil, "repo", repo.ID, "webhook_rejected", map[string]any{"reason": "bad signature"})
+		if s.hookRej.Allow(strconv.FormatInt(repo.ID, 10)) {
+			_ = audit(ctx, s.q, auditMeta{via: "webhook", requestID: ptr(requestIDFrom(ctx)), ip: ipAddr(r), projectID: &repo.ProjectID},
+				nil, "repo", repo.ID, "webhook_rejected", map[string]any{"reason": "bad signature"})
+		}
 		writeProblem(w, http.StatusUnauthorized, "bad_signature", "The webhook signature does not match")
 		return
 	}

@@ -29,6 +29,8 @@ type Server struct {
 	pool    *pgxpool.Pool
 	q       *db.Queries
 	ipLimit *auth.Limiter
+	hookIP  *auth.Limiter // webhook requests per client IP
+	hookRej *auth.Limiter // webhook rejection audit events per repository
 	log     *slog.Logger
 	now     func() time.Time
 	jobs    *river.Client[pgx.Tx] // inserts jobs only; `serve` runs the workers (FSD §13.2)
@@ -53,6 +55,8 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) *Server {
 		pool:    pool,
 		q:       q,
 		ipLimit: auth.NewLimiter(20, time.Minute), // FSD §15.1: 20 sign-in attempts per IP per minute
+		hookIP:  auth.NewLimiter(60, time.Minute),
+		hookRej: auth.NewLimiter(1, time.Minute),
 		log:     log,
 		now:     time.Now,
 		jobs:    jobs,
