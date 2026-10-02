@@ -5,7 +5,6 @@
     "password": "Password",
     "submit": "Sign in",
     "failed": "Email or password is wrong",
-    "locked": "Too many attempts, try again in 15 minutes",
     "rateLimited": "Too many sign-in attempts from this network. Wait a minute."
   },
   "setup": {
@@ -17,7 +16,8 @@
     "submit": "Save password",
     "done": "Password saved. You can sign in now.",
     "toLogin": "Go to sign in",
-    "forAccount": "For {name} ({email})"
+    "forAccount": "For {name} ({email})",
+    "rateLimited": "Too many attempts. Wait a minute and try again."
   },
   "nav": {
     "label": "Main",

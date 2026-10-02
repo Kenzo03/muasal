@@ -36,7 +36,7 @@ export default function SetupForm({ token }: { token: string }) {
     setBusy(false);
     if (error) {
       const key = problemKey(error);
-      setError(tErr.has(key) ? tErr(key) : tErr("generic"));
+      setError(key === "rate_limited" ? t("rateLimited") : tErr.has(key) ? tErr(key) : tErr("generic"));
       return;
     }
     setDone(true);
