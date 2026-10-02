@@ -293,3 +293,34 @@ func TestDisabledUserCannotUseSetupLink(t *testing.T) {
 		t.Fatalf("a disabled user's link: %d", code)
 	}
 }
+
+// A dead setup link is refused as gone even when the password would pass.
+func TestSetupWithBadTokenIsGone(t *testing.T) {
+	e := newEnv(t)
+	var p httpapi.Problem
+	if code := e.call(e.client(), http.MethodPost, "/auth/setup", map[string]string{"token": "no-such-token", "password": "nasi-goreng-pedas-99"}, &p); code != http.StatusGone || p.Code != "setup_link_invalid" {
+		t.Fatalf("got %d %s", code, p.Code)
+	}
+}
+
+// The setup endpoints share a limit of 20 requests a minute per address.
+func TestSetupEndpointsAreRateLimited(t *testing.T) {
+	e := newEnv(t)
+	c := e.client()
+	for i := 0; i < 10; i++ {
+		e.call(c, http.MethodPost, "/auth/setup/account", map[string]string{"token": "no-such-token"}, nil)
+		e.call(c, http.MethodPost, "/auth/setup", map[string]string{"token": "no-such-token", "password": "nasi-goreng-pedas-99"}, nil)
+	}
+	for path, body := range map[string]map[string]string{
+		"/auth/setup":         {"token": "no-such-token", "password": "nasi-goreng-pedas-99"},
+		"/auth/setup/account": {"token": "no-such-token"},
+	} {
+		var p httpapi.Problem
+		if code := e.call(c, http.MethodPost, path, body, &p); code != http.StatusTooManyRequests || p.Code != "rate_limited" {
+			t.Fatalf("%s: got %d %s", path, code, p.Code)
+		}
+	}
+	if code, p := login(e, c, "nobody@example.com", "whatever-password"); code != http.StatusUnauthorized {
+		t.Fatalf("sign-in shares the setup limit: %d %s", code, p.Code)
+	}
+}

@@ -187,18 +187,43 @@ func (s *Server) CreateSetupLink(w http.ResponseWriter, r *http.Request, id int6
 	writeJSON(w, http.StatusCreated, link)
 }
 
+// allowSetup applies the per-IP limit shared by the setup-link endpoints.
+func (s *Server) allowSetup(w http.ResponseWriter, r *http.Request) bool {
+	if !s.setupIP.Allow(clientIP(r)) {
+		writeProblem(w, http.StatusTooManyRequests, "rate_limited", "Too many setup attempts from this address; wait a minute")
+		return false
+	}
+	return true
+}
+
+func setupLinkInvalid(w http.ResponseWriter) {
+	writeProblem(w, http.StatusGone, "setup_link_invalid", "This link has expired or was already used. Ask your admin for a new one.")
+}
+
 // SetupPassword redeems a one-time setup link.
 func (s *Server) SetupPassword(w http.ResponseWriter, r *http.Request) {
 	var in SetupRequest
 	if !decodeJSON(w, r, &in) {
 		return
 	}
+	if !s.allowSetup(w, r) {
+		return
+	}
 	if err := auth.CheckPolicy(in.Password); err != nil {
 		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields", passwordField("password", err))
 		return
 	}
-	hash := auth.HashPassword(in.Password)
 	ctx := r.Context()
+	// Check the link before the slow hash; UseSetupToken below still settles a race.
+	if _, err := s.q.GetSetupTokenUser(ctx, auth.HashToken(in.Token)); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			setupLinkInvalid(w)
+		} else {
+			s.fail(w, r, err)
+		}
+		return
+	}
+	hash := auth.HashPassword(in.Password)
 	err := s.inTx(ctx, func(q *db.Queries) error {
 		userID, err := q.UseSetupToken(ctx, auth.HashToken(in.Token))
 		if err != nil {
@@ -216,7 +241,7 @@ func (s *Server) SetupPassword(w http.ResponseWriter, r *http.Request) {
 		return audit(ctx, q, webMeta(r), &userID, "user", userID, "set_password", nil)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		writeProblem(w, http.StatusGone, "setup_link_invalid", "This link has expired or was already used. Ask your admin for a new one.")
+		setupLinkInvalid(w)
 		return
 	}
 	if err != nil {
@@ -233,9 +258,12 @@ func (s *Server) GetSetupAccount(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &in) {
 		return
 	}
+	if !s.allowSetup(w, r) {
+		return
+	}
 	u, err := s.q.GetSetupTokenUser(r.Context(), auth.HashToken(in.Token))
 	if errors.Is(err, pgx.ErrNoRows) {
-		writeProblem(w, http.StatusGone, "setup_link_invalid", "This link has expired or was already used. Ask your admin for a new one.")
+		setupLinkInvalid(w)
 		return
 	}
 	if err != nil {
