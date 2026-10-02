@@ -149,7 +149,8 @@ func TestWrongPasswordIsRejected(t *testing.T) {
 	}
 }
 
-// AC-AD-2: after five wrong passwords, even the right one is refused.
+// AC-AD-2: after five wrong passwords, even the right one is refused,
+// with the same answer as a wrong password.
 func TestFiveFailuresLockTheAccount(t *testing.T) {
 	e := newEnv(t)
 	e.seedUser("budi@example.com", pw, false)
@@ -159,8 +160,25 @@ func TestFiveFailuresLockTheAccount(t *testing.T) {
 			t.Fatalf("attempt %d: %d", i, code)
 		}
 	}
-	if code, p := login(e, c, "budi@example.com", pw); code != http.StatusTooManyRequests || p.Code != "account_locked" {
+	if code, p := login(e, c, "budi@example.com", pw); code != http.StatusUnauthorized || p.Code != "invalid_credentials" {
 		t.Fatalf("got %d %s", code, p.Code)
+	}
+}
+
+// Disabled and password-less accounts get the same answer as a wrong password.
+func TestDisabledAndPasswordlessLoginsAreInvalidCredentials(t *testing.T) {
+	e := newEnv(t)
+	u := e.seedUser("budi@example.com", pw, false)
+	e.exec(`UPDATE users SET disabled_at = now() WHERE id = $1`, u.ID)
+	if code, p := login(e, e.client(), "budi@example.com", pw); code != http.StatusUnauthorized || p.Code != "invalid_credentials" {
+		t.Fatalf("disabled: %d %s", code, p.Code)
+	}
+	if _, err := e.q.CreateUser(context.Background(), db.CreateUserParams{Email: "rina@example.com", Name: "Rina", Locale: "id", Timezone: "Asia/Jakarta"}); err != nil {
+		t.Fatal(err)
+	}
+	// the password behind the stand-in hash must not open an account that has none
+	if code, p := login(e, e.client(), "rina@example.com", "muasal-timing-equalizer"); code != http.StatusUnauthorized || p.Code != "invalid_credentials" {
+		t.Fatalf("no password: %d %s", code, p.Code)
 	}
 }
 
