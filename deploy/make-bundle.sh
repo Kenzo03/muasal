@@ -24,6 +24,13 @@ images="muasal-app:$version muasal-web:$version"
 for img in $(grep -oE 'image: [^$ ]+$' deploy/compose.yaml | awk '{print $2}' | sort -u); do
   case "$img" in ollama/*) [ -n "$models" ] && images="$images $img" ;; *) images="$images $img" ;; esac
 done
+# The stack's other images (Caddy, PostgreSQL) come from Docker Hub. Pull any
+# that is missing, for the bundle's platform (amd64, as docs/operations.md
+# says), so a clean machine such as the release runner can save them.
+for img in $images; do
+  case "$img" in muasal-*) continue ;; esac
+  docker image inspect "$img" >/dev/null 2>&1 || docker pull --platform linux/amd64 "$img"
+done
 out=dist/muasal-$version
 rm -rf "$out" && mkdir -p "$out/caddy.d" "$out/certs"
 echo "Saving images: $images"
