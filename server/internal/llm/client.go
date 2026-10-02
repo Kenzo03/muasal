@@ -22,12 +22,15 @@ type Client struct {
 	http             *http.Client
 }
 
-// New returns a client; key may be empty for a local server without auth.
+// New returns a client; key may be empty for a local server without auth. It
+// never follows a redirect, so the key goes only to baseURL's server.
 func New(baseURL, model, key string, hc *http.Client) *Client {
 	if hc == nil {
 		hc = http.DefaultClient
 	}
-	return &Client{base: strings.TrimRight(baseURL, "/"), model: model, key: key, http: hc}
+	noRedirect := *hc
+	noRedirect.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	return &Client{base: strings.TrimRight(baseURL, "/"), model: model, key: key, http: &noRedirect}
 }
 
 // Model names the model this client uses.

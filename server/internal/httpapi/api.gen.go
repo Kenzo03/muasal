@@ -1010,16 +1010,15 @@ type AIMode string
 type AIProbe struct {
 	// Dim The embedding's dimension.
 	Dim       *int      `json:"dim,omitempty"`
-	Error     *string   `json:"error,omitempty"`
 	LatencyMs int       `json:"latency_ms"`
 	Models    *[]string `json:"models,omitempty"`
 	Ok        bool      `json:"ok"`
 
-	// Reason The failure's likely cause, which the page says in plain words above the raw error (MSL-31).
+	// Reason The failure's likely cause, which the page says in plain words (MSL-31). The server's own answer is never returned.
 	Reason *AIProbeReason `json:"reason,omitempty"`
 }
 
-// AIProbeReason The failure's likely cause, which the page says in plain words above the raw error (MSL-31).
+// AIProbeReason The failure's likely cause, which the page says in plain words (MSL-31). The server's own answer is never returned.
 type AIProbeReason string
 
 // AISettings defines model for AISettings.

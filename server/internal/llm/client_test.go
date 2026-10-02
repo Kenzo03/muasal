@@ -96,3 +96,23 @@ func TestRateLimitsRetry(t *testing.T) {
 		t.Fatalf("a stopped server: %v", err)
 	}
 }
+
+// A redirect is not followed, so the key goes only to the base URL it was given.
+func TestRedirectsAreNotFollowed(t *testing.T) {
+	var auth atomic.Value
+	other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth.Store(r.Header.Get("Authorization"))
+	}))
+	defer other.Close()
+	moved := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, other.URL+r.URL.Path, http.StatusFound)
+	}))
+	defer moved.Close()
+	for _, hc := range []*http.Client{nil, {}} {
+		_, err := llm.New(moved.URL+"/v1", "bge-m3", "sk-local", hc).Models(context.Background())
+		var apiErr *llm.APIError
+		if !errors.As(err, &apiErr) || apiErr.Status != http.StatusFound || auth.Load() != nil {
+			t.Fatalf("a redirect: %v, the other host saw %v", err, auth.Load())
+		}
+	}
+}

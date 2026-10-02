@@ -2834,9 +2834,8 @@ export interface components {
         AIProbe: {
             ok: boolean;
             latency_ms: number;
-            error?: string;
             /**
-             * @description The failure's likely cause, which the page says in plain words above the raw error (MSL-31).
+             * @description The failure's likely cause, which the page says in plain words (MSL-31). The server's own answer is never returned.
              * @enum {string}
              */
             reason?: "unknown_host" | "refused" | "timeout" | "tls" | "unauthorized" | "not_found" | "no_model";
