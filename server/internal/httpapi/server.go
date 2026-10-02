@@ -29,7 +29,7 @@ type Server struct {
 	pool    *pgxpool.Pool
 	q       *db.Queries
 	ipLimit *auth.Limiter
-	hookIP  *auth.Limiter // webhook requests per client IP
+	hookIP  *auth.Limiter // rejected webhook requests per client IP
 	hookRej *auth.Limiter // webhook rejection audit events per repository
 	setupIP *auth.Limiter // setup-link requests per client IP
 	log     *slog.Logger
@@ -56,9 +56,9 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) *Server {
 		pool:    pool,
 		q:       q,
 		ipLimit: auth.NewLimiter(20, time.Minute), // FSD §15.1: 20 sign-in attempts per IP per minute
-		hookIP:  auth.NewLimiter(60, time.Minute),
-		hookRej: auth.NewLimiter(1, time.Minute),
-		setupIP: auth.NewLimiter(20, time.Minute),
+		hookIP:  auth.NewLimiter(60, time.Minute), // §14.1: 60 rejected webhook requests per IP per minute; verified deliveries are not counted
+		hookRej: auth.NewLimiter(1, time.Minute),  // §14.1: one webhook_rejected audit event per repository per minute
+		setupIP: auth.NewLimiter(20, time.Minute), // 20 setup-link requests per IP per minute
 		log:     log,
 		now:     time.Now,
 		jobs:    jobs,
