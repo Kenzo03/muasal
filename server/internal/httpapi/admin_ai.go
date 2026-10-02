@@ -119,13 +119,13 @@ func (s *Server) TestAI(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, err)
 		return
 	}
+	if in.Mode == AIModeOff {
+		in.Mode = AIModeLocal // Off still lets the admin try a server before switching to it, checked as Local
+	}
 	next, fields := s.aiSettingsFrom(cur, in)
 	if len(fields) > 0 {
 		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields", fields...)
 		return
-	}
-	if next.Mode == ai.ModeOff {
-		next.Mode = ai.ModeLocal // Off still lets the admin try a server before switching to it
 	}
 	chat, err := s.ai.ChatClient(next)
 	if err != nil {

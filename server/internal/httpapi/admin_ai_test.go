@@ -238,6 +238,12 @@ func TestEndpointURLsHaveNoQueryOrFragment(t *testing.T) {
 			firstError(p).Field != "chat.url" {
 			t.Errorf("%s: %d %+v", u, code, p)
 		}
+		// Test with Off tries the server as Local, so the same check applies.
+		p = httpapi.Problem{}
+		if code := e.call(admin, http.MethodPost, "/admin/ai/test", aiUpdate("off", u), &p); code != http.StatusUnprocessableEntity ||
+			firstError(p).Field != "chat.url" {
+			t.Errorf("test with Off, %s: %d %+v", u, code, p)
+		}
 	}
 }
 
@@ -250,8 +256,9 @@ func TestConnectionTestHidesTheServersAnswer(t *testing.T) {
 	}))
 	defer failing.Close()
 	var raw json.RawMessage
+	var res httpapi.AITestResult
 	if code := e.call(admin, http.MethodPost, "/admin/ai/test", aiUpdate("local", failing.URL+"/v1"), &raw); code != http.StatusOK ||
-		strings.Contains(string(raw), "SECRET") || strings.Contains(string(raw), "500") {
+		json.Unmarshal(raw, &res) != nil || res.Chat.Ok || res.Embed.Ok || strings.Contains(string(raw), "SECRET") {
 		t.Fatalf("a failing server: %d %s", code, raw)
 	}
 }

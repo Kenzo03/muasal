@@ -48,6 +48,11 @@ func TestSystemStatus(t *testing.T) {
 	if e.call(admin, http.MethodGet, "/admin/system/status", nil, &st); st.Model.Reachable == nil || *st.Model.Reachable || !contains(st.Warnings, "model_unreachable") {
 		t.Fatalf("model down: %+v %v", st.Model, st.Warnings)
 	}
+	// The status names the failure, never the model server's own answer.
+	fake.Set(func(s *llmtest.Server) { s.DownBody = "SECRET" })
+	if e.call(admin, http.MethodGet, "/admin/system/status", nil, &st); st.Model.Error == nil || strings.Contains(*st.Model.Error, "SECRET") {
+		t.Fatalf("model error: %v", st.Model.Error)
+	}
 }
 
 // §18.3: /metrics serves the same figures in Prometheus text for customers
