@@ -16,14 +16,16 @@ WHERE id = sqlc.arg('id')
 RETURNING *;
 
 -- name: ListSummaries :many
--- A summary is visible to its creator and to project admins (§12.1).
+-- A summary is visible to its creator while a member of its project, and to
+-- project admins (§12.1).
 SELECT s.id, s.title, s.created_at, s.updated_at, u.name AS creator_name, p.key AS project_key
 FROM summaries s
 JOIN users u ON u.id = s.created_by
 JOIN projects p ON p.id = s.project_id
 WHERE (sqlc.narg('project_id')::bigint IS NULL OR s.project_id = sqlc.narg('project_id')::bigint)
-  AND (sqlc.arg('is_admin')::boolean OR s.created_by = sqlc.arg('user_id')::bigint OR EXISTS (
-        SELECT 1 FROM memberships m WHERE m.user_id = sqlc.arg('user_id')::bigint AND m.project_id = s.project_id AND m.role = 'admin'))
+  AND (sqlc.arg('is_admin')::boolean OR EXISTS (
+        SELECT 1 FROM memberships m WHERE m.user_id = sqlc.arg('user_id')::bigint AND m.project_id = s.project_id
+          AND (m.role = 'admin' OR (m.role = 'member' AND s.created_by = sqlc.arg('user_id')::bigint))))
 ORDER BY s.created_at DESC
 LIMIT 100;
 
