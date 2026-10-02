@@ -8,12 +8,15 @@ SELECT * FROM clients WHERE id = $1;
 
 -- name: ListClients :many
 -- The admin list (GET /clients): each client with the keys of the projects
--- linked to it, in key order; none gives an empty array.
+-- linked to it, in key order; none gives an empty array. Unless the caller is
+-- a system admin, only projects the caller belongs to are listed.
 SELECT sqlc.embed(c),
        coalesce(array_agg(p.key ORDER BY p.key) FILTER (WHERE p.key IS NOT NULL), '{}')::text[] AS projects
 FROM clients c
 LEFT JOIN project_clients pc ON pc.client_id = c.id
 LEFT JOIN projects p ON p.id = pc.project_id
+  AND (sqlc.arg('is_admin')::bool
+       OR EXISTS (SELECT 1 FROM memberships m WHERE m.project_id = p.id AND m.user_id = sqlc.arg('user_id')))
 GROUP BY c.id
 ORDER BY lower(c.name), c.id;
 

@@ -33,10 +33,11 @@ func (s *Server) clientAdmin(w http.ResponseWriter, r *http.Request) *db.User {
 }
 
 func (s *Server) ListClients(w http.ResponseWriter, r *http.Request) {
-	if s.clientAdmin(w, r) == nil {
+	u := s.clientAdmin(w, r)
+	if u == nil {
 		return
 	}
-	rows, err := s.q.ListClients(r.Context())
+	rows, err := s.q.ListClients(r.Context(), db.ListClientsParams{IsAdmin: u.IsAdmin, UserID: u.ID})
 	if err != nil {
 		s.fail(w, r, err)
 		return
