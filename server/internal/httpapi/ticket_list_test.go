@@ -149,6 +149,7 @@ func TestTicketListExportsCSV(t *testing.T) {
 	e.seedTicket(w.p, w.pmUser, "=HYPERLINK(\"http://evil\")", &w.a, w.ot)
 	e.seedTicket(w.p, w.pmUser, "Overtime export", nil, w.ot)
 	e.seedTicket(w.p, w.pmUser, "Client B only", &w.b)
+	e.exec("UPDATE statuses SET name = '=' || name WHERE project_id = $1", w.p.ID)
 	req, _ := http.NewRequest(http.MethodGet, e.url+"/api/v1/projects/HRIS/tickets?format=csv&sort=key", nil)
 	res, err := w.pm.Do(req)
 	if err != nil {
@@ -168,8 +169,10 @@ func TestTicketListExportsCSV(t *testing.T) {
 		if strings.Contains(r[1], "Client B") {
 			t.Fatalf("a Client B ticket leaked: %v", r)
 		}
-		if strings.HasPrefix(r[1], "=") {
-			t.Fatalf("a formula cell: %v", r)
+		for _, cell := range r {
+			if strings.HasPrefix(cell, "=") {
+				t.Fatalf("a formula cell: %v", r)
+			}
 		}
 	}
 }
