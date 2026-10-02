@@ -18,4 +18,5 @@ DELETE FROM sessions WHERE token_hash = $1;
 DELETE FROM sessions WHERE user_id = $1;
 
 -- name: DeleteOtherSessions :exec
-DELETE FROM sessions WHERE user_id = $1 AND token_hash <> $2;
+-- A NULL hash (a request made with an API token) ends every session.
+DELETE FROM sessions WHERE user_id = $1 AND token_hash IS DISTINCT FROM $2;

@@ -57,6 +57,9 @@ func (s *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
 		Email: email, Name: strings.TrimSpace(in.Name), IsAdmin: in.IsAdmin != nil && *in.IsAdmin,
 		Locale: "id", Timezone: "Asia/Jakarta",
 	}
+	if params.IsAdmin && !needSession(w, r) {
+		return
+	}
 	if in.Locale != nil {
 		params.Locale = string(*in.Locale)
 	}
@@ -124,6 +127,9 @@ func (s *Server) UpdateUser(w http.ResponseWriter, r *http.Request, id int64) {
 				if err := q.DeleteUserSessions(ctx, id); err != nil {
 					return err
 				}
+				if err := q.VoidSetupTokens(ctx, id); err != nil {
+					return err
+				}
 			}
 		}
 		return audit(ctx, q, webMeta(r), &admin.ID, "user", id, "update", in)
@@ -140,10 +146,10 @@ func (s *Server) UpdateUser(w http.ResponseWriter, r *http.Request, id int64) {
 }
 
 // CreateSetupLink resets a password: the old one stops working, every session
-// ends, and a new one-time link is returned (FSD §15.1).
+// and API token ends, and a new one-time link is returned (FSD §15.1).
 func (s *Server) CreateSetupLink(w http.ResponseWriter, r *http.Request, id int64) {
 	admin := s.requireAdmin(w, r)
-	if admin == nil {
+	if admin == nil || !needSession(w, r) {
 		return
 	}
 	ctx := r.Context()
@@ -156,6 +162,9 @@ func (s *Server) CreateSetupLink(w http.ResponseWriter, r *http.Request, id int6
 			return err
 		}
 		if err := q.DeleteUserSessions(ctx, id); err != nil {
+			return err
+		}
+		if err := q.RevokeUserAPITokens(ctx, id); err != nil {
 			return err
 		}
 		var err error
@@ -196,6 +205,9 @@ func (s *Server) SetupPassword(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 		if err := q.DeleteUserSessions(ctx, userID); err != nil {
+			return err
+		}
+		if err := q.RevokeUserAPITokens(ctx, userID); err != nil {
 			return err
 		}
 		return audit(ctx, q, webMeta(r), &userID, "user", userID, "set_password", nil)
@@ -277,8 +289,12 @@ func (s *Server) UpdateMe(w http.ResponseWriter, r *http.Request) {
 			if err := q.SetPasswordHash(ctx, db.SetPasswordHashParams{ID: u.ID, PasswordHash: newHash}); err != nil {
 				return err
 			}
-			// Other devices sign out; this one stays signed in (FSD §18.2).
+			// Other devices sign out and API tokens end; this session stays
+			// signed in (FSD §18.2).
 			if err := q.DeleteOtherSessions(ctx, db.DeleteOtherSessionsParams{UserID: u.ID, TokenHash: currentSessionHash(r)}); err != nil {
+				return err
+			}
+			if err := q.RevokeUserAPITokens(ctx, u.ID); err != nil {
 				return err
 			}
 			changes["password"] = "changed"

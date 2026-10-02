@@ -195,6 +195,16 @@ func (q *Queries) RevokeAPIToken(ctx context.Context, arg RevokeAPITokenParams) 
 	return i, err
 }
 
+const revokeUserAPITokens = `-- name: RevokeUserAPITokens :exec
+UPDATE api_tokens SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL
+`
+
+// A password reset or change ends every token the user holds.
+func (q *Queries) RevokeUserAPITokens(ctx context.Context, userID int64) error {
+	_, err := q.db.Exec(ctx, revokeUserAPITokens, userID)
+	return err
+}
+
 const saveIdempotencyKey = `-- name: SaveIdempotencyKey :exec
 INSERT INTO idempotency_keys (user_id, key, ticket_id) VALUES ($1, $2, $3)
 ON CONFLICT (user_id, key) DO UPDATE SET ticket_id = excluded.ticket_id, created_at = now()

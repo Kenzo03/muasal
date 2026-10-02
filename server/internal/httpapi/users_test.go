@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/kenzo03/muasal/server/internal/auth"
+	"github.com/kenzo03/muasal/server/internal/db"
 	"github.com/kenzo03/muasal/server/internal/httpapi"
 )
 
@@ -172,5 +174,111 @@ func TestChangingPasswordNeedsTheCurrentOne(t *testing.T) {
 	}
 	if code, _ := login(e, e.client(), "budi@example.com", "teh-manis-dingin-42"); code != http.StatusOK {
 		t.Fatalf("the new password is rejected: %d", code)
+	}
+}
+
+// newToken mints a read-write API token for a signed-in client.
+func (e *env) newToken(c *http.Client) string {
+	e.t.Helper()
+	var tok httpapi.APITokenCreated
+	if code := e.call(c, http.MethodPost, "/me/tokens", map[string]any{"name": "Script", "read_only": false}, &tok); code != http.StatusCreated {
+		e.t.Fatalf("create token: %d", code)
+	}
+	return tok.Token
+}
+
+// A reset and a redemption each revoke the user's API tokens.
+func TestResetAndSetupRevokeAPITokens(t *testing.T) {
+	e := newEnv(t)
+	admin, _ := e.signedIn("admin@example.com", true)
+	budi, budiUser := e.signedIn("budi@example.com", false)
+	tok := e.newToken(budi)
+	var link httpapi.SetupLink
+	if code := e.call(admin, http.MethodPost, fmt.Sprintf("/admin/users/%d/setup-link", budiUser.ID), nil, &link); code != http.StatusCreated {
+		t.Fatalf("reset: %d", code)
+	}
+	if code := e.bearer(tok, http.MethodGet, "/me", nil, nil); code != http.StatusUnauthorized {
+		t.Fatalf("a token survived the reset: %d", code)
+	}
+	// A token that exists when the link is redeemed stops working too.
+	secret := "msl_made-between-reset-and-setup"
+	if _, err := e.q.CreateAPIToken(t.Context(), db.CreateAPITokenParams{UserID: budiUser.ID, Name: "Late", TokenHash: auth.HashToken(secret)}); err != nil {
+		t.Fatal(err)
+	}
+	if code := e.bearer(secret, http.MethodGet, "/me", nil, nil); code != http.StatusOK {
+		t.Fatalf("the late token should work before setup: %d", code)
+	}
+	if code := e.call(e.client(), http.MethodPost, "/auth/setup", map[string]string{"token": setupToken(t, link.Url), "password": "nasi-goreng-pedas-99"}, nil); code != http.StatusNoContent {
+		t.Fatalf("setup: %d", code)
+	}
+	if code := e.bearer(secret, http.MethodGet, "/me", nil, nil); code != http.StatusUnauthorized {
+		t.Fatalf("a token survived the setup: %d", code)
+	}
+}
+
+// A password change made with a token ends every session and revokes the
+// user's tokens.
+func TestTokenPasswordChangeEndsSessions(t *testing.T) {
+	e := newEnv(t)
+	budi, _ := e.signedIn("budi@example.com", false)
+	tok := e.newToken(budi)
+	if code := e.bearer(tok, http.MethodPatch, "/me", map[string]string{"current_password": pw, "new_password": "teh-manis-dingin-42"}, nil); code != http.StatusOK {
+		t.Fatalf("change: %d", code)
+	}
+	if code := e.call(budi, http.MethodGet, "/me", nil, nil); code != http.StatusUnauthorized {
+		t.Fatalf("the browser session survived: %d", code)
+	}
+	if code := e.bearer(tok, http.MethodGet, "/me", nil, nil); code != http.StatusUnauthorized {
+		t.Fatalf("the token survived: %d", code)
+	}
+}
+
+// Resetting a password or creating an admin needs a signed-in session.
+func TestAdminCredentialActionsNeedASession(t *testing.T) {
+	e := newEnv(t)
+	admin, _ := e.signedIn("admin@example.com", true)
+	_, budiUser := e.signedIn("budi@example.com", false)
+	tok := e.newToken(admin)
+	var p httpapi.Problem
+	if code := e.bearer(tok, http.MethodPost, fmt.Sprintf("/admin/users/%d/setup-link", budiUser.ID), nil, &p); code != http.StatusForbidden || p.Code != "session_required" {
+		t.Fatalf("setup-link with a token: %d %+v", code, p)
+	}
+	if code := e.bearer(tok, http.MethodPost, "/admin/users", map[string]any{"email": "boss@example.com", "name": "Boss", "is_admin": true}, &p); code != http.StatusForbidden || p.Code != "session_required" {
+		t.Fatalf("create admin with a token: %d %+v", code, p)
+	}
+	if code := e.bearer(tok, http.MethodPost, "/admin/users", map[string]any{"email": "sari@example.com", "name": "Sari"}, nil); code != http.StatusCreated {
+		t.Fatalf("create member with a token: %d", code)
+	}
+}
+
+// Disabling a user voids their setup links, so re-enabling does not revive one.
+func TestDisablingVoidsSetupLinks(t *testing.T) {
+	e := newEnv(t)
+	admin, _ := e.signedIn("admin@example.com", true)
+	var created httpapi.CreatedUser
+	if code := e.call(admin, http.MethodPost, "/admin/users", map[string]any{"email": "budi@example.com", "name": "Budi"}, &created); code != http.StatusCreated {
+		t.Fatalf("create: %d", code)
+	}
+	path := fmt.Sprintf("/admin/users/%d", created.User.Id)
+	for _, disabled := range []bool{true, false} {
+		if code := e.call(admin, http.MethodPatch, path, map[string]bool{"disabled": disabled}, nil); code != http.StatusOK {
+			t.Fatalf("disabled=%v: %d", disabled, code)
+		}
+	}
+	var p httpapi.Problem
+	if code := e.call(e.client(), http.MethodPost, "/auth/setup", map[string]string{"token": setupToken(t, created.SetupLink.Url), "password": "nasi-goreng-pedas-99"}, &p); code != http.StatusGone || p.Code != "setup_link_invalid" {
+		t.Fatalf("old link after re-enable: %d %s", code, p.Code)
+	}
+}
+
+// A disabled user's live link cannot be redeemed.
+func TestDisabledUserCannotUseSetupLink(t *testing.T) {
+	e := newEnv(t)
+	admin, _ := e.signedIn("admin@example.com", true)
+	var created httpapi.CreatedUser
+	e.call(admin, http.MethodPost, "/admin/users", map[string]any{"email": "budi@example.com", "name": "Budi"}, &created)
+	e.exec(`UPDATE users SET disabled_at = now() WHERE id = $1`, created.User.Id)
+	if code := e.call(e.client(), http.MethodPost, "/auth/setup", map[string]string{"token": setupToken(t, created.SetupLink.Url), "password": "nasi-goreng-pedas-99"}, nil); code != http.StatusGone {
+		t.Fatalf("a disabled user's link: %d", code)
 	}
 }

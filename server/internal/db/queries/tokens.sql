@@ -35,3 +35,7 @@ DELETE FROM idempotency_keys WHERE created_at < now() - interval '24 hours';
 
 -- name: LockIdempotencyKey :exec
 SELECT pg_advisory_xact_lock(hashtextextended('idempotency:' || sqlc.arg('user_id')::bigint::text || ':' || sqlc.arg('key')::text, 0));
+
+-- name: RevokeUserAPITokens :exec
+-- A password reset or change ends every token the user holds.
+UPDATE api_tokens SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL;
