@@ -211,6 +211,21 @@ func TestOffModeReturnsKeywordResults(t *testing.T) {
 	}
 }
 
+// §10.6: a ticket moved to another client since it was indexed is left out,
+// though its chunks still carry the old client.
+func TestAskRechecksWhatTheAskerCanSee(t *testing.T) {
+	w := newWorld(t)
+	tk := w.ticket("Overtime approval skips supervisor", &w.a, w.ot, "Supervisors are on leave.", "2025-06-10", "HR approves overtime.")
+	_, err := w.d.Pool.Exec(context.Background(), "UPDATE tickets SET client_id = $2 WHERE id = $1", tk.ID, w.b.ID)
+	w.check(err)
+	s := must(w.rt.Store.Get(context.Background()))
+	s.Mode = ai.ModeOff
+	w.check(w.rt.Store.Put(context.Background(), w.q, s, w.admin.ID))
+	if res := w.ask(w.member, "overtime supervisor", ask.Scope{}, ask.Sink{}); len(res.Results) != 0 {
+		t.Fatalf("results %+v", res.Results)
+	}
+}
+
 // §11.5 and §11.7: invalid JSON is an error the log keeps; a busy model server
 // queues the question and says how many are ahead.
 func TestInvalidAnswersAndTheQueue(t *testing.T) {
