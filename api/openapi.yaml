@@ -282,7 +282,7 @@ paths:
     post:
       operationId: createUser
       tags: [admin]
-      description: Creating an admin needs a signed-in session (403 session_required).
+      description: Creating any user needs a signed-in session; a token answers 403 session_required.
       requestBody:
         required: true
         content:

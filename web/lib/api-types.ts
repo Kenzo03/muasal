@@ -269,7 +269,7 @@ export interface paths {
         };
         get: operations["listUsers"];
         put?: never;
-        /** @description Creating an admin needs a signed-in session (403 session_required). */
+        /** @description Creating any user needs a signed-in session; a token answers 403 session_required. */
         post: operations["createUser"];
         delete?: never;
         options?: never;

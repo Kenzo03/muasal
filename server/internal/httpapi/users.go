@@ -37,14 +37,11 @@ func (s *Server) ListUsers(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
 	admin := s.requireAdmin(w, r)
-	if admin == nil {
+	if admin == nil || !needSession(w, r) {
 		return
 	}
 	var in UserCreate
 	if !decodeJSON(w, r, &in) {
-		return
-	}
-	if in.IsAdmin != nil && *in.IsAdmin && !needSession(w, r) {
 		return
 	}
 	email := strings.TrimSpace(in.Email)

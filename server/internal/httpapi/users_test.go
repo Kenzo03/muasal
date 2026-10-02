@@ -233,7 +233,7 @@ func TestTokenPasswordChangeEndsSessions(t *testing.T) {
 	}
 }
 
-// Resetting a password or creating an admin needs a signed-in session.
+// Resetting a password or creating any user needs a signed-in session.
 func TestAdminCredentialActionsNeedASession(t *testing.T) {
 	e := newEnv(t)
 	admin, _ := e.signedIn("admin@example.com", true)
@@ -249,8 +249,11 @@ func TestAdminCredentialActionsNeedASession(t *testing.T) {
 	if code := e.bearer(tok, http.MethodPost, "/admin/users", map[string]any{"email": "not-an-email", "name": "", "is_admin": true}, &p); code != http.StatusForbidden || p.Code != "session_required" {
 		t.Fatalf("invalid admin create with a token: %d %+v", code, p)
 	}
-	if code := e.bearer(tok, http.MethodPost, "/admin/users", map[string]any{"email": "sari@example.com", "name": "Sari"}, nil); code != http.StatusCreated {
-		t.Fatalf("create member with a token: %d", code)
+	if code := e.bearer(tok, http.MethodPost, "/admin/users", map[string]any{"email": "sari@example.com", "name": "Sari"}, &p); code != http.StatusForbidden || p.Code != "session_required" {
+		t.Fatalf("create member with a token: %d %+v", code, p)
+	}
+	if _, err := e.q.GetUserByEmail(t.Context(), "sari@example.com"); err == nil {
+		t.Fatal("a token created a member")
 	}
 	if code := e.bearer(tok, http.MethodPatch, fmt.Sprintf("/admin/users/%d", budiUser.ID), map[string]any{"is_admin": true}, &p); code != http.StatusForbidden || p.Code != "session_required" {
 		t.Fatalf("promote with a token: %d %+v", code, p)
