@@ -166,6 +166,9 @@ func TestTicketListExportsCSV(t *testing.T) {
 		t.Fatalf("rows: %v %q", err, body)
 	}
 	for _, r := range rows[1:] {
+		if r[3] != "'=To do" {
+			t.Fatalf("status cell: %q", r[3])
+		}
 		if strings.Contains(r[1], "Client B") {
 			t.Fatalf("a Client B ticket leaked: %v", r)
 		}

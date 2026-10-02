@@ -193,4 +193,20 @@ func TestIdempotentReplayNeedsTheTicketsProject(t *testing.T) {
 	if code != http.StatusConflict || p.Code != "idempotency_conflict" {
 		t.Fatalf("replay after removal: %d %+v", code, p)
 	}
+
+	// Same project, but the caller no longer sees the ticket's client.
+	key = map[string]string{"Idempotency-Key": "sync-44"}
+	e.seedMember(w.pmUser, w.p, "member", w.a)
+	if code, _ := e.callWith(w.pm, http.MethodPost, "/projects/HRIS/tickets", key,
+		map[string]any{"type": "bug", "title": "Created for Client A", "node_ids": []int64{w.ot.ID}, "client_id": w.a.ID}, &first); code != http.StatusCreated {
+		t.Fatalf("second: %d", code)
+	}
+	e.exec("DELETE FROM membership_clients WHERE user_id = $1 AND project_id = $2", w.pmUser.ID, w.p.ID)
+	e.seedMember(w.pmUser, w.p, "member", w.b)
+	p = httpapi.Problem{}
+	code, _ = e.callWith(w.pm, http.MethodPost, "/projects/HRIS/tickets", key,
+		map[string]any{"type": "bug", "title": "Created for Client A", "node_ids": []int64{w.secret.ID}, "client_id": w.b.ID}, &p)
+	if code != http.StatusConflict || p.Code != "idempotency_conflict" {
+		t.Fatalf("replay out of scope: %d %+v", code, p)
+	}
 }
