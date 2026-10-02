@@ -3152,7 +3152,7 @@ type ListTicketsParamsFormat string
 
 // CreateTicketParams defines parameters for CreateTicket.
 type CreateTicketParams struct {
-	// IdempotencyKey A retry with the same key within 24 hours returns the ticket the first request created (200, with Idempotent-Replayed true) instead of a second ticket (FSD §17.1).
+	// IdempotencyKey A retry with the same key within 24 hours returns the ticket the first request created (200, with Idempotent-Replayed true) instead of a second ticket (FSD §17.1). A key whose ticket is in another project, or outside the caller's clients, answers 409 idempotency_conflict.
 	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
 }
 

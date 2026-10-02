@@ -4531,7 +4531,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /** @description A retry with the same key within 24 hours returns the ticket the first request created (200, with Idempotent-Replayed true) instead of a second ticket (FSD §17.1). */
+                /** @description A retry with the same key within 24 hours returns the ticket the first request created (200, with Idempotent-Replayed true) instead of a second ticket (FSD §17.1). A key whose ticket is in another project, or outside the caller's clients, answers 409 idempotency_conflict. */
                 "Idempotency-Key"?: string;
             };
             path: {
