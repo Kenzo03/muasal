@@ -60,7 +60,7 @@ func writeOAuthError(w http.ResponseWriter, status int, code, desc string) {
 // address, where native clients listen (RFC 8252). No fragments.
 func validRedirectURI(raw string) bool {
 	u, err := url.Parse(raw)
-	if err != nil || u.Host == "" || strings.Contains(raw, "#") {
+	if err != nil || u.Host == "" || u.User != nil || len(raw) > 2000 || strings.Contains(raw, "#") {
 		return false
 	}
 	switch u.Scheme {
@@ -85,7 +85,7 @@ func (s *Server) registerClient(w http.ResponseWriter, r *http.Request) {
 		RedirectURIs []string `json:"redirect_uris"`
 	}
 	// Clients send more metadata than this; unknown fields are ignored.
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64<<10)).Decode(&in); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 16<<10)).Decode(&in); err != nil {
 		writeOAuthError(w, http.StatusBadRequest, "invalid_client_metadata", "Send the client metadata as JSON")
 		return
 	}
@@ -103,7 +103,7 @@ func (s *Server) registerClient(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, u := range in.RedirectURIs {
 		if !validRedirectURI(u) {
-			writeOAuthError(w, http.StatusBadRequest, "invalid_redirect_uri", "Redirect URIs use https, or http on localhost, with no fragment")
+			writeOAuthError(w, http.StatusBadRequest, "invalid_redirect_uri", "Redirect URIs use https, or http on localhost, with no fragment or login, at most 2000 characters")
 			return
 		}
 	}

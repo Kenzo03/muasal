@@ -63,6 +63,8 @@ func TestOAuthRegistration(t *testing.T) {
 		{"http://evil.example.com/cb"},
 		{"https://agent.example.com/cb#frag"},
 		{"ftp://localhost/cb"},
+		{"https://agent.example.com/" + strings.Repeat("a", 1980)},
+		{"https://user:pass@agent.example.com/cb"},
 		{"https://a.example/1", "https://a.example/2", "https://a.example/3", "https://a.example/4", "https://a.example/5", "https://a.example/6"},
 	} {
 		var bad map[string]any
@@ -228,6 +230,14 @@ func TestOAuthTokenExchange(t *testing.T) {
 		if s, out := exchange(e, form); s != http.StatusBadRequest || out["error"] != "invalid_grant" {
 			t.Errorf("%s: %d %v", name, s, out)
 		}
+	}
+	// A failed attempt burns the code: the right verifier no longer redeems it.
+	burnt := fresh()
+	bad := tokenForm(id, redirect, burnt)
+	bad.Set("code_verifier", strings.Repeat("x", 43))
+	exchange(e, bad)
+	if s, out := exchange(e, tokenForm(id, redirect, burnt)); s != http.StatusBadRequest || out["error"] != "invalid_grant" {
+		t.Fatalf("burnt code: %d %v", s, out)
 	}
 	expired := fresh()
 	e.exec("UPDATE oauth_codes SET expires_at = now() - interval '1 second' WHERE used_at IS NULL")
