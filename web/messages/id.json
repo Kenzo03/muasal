@@ -1,4 +1,17 @@
 {
+  "oauth": {
+    "title": "Hubungkan agen AI",
+    "asks": "{client} ingin memakai Muasal atas nama Anda.",
+    "account": "Masuk sebagai {name} ({email})",
+    "can": "Agen dapat membaca tiket yang Anda lihat, serta membuat, mengubah, dan menutup tiket, kecuali Anda mencentang Hanya baca.",
+    "returnsTo": "Setelah Anda menjawab, browser kembali ke {host}.",
+    "readOnly": "Hanya baca",
+    "allow": "Izinkan",
+    "deny": "Tolak",
+    "revoke": "Anda dapat memutuskannya nanti di Pengaturan › Token API.",
+    "invalid": "Permintaan koneksi ini tidak sah. Mulai lagi dari agen Anda.",
+    "failed": "Jawaban Anda tidak tersimpan. Coba lagi."
+  },
   "login": {
     "title": "Masuk ke Muasal",
     "email": "Email",

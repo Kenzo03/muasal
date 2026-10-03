@@ -11,7 +11,14 @@ const nextConfig: NextConfig = {
   async rewrites() {
     // Only for `next dev`: send /api to a Go server on :8080. In Docker, Caddy does this.
     return process.env.NODE_ENV === "development"
-      ? [{ source: "/api/:path*", destination: "http://localhost:8080/api/:path*" }]
+      ? [
+          { source: "/api/:path*", destination: "http://localhost:8080/api/:path*" },
+          // MCP sign-in and the MCP endpoint; /oauth/authorize stays here.
+          { source: "/mcp", destination: "http://localhost:8080/mcp" },
+          { source: "/oauth/register", destination: "http://localhost:8080/oauth/register" },
+          { source: "/oauth/token", destination: "http://localhost:8080/oauth/token" },
+          { source: "/.well-known/:path*", destination: "http://localhost:8080/.well-known/:path*" },
+        ]
       : [];
   },
 };

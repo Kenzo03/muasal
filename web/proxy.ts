@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-// Pages anyone may open: sign-in and password setup.
-const open = /^\/(login|setup)(\/|$)/;
+// Pages anyone may open: sign-in and password setup, plus the MCP endpoints
+// the Go app serves (dev rewrites reach the proxy first).
+const open = /^\/(login|setup|mcp|oauth\/(register|token)|\.well-known)(\/|$)/;
 
 // Every page gets a nonce-based Content-Security-Policy (FSD §18.2): Next.js
 // reads the nonce from the request's policy and puts it on its own scripts, so
@@ -10,7 +11,10 @@ const open = /^\/(login|setup)(\/|$)/;
 // decides whether it is valid.
 export function proxy(request: NextRequest) {
   if (!open.test(request.nextUrl.pathname) && !request.cookies.has("sid")) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    const login = new URL("/login", request.url);
+    // MCP spec: an agent's sign-in returns to its approval page.
+    if (request.nextUrl.pathname.startsWith("/oauth/")) login.searchParams.set("next", request.nextUrl.pathname + request.nextUrl.search);
+    return NextResponse.redirect(login);
   }
   const nonce = btoa(crypto.randomUUID());
   const csp = [
