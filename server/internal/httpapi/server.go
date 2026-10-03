@@ -111,7 +111,10 @@ func (s *Server) Handler() http.Handler {
 			writeProblem(w, http.StatusBadRequest, "invalid_parameter", err.Error())
 		},
 	})
-	return securityHeaders(s.requestContext(mux))
+	root := securityHeaders(s.requestContext(mux))
+	// The MCP tools call the API through root, so they get its middleware too.
+	mux.Handle("POST /mcp", s.mcpHandler(root))
+	return root
 }
 
 // securityHeaders sets FSD §18.2's headers on every response. The API serves
