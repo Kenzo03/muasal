@@ -2,13 +2,10 @@ package httpapi
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"io/fs"
 	"net/http"
 	"slices"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/kenzo03/muasal/server/internal/ai"
@@ -96,21 +93,6 @@ func (s *Server) probeModel(ctx context.Context, cur ai.Settings) error {
 		}
 	}
 	return nil
-}
-
-func diskUse(volume, path string) DiskUse {
-	d := DiskUse{Volume: DiskUseVolume(volume), Path: path}
-	var st syscall.Statfs_t
-	if err := syscall.Statfs(path, &st); err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			d.Missing = ptr(true)
-		}
-		return d
-	}
-	bs := int64(st.Bsize)
-	d.TotalBytes = int64(st.Blocks) * bs
-	d.UsedBytes = (int64(st.Blocks) - int64(st.Bfree)) * bs
-	return d
 }
 
 // GetSystemStatus is Admin → System status (§18.3).
