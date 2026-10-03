@@ -32,7 +32,7 @@ func PurgeAskLog(ctx context.Context, pool *pgxpool.Pool, days int, now time.Tim
 }
 
 // PurgeAsk is the daily retention job; it also drops idempotency keys past
-// their 24 hours (§17.1).
+// their 24 hours (§17.1) and old MCP sign-in codes.
 type PurgeAsk struct{}
 
 func (PurgeAsk) Kind() string { return "purge_ask_log" }
@@ -53,6 +53,9 @@ func (w *purgeWorker) Work(ctx context.Context, _ *river.Job[PurgeAsk]) error {
 		return err
 	}
 	if _, err := q.PurgeNotifications(ctx); err != nil { // kept 90 days (§8.10)
+		return err
+	}
+	if _, err := q.PurgeOAuthCodes(ctx); err != nil { // MCP sign-in codes, a day past expiry
 		return err
 	}
 	_, err := PurgeAskLog(ctx, w.pool, w.days, time.Now())

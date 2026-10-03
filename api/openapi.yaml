@@ -212,6 +212,40 @@ paths:
       responses:
         "204": { description: Revoked. }
         default: { $ref: "#/components/responses/Problem" }
+  /oauth/clients/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getOAuthClient
+      tags: [oauth]
+      description: A registered MCP client, for the approval page. Needs a signed-in browser session (MCP spec).
+      responses:
+        "200":
+          description: The client.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OAuthClient" }
+        default: { $ref: "#/components/responses/Problem" }
+  /oauth/approve:
+    post:
+      operationId: approveOAuth
+      tags: [oauth]
+      description: >
+        The signed-in user allows or denies an MCP client. Allow stores a one-time
+        code for 10 minutes. The answer is where the browser goes next. Needs a
+        browser session: a token can't approve more tokens.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OAuthApprove" }
+      responses:
+        "200":
+          description: The client's redirect URI with a code, or with error=access_denied.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OAuthRedirect" }
+        default: { $ref: "#/components/responses/Problem" }
   /notifications:
     get:
       operationId: listNotifications
@@ -2941,6 +2975,30 @@ components:
         name: { type: string, maxLength: 100 }
         read_only: { type: boolean }
         expires_on: { type: string, format: date, description: The last day the token works; omitted for no expiry. }
+    OAuthClient:
+      type: object
+      required: [id, name, redirect_uris]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        redirect_uris: { type: array, items: { type: string } }
+    OAuthApprove:
+      type: object
+      required: [client_id, redirect_uri, code_challenge, code_challenge_method, read_only, allow]
+      properties:
+        client_id: { type: string }
+        redirect_uri: { type: string }
+        code_challenge: { type: string }
+        code_challenge_method: { type: string }
+        state: { type: string }
+        resource: { type: string }
+        read_only: { type: boolean }
+        allow: { type: boolean }
+    OAuthRedirect:
+      type: object
+      required: [redirect_url]
+      properties:
+        redirect_url: { type: string }
     APITokenCreated:
       allOf:
         - $ref: "#/components/schemas/APIToken"

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/kenzo03/muasal/server/internal/db"
@@ -345,6 +346,9 @@ func TestPermissionSuiteWrites(t *testing.T) {
 		{"citra", http.MethodPut, "/tickets/HRIS-2/decision", nil, decision, 403},
 		{"ani", http.MethodPut, "/tickets/HRIS-2/decision", nil, decision, 403}, // neither project admin nor confirmer
 		{"citra", http.MethodPost, "/tickets/HRIS-4/transition", nil, closeCore, 403},
+		{"ani", http.MethodPost, "/oauth/approve", nil, map[string]any{"client_id": "NOPE", "redirect_uri": "http://localhost:1/cb",
+			"code_challenge": strings.Repeat("a", 43), "code_challenge_method": "S256", "read_only": true, "allow": true}, 422},
+		{"ani", http.MethodGet, "/oauth/clients/NOPE", nil, nil, 404},
 		// Allowed, as controls: the suite must not pass by refusing everything.
 		{"hana", http.MethodPatch, node("Leave Request"), nil, map[string]any{"name": "Leave Requests"}, 200},
 		{"citra", http.MethodPatch, contact("Cahya"), nil, map[string]any{"name": "Cahya", "client_id": w.clients["C"].ID}, 200},
