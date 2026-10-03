@@ -17,6 +17,11 @@
 		}
 		reverse_proxy app:8080
 	}
+	# MCP endpoint and its sign-in (docs/mcp.md); /oauth/authorize is a web page.
+	@mcp path /mcp /oauth/register /oauth/token /.well-known/oauth-*
+	handle @mcp {
+		reverse_proxy app:8080
+	}
 	handle {
 		encode zstd gzip
 		reverse_proxy web:3000
