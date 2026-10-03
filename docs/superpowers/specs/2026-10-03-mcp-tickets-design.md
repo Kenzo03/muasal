@@ -42,7 +42,7 @@ Migration `00020_oauth.sql`:
 -- MCP sign-in (OAuth 2.1 authorization code with PKCE): registered clients
 -- and their one-time codes. The tokens issued are api_tokens rows.
 CREATE TABLE oauth_clients (
-  id            text PRIMARY KEY,          -- random, 32 base32 chars
+  id            text PRIMARY KEY,          -- random: crypto/rand.Text(), 26 base32 chars
   name          text NOT NULL,             -- client_name, at most 100 chars
   redirect_uris text[] NOT NULL,
   created_at    timestamptz NOT NULL DEFAULT now()
@@ -77,11 +77,11 @@ These sit on the mux next to `/webhooks`, so they skip the session and Origin mi
 **`POST /oauth/register`** takes JSON with `client_name` and `redirect_uris` and answers 201 with `client_id`, `client_name`, `redirect_uris`, `token_endpoint_auth_method: "none"`, `grant_types: ["authorization_code"]` and `response_types: ["code"]`. It rejects, with 400 `invalid_redirect_uri` or `invalid_client_metadata`:
 - more than 5 redirect URIs, or none;
 - a URI with a fragment, or one that is not `https://`, or `http://` on `localhost`, `127.0.0.1` or `[::1]` (any port, for native clients, RFC 8252);
-- a name that is empty or longer than 100 characters.
+- a name longer than 100 characters. A missing name becomes "MCP client".
 
 It shares the sign-in limiter: 20 requests a minute per IP. Registering creates no access: nothing is issued until a signed-in user approves.
 
-**`POST /oauth/token`** takes `application/x-www-form-urlencoded` with `grant_type=authorization_code`, `code`, `redirect_uri`, `client_id`, `code_verifier` and an optional `resource`. In one statement it marks the code used (`UPDATE … SET used_at = now() WHERE code_hash = $1 AND used_at IS NULL AND expires_at > now() RETURNING …`), then checks that the client, the redirect URI and `BASE64URL(SHA-256(code_verifier))` match, and that `resource`, when given, is `<PUBLIC_URL>/mcp`. On success it creates an API token for the code's user, named `<client name> (MCP)` and cut to the token-name limit of 100 characters, with the code's `read_only` and no expiry, audits `token create` with `via: "oauth"` and the client ID, and answers `{"access_token": "msl_…", "token_type": "Bearer"}` with `Cache-Control: no-store`. Every failure answers 400 with an RFC 6749 error: `invalid_grant` (unknown, used, expired or mismatched code, or a bad verifier), `invalid_request` or `unsupported_grant_type`. It shares the sign-in limiter.
+**`POST /oauth/token`** takes `application/x-www-form-urlencoded` with `grant_type=authorization_code`, `code`, `redirect_uri`, `client_id`, `code_verifier` and an optional `resource`. In one statement it marks the code used (`UPDATE … SET used_at = now() WHERE code_hash = $1 AND used_at IS NULL AND expires_at > now() RETURNING …`), then checks that the client, the redirect URI and `BASE64URL(SHA-256(code_verifier))` match, and that `resource`, when given, is `<PUBLIC_URL>/mcp`. On success it creates an API token for the code's user, named `<client name> (MCP)` and cut to the token-name limit of 100 characters, with the code's `read_only` and no expiry, audits `token create` with `via: "web"` (the user approved it in the browser; `audit_events.via` allows no new value without a migration) and the client ID, and answers `{"access_token": "msl_…", "token_type": "Bearer"}` with `Cache-Control: no-store`. Every failure answers 400 with an RFC 6749 error: `invalid_grant` (unknown, used, expired or mismatched code, or a bad verifier), `invalid_request` or `unsupported_grant_type`. It shares the sign-in limiter.
 
 ### Endpoints inside `/api/v1`
 
@@ -98,7 +98,7 @@ Added to `api/openapi.yaml`, tag `oauth`. Both need a signed-in browser session 
 
 - **Library:** the official Go SDK, `github.com/modelcontextprotocol/go-sdk` (MIT). It must pass `go run ./cmd/licenses`. `mcp.NewStreamableHTTPHandler` serves it with `Stateless: true` and JSON responses, so there is no session to keep.
 - **Auth:** `/mcp` accepts only a bearer token, not a session cookie, so a web page can't drive it. A missing or invalid token answers 401 with the `WWW-Authenticate` header above. A valid one goes through the existing token check, rate limit and `read_only` rule.
-- **Tools call the REST API in-process.** Each tool builds an `http.Request` to `/api/v1/...` with the caller's `Authorization` header and serves it through `s.Handler()` into an `httptest.ResponseRecorder`. So permissions, validation, the `If-Match` version checks, idempotency, audit (`via: "api"`) and the per-token rate limit are those of the API, with no second copy of any rule. A 2xx answer becomes the tool's structured result. A problem answer becomes a tool error whose text carries the problem's `code`, `detail` and field errors, so the agent can correct itself. A `read_only` token gets `token_read_only` from the write tools that way.
+- **Tools call the REST API in-process.** Each tool builds an `http.Request` to `/api/v1/...` with the caller's `Authorization` header and serves it through `s.Handler()` into an `httptest.ResponseRecorder`. So permissions, validation, the `If-Match` version checks, idempotency, audit (`via: "api"`) and the per-token rate limit are those of the API, with no second copy of any rule. A 2xx answer becomes the tool's result as JSON text. A problem answer becomes a tool error whose text carries the problem's `code`, `detail` and field errors, so the agent can correct itself. A `read_only` token gets `token_read_only` from the write tools that way.
 
 ### Tools
 
@@ -106,7 +106,7 @@ Each tool has a JSON input schema with descriptions written for an agent. Enums 
 
 | Tool | Input | Calls |
 | --- | --- | --- |
-| `get_project` | `project` | `GET /projects/{key}`, `/statuses`, `/nodes`, `/clients`, `/assignees`. Returns statuses with their categories, the menu tree as id, name, path and type, the clients, and the assignees. Agents need it for the IDs the other tools take. |
+| `get_project` | `project` | `GET /projects/{key}`, `/statuses`, `/nodes`, `/clients`, `/assignees`. Returns the project, its statuses with their categories, the menu tree as the flat node list `/nodes` gives (id, parent, name, type), the clients, and the assignees. Agents need it for the IDs the other tools take. |
 | `list_tickets` | `project`; optional `q`, `status_id`, `open`, `type`, `client_id`, `assignee_id`, `mine`, `node_id`, `sort`, `limit` (default 50, max 200), `cursor` | `GET /projects/{key}/tickets` |
 | `get_ticket` | `key` | `GET /tickets/{key}`. Returns the ticket and its `version` from the ETag. |
 | `create_ticket` | `project`, `type`, `title`, `node_ids`; optional `client_id`, `reason`, `description`, `assignee_id`, `priority`, `due_date`, `status_id`, `idempotency_key` | `POST /projects/{key}/tickets` |
