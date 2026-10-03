@@ -97,6 +97,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /readyz", s.readyz)
 	mux.HandleFunc("GET /metrics", s.metrics)
 	mux.HandleFunc("POST /webhooks/git/{repo_id}", s.gitWebhook)
+	mux.HandleFunc("GET /.well-known/oauth-protected-resource", s.protectedResource)
+	mux.HandleFunc("GET /.well-known/oauth-protected-resource/mcp", s.protectedResource)
+	mux.HandleFunc("GET /.well-known/oauth-authorization-server", s.authServerMetadata)
+	mux.HandleFunc("POST /oauth/register", s.registerClient)
 	HandlerWithOptions(s, StdHTTPServerOptions{
 		BaseURL:    "/api/v1",
 		BaseRouter: mux,
