@@ -99,3 +99,68 @@ func TestMCPReadTools(t *testing.T) {
 		t.Fatalf("get_project: %v %s", isErr, text)
 	}
 }
+
+// The write tools go through the API's rules: read-only tokens, versions, close validation.
+func TestMCPWriteTools(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	tok := mcpToken(e, w.pm, false)
+
+	text, isErr := mcpCall(e, tok, "create_ticket", map[string]any{"project": "HRIS", "type": "bug", "title": "Filed by an agent",
+		"node_ids": []int64{w.ot.ID}, "client_id": w.a.ID, "reason": "The agent found it."})
+	var tk struct {
+		Key     string
+		Title   string
+		Reason  string
+		Version int
+		Status  struct{ Category string }
+	}
+	if isErr || json.Unmarshal([]byte(text), &tk) != nil || tk.Key != "HRIS-1" {
+		t.Fatalf("create: %v %s", isErr, text)
+	}
+
+	// Only the given field changes.
+	text, isErr = mcpCall(e, tok, "update_ticket", map[string]any{"key": "HRIS-1", "title": "Renamed by an agent"})
+	if isErr || json.Unmarshal([]byte(text), &tk) != nil || tk.Title != "Renamed by an agent" || tk.Reason != "The agent found it." {
+		t.Fatalf("update: %v %s", isErr, text)
+	}
+	if text, isErr := mcpCall(e, tok, "update_ticket", map[string]any{"key": "HRIS-1", "title": "Stale", "version": 1}); !isErr || !strings.Contains(text, "412") {
+		t.Fatalf("stale version: %v %s", isErr, text)
+	}
+
+	// Cancel needs why; with it the ticket closes as Cancelled with a decision record.
+	if text, isErr := mcpCall(e, tok, "cancel_ticket", map[string]any{"key": "HRIS-1", "reason": "Duplicate of another ticket.", "why": ""}); !isErr || !strings.Contains(text, "422") {
+		t.Fatalf("cancel without why: %v %s", isErr, text)
+	}
+	text, isErr = mcpCall(e, tok, "cancel_ticket", map[string]any{"key": "HRIS-1", "reason": "Duplicate of another ticket.", "why": "The same request was filed twice."})
+	if isErr || json.Unmarshal([]byte(text), &tk) != nil || tk.Status.Category != "cancelled" {
+		t.Fatalf("cancel: %v %s", isErr, text)
+	}
+	if text, _ := mcpCall(e, tok, "get_ticket", map[string]any{"key": "HRIS-1"}); !strings.Contains(text, "The same request was filed twice.") {
+		t.Fatalf("decision record: %s", text)
+	}
+
+	// transition_ticket reopens it.
+	var statuses struct {
+		Items []struct {
+			Id       int64
+			Category string
+		}
+	}
+	e.call(w.pm, http.MethodGet, "/projects/HRIS/statuses", nil, &statuses)
+	var todo int64
+	for _, s := range statuses.Items {
+		if s.Category == "todo" {
+			todo = s.Id
+		}
+	}
+	if text, isErr := mcpCall(e, tok, "transition_ticket", map[string]any{"key": "HRIS-1", "status_id": todo}); isErr || !strings.Contains(text, `"category":"todo"`) {
+		t.Fatalf("reopen: %v %s", isErr, text)
+	}
+
+	// A read-only token can't write.
+	ro := mcpToken(e, w.pm, true)
+	if text, isErr := mcpCall(e, ro, "create_ticket", map[string]any{"project": "HRIS", "type": "bug", "title": "No", "node_ids": []int64{w.ot.ID}, "client_id": w.a.ID}); !isErr || !strings.Contains(text, "token_read_only") {
+		t.Fatalf("read-only create: %v %s", isErr, text)
+	}
+}
