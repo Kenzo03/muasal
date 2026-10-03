@@ -101,6 +101,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /.well-known/oauth-protected-resource/mcp", s.protectedResource)
 	mux.HandleFunc("GET /.well-known/oauth-authorization-server", s.authServerMetadata)
 	mux.HandleFunc("POST /oauth/register", s.registerClient)
+	mux.HandleFunc("POST /oauth/token", s.exchangeCode)
 	HandlerWithOptions(s, StdHTTPServerOptions{
 		BaseURL:    "/api/v1",
 		BaseRouter: mux,

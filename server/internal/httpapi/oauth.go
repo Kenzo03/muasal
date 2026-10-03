@@ -2,6 +2,9 @@ package httpapi
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -208,4 +211,71 @@ func encodeQuery(q url.Values) string {
 		}
 	}
 	return strings.Join(parts, "&")
+}
+
+// exchangeCode is the token endpoint. The code is spent before anything is
+// checked, so a wrong verifier can't be retried against the same code.
+func (s *Server) exchangeCode(w http.ResponseWriter, r *http.Request) {
+	if !s.ipLimit.Allow(clientIP(r)) {
+		writeOAuthError(w, http.StatusTooManyRequests, "rate_limited", "Too many requests from this address; wait a minute")
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
+	if err := r.ParseForm(); err != nil {
+		writeOAuthError(w, http.StatusBadRequest, "invalid_request", "Send a form body")
+		return
+	}
+	f := r.PostForm
+	if f.Get("grant_type") != "authorization_code" {
+		writeOAuthError(w, http.StatusBadRequest, "unsupported_grant_type", "Only authorization_code is supported")
+		return
+	}
+	code, verifier, clientID, redirect := f.Get("code"), f.Get("code_verifier"), f.Get("client_id"), f.Get("redirect_uri")
+	if code == "" || verifier == "" || clientID == "" || redirect == "" {
+		writeOAuthError(w, http.StatusBadRequest, "invalid_request", "code, code_verifier, client_id and redirect_uri are required")
+		return
+	}
+	if res := f.Get("resource"); res != "" && res != s.mcpResource() {
+		writeOAuthError(w, http.StatusBadRequest, "invalid_target", "Tokens are only for "+s.mcpResource())
+		return
+	}
+	ctx := r.Context()
+	c, err := s.q.UseOAuthCode(ctx, auth.HashToken(code))
+	if errors.Is(err, pgx.ErrNoRows) {
+		writeOAuthError(w, http.StatusBadRequest, "invalid_grant", "The code is unknown, used or expired")
+		return
+	}
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	sum := sha256.Sum256([]byte(verifier))
+	if c.ClientID != clientID || c.RedirectUri != redirect ||
+		subtle.ConstantTimeCompare([]byte(base64.RawURLEncoding.EncodeToString(sum[:])), []byte(c.CodeChallenge)) != 1 {
+		writeOAuthError(w, http.StatusBadRequest, "invalid_grant", "The code does not match this client, redirect URI or verifier")
+		return
+	}
+	secret := tokenPrefix + rand.Text() + rand.Text()
+	err = s.inTx(ctx, func(q *db.Queries) error {
+		client, err := q.GetOAuthClient(ctx, c.ClientID)
+		if err != nil {
+			return err
+		}
+		name := client.Name + " (MCP)"
+		if rs := []rune(name); len(rs) > 100 {
+			name = string(rs[:100])
+		}
+		t, err := q.CreateAPIToken(ctx, db.CreateAPITokenParams{UserID: c.UserID, Name: name, TokenHash: auth.HashToken(secret), ReadOnly: c.ReadOnly})
+		if err != nil {
+			return err
+		}
+		// The user approved this in the browser; audit_events.via has no "oauth".
+		m := auditMeta{via: "web", requestID: ptr(requestIDFrom(ctx)), ip: ipAddr(r)}
+		return audit(ctx, q, m, &c.UserID, "token", t.ID, "create", map[string]any{"name": name, "read_only": c.ReadOnly, "client_id": client.ID})
+	})
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"access_token": secret, "token_type": "Bearer"})
 }

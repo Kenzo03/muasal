@@ -145,3 +145,103 @@ func TestOAuthApprove(t *testing.T) {
 		t.Fatalf("approve with a token: %d %+v", code, p)
 	}
 }
+
+func exchange(e *env, form url.Values) (int, map[string]any) {
+	e.t.Helper()
+	res, err := http.PostForm(e.url+"/oauth/token", form)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	defer res.Body.Close()
+	var out map[string]any
+	_ = json.NewDecoder(res.Body).Decode(&out)
+	return res.StatusCode, out
+}
+
+func codeFrom(e *env, to string) string {
+	u, err := url.Parse(to)
+	if err != nil || u.Query().Get("code") == "" {
+		e.t.Fatalf("no code in %q", to)
+	}
+	return u.Query().Get("code")
+}
+
+func tokenForm(id, redirect, code string) url.Values {
+	return url.Values{"grant_type": {"authorization_code"}, "code": {code}, "redirect_uri": {redirect},
+		"client_id": {id}, "code_verifier": {verifier}, "resource": {origin + "/mcp"}}
+}
+
+// mcpToken runs the whole sign-in as c's user and returns the token.
+func mcpToken(e *env, c *http.Client, readOnly bool) string {
+	e.t.Helper()
+	redirect := "http://127.0.0.1:7777/cb"
+	id := registerTestClient(e, redirect)
+	b := approveBody(id, redirect, true)
+	b["read_only"] = readOnly
+	_, to := approve(e, c, b)
+	code, out := exchange(e, tokenForm(id, redirect, codeFrom(e, to)))
+	if code != http.StatusOK {
+		e.t.Fatalf("exchange: %d %v", code, out)
+	}
+	return out["access_token"].(string)
+}
+
+// MCP spec: a code buys one API token, once, with the right verifier.
+func TestOAuthTokenExchange(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	redirect := "http://localhost:53682/callback"
+	id := registerTestClient(e, redirect)
+
+	_, to := approve(e, w.pm, approveBody(id, redirect, true))
+	code := codeFrom(e, to)
+	status, out := exchange(e, tokenForm(id, redirect, code))
+	tok, _ := out["access_token"].(string)
+	if status != http.StatusOK || !strings.HasPrefix(tok, "msl_") || out["token_type"] != "Bearer" {
+		t.Fatalf("exchange: %d %v", status, out)
+	}
+	var page httpapi.TicketPage
+	if s := e.bearer(tok, http.MethodGet, "/projects/HRIS/tickets", nil, &page); s != http.StatusOK {
+		t.Fatalf("token works: %d", s)
+	}
+	var list httpapi.APITokenList
+	e.call(w.pm, http.MethodGet, "/me/tokens", nil, &list)
+	if len(list.Items) != 1 || list.Items[0].Name != "Test Agent (MCP)" || list.Items[0].ReadOnly {
+		t.Fatalf("token list: %+v", list.Items)
+	}
+	if s, out := exchange(e, tokenForm(id, redirect, code)); s != http.StatusBadRequest || out["error"] != "invalid_grant" {
+		t.Fatalf("reused code: %d %v", s, out)
+	}
+
+	fresh := func() string { _, to := approve(e, w.pm, approveBody(id, redirect, true)); return codeFrom(e, to) }
+	other := registerTestClient(e, redirect)
+	for name, form := range map[string]url.Values{
+		"wrong verifier": func() url.Values {
+			f := tokenForm(id, redirect, fresh())
+			f.Set("code_verifier", strings.Repeat("x", 43))
+			return f
+		}(),
+		"other client":   tokenForm(other, redirect, fresh()),
+		"other redirect": tokenForm(id, "http://localhost:1/cb", fresh()),
+		"unknown code":   tokenForm(id, redirect, "nope"),
+	} {
+		if s, out := exchange(e, form); s != http.StatusBadRequest || out["error"] != "invalid_grant" {
+			t.Errorf("%s: %d %v", name, s, out)
+		}
+	}
+	expired := fresh()
+	e.exec("UPDATE oauth_codes SET expires_at = now() - interval '1 second' WHERE used_at IS NULL")
+	if s, out := exchange(e, tokenForm(id, redirect, expired)); s != http.StatusBadRequest || out["error"] != "invalid_grant" {
+		t.Fatalf("expired: %d %v", s, out)
+	}
+	if s, out := exchange(e, url.Values{"grant_type": {"client_credentials"}}); s != http.StatusBadRequest || out["error"] != "unsupported_grant_type" {
+		t.Fatalf("grant type: %d %v", s, out)
+	}
+	if s, out := exchange(e, func() url.Values {
+		f := tokenForm(id, redirect, fresh())
+		f.Set("resource", "https://x.example/mcp")
+		return f
+	}()); s != http.StatusBadRequest || out["error"] != "invalid_target" {
+		t.Fatalf("resource: %d %v", s, out)
+	}
+}
