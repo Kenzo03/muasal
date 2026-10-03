@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -27,11 +28,17 @@ func (s *Server) mcpHandler(root http.Handler) http.Handler {
 		// Only a token: a session cookie would let any web page drive the tools.
 		bearer, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 		if !ok {
-			s.mcpUnauthorized(w)
+			s.mcpUnauthorized(w, false)
 			return
 		}
-		if _, u := s.tokenUser(r.Context(), strings.TrimSpace(bearer)); u == nil {
-			s.mcpUnauthorized(w)
+		tok, u := s.tokenUser(r.Context(), strings.TrimSpace(bearer))
+		if u == nil {
+			s.mcpUnauthorized(w, true)
+			return
+		}
+		if !s.tokRate.Allow(strconv.FormatInt(tok.ID, 10)) {
+			w.Header().Set("Retry-After", "60")
+			writeProblem(w, http.StatusTooManyRequests, "rate_limited", "A token takes 60 requests a minute; wait a moment")
 			return
 		}
 		h.ServeHTTP(w, r)
@@ -39,8 +46,13 @@ func (s *Server) mcpHandler(root http.Handler) http.Handler {
 }
 
 // mcpUnauthorized points the client at the sign-in metadata (RFC 9728).
-func (s *Server) mcpUnauthorized(w http.ResponseWriter) {
-	w.Header().Set("WWW-Authenticate", `Bearer resource_metadata="`+s.cfg.PublicURL+`/.well-known/oauth-protected-resource/mcp"`)
+// A token that was sent and refused also says so (RFC 6750 section 3).
+func (s *Server) mcpUnauthorized(w http.ResponseWriter, sent bool) {
+	hdr := "Bearer "
+	if sent {
+		hdr += `error="invalid_token", `
+	}
+	w.Header().Set("WWW-Authenticate", hdr+`resource_metadata="`+s.cfg.PublicURL+`/.well-known/oauth-protected-resource/mcp"`)
 	writeProblem(w, http.StatusUnauthorized, "invalid_token", "Sign in to Muasal to use this endpoint")
 }
 
