@@ -8,7 +8,7 @@ An agent sees only what you can see, and the same permissions, validation and au
 
 ## Connect Claude Code
 
-```
+```bash
 claude mcp add --transport http muasal https://muasal.example.com/mcp
 ```
 
@@ -16,7 +16,14 @@ Use your own address in place of `muasal.example.com`. Then run `/mcp` in Claude
 
 ## Other clients
 
-Any MCP client that supports streamable HTTP and OAuth sign-in works. The URL is `<PUBLIC_URL>/mcp`.
+Any MCP client that supports streamable HTTP and OAuth sign-in works. The URL is `<PUBLIC_URL>/mcp`. Two limits apply today:
+
+- Redirect URIs must be `https`, or `http` on localhost. Clients that use custom URL schemes cannot register yet.
+- Browser-based clients are not supported, because Muasal sends no CORS headers.
+
+**Claude Desktop and claude.ai.** Add Muasal as a custom connector with the `/mcp` URL. claude.ai connects from Anthropic's servers, so Muasal must be reachable at a public HTTPS `PUBLIC_URL`.
+
+Every tool call counts toward the token's 60 requests a minute, and `get_project` makes several API calls.
 
 ## Tools
 
@@ -38,7 +45,7 @@ Tick **Read only** on the approval page. The agent can then list and read ticket
 
 ## Disconnect an agent
 
-Open **Settings › API tokens** and revoke the token named after the agent, with "(MCP)" after it. The agent loses access at once.
+Open **Settings › API tokens** and revoke the token named after the agent, with "(MCP)" after it. The agent loses access at once. Signing in again creates a new token, so revoke old ones you no longer use.
 
 ## Why there is no delete
 

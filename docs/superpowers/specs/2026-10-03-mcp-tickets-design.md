@@ -163,5 +163,6 @@ handle @app {
 ## Risks
 
 - **Phishing through registration.** Anyone can register a client named "Claude Code". The approval page therefore shows the redirect host next to the name, and nothing is issued without a signed-in user's click.
+- **Deny redirects too.** Deny also redirects to the client's registered URI. Since anyone can register, the approval page is a click-through redirect to an attacker-chosen https URL (RFC 9700 section 4.11). Accepted: the page shows the host and needs a click.
 - **Long-lived tokens.** An agent's token works until revoked, like a personal token today. The token list shows its last use.
 - **SDK churn.** The Go SDK is young. It is pinned in `go.mod`, and only `mcp.go` imports it.
