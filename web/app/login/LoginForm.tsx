@@ -4,11 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
+import { safeNext } from "@/lib/next";
 import { button, cx, field } from "@/lib/ui";
 
 const messageFor: Record<string, string> = { account_locked: "locked", rate_limited: "rateLimited" };
 
-export default function LoginForm({ email }: { email?: string }) {
+export default function LoginForm({ email, next }: { email?: string; next?: string }) {
   const t = useTranslations("login");
   const router = useRouter();
   const [error, setError] = useState("");
@@ -27,7 +28,7 @@ export default function LoginForm({ email }: { email?: string }) {
       return;
     }
     document.cookie = `locale=${data.locale}; path=/; max-age=31536000; samesite=lax`;
-    router.push("/");
+    router.push(safeNext(next));
     router.refresh();
   }
 

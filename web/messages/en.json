@@ -1,4 +1,17 @@
 {
+  "oauth": {
+    "title": "Connect an AI agent",
+    "asks": "{client} wants to use Muasal as you.",
+    "account": "Signed in as {name} ({email})",
+    "can": "It can read the tickets you can see, and create, edit and close tickets unless you tick Read only.",
+    "returnsTo": "After you answer, your browser returns to {host}.",
+    "readOnly": "Read only",
+    "allow": "Allow",
+    "deny": "Deny",
+    "revoke": "You can disconnect it later in Settings › API tokens.",
+    "invalid": "This connection request is not valid. Start again from your agent.",
+    "failed": "Could not save your answer. Try again."
+  },
   "login": {
     "title": "Sign in to Muasal",
     "email": "Email",

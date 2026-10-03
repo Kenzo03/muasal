@@ -76,4 +76,7 @@ export default async function globalSetup() {
   const admin2 = createAdmin("Admin Screens");
   process.env.E2E_ADMIN2_EMAIL = admin2.email;
   process.env.E2E_ADMIN2_LINK = admin2.link;
+  const mcp = createAdmin("MCP Admin");
+  process.env.E2E_MCP_ADMIN_EMAIL = mcp.email;
+  process.env.E2E_MCP_ADMIN_LINK = mcp.link;
 }
