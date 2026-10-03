@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-	"syscall"
 )
 
 // dumpName is what backup.sh writes: db-YYYYMMDD-HHMM.dump (FSD §19.4).
@@ -45,20 +44,6 @@ func (s *Server) ListBackups(w http.ResponseWriter, r *http.Request) {
 	out.Requested = err == nil
 	out.SameDisk = sameDisk(s.cfg.BackupsDir, s.cfg.AttachmentsDir)
 	writeJSON(w, http.StatusOK, out)
-}
-
-// sameDisk reports whether two folders are on one filesystem (MSL-40). Docker
-// keeps named volumes on the host's disk, so a default install says yes until
-// the backups volume is mounted elsewhere, such as on a NAS.
-func sameDisk(a, b string) bool {
-	x, errA := os.Stat(a)
-	y, errB := os.Stat(b)
-	if errA != nil || errB != nil {
-		return false
-	}
-	sx, okX := x.Sys().(*syscall.Stat_t)
-	sy, okY := y.Sys().(*syscall.Stat_t)
-	return okX && okY && sx.Dev == sy.Dev
 }
 
 // RunBackup asks the backup service for a backup now (§19.4).
