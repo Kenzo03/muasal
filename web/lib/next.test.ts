@@ -8,4 +8,8 @@ test("safeNext follows only paths on this site", () => {
   assert.equal(safeNext("https://evil.example"), "/");
   assert.equal(safeNext("//evil.example"), "/");
   assert.equal(safeNext("/\\evil.example"), "/");
+  // Browsers drop tabs and newlines while parsing, which turns these into //evil.example.
+  assert.equal(safeNext("/\t/evil.example"), "/");
+  assert.equal(safeNext("/\n/evil.example"), "/");
+  assert.equal(safeNext("\t//evil.example"), "/");
 });
