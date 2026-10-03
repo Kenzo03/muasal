@@ -3,11 +3,17 @@ package httpapi
 import (
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
+	"time"
 	"unicode/utf8"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/kenzo03/muasal/server/internal/auth"
 	"github.com/kenzo03/muasal/server/internal/db"
 )
 
@@ -107,4 +113,99 @@ func (s *Server) registerClient(w http.ResponseWriter, r *http.Request) {
 		"client_id": c.ID, "client_name": c.Name, "redirect_uris": c.RedirectUris,
 		"token_endpoint_auth_method": "none", "grant_types": []string{"authorization_code"}, "response_types": []string{"code"},
 	})
+}
+
+// codeTTL is how long an approval's code may be exchanged.
+const codeTTL = 10 * time.Minute
+
+// GetOAuthClient shows the approval page which client is asking.
+func (s *Server) GetOAuthClient(w http.ResponseWriter, r *http.Request, id string) {
+	if _, ok := s.sessionOnly(w, r); !ok {
+		return
+	}
+	c, err := s.q.GetOAuthClient(r.Context(), id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		writeProblem(w, http.StatusNotFound, "not_found", "This app is not registered")
+		return
+	}
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, OAuthClient{Id: c.ID, Name: c.Name, RedirectUris: c.RedirectUris})
+}
+
+// ApproveOAuth records the signed-in user's answer. It redirects only to a
+// URI the client registered, so a bad request never leaves Muasal.
+func (s *Server) ApproveOAuth(w http.ResponseWriter, r *http.Request) {
+	u, ok := s.sessionOnly(w, r)
+	if !ok {
+		return
+	}
+	var in OAuthApprove
+	if !decodeJSON(w, r, &in) {
+		return
+	}
+	ctx := r.Context()
+	c, err := s.q.GetOAuthClient(ctx, in.ClientId)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		s.fail(w, r, err)
+		return
+	}
+	invalid := func(msg string) {
+		writeProblem(w, http.StatusUnprocessableEntity, "invalid_authorization_request", msg)
+	}
+	switch {
+	case err != nil:
+		invalid("This app is not registered")
+		return
+	case !slices.Contains(c.RedirectUris, in.RedirectUri):
+		invalid("The app asked to return to an address it did not register")
+		return
+	case in.CodeChallengeMethod != "S256" || len(in.CodeChallenge) < 43 || len(in.CodeChallenge) > 128:
+		invalid("The app must use PKCE with S256")
+		return
+	case in.Resource != nil && *in.Resource != "" && *in.Resource != s.mcpResource():
+		invalid("The app asked for access to another server")
+		return
+	}
+	q := url.Values{}
+	if in.State != nil && *in.State != "" {
+		q.Set("state", *in.State)
+	}
+	action := "deny"
+	if in.Allow {
+		code, hash := auth.NewToken()
+		if err := s.q.CreateOAuthCode(ctx, db.CreateOAuthCodeParams{
+			CodeHash: hash, ClientID: c.ID, UserID: u.ID, RedirectUri: in.RedirectUri,
+			CodeChallenge: in.CodeChallenge, ReadOnly: in.ReadOnly, ExpiresAt: s.now().Add(codeTTL),
+		}); err != nil {
+			s.fail(w, r, err)
+			return
+		}
+		q.Set("code", code)
+		action = "approve"
+	} else {
+		q.Set("error", "access_denied")
+	}
+	if err := audit(ctx, s.q, webMeta(r), &u.ID, "oauth_client", 0, action, map[string]any{"client_id": c.ID, "name": c.Name, "read_only": in.ReadOnly}); err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	sep := "?"
+	if strings.Contains(in.RedirectUri, "?") {
+		sep = "&"
+	}
+	writeJSON(w, http.StatusOK, OAuthRedirect{RedirectUrl: in.RedirectUri + sep + encodeQuery(q)})
+}
+
+// encodeQuery keeps code (or error) before state, as clients log it.
+func encodeQuery(q url.Values) string {
+	var parts []string
+	for _, k := range []string{"code", "error", "state"} {
+		if v := q.Get(k); v != "" {
+			parts = append(parts, k+"="+url.QueryEscape(v))
+		}
+	}
+	return strings.Join(parts, "&")
 }

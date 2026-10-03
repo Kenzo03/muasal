@@ -2193,6 +2193,30 @@ type NotifyPrefs struct {
 	Status  *bool `json:"status,omitempty"`
 }
 
+// OAuthApprove defines model for OAuthApprove.
+type OAuthApprove struct {
+	Allow               bool    `json:"allow"`
+	ClientId            string  `json:"client_id"`
+	CodeChallenge       string  `json:"code_challenge"`
+	CodeChallengeMethod string  `json:"code_challenge_method"`
+	ReadOnly            bool    `json:"read_only"`
+	RedirectUri         string  `json:"redirect_uri"`
+	Resource            *string `json:"resource,omitempty"`
+	State               *string `json:"state,omitempty"`
+}
+
+// OAuthClient defines model for OAuthClient.
+type OAuthClient struct {
+	Id           string   `json:"id"`
+	Name         string   `json:"name"`
+	RedirectUris []string `json:"redirect_uris"`
+}
+
+// OAuthRedirect defines model for OAuthRedirect.
+type OAuthRedirect struct {
+	RedirectUrl string `json:"redirect_url"`
+}
+
 // Person defines model for Person.
 type Person struct {
 	Email string `json:"email"`
@@ -3271,6 +3295,9 @@ type UpdateNoteJSONRequestBody = NoteUpdate
 // MarkNotificationsReadJSONRequestBody defines body for MarkNotificationsRead for application/json ContentType.
 type MarkNotificationsReadJSONRequestBody MarkNotificationsReadJSONBody
 
+// ApproveOAuthJSONRequestBody defines body for ApproveOAuth for application/json ContentType.
+type ApproveOAuthJSONRequestBody = OAuthApprove
+
 // CreateProjectJSONRequestBody defines body for CreateProject for application/json ContentType.
 type CreateProjectJSONRequestBody = ProjectCreate
 
@@ -3540,6 +3567,12 @@ type ServerInterface interface {
 
 	// (GET /notifications/stream)
 	StreamNotifications(w http.ResponseWriter, r *http.Request)
+
+	// (POST /oauth/approve)
+	ApproveOAuth(w http.ResponseWriter, r *http.Request)
+
+	// (GET /oauth/clients/{id})
+	GetOAuthClient(w http.ResponseWriter, r *http.Request, id string)
 
 	// (GET /projects)
 	ListProjects(w http.ResponseWriter, r *http.Request)
@@ -5424,6 +5457,46 @@ func (siw *ServerInterfaceWrapper) StreamNotifications(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// ApproveOAuth operation middleware
+func (siw *ServerInterfaceWrapper) ApproveOAuth(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApproveOAuth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetOAuthClient operation middleware
+func (siw *ServerInterfaceWrapper) GetOAuthClient(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetOAuthClient(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListProjects operation middleware
 func (siw *ServerInterfaceWrapper) ListProjects(w http.ResponseWriter, r *http.Request) {
 
@@ -7213,6 +7286,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/tokens", wrapper.ListTokens)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/me/tokens", wrapper.CreateToken)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/me/tokens/{id}", wrapper.RevokeToken)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/oauth/clients/{id}", wrapper.GetOAuthClient)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/oauth/approve", wrapper.ApproveOAuth)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/notifications", wrapper.ListNotifications)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/notifications/read", wrapper.MarkNotificationsRead)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/notifications/stream", wrapper.StreamNotifications)
