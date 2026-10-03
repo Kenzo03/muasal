@@ -190,6 +190,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/oauth/clients/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** @description A registered MCP client, for the approval page. Needs a signed-in browser session (MCP spec). */
+        get: operations["getOAuthClient"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/oauth/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description The signed-in user allows or denies an MCP client. Allow stores a one-time code for 10 minutes. The answer is where the browser goes next. Needs a browser session: a token can't approve more tokens. */
+        post: operations["approveOAuth"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/notifications": {
         parameters: {
             query?: never;
@@ -2502,6 +2538,24 @@ export interface components {
              */
             expires_on?: string;
         };
+        OAuthClient: {
+            id: string;
+            name: string;
+            redirect_uris: string[];
+        };
+        OAuthApprove: {
+            client_id: string;
+            redirect_uri: string;
+            code_challenge: string;
+            code_challenge_method: string;
+            state?: string;
+            resource?: string;
+            read_only: boolean;
+            allow: boolean;
+        };
+        OAuthRedirect: {
+            redirect_url: string;
+        };
         APITokenCreated: components["schemas"]["APIToken"] & {
             /** @description The secret, e.g. msl_…; shown once. */
             token: string;
@@ -3470,6 +3524,54 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getOAuthClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The client. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthClient"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    approveOAuth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OAuthApprove"];
+            };
+        };
+        responses: {
+            /** @description The client's redirect URI with a code, or with error=access_denied. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthRedirect"];
+                };
             };
             default: components["responses"]["Problem"];
         };
