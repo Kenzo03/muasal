@@ -166,3 +166,51 @@ func TestMCPWriteTools(t *testing.T) {
 		t.Fatalf("read-only create: %v %s", isErr, text)
 	}
 }
+
+// Project admins shape the module tree through MCP; members get the API's 403.
+func TestMCPTreeTools(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	admin, adminUser := e.signedIn("lead@example.com", false)
+	e.seedMember(adminUser, w.p, "admin")
+	tok := mcpToken(e, admin, false)
+
+	var mod, menu struct {
+		Id       int64
+		Name     string
+		ParentId *int64 `json:"parent_id"`
+	}
+	text, isErr := mcpCall(e, tok, "create_node", map[string]any{"project": "HRIS", "type": "module", "name": "Payroll", "code": "PAY"})
+	if isErr || json.Unmarshal([]byte(text), &mod) != nil || mod.Name != "Payroll" {
+		t.Fatalf("create module: %v %s", isErr, text)
+	}
+	text, isErr = mcpCall(e, tok, "create_node", map[string]any{"project": "HRIS", "type": "menu", "name": "Run Payroll", "parent_id": mod.Id, "aliases": []string{"Gajian"}})
+	if isErr || json.Unmarshal([]byte(text), &menu) != nil || menu.ParentId == nil || *menu.ParentId != mod.Id {
+		t.Fatalf("create menu: %v %s", isErr, text)
+	}
+	// Rename, and move under HR; fields not passed stay.
+	text, isErr = mcpCall(e, tok, "update_node", map[string]any{"id": menu.Id, "name": "Payroll Run", "move": map[string]any{"parent_id": w.hr.ID}})
+	if isErr || json.Unmarshal([]byte(text), &menu) != nil || menu.Name != "Payroll Run" || *menu.ParentId != w.hr.ID || !strings.Contains(text, "Gajian") {
+		t.Fatalf("update: %v %s", isErr, text)
+	}
+
+	csv := "path,type,code,client_scope,clients,aliases\nReports,module,REP,shared,,\nReports > Headcount,menu,,shared,,\n"
+	text, isErr = mcpCall(e, tok, "import_tree", map[string]any{"project": "HRIS", "csv": csv})
+	if isErr || !strings.Contains(text, `"applied":false`) || !strings.Contains(text, "Headcount") {
+		t.Fatalf("preview: %v %s", isErr, text)
+	}
+	if text, _ := mcpCall(e, tok, "get_project", map[string]any{"project": "HRIS"}); strings.Contains(text, "Headcount") {
+		t.Fatalf("preview applied: %s", text)
+	}
+	if text, isErr := mcpCall(e, tok, "import_tree", map[string]any{"project": "HRIS", "csv": csv, "apply": true}); isErr || !strings.Contains(text, `"applied":true`) {
+		t.Fatalf("apply: %v %s", isErr, text)
+	}
+	if text, _ := mcpCall(e, tok, "get_project", map[string]any{"project": "HRIS"}); !strings.Contains(text, "Headcount") {
+		t.Fatalf("not applied: %s", text)
+	}
+
+	member := mcpToken(e, w.pm, false)
+	if text, isErr := mcpCall(e, member, "create_node", map[string]any{"project": "HRIS", "type": "menu", "name": "Nope"}); !isErr || !strings.Contains(text, "403") {
+		t.Fatalf("member create: %v %s", isErr, text)
+	}
+}

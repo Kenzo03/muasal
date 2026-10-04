@@ -36,8 +36,13 @@ Every tool call counts toward the token's 60 requests a minute, and `get_project
 | `update_ticket` | Changes the fields you pass. Pass `version` to fail instead of overwriting a newer change. |
 | `transition_ticket` | Moves a ticket to another status. Closing needs a reason, a menu and a decision. |
 | `cancel_ticket` | Closes a ticket as Cancelled and records why. |
+| `create_node` | Adds a module or menu to the project's tree. Project admins only. |
+| `update_node` | Renames, moves, archives or restores a module or menu, or changes its code, aliases or clients. Project admins only. |
+| `import_tree` | Imports a module-tree CSV. It previews unless you pass `apply`. Project admins only. |
 
 `update_ticket` changes only the fields you pass. It cannot clear a field: to unassign, remove a due date, or move a ticket back to core work, use the web app.
+
+The tree tools follow the same rules as the web app: a member who is not a project admin gets an error. There is no tool to delete a node; archive it with `update_node` instead.
 
 ## Read-only access
 
