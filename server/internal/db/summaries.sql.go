@@ -329,8 +329,9 @@ FROM summaries s
 JOIN users u ON u.id = s.created_by
 JOIN projects p ON p.id = s.project_id
 WHERE ($1::bigint IS NULL OR s.project_id = $1::bigint)
-  AND ($2::boolean OR s.created_by = $3::bigint OR EXISTS (
-        SELECT 1 FROM memberships m WHERE m.user_id = $3::bigint AND m.project_id = s.project_id AND m.role = 'admin'))
+  AND ($2::boolean OR EXISTS (
+        SELECT 1 FROM memberships m WHERE m.user_id = $3::bigint AND m.project_id = s.project_id
+          AND (m.role = 'admin' OR (m.role = 'member' AND s.created_by = $3::bigint))))
 ORDER BY s.created_at DESC
 LIMIT 100
 `
@@ -350,7 +351,8 @@ type ListSummariesRow struct {
 	ProjectKey  string
 }
 
-// A summary is visible to its creator and to project admins (§12.1).
+// A summary is visible to its creator while a member of its project, and to
+// project admins (§12.1).
 func (q *Queries) ListSummaries(ctx context.Context, arg ListSummariesParams) ([]ListSummariesRow, error) {
 	rows, err := q.db.Query(ctx, listSummaries, arg.ProjectID, arg.IsAdmin, arg.UserID)
 	if err != nil {

@@ -21,7 +21,7 @@ WHERE t.token_hash = $1;
 UPDATE api_tokens SET last_used_at = now() WHERE id = $1;
 
 -- name: GetIdempotentTicket :one
-SELECT t.key FROM idempotency_keys k JOIN tickets t ON t.id = k.ticket_id
+SELECT t.key, t.project_id, t.client_id FROM idempotency_keys k JOIN tickets t ON t.id = k.ticket_id
 WHERE k.user_id = sqlc.arg('user_id') AND k.key = sqlc.arg('key') AND k.created_at > now() - interval '24 hours';
 
 -- name: SaveIdempotencyKey :exec
@@ -35,3 +35,7 @@ DELETE FROM idempotency_keys WHERE created_at < now() - interval '24 hours';
 
 -- name: LockIdempotencyKey :exec
 SELECT pg_advisory_xact_lock(hashtextextended('idempotency:' || sqlc.arg('user_id')::bigint::text || ':' || sqlc.arg('key')::text, 0));
+
+-- name: RevokeUserAPITokens :exec
+-- A password reset or change ends every token the user holds.
+UPDATE api_tokens SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL;

@@ -1031,16 +1031,15 @@ type AIMode string
 type AIProbe struct {
 	// Dim The embedding's dimension.
 	Dim       *int      `json:"dim,omitempty"`
-	Error     *string   `json:"error,omitempty"`
 	LatencyMs int       `json:"latency_ms"`
 	Models    *[]string `json:"models,omitempty"`
 	Ok        bool      `json:"ok"`
 
-	// Reason The failure's likely cause, which the page says in plain words above the raw error (MSL-31).
+	// Reason The failure's likely cause, which the page says in plain words (MSL-31). The server's own answer is never returned.
 	Reason *AIProbeReason `json:"reason,omitempty"`
 }
 
-// AIProbeReason The failure's likely cause, which the page says in plain words above the raw error (MSL-31).
+// AIProbeReason The failure's likely cause, which the page says in plain words (MSL-31). The server's own answer is never returned.
 type AIProbeReason string
 
 // AISettings defines model for AISettings.
@@ -1541,6 +1540,9 @@ type Client struct {
 	Code *string `json:"code"`
 	Id   int64   `json:"id"`
 	Name string  `json:"name"`
+
+	// Projects Keys of the projects linked to this client. Only GET /clients fills it.
+	Projects *[]string `json:"projects,omitempty"`
 }
 
 // ClientCreate defines model for ClientCreate.
@@ -2255,6 +2257,30 @@ type NotifyPrefs struct {
 	JobDone *bool `json:"job_done,omitempty"`
 	Mention *bool `json:"mention,omitempty"`
 	Status  *bool `json:"status,omitempty"`
+}
+
+// OAuthApprove defines model for OAuthApprove.
+type OAuthApprove struct {
+	Allow               bool    `json:"allow"`
+	ClientId            string  `json:"client_id"`
+	CodeChallenge       string  `json:"code_challenge"`
+	CodeChallengeMethod string  `json:"code_challenge_method"`
+	ReadOnly            bool    `json:"read_only"`
+	RedirectUri         string  `json:"redirect_uri"`
+	Resource            *string `json:"resource,omitempty"`
+	State               *string `json:"state,omitempty"`
+}
+
+// OAuthClient defines model for OAuthClient.
+type OAuthClient struct {
+	Id           string   `json:"id"`
+	Name         string   `json:"name"`
+	RedirectUris []string `json:"redirect_uris"`
+}
+
+// OAuthRedirect defines model for OAuthRedirect.
+type OAuthRedirect struct {
+	RedirectUrl string `json:"redirect_url"`
 }
 
 // Person defines model for Person.
@@ -3349,7 +3375,7 @@ type ListTicketsParamsFormat string
 
 // CreateTicketParams defines parameters for CreateTicket.
 type CreateTicketParams struct {
-	// IdempotencyKey A retry with the same key within 24 hours returns the ticket the first request created (200, with Idempotent-Replayed true) instead of a second ticket (FSD §17.1).
+	// IdempotencyKey A retry with the same key within 24 hours returns the ticket the first request created (200, with Idempotent-Replayed true) instead of a second ticket (FSD §17.1). A key whose ticket is in another project, or outside the caller's clients, answers 409 idempotency_conflict.
 	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
 }
 
@@ -3466,6 +3492,9 @@ type UpdateNoteJSONRequestBody = NoteUpdate
 
 // MarkNotificationsReadJSONRequestBody defines body for MarkNotificationsRead for application/json ContentType.
 type MarkNotificationsReadJSONRequestBody MarkNotificationsReadJSONBody
+
+// ApproveOAuthJSONRequestBody defines body for ApproveOAuth for application/json ContentType.
+type ApproveOAuthJSONRequestBody = OAuthApprove
 
 // CreateProjectJSONRequestBody defines body for CreateProject for application/json ContentType.
 type CreateProjectJSONRequestBody = ProjectCreate
@@ -3745,6 +3774,12 @@ type ServerInterface interface {
 
 	// (GET /notifications/stream)
 	StreamNotifications(w http.ResponseWriter, r *http.Request)
+
+	// (POST /oauth/approve)
+	ApproveOAuth(w http.ResponseWriter, r *http.Request)
+
+	// (GET /oauth/clients/{id})
+	GetOAuthClient(w http.ResponseWriter, r *http.Request, id string)
 
 	// (GET /projects)
 	ListProjects(w http.ResponseWriter, r *http.Request, params ListProjectsParams)
@@ -5656,6 +5691,46 @@ func (siw *ServerInterfaceWrapper) StreamNotifications(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.StreamNotifications(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ApproveOAuth operation middleware
+func (siw *ServerInterfaceWrapper) ApproveOAuth(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApproveOAuth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetOAuthClient operation middleware
+func (siw *ServerInterfaceWrapper) GetOAuthClient(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetOAuthClient(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -7840,6 +7915,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/tokens", wrapper.ListTokens)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/me/tokens", wrapper.CreateToken)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/me/tokens/{id}", wrapper.RevokeToken)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/oauth/clients/{id}", wrapper.GetOAuthClient)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/oauth/approve", wrapper.ApproveOAuth)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/notifications", wrapper.ListNotifications)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/notifications/read", wrapper.MarkNotificationsRead)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/notifications/stream", wrapper.StreamNotifications)

@@ -26,20 +26,21 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 	u, err := s.q.GetUserByEmail(ctx, strings.TrimSpace(in.Email))
-	if errors.Is(err, pgx.ErrNoRows) {
-		auth.CheckPassword(dummyHash, in.Password)
-		writeProblem(w, http.StatusUnauthorized, "invalid_credentials", "Email or password is wrong")
-		return
-	}
-	if err != nil {
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		s.fail(w, r, err)
 		return
 	}
-	if u.LockedUntil != nil && u.LockedUntil.After(s.now()) {
-		writeProblem(w, http.StatusTooManyRequests, "account_locked", "Too many attempts, try again in 15 minutes")
+	// Every outcome below runs exactly one password check and refuses with the same answer.
+	pwHash := dummyHash
+	if err == nil && u.PasswordHash != nil {
+		pwHash = *u.PasswordHash
+	}
+	passwordOK := auth.CheckPassword(pwHash, in.Password) && err == nil && u.PasswordHash != nil
+	if err != nil || (u.LockedUntil != nil && u.LockedUntil.After(s.now())) {
+		writeProblem(w, http.StatusUnauthorized, "invalid_credentials", "Email or password is wrong")
 		return
 	}
-	if u.DisabledAt != nil || u.PasswordHash == nil || !auth.CheckPassword(*u.PasswordHash, in.Password) {
+	if u.DisabledAt != nil || !passwordOK {
 		err := s.inTx(ctx, func(q *db.Queries) error {
 			if err := q.RecordLoginFailure(ctx, u.ID); err != nil {
 				return err

@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -94,5 +95,52 @@ func TestRateLimitsRetry(t *testing.T) {
 	var apiErr *llm.APIError
 	if _, err := llm.New(fake.BaseURL(), "m", "", nil).Embed(context.Background(), []string{"x"}); !errors.As(err, &apiErr) || apiErr.Status != 503 {
 		t.Fatalf("a stopped server: %v", err)
+	}
+}
+
+// A redirect is not followed, so the key goes only to the base URL it was given.
+func TestRedirectsAreNotFollowed(t *testing.T) {
+	var auth atomic.Value
+	other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth.Store(r.Header.Get("Authorization"))
+	}))
+	defer other.Close()
+	moved := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, other.URL+r.URL.Path, http.StatusFound)
+	}))
+	defer moved.Close()
+	for _, hc := range []*http.Client{nil, {}} {
+		_, err := llm.New(moved.URL+"/v1", "bge-m3", "sk-local", hc).Models(context.Background())
+		var apiErr *llm.APIError
+		if !errors.As(err, &apiErr) || apiErr.Status != http.StatusFound || auth.Load() != nil {
+			t.Fatalf("a redirect: %v, the other host saw %v", err, auth.Load())
+		}
+	}
+}
+
+// An error names the status, never the server's own words; APIError.Body keeps
+// them for the server's use.
+func TestErrorsLeaveOutTheServersAnswer(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/models" {
+			http.Error(w, "SECRET", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		io.WriteString(w, "data: {\"error\":{\"message\":\"SECRET\"}}\n\n")
+	}))
+	defer srv.Close()
+	c := llm.New(srv.URL+"/v1", "m", "", nil)
+	_, err := c.Models(context.Background())
+	var apiErr *llm.APIError
+	if !errors.As(err, &apiErr) || apiErr.Body != "SECRET" || strings.Contains(err.Error(), "SECRET") {
+		t.Fatalf("a 500: %v", err)
+	}
+	r, err := c.ChatStream(context.Background(), llm.ChatRequest{})
+	if err == nil {
+		_, err = io.ReadAll(r)
+	}
+	if err == nil || strings.Contains(err.Error(), "SECRET") {
+		t.Fatalf("an error in the stream: %v", err)
 	}
 }

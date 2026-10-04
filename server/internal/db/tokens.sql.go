@@ -92,7 +92,7 @@ func (q *Queries) GetAPITokenUser(ctx context.Context, tokenHash []byte) (GetAPI
 }
 
 const getIdempotentTicket = `-- name: GetIdempotentTicket :one
-SELECT t.key FROM idempotency_keys k JOIN tickets t ON t.id = k.ticket_id
+SELECT t.key, t.project_id, t.client_id FROM idempotency_keys k JOIN tickets t ON t.id = k.ticket_id
 WHERE k.user_id = $1 AND k.key = $2 AND k.created_at > now() - interval '24 hours'
 `
 
@@ -101,11 +101,17 @@ type GetIdempotentTicketParams struct {
 	Key    string
 }
 
-func (q *Queries) GetIdempotentTicket(ctx context.Context, arg GetIdempotentTicketParams) (string, error) {
+type GetIdempotentTicketRow struct {
+	Key       string
+	ProjectID int64
+	ClientID  *int64
+}
+
+func (q *Queries) GetIdempotentTicket(ctx context.Context, arg GetIdempotentTicketParams) (GetIdempotentTicketRow, error) {
 	row := q.db.QueryRow(ctx, getIdempotentTicket, arg.UserID, arg.Key)
-	var key string
-	err := row.Scan(&key)
-	return key, err
+	var i GetIdempotentTicketRow
+	err := row.Scan(&i.Key, &i.ProjectID, &i.ClientID)
+	return i, err
 }
 
 const listAPITokens = `-- name: ListAPITokens :many
@@ -193,6 +199,16 @@ func (q *Queries) RevokeAPIToken(ctx context.Context, arg RevokeAPITokenParams) 
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const revokeUserAPITokens = `-- name: RevokeUserAPITokens :exec
+UPDATE api_tokens SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL
+`
+
+// A password reset or change ends every token the user holds.
+func (q *Queries) RevokeUserAPITokens(ctx context.Context, userID int64) error {
+	_, err := q.db.Exec(ctx, revokeUserAPITokens, userID)
+	return err
 }
 
 const saveIdempotencyKey = `-- name: SaveIdempotencyKey :exec

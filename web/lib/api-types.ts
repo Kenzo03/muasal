@@ -190,6 +190,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/oauth/clients/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** @description A registered MCP client, for the approval page. Needs a signed-in browser session (MCP spec). */
+        get: operations["getOAuthClient"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/oauth/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description The signed-in user allows or denies an MCP client. Allow stores a one-time code for 10 minutes. The answer is where the browser goes next. Needs a browser session: a token can't approve more tokens. */
+        post: operations["approveOAuth"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/notifications": {
         parameters: {
             query?: never;
@@ -269,6 +305,7 @@ export interface paths {
         };
         get: operations["listUsers"];
         put?: never;
+        /** @description Creating any user needs a signed-in session; a token answers 403 session_required. */
         post: operations["createUser"];
         delete?: never;
         options?: never;
@@ -289,6 +326,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /** @description Making a user an admin needs a signed-in session (403 session_required). */
         patch: operations["updateUser"];
         trace?: never;
     };
@@ -301,7 +339,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Resets the password; the old one stops working and every session ends. */
+        /** @description Resets the password; the old one stops working and every session and API token ends. Needs a signed-in session (403 session_required). */
         post: operations["createSetupLink"];
         delete?: never;
         options?: never;
@@ -1862,6 +1900,8 @@ export interface components {
             code: string | null;
             aliases: string[];
             archived: boolean;
+            /** @description Keys of the projects linked to this client. Only GET /clients fills it. */
+            projects?: string[];
         };
         ClientList: {
             items: components["schemas"]["Client"][];
@@ -2824,6 +2864,24 @@ export interface components {
              */
             expires_on?: string;
         };
+        OAuthClient: {
+            id: string;
+            name: string;
+            redirect_uris: string[];
+        };
+        OAuthApprove: {
+            client_id: string;
+            redirect_uri: string;
+            code_challenge: string;
+            code_challenge_method: string;
+            state?: string;
+            resource?: string;
+            read_only: boolean;
+            allow: boolean;
+        };
+        OAuthRedirect: {
+            redirect_url: string;
+        };
         APITokenCreated: components["schemas"]["APIToken"] & {
             /** @description The secret, e.g. msl_…; shown once. */
             token: string;
@@ -3161,9 +3219,8 @@ export interface components {
         AIProbe: {
             ok: boolean;
             latency_ms: number;
-            error?: string;
             /**
-             * @description The failure's likely cause, which the page says in plain words above the raw error (MSL-31).
+             * @description The failure's likely cause, which the page says in plain words (MSL-31). The server's own answer is never returned.
              * @enum {string}
              */
             reason?: "unknown_host" | "refused" | "timeout" | "tls" | "unauthorized" | "not_found" | "no_model";
@@ -3797,6 +3854,54 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getOAuthClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The client. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthClient"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    approveOAuth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OAuthApprove"];
+            };
+        };
+        responses: {
+            /** @description The client's redirect URI with a code, or with error=access_denied. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthRedirect"];
+                };
             };
             default: components["responses"]["Problem"];
         };
@@ -5065,7 +5170,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /** @description A retry with the same key within 24 hours returns the ticket the first request created (200, with Idempotent-Replayed true) instead of a second ticket (FSD §17.1). */
+                /** @description A retry with the same key within 24 hours returns the ticket the first request created (200, with Idempotent-Replayed true) instead of a second ticket (FSD §17.1). A key whose ticket is in another project, or outside the caller's clients, answers 409 idempotency_conflict. */
                 "Idempotency-Key"?: string;
             };
             path: {

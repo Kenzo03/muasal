@@ -73,4 +73,10 @@ export default async function globalSetup() {
   const bell = createAdmin("Bell Admin");
   process.env.E2E_BELL_ADMIN_EMAIL = bell.email;
   process.env.E2E_BELL_ADMIN_LINK = bell.link;
+  const admin2 = createAdmin("Admin Screens");
+  process.env.E2E_ADMIN2_EMAIL = admin2.email;
+  process.env.E2E_ADMIN2_LINK = admin2.link;
+  const mcp = createAdmin("MCP Admin");
+  process.env.E2E_MCP_ADMIN_EMAIL = mcp.email;
+  process.env.E2E_MCP_ADMIN_LINK = mcp.link;
 }

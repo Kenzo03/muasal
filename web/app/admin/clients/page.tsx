@@ -13,6 +13,7 @@ export default async function ClientsPage() {
     <>
       <PageBar>
         <h1 className="text-base font-semibold">{t("title")}</h1>
+        {me.is_admin && <span className="inline-flex h-6 items-center rounded-full bg-[#EFE9E2] px-2.5 text-[12.5px] font-extrabold text-ink-soft">{data?.items.length ?? 0}</span>}
       </PageBar>
       <main className="mx-auto max-w-6xl p-4 md:p-5">
         {me.is_admin ? <ClientsAdmin clients={data?.items ?? []} /> : <p className="text-muted">{t("adminsOnly")}</p>}

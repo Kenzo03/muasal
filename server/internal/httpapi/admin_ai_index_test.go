@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -109,14 +110,14 @@ func TestFailedIndexJobsCanBeRetried(t *testing.T) {
 	e.startWorkers()
 	e.call(admin, http.MethodPut, "/admin/settings/ai", aiUpdate("local", fake.BaseURL()), nil)
 	tk := e.seedTicket(w.p, w.pmUser, "Overtime cap of 40 hours", &w.a, w.ot)
-	fake.Set(func(s *llmtest.Server) { s.Down = true })
+	fake.Set(func(s *llmtest.Server) { s.Down, s.DownBody = true, "SECRET" })
 	if _, err := e.d.Pool.Exec(context.Background(), `INSERT INTO river_job (args, kind, max_attempts, queue, state)
 		VALUES (jsonb_build_object('ticket_id', $1::bigint), 'index_ticket', 1, 'index', 'available')`, tk.ID); err != nil {
 		t.Fatal(err)
 	}
 	e.eventually("the job to fail for good", func() bool { return len(e.status(admin).FailedJobs) == 1 })
 	st := e.status(admin)
-	if f := st.FailedJobs[0]; f.TicketId != tk.ID || f.Attempts != 1 || f.Error == "" {
+	if f := st.FailedJobs[0]; f.TicketId != tk.ID || f.Attempts != 1 || f.Error == "" || strings.Contains(f.Error, "SECRET") {
 		t.Fatalf("failed job: %+v", f)
 	}
 	fake.Set(func(s *llmtest.Server) { s.Down = false })

@@ -186,4 +186,15 @@ func TestChangeSummary(t *testing.T) {
 	if e.call(w.pm, http.MethodGet, "/summaries?project=HRIS", nil, &list); len(list.Items) != 1 || list.Items[0].Title != "Edited" {
 		t.Fatalf("creator's list: %+v", list)
 	}
+	// A creator who left the project no longer reads, edits or lists it.
+	e.exec("DELETE FROM memberships WHERE user_id = $1 AND project_id = $2", w.pmUser.ID, w.p.ID)
+	if code := e.call(w.pm, http.MethodGet, path, nil, nil); code != http.StatusNotFound {
+		t.Fatalf("a removed creator read it: %d", code)
+	}
+	if code := e.call(w.pm, http.MethodPatch, path, map[string]any{"title": "Mine", "markdown": "# Mine"}, nil); code != http.StatusNotFound {
+		t.Fatalf("a removed creator edited it: %d", code)
+	}
+	if e.call(w.pm, http.MethodGet, "/summaries", nil, &list); len(list.Items) != 0 {
+		t.Fatalf("a removed creator's list: %+v", list)
+	}
 }

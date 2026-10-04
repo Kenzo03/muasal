@@ -4,6 +4,7 @@
 package llmtest
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
@@ -24,6 +25,7 @@ type Server struct {
 	Dim          int                                                      // embedding dimension, 1024 by default
 	Answer       func(system, user string, schema json.RawMessage) string // the chat answer's text
 	Down         bool                                                     // answer every call with 503
+	DownBody     string                                                   // the 503's body, "model server stopped" by default
 	RejectSchema bool                                                     // answer json_schema requests with 400
 	Key          string                                                   // when set, require "Bearer <Key>"
 	Missing      string                                                   // a model this server lacks: 404 as Ollama says it
@@ -61,10 +63,10 @@ func (s *Server) Set(f func(s *Server)) {
 
 func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
-	down, key, dim, answer, reject, missing := s.Down, s.Key, s.Dim, s.Answer, s.RejectSchema, s.Missing
+	down, downBody, key, dim, answer, reject, missing := s.Down, s.DownBody, s.Key, s.Dim, s.Answer, s.RejectSchema, s.Missing
 	s.mu.Unlock()
 	if down {
-		http.Error(w, "model server stopped", http.StatusServiceUnavailable)
+		http.Error(w, cmp.Or(downBody, "model server stopped"), http.StatusServiceUnavailable)
 		return
 	}
 	if key != "" && r.Header.Get("Authorization") != "Bearer "+key {

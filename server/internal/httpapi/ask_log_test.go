@@ -133,6 +133,27 @@ func TestAuditLogFiltersAndExports(t *testing.T) {
 	}
 }
 
+// Names and other free text in the audit export stay text in a spreadsheet.
+func TestAuditExportKeepsFormulasAsText(t *testing.T) {
+	e := newEnv(t)
+	admin, _ := e.signedIn("admin@example.com", true)
+	e.exec("UPDATE users SET name = '=HYPERLINK(1)' WHERE email = 'admin@example.com'")
+	if code := e.call(admin, http.MethodPost, "/clients", map[string]any{"name": "=SUM(1)"}, nil); code != http.StatusCreated {
+		t.Fatalf("client: %d", code)
+	}
+	req, _ := http.NewRequest(http.MethodGet, e.url+"/api/v1/admin/audit/export?entity=client", nil)
+	resp, err := admin.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	rows, err := csv.NewReader(strings.NewReader(string(body))).ReadAll()
+	if err != nil || len(rows) != 2 || rows[1][2] != "'=HYPERLINK(1)" || rows[1][10] != "'=SUM(1)" {
+		t.Fatalf("export: %v %q", err, body)
+	}
+}
+
 // §10.2: one click removes a detected chip and re-runs the question; the
 // request names the chips to leave out, so detection does not bring them back.
 func TestRemovedDetectedChipsStayOff(t *testing.T) {

@@ -309,6 +309,24 @@ type Notification struct {
 	EmailedAt *time.Time
 }
 
+type OauthClient struct {
+	ID           string
+	Name         string
+	RedirectUris []string
+	CreatedAt    time.Time
+}
+
+type OauthCode struct {
+	CodeHash      []byte
+	ClientID      string
+	UserID        int64
+	RedirectUri   string
+	CodeChallenge string
+	ReadOnly      bool
+	ExpiresAt     time.Time
+	UsedAt        *time.Time
+}
+
 type Project struct {
 	ID          int64
 	Key         string

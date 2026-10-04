@@ -33,8 +33,10 @@ func (s *Server) GetTicketActivity(w http.ResponseWriter, r *http.Request, key s
 		return
 	}
 	items := make([]ActivityItem, 0, len(comments)+len(events))
+	live := map[int64]bool{}
 	for _, c := range comments {
 		items = append(items, commentItem(c.Comment, c.AuthorName, pc.user.IsAdmin))
+		live[c.Comment.ID] = c.Comment.DeletedAt == nil
 	}
 	for _, ev := range events {
 		item := ActivityItem{Kind: ActivityItemKindEvent, At: ev.OccurredAt, Action: &ev.Action}
@@ -45,6 +47,10 @@ func (s *Server) GetTicketActivity(w http.ResponseWriter, r *http.Request, key s
 		if err := json.Unmarshal(ev.Changes, &changes); err != nil {
 			s.fail(w, r, err)
 			return
+		}
+		// An edit keeps the earlier text (AC-TK-6) only while its comment is live.
+		if id, _ := changes["comment_id"].(float64); ev.Action == "comment_edit" && !pc.user.IsAdmin && !live[int64(id)] {
+			delete(changes, "body")
 		}
 		item.Changes = &changes
 		items = append(items, item)

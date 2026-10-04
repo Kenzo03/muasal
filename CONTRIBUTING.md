@@ -38,7 +38,7 @@ make e2e         # Playwright against a running `make up` stack
 - `web/`: Next.js, which only renders; every request goes through the Go API.
   - Strings live in `messages/id.json` (the default) and `messages/en.json`.
 - `deploy/`: Compose files, the installer, backups and the load test.
-- `docs/`: the documentation site. `docs/superpowers/plans/` holds each iteration's plan with its deliberate deviations from the FSD.
+- `docs/`: the documentation site.
 
 ## Rules we keep
 

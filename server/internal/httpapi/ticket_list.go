@@ -194,7 +194,7 @@ func (s *Server) writeTicketsCSV(w http.ResponseWriter, r *http.Request, pc proj
 			due = t.DueDate.Format(time.DateOnly)
 		}
 		_ = cw.Write([]string{
-			t.Key, csvSafe(t.Title), t.Type, statusName[t.StatusID], csvSafe(deref(t.ClientName)), csvSafe(deref(t.AssigneeName)),
+			t.Key, csvSafe(t.Title), csvSafe(t.Type), csvSafe(statusName[t.StatusID]), csvSafe(deref(t.ClientName)), csvSafe(deref(t.AssigneeName)),
 			csvSafe(t.RequesterName), csvSafe(strings.Join(t.NodeNames, "; ")), t.Priority, t.UpdatedAt.UTC().Format(time.RFC3339), due,
 			strconv.FormatBool(t.MissingReason),
 		})

@@ -38,7 +38,7 @@ func (s *Server) ListUsers(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
 	admin := s.requireAdmin(w, r)
-	if admin == nil {
+	if admin == nil || !needSession(w, r) {
 		return
 	}
 	var in UserCreate
@@ -103,6 +103,9 @@ func (s *Server) UpdateUser(w http.ResponseWriter, r *http.Request, id int64) {
 	if !decodeJSON(w, r, &in) {
 		return
 	}
+	if in.IsAdmin != nil && *in.IsAdmin && !needSession(w, r) {
+		return
+	}
 	if id == admin.ID && ((in.Disabled != nil && *in.Disabled) || (in.IsAdmin != nil && !*in.IsAdmin)) {
 		writeProblem(w, http.StatusUnprocessableEntity, "cannot_change_self", "You cannot disable yourself or remove your own admin role")
 		return
@@ -128,6 +131,9 @@ func (s *Server) UpdateUser(w http.ResponseWriter, r *http.Request, id int64) {
 				if err := q.DeleteUserSessions(ctx, id); err != nil {
 					return err
 				}
+				if err := q.VoidSetupTokens(ctx, id); err != nil {
+					return err
+				}
 			}
 		}
 		return audit(ctx, q, webMeta(r), &admin.ID, "user", id, "update", in)
@@ -144,10 +150,10 @@ func (s *Server) UpdateUser(w http.ResponseWriter, r *http.Request, id int64) {
 }
 
 // CreateSetupLink resets a password: the old one stops working, every session
-// ends, and a new one-time link is returned (FSD §15.1).
+// and API token ends, and a new one-time link is returned (FSD §15.1).
 func (s *Server) CreateSetupLink(w http.ResponseWriter, r *http.Request, id int64) {
 	admin := s.requireAdmin(w, r)
-	if admin == nil {
+	if admin == nil || !needSession(w, r) {
 		return
 	}
 	ctx := r.Context()
@@ -162,6 +168,9 @@ func (s *Server) CreateSetupLink(w http.ResponseWriter, r *http.Request, id int6
 			return err
 		}
 		if err := q.DeleteUserSessions(ctx, id); err != nil {
+			return err
+		}
+		if err := q.RevokeUserAPITokens(ctx, id); err != nil {
 			return err
 		}
 		if link, err = s.issueSetupLink(ctx, q, id); err != nil {
@@ -181,18 +190,43 @@ func (s *Server) CreateSetupLink(w http.ResponseWriter, r *http.Request, id int6
 	writeJSON(w, http.StatusCreated, link)
 }
 
+// allowSetup applies the per-IP limit shared by the setup-link endpoints.
+func (s *Server) allowSetup(w http.ResponseWriter, r *http.Request) bool {
+	if !s.setupIP.Allow(clientIP(r)) {
+		writeProblem(w, http.StatusTooManyRequests, "rate_limited", "Too many setup attempts from this address; wait a minute")
+		return false
+	}
+	return true
+}
+
+func setupLinkInvalid(w http.ResponseWriter) {
+	writeProblem(w, http.StatusGone, "setup_link_invalid", "This link has expired or was already used. Ask your admin for a new one.")
+}
+
 // SetupPassword redeems a one-time setup link.
 func (s *Server) SetupPassword(w http.ResponseWriter, r *http.Request) {
 	var in SetupRequest
 	if !decodeJSON(w, r, &in) {
 		return
 	}
+	if !s.allowSetup(w, r) {
+		return
+	}
 	if err := auth.CheckPolicy(in.Password); err != nil {
 		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields", passwordField("password", err))
 		return
 	}
-	hash := auth.HashPassword(in.Password)
 	ctx := r.Context()
+	// Check the link before the slow hash; UseSetupToken below still settles a race.
+	if _, err := s.q.GetSetupTokenUser(ctx, auth.HashToken(in.Token)); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			setupLinkInvalid(w)
+		} else {
+			s.fail(w, r, err)
+		}
+		return
+	}
+	hash := auth.HashPassword(in.Password)
 	err := s.inTx(ctx, func(q *db.Queries) error {
 		userID, err := q.UseSetupToken(ctx, auth.HashToken(in.Token))
 		if err != nil {
@@ -204,10 +238,13 @@ func (s *Server) SetupPassword(w http.ResponseWriter, r *http.Request) {
 		if err := q.DeleteUserSessions(ctx, userID); err != nil {
 			return err
 		}
+		if err := q.RevokeUserAPITokens(ctx, userID); err != nil {
+			return err
+		}
 		return audit(ctx, q, webMeta(r), &userID, "user", userID, "set_password", nil)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		writeProblem(w, http.StatusGone, "setup_link_invalid", "This link has expired or was already used. Ask your admin for a new one.")
+		setupLinkInvalid(w)
 		return
 	}
 	if err != nil {
@@ -224,9 +261,12 @@ func (s *Server) GetSetupAccount(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &in) {
 		return
 	}
+	if !s.allowSetup(w, r) {
+		return
+	}
 	u, err := s.q.GetSetupTokenUser(r.Context(), auth.HashToken(in.Token))
 	if errors.Is(err, pgx.ErrNoRows) {
-		writeProblem(w, http.StatusGone, "setup_link_invalid", "This link has expired or was already used. Ask your admin for a new one.")
+		setupLinkInvalid(w)
 		return
 	}
 	if err != nil {
@@ -283,8 +323,12 @@ func (s *Server) UpdateMe(w http.ResponseWriter, r *http.Request) {
 			if err := q.SetPasswordHash(ctx, db.SetPasswordHashParams{ID: u.ID, PasswordHash: newHash}); err != nil {
 				return err
 			}
-			// Other devices sign out; this one stays signed in (FSD §18.2).
+			// Other devices sign out and API tokens end; this session stays
+			// signed in (FSD §18.2).
 			if err := q.DeleteOtherSessions(ctx, db.DeleteOtherSessionsParams{UserID: u.ID, TokenHash: currentSessionHash(r)}); err != nil {
+				return err
+			}
+			if err := q.RevokeUserAPITokens(ctx, u.ID); err != nil {
 				return err
 			}
 			changes["password"] = "changed"

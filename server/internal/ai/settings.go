@@ -108,7 +108,8 @@ func (s Settings) Validate() []Problem {
 		name string
 		ep   Endpoint
 	}{{"chat", s.Chat}, {"embed", s.Embed}} {
-		if u, err := url.Parse(e.ep.URL); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		if u, err := url.Parse(e.ep.URL); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" ||
+			u.RawQuery != "" || u.ForceQuery || u.Fragment != "" {
 			p = append(p, Problem{e.name + ".url", "invalid", "Enter the API's base URL, e.g. http://model:11434/v1"})
 		}
 		if strings.TrimSpace(e.ep.Model) == "" {
@@ -143,6 +144,15 @@ func (s Settings) Validate() []Problem {
 		}
 	}
 	return p
+}
+
+// SameServer reports whether two endpoint URLs share scheme, host and port,
+// so a key saved for one may go to the other.
+func SameServer(a, b string) bool {
+	ua, errA := url.Parse(a)
+	ub, errB := url.Parse(b)
+	return errA == nil && errB == nil && ua.Host != "" &&
+		strings.EqualFold(ua.Scheme, ub.Scheme) && strings.EqualFold(ua.Host, ub.Host)
 }
 
 // Badge names the chat model as answers show it (§10.3): "Local · qwen3.5:4b"

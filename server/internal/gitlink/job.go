@@ -48,7 +48,8 @@ func (w *Worker) Work(ctx context.Context, job *river.Job[ProcessDelivery]) erro
 // Process links a delivery's commits and merge request to the tickets their
 // messages, titles, descriptions and branches name, re-indexes those tickets
 // (queued by index) and drops the delivery, all in one transaction. A ticket
-// key counts only when the ticket exists. Re-deliveries change nothing.
+// key counts only when the ticket exists in the repository's project.
+// Re-deliveries change nothing.
 func Process(ctx context.Context, pool *pgxpool.Pool, deliveryID int64, index func(context.Context, pgx.Tx, []int64) error) error {
 	return pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error {
 		q := db.New(tx)
@@ -65,7 +66,7 @@ func Process(ctx context.Context, pool *pgxpool.Pool, deliveryID int64, index fu
 		}
 		var touched []int64
 		for _, c := range commits {
-			ids, err := q.TicketIDsByKeys(ctx, Keys(c.Message, branch))
+			ids, err := q.TicketIDsByKeys(ctx, db.TicketIDsByKeysParams{ProjectID: d.ProjectID, Keys: Keys(c.Message, branch)})
 			if err != nil {
 				return err
 			}
@@ -92,12 +93,12 @@ func Process(ctx context.Context, pool *pgxpool.Pool, deliveryID int64, index fu
 				}
 				touched = append(touched, id)
 			}
-			if err := moveFixed(ctx, q, c); err != nil {
+			if err := moveFixed(ctx, q, d.ProjectID, c); err != nil {
 				return err
 			}
 		}
 		if mr != nil && mr.Number > 0 {
-			ids, err := q.TicketIDsByKeys(ctx, Keys(mr.Title, mr.Body, mr.Branch))
+			ids, err := q.TicketIDsByKeys(ctx, db.TicketIDsByKeysParams{ProjectID: d.ProjectID, Keys: Keys(mr.Title, mr.Body, mr.Branch)})
 			if err != nil {
 				return err
 			}
@@ -126,13 +127,14 @@ func Process(ctx context.Context, pool *pgxpool.Pool, deliveryID int64, index fu
 }
 
 // moveFixed moves the tickets a commit says it fixes to review (MSL-29), with
-// an audit event, so the ticket's history says the commit did it.
-func moveFixed(ctx context.Context, q *db.Queries, c Commit) error {
+// an audit event, so the ticket's history says the commit did it. Only
+// tickets in projectID move.
+func moveFixed(ctx context.Context, q *db.Queries, projectID int64, c Commit) error {
 	keys := Fixes(c.Message)
 	if len(keys) == 0 {
 		return nil
 	}
-	moved, err := q.MoveFixedTickets(ctx, keys)
+	moved, err := q.MoveFixedTickets(ctx, db.MoveFixedTicketsParams{ProjectID: projectID, Keys: keys})
 	if err != nil {
 		return err
 	}

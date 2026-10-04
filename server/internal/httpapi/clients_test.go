@@ -86,3 +86,53 @@ func TestLinkingClientsToAProject(t *testing.T) {
 		t.Fatalf("failed updates must change nothing: %d %+v", code, list)
 	}
 }
+
+// The admin list names the projects using each client, in key order; an
+// unlinked client gets an empty list, never null.
+func TestClientListNamesTheirProjects(t *testing.T) {
+	e := newEnv(t)
+	a, b := e.seedClient("Client A"), e.seedClient("Client B")
+	e.seedProject("PAY", a)
+	e.seedProject("HRIS", a)
+	admin, _ := e.signedIn("admin@example.com", true)
+	var list httpapi.ClientList
+	if code := e.call(admin, http.MethodGet, "/clients", nil, &list); code != http.StatusOK || len(list.Items) != 2 {
+		t.Fatalf("list: %d %+v", code, list)
+	}
+	byName := map[string]httpapi.Client{}
+	for _, c := range list.Items {
+		byName[c.Name] = c
+	}
+	if got := byName[a.Name].Projects; got == nil || !slices.Equal(*got, []string{"HRIS", "PAY"}) {
+		t.Fatalf("Client A projects: %v", got)
+	}
+	if got := byName[b.Name].Projects; got == nil || len(*got) != 0 {
+		t.Fatalf("Client B projects: %v", got)
+	}
+	var linked httpapi.ClientList
+	if code := e.call(admin, http.MethodGet, "/projects/HRIS/clients", nil, &linked); code != http.StatusOK || linked.Items[0].Projects != nil {
+		t.Fatalf("project clients must not carry projects: %d %+v", code, linked)
+	}
+}
+
+func TestClientListShowsOnlyTheCallersProjects(t *testing.T) {
+	e := newEnv(t)
+	a := e.seedClient("Client A")
+	e.seedProject("PAY", a)
+	hris := e.seedProject("HRIS", a)
+	pa, u := e.signedIn("pa@example.com", false)
+	e.seedMember(u, hris, "admin")
+	admin, _ := e.signedIn("admin@example.com", true)
+	for _, tc := range []struct {
+		who  *http.Client
+		want []string
+	}{{pa, []string{"HRIS"}}, {admin, []string{"HRIS", "PAY"}}} {
+		var list httpapi.ClientList
+		if code := e.call(tc.who, http.MethodGet, "/clients", nil, &list); code != http.StatusOK || len(list.Items) != 1 {
+			t.Fatalf("list: %d %+v", code, list)
+		}
+		if got := list.Items[0].Projects; got == nil || !slices.Equal(*got, tc.want) {
+			t.Fatalf("projects: %v, want %v", got, tc.want)
+		}
+	}
+}

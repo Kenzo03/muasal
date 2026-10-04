@@ -143,6 +143,9 @@ func (e *Engine) Ask(ctx context.Context, r Request, sink Sink) (Result, error) 
 		if err != nil {
 			return Result{}, err
 		}
+		if found, err = e.recheck(ctx, r.Asker, found); err != nil {
+			return Result{}, err
+		}
 		if res.Results, err = e.items(ctx, found.Refs, 12); err != nil {
 			return Result{}, err
 		}
@@ -167,6 +170,9 @@ func (e *Engine) Ask(ctx context.Context, r Request, sink Sink) (Result, error) 
 	tuning.EmbedModel = s.Embed.Model
 	found, err := Retrieve(ctx, e.pool, r.Asker, scope, fu.retrieval, vecs[0], keys, tuning)
 	if err != nil {
+		return Result{}, err
+	}
+	if found, err = e.recheck(ctx, r.Asker, found); err != nil {
 		return Result{}, err
 	}
 	logRow.evidence = found
@@ -376,30 +382,53 @@ func (e *Engine) items(ctx context.Context, refs []Ref, n int) ([]Item, error) {
 // asker, only those they may open now are kept (§10.6); without one, all of
 // them (the Ask log, for system admins).
 func (e *Engine) ItemsFor(ctx context.Context, a *Asker, refs []Ref) ([]Item, error) {
-	if a != nil && len(refs) > 0 {
-		tickets, err := e.q.VisibleTicketIDs(ctx, db.VisibleTicketIDsParams{Ids: orEmpty(idsOf(refs, KindTicket)), IsAdmin: a.IsAdmin, UserID: a.UserID})
-		if err != nil {
+	if a != nil {
+		var err error
+		if refs, err = e.visible(ctx, *a, refs); err != nil {
 			return nil, err
 		}
-		notes, err := e.q.VisibleNoteIDs(ctx, db.VisibleNoteIDsParams{Ids: orEmpty(idsOf(refs, KindNote)), IsAdmin: a.IsAdmin, UserID: a.UserID})
-		if err != nil {
-			return nil, err
-		}
-		sections, err := e.q.VisibleSectionIDs(ctx, db.VisibleSectionIDsParams{Ids: orEmpty(idsOf(refs, KindSection)), IsAdmin: a.IsAdmin, UserID: a.UserID})
-		if err != nil {
-			return nil, err
-		}
-		refs = slices.DeleteFunc(slices.Clone(refs), func(r Ref) bool {
-			switch r.Kind {
-			case KindNote:
-				return !slices.Contains(notes, r.ID)
-			case KindSection:
-				return !slices.Contains(sections, r.ID)
-			}
-			return !slices.Contains(tickets, r.ID)
-		})
 	}
 	return e.items(ctx, refs, len(refs))
+}
+
+// visible keeps, in order, the refs the asker may open now. The chunk index
+// can lag a ticket, note or section moving client or project, so retrieval
+// alone does not decide what an answer may show.
+func (e *Engine) visible(ctx context.Context, a Asker, refs []Ref) ([]Ref, error) {
+	if len(refs) == 0 {
+		return refs, nil
+	}
+	tickets, err := e.q.VisibleTicketIDs(ctx, db.VisibleTicketIDsParams{Ids: orEmpty(idsOf(refs, KindTicket)), IsAdmin: a.IsAdmin, UserID: a.UserID})
+	if err != nil {
+		return nil, err
+	}
+	notes, err := e.q.VisibleNoteIDs(ctx, db.VisibleNoteIDsParams{Ids: orEmpty(idsOf(refs, KindNote)), IsAdmin: a.IsAdmin, UserID: a.UserID})
+	if err != nil {
+		return nil, err
+	}
+	sections, err := e.q.VisibleSectionIDs(ctx, db.VisibleSectionIDsParams{Ids: orEmpty(idsOf(refs, KindSection)), IsAdmin: a.IsAdmin, UserID: a.UserID})
+	if err != nil {
+		return nil, err
+	}
+	return slices.DeleteFunc(slices.Clone(refs), func(r Ref) bool {
+		switch r.Kind {
+		case KindNote:
+			return !slices.Contains(notes, r.ID)
+		case KindSection:
+			return !slices.Contains(sections, r.ID)
+		}
+		return !slices.Contains(tickets, r.ID)
+	}), nil
+}
+
+// recheck drops from found what the asker may not open now.
+func (e *Engine) recheck(ctx context.Context, a Asker, found Found) (Found, error) {
+	var err error
+	if found.Refs, err = e.visible(ctx, a, found.Refs); err != nil {
+		return found, err
+	}
+	found.Closest, err = e.visible(ctx, a, found.Closest)
+	return found, err
 }
 
 func itemOf(ev Evidence) Item {

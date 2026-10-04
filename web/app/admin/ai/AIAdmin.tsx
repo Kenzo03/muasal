@@ -215,9 +215,6 @@ export default function AIAdmin({ settings, status }: { settings: AISettings; st
               {test[k].models && <span className="text-muted">{t("models")}: {test[k].models!.join(", ")}</span>}
               {test[k].dim && <span className="text-muted">{t("dimension", { dim: test[k].dim! })}</span>}
               {test[k].reason && <span className="text-danger">{t(`reasons.${test[k].reason!}`)}</span>}
-              {test[k].error && (
-                <span className={cx("break-all", test[k].reason ? "font-mono text-xs text-muted" : "text-danger")}>{test[k].error}</span>
-              )}
             </div>
           ))}
         </section>

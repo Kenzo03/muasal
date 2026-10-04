@@ -52,24 +52,46 @@ func (q *Queries) GetClient(ctx context.Context, id int64) (Client, error) {
 }
 
 const listClients = `-- name: ListClients :many
-SELECT id, name, code, aliases, archived_at FROM clients ORDER BY lower(name), id
+SELECT c.id, c.name, c.code, c.aliases, c.archived_at,
+       coalesce(array_agg(p.key ORDER BY p.key) FILTER (WHERE p.key IS NOT NULL), '{}')::text[] AS projects
+FROM clients c
+LEFT JOIN project_clients pc ON pc.client_id = c.id
+LEFT JOIN projects p ON p.id = pc.project_id
+  AND ($1::bool
+       OR EXISTS (SELECT 1 FROM memberships m WHERE m.project_id = p.id AND m.user_id = $2))
+GROUP BY c.id
+ORDER BY lower(c.name), c.id
 `
 
-func (q *Queries) ListClients(ctx context.Context) ([]Client, error) {
-	rows, err := q.db.Query(ctx, listClients)
+type ListClientsParams struct {
+	IsAdmin bool
+	UserID  int64
+}
+
+type ListClientsRow struct {
+	Client   Client
+	Projects []string
+}
+
+// The admin list (GET /clients): each client with the keys of the projects
+// linked to it, in key order; none gives an empty array. Unless the caller is
+// a system admin, only projects the caller belongs to are listed.
+func (q *Queries) ListClients(ctx context.Context, arg ListClientsParams) ([]ListClientsRow, error) {
+	rows, err := q.db.Query(ctx, listClients, arg.IsAdmin, arg.UserID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Client
+	var items []ListClientsRow
 	for rows.Next() {
-		var i Client
+		var i ListClientsRow
 		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Code,
-			&i.Aliases,
-			&i.ArchivedAt,
+			&i.Client.ID,
+			&i.Client.Name,
+			&i.Client.Code,
+			&i.Client.Aliases,
+			&i.Client.ArchivedAt,
+			&i.Projects,
 		); err != nil {
 			return nil, err
 		}

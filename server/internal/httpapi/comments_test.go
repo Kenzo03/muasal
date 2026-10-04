@@ -115,3 +115,50 @@ func TestActivityInterleavesCommentsAndHistory(t *testing.T) {
 		t.Fatalf("activity: %v", kinds)
 	}
 }
+
+// FSD §8.7: once a comment is deleted, its edits no longer carry its text for
+// readers other than system admins, nor does an edit of a comment not on the
+// ticket; Home's latest change never carries it.
+func TestDeletedCommentsLeaveNoTextInTheirEdits(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	admin, _ := e.signedIn("admin@example.com", true)
+	tk := e.seedTicket(w.p, w.pmUser, "Overtime export", &w.a)
+	var c httpapi.ActivityItem
+	e.call(w.pm, http.MethodPost, "/tickets/"+tk.Key+"/comments", map[string]any{"body": "Salary of Budi is 9m"}, &c)
+	path := fmt.Sprintf("/comments/%d", *c.CommentId)
+	if code := e.call(w.pm, http.MethodPatch, path, map[string]any{"body": "Budi confirmed"}, nil); code != http.StatusOK {
+		t.Fatalf("edit: %d", code)
+	}
+	for _, reader := range []*http.Client{w.pm, admin} {
+		var home httpapi.RecentTicketList
+		e.call(reader, http.MethodGet, "/me/updates", nil, &home)
+		if len(home.Items) != 1 || home.Items[0].Change == nil || home.Items[0].Change.Changes == nil {
+			t.Fatalf("home: %+v", home.Items)
+		} else if _, ok := (*home.Items[0].Change.Changes)["body"]; ok {
+			t.Fatalf("home carries the text: %+v", *home.Items[0].Change.Changes)
+		}
+	}
+	e.exec(`INSERT INTO audit_events (actor_id, via, entity, entity_id, project_id, action, changes)
+		VALUES ($1, 'web', 'ticket', $2, $3, 'comment_edit', '{"comment_id": 999999, "body": {"old": "x", "new": "y"}}')`, w.pmUser.ID, tk.ID, w.p.ID)
+	if code := e.call(w.pm, http.MethodDelete, path, nil, nil); code != http.StatusNoContent {
+		t.Fatalf("delete: %d", code)
+	}
+	for _, reader := range []struct {
+		c       *http.Client
+		readsIt bool
+	}{{w.pm, false}, {admin, true}} {
+		edits := 0
+		for _, it := range activity(e, reader.c, tk.Key) {
+			if it.Action != nil && *it.Action == "comment_edit" {
+				edits++
+				if _, ok := (*it.Changes)["body"]; ok != reader.readsIt {
+					t.Errorf("edit of a deleted comment (admin %v): %+v", reader.readsIt, *it.Changes)
+				}
+			}
+		}
+		if edits != 2 {
+			t.Errorf("edits: %d", edits)
+		}
+	}
+}

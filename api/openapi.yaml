@@ -212,6 +212,40 @@ paths:
       responses:
         "204": { description: Revoked. }
         default: { $ref: "#/components/responses/Problem" }
+  /oauth/clients/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getOAuthClient
+      tags: [oauth]
+      description: A registered MCP client, for the approval page. Needs a signed-in browser session (MCP spec).
+      responses:
+        "200":
+          description: The client.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OAuthClient" }
+        default: { $ref: "#/components/responses/Problem" }
+  /oauth/approve:
+    post:
+      operationId: approveOAuth
+      tags: [oauth]
+      description: >
+        The signed-in user allows or denies an MCP client. Allow stores a one-time
+        code for 10 minutes. The answer is where the browser goes next. Needs a
+        browser session: a token can't approve more tokens.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OAuthApprove" }
+      responses:
+        "200":
+          description: The client's redirect URI with a code, or with error=access_denied.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OAuthRedirect" }
+        default: { $ref: "#/components/responses/Problem" }
   /notifications:
     get:
       operationId: listNotifications
@@ -282,6 +316,7 @@ paths:
     post:
       operationId: createUser
       tags: [admin]
+      description: Creating any user needs a signed-in session; a token answers 403 session_required.
       requestBody:
         required: true
         content:
@@ -298,6 +333,7 @@ paths:
     patch:
       operationId: updateUser
       tags: [admin]
+      description: Making a user an admin needs a signed-in session (403 session_required).
       parameters:
         - name: id
           in: path
@@ -319,7 +355,9 @@ paths:
     post:
       operationId: createSetupLink
       tags: [admin]
-      description: Resets the password; the old one stops working and every session ends.
+      description: >-
+        Resets the password; the old one stops working and every session and API token ends. Needs a signed-in
+        session (403 session_required).
       parameters:
         - name: id
           in: path
@@ -1040,7 +1078,8 @@ paths:
           schema: { type: string, maxLength: 200 }
           description: >-
             A retry with the same key within 24 hours returns the ticket the first request created (200, with
-            Idempotent-Replayed true) instead of a second ticket (FSD §17.1).
+            Idempotent-Replayed true) instead of a second ticket (FSD §17.1). A key whose ticket is in another
+            project, or outside the caller's clients, answers 409 idempotency_conflict.
       requestBody:
         required: true
         content:
@@ -2224,6 +2263,10 @@ components:
           type: array
           items: { type: string }
         archived: { type: boolean }
+        projects:
+          type: array
+          items: { type: string }
+          description: Keys of the projects linked to this client. Only GET /clients fills it.
     ClientList:
       type: object
       required: [items]
@@ -3230,6 +3273,30 @@ components:
         name: { type: string, maxLength: 100 }
         read_only: { type: boolean }
         expires_on: { type: string, format: date, description: The last day the token works; omitted for no expiry. }
+    OAuthClient:
+      type: object
+      required: [id, name, redirect_uris]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        redirect_uris: { type: array, items: { type: string } }
+    OAuthApprove:
+      type: object
+      required: [client_id, redirect_uri, code_challenge, code_challenge_method, read_only, allow]
+      properties:
+        client_id: { type: string }
+        redirect_uri: { type: string }
+        code_challenge: { type: string }
+        code_challenge_method: { type: string }
+        state: { type: string }
+        resource: { type: string }
+        read_only: { type: boolean }
+        allow: { type: boolean }
+    OAuthRedirect:
+      type: object
+      required: [redirect_url]
+      properties:
+        redirect_url: { type: string }
     APITokenCreated:
       allOf:
         - $ref: "#/components/schemas/APIToken"
@@ -3603,11 +3670,10 @@ components:
       properties:
         ok: { type: boolean }
         latency_ms: { type: integer }
-        error: { type: string }
         reason:
           type: string
           enum: [unknown_host, refused, timeout, tls, unauthorized, not_found, no_model]
-          description: The failure's likely cause, which the page says in plain words above the raw error (MSL-31).
+          description: The failure's likely cause, which the page says in plain words (MSL-31). The server's own answer is never returned.
         models:
           type: array
           items: { type: string }

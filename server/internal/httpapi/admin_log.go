@@ -170,8 +170,9 @@ func (s *Server) ExportAudit(w http.ResponseWriter, r *http.Request, params Expo
 	_ = cw.Write([]string{"id", "occurred_at", "actor", "via", "entity", "entity_id", "project", "action", "changes", "token", "subject"})
 	for _, row := range rows {
 		_ = cw.Write([]string{
-			strconv.FormatInt(row.ID, 10), row.OccurredAt.UTC().Format(time.RFC3339), deref(row.ActorName), row.Via, row.Entity,
-			strconv.FormatInt(row.EntityID, 10), deref(row.ProjectKey), row.Action, string(row.Changes), deref(row.TokenName), row.Subject,
+			strconv.FormatInt(row.ID, 10), row.OccurredAt.UTC().Format(time.RFC3339), csvSafe(deref(row.ActorName)), row.Via, row.Entity,
+			strconv.FormatInt(row.EntityID, 10), csvSafe(deref(row.ProjectKey)), row.Action, csvSafe(string(row.Changes)),
+			csvSafe(deref(row.TokenName)), csvSafe(row.Subject),
 		})
 	}
 	cw.Flush()

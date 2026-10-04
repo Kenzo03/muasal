@@ -116,11 +116,19 @@ func (s *Server) sessionOnly(w http.ResponseWriter, r *http.Request) (*db.User, 
 	if u == nil {
 		return nil, false
 	}
-	if currentToken(r) != nil {
-		writeProblem(w, http.StatusForbidden, "session_required", "Manage API tokens from a signed-in session")
+	if !needSession(w, r) {
 		return nil, false
 	}
 	return u, true
+}
+
+// needSession answers 403 to a request made with an API token.
+func needSession(w http.ResponseWriter, r *http.Request) bool {
+	if currentToken(r) != nil {
+		writeProblem(w, http.StatusForbidden, "session_required", "Do this from a signed-in session")
+		return false
+	}
+	return true
 }
 
 func toAPIToken(t db.ApiToken) APIToken {
