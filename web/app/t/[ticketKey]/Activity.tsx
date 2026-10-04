@@ -186,8 +186,8 @@ export default function Activity({ ticketKey, items, meId, canComment, people }:
           <MentionBox ticketKey={ticketKey} name="body" required maxLength={20000} rows={3} aria-label={t("placeholder")} placeholder={t("placeholder")} onPaste={paste} />
           <p className={field.hint}>{t("markdownHint")} {t("mentionHint")}</p>
           <div className="flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-2 text-[13px] font-semibold">
-              <input type="checkbox" name="internal" defaultChecked className="size-4 accent-accent" />
+            <label htmlFor="comment-internal" className="flex items-center gap-2 text-[13px] font-semibold">
+              <input id="comment-internal" type="checkbox" name="internal" defaultChecked className="size-4 accent-accent" />
               {t("internalToggle")}
             </label>
             <button className={cx(button.primary, "ml-auto")}>{t("send")}</button>

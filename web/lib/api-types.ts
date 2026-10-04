@@ -461,6 +461,140 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{key}/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description The labels the project's tickets use, most used first (MSL-56). */
+        get: operations["listProjectLabels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{key}/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description Project admins only. How far the project is set up, for the checklist on its board (MSL-48). */
+        get: operations["getProjectSetup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{key}/handover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description The handover pack's content for everyone who may see the project (MSL-68); with client_id, that client's items and the core work. */
+        get: operations["getHandover"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{key}/releases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        /** @description The project's releases, unreleased ones first, then the latest (MSL-67). */
+        get: operations["listReleases"];
+        put?: never;
+        /** @description Members and project admins add a release; names are unique in the project, ignoring case. */
+        post: operations["createRelease"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/releases/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Members and project admins rename a release or set the day it shipped. */
+        patch: operations["updateRelease"];
+        trace?: never;
+    };
+    "/projects/{key}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Project admins only. Archives a finished project (MSL-64); archiving an archived project changes nothing. */
+        post: operations["archiveProject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{key}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Project admins only. Brings an archived project back (MSL-64). */
+        post: operations["restoreProject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{key}/member-candidates": {
         parameters: {
             query?: never;
@@ -789,6 +923,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tickets/{key}/acceptance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /** @description Members and project admins record who at the client accepted the ticket's work, and when (MSL-66); it replaces an earlier record. */
+        put: operations["acceptTicket"];
+        post?: never;
+        /** @description Members and project admins remove a ticket's acceptance record, such as one recorded by mistake. */
+        delete: operations["unacceptTicket"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tickets/{key}/transition": {
         parameters: {
             query?: never;
@@ -1030,6 +1184,25 @@ export interface paths {
         put: operations["updateDecision"];
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tickets/{key}/follow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description The caller follows the ticket and hears its comments and status changes (MSL-57). */
+        post: operations["followTicket"];
+        delete: operations["unfollowTicket"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1663,6 +1836,8 @@ export interface components {
             url: string;
             /** Format: date-time */
             expires_at: string;
+            /** @description With email set up */
+            emailed_to?: string;
         };
         CreatedUser: {
             user: components["schemas"]["User"];
@@ -1693,6 +1868,13 @@ export interface components {
             role: components["schemas"]["ProjectRole"];
             /** Format: date-time */
             created_at: string;
+            /**
+             * Format: date-time
+             * @description When it was archived (MSL-64): an archived project is read-only, so role reads viewer for everyone until it is restored.
+             */
+            archived_at?: string;
+            /** @description The caller may archive or restore it (a project admin or system admin). */
+            can_restore?: boolean;
         };
         ProjectList: {
             items: components["schemas"]["Project"][];
@@ -1746,6 +1928,20 @@ export interface components {
             role: components["schemas"]["ProjectRole"];
             all_clients: boolean;
             client_ids: number[];
+        };
+        ProjectSetup: {
+            /** @description A client is linked. */
+            clients: boolean;
+            /** @description Someone besides the creator is a member. */
+            team: boolean;
+            /** @description A specification is uploaded. */
+            documents: boolean;
+            /** @description The module tree has a node. */
+            tree: boolean;
+            /** @description There is a ticket. */
+            tickets: boolean;
+            /** @description A repository is connected (optional). */
+            repos: boolean;
         };
         Person: {
             /** Format: int64 */
@@ -2032,6 +2228,17 @@ export interface components {
             priority: components["schemas"]["Priority"];
             /** Format: date */
             due_date: string | null;
+            /**
+             * Format: double
+             * @description The effort estimate in hours (MSL-54).
+             */
+            estimate_hours?: number | null;
+            /** @description Free-text labels, lowercased (MSL-56). */
+            labels?: string[];
+            /** @description The caller follows the ticket (MSL-57). */
+            following?: boolean;
+            acceptance?: components["schemas"]["TicketAcceptance"];
+            release?: components["schemas"]["Ref"];
             nodes: components["schemas"]["NodeRef"][];
             attachments: components["schemas"]["Attachment"][];
             /** Format: int32 */
@@ -2074,6 +2281,18 @@ export interface components {
             /** Format: date */
             due_date?: string;
             /**
+             * Format: double
+             * @description Hours of effort; omitted means no estimate (MSL-54).
+             */
+            estimate_hours?: number;
+            /** @description Up to 10 labels of 1 to 30 characters; omitted means none (MSL-56). */
+            labels?: string[];
+            /**
+             * Format: int64
+             * @description A release of this project; omitted means none (MSL-67).
+             */
+            release_id?: number;
+            /**
              * Format: int64
              * @description An open status; omitted means the project's default.
              */
@@ -2105,6 +2324,18 @@ export interface components {
             priority?: components["schemas"]["Priority"];
             /** Format: date */
             due_date?: string;
+            /**
+             * Format: double
+             * @description Hours of effort; omitted means no estimate (MSL-54).
+             */
+            estimate_hours?: number;
+            /** @description Up to 10 labels of 1 to 30 characters; omitted means none (MSL-56). */
+            labels?: string[];
+            /**
+             * Format: int64
+             * @description A release of this project; omitted means none (MSL-67).
+             */
+            release_id?: number;
         };
         TransitionRequest: {
             /** Format: int64 */
@@ -2234,6 +2465,11 @@ export interface components {
              * @description One client; omitted for all.
              */
             client_id?: number;
+            /**
+             * Format: int64
+             * @description Only this release's tickets, without decision notes (MSL-67).
+             */
+            release_id?: number;
             /** Format: date */
             from: string;
             /** Format: date */
@@ -2257,6 +2493,10 @@ export interface components {
             client?: string;
             requested_by?: string;
             cancelled?: boolean;
+            /** @description The client contact who accepted it (MSL-66). */
+            accepted_by?: string;
+            /** Format: date */
+            accepted_on?: string;
         };
         SummaryPreview: {
             items: components["schemas"]["SummaryItem"][];
@@ -2340,6 +2580,13 @@ export interface components {
             stale: number;
             /** @description Urgent or high priority. */
             high: number;
+            /**
+             * Format: double
+             * @description The open tickets' estimates added up (MSL-54).
+             */
+            open_hours: number;
+            /** @description How many of the open tickets have an estimate. */
+            estimated: number;
         };
         Workload: {
             /** @description People by name; a row without assignee counts unassigned tickets. */
@@ -2385,6 +2632,70 @@ export interface components {
             /** Format: date-time */
             closed_at?: string | null;
         };
+        /** @description The project as it stands, per module and menu in tree order: the spec sections in force, the behaviours in force and the open tickets (MSL-68). */
+        Handover: {
+            nodes: components["schemas"]["HandoverNode"][];
+        };
+        HandoverNode: {
+            /** Format: int64 */
+            id: number;
+            name: string;
+            code?: string;
+            /** @enum {string} */
+            type: "module" | "menu";
+            /** @description 0 for a top module. */
+            depth: number;
+            sections: components["schemas"]["TimelineSection"][];
+            behaviors: components["schemas"]["Behavior"][];
+            open: components["schemas"]["HandoverTicket"][];
+        };
+        HandoverTicket: {
+            key: string;
+            title: string;
+            status: string;
+            assignee?: string;
+            /** Format: date */
+            due_date?: string;
+        };
+        /** @description A project release, such as v1.0 (MSL-67). */
+        Release: {
+            /** Format: int64 */
+            id: number;
+            name: string;
+            /**
+             * Format: date
+             * @description Omitted while it is still to ship.
+             */
+            released_on?: string;
+        };
+        ReleaseList: {
+            items: components["schemas"]["Release"][];
+        };
+        ReleaseInput: {
+            name: string;
+            /** Format: date */
+            released_on?: string;
+        };
+        /** @description Who at the client accepted the ticket's work, as in UAT sign-off, and when (MSL-66). */
+        TicketAcceptance: {
+            contact: components["schemas"]["Ref"];
+            /** Format: date */
+            accepted_on: string;
+            note: string;
+        };
+        AcceptanceInput: {
+            /**
+             * Format: int64
+             * @description A contact of the ticket's client; any client's contact for core work.
+             */
+            contact_id: number;
+            /**
+             * Format: date
+             * @description Today or earlier.
+             */
+            accepted_on: string;
+            note?: string;
+        };
         TicketSummary: {
             /** Format: int64 */
             id: number;
@@ -2401,6 +2712,19 @@ export interface components {
             requester_name: string;
             node_names: string[];
             missing_reason: boolean;
+            labels?: string[];
+            /**
+             * Format: date
+             * @description When the client accepted it (MSL-66).
+             */
+            accepted_on?: string;
+            /** @description Its release's name (MSL-67). */
+            release?: string;
+            /** @description The description's task list, when it has one (MSL-55). */
+            checklist?: {
+                done: number;
+                total: number;
+            };
             /** Format: date-time */
             updated_at: string;
         };
@@ -2466,7 +2790,7 @@ export interface components {
              */
             client_id?: number;
             attendees?: string;
-            /** @description One or more menus or modules of the project. */
+            /** @description Menus or modules of the project; none makes a project-wide note, such as a kickoff (MSL-59). */
             node_ids: number[];
             /** @description Tickets the decision relates to, in any project the author can see. */
             ticket_keys?: string[];
@@ -2654,6 +2978,8 @@ export interface components {
             mention?: boolean;
             status?: boolean;
             job_done?: boolean;
+            /** @description The morning reminder of tickets due today or tomorrow */
+            due?: boolean;
             browser?: boolean;
             /** @description Also by email, a digest of what is still unread after two minutes, when the server has SMTP set up (MSL-10). Off until chosen. */
             email?: boolean;
@@ -2661,8 +2987,11 @@ export interface components {
         Notification: {
             /** Format: int64 */
             id: number;
-            /** @enum {string} */
-            type: "assigned" | "comment" | "mention" | "status" | "job_done";
+            /**
+             * @description due (MSL-52): payload.when is today, tomorrow or overdue, payload.due the date.
+             * @enum {string}
+             */
+            type: "assigned" | "comment" | "mention" | "status" | "job_done" | "due";
             ticket_key?: string;
             ticket_title?: string;
             actor?: components["schemas"]["Ref"];
@@ -3766,7 +4095,10 @@ export interface operations {
     };
     listProjects: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Also archived projects, as All projects lists them; pickers leave them out (MSL-64). */
+                archived?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -4028,6 +4360,205 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MemberList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listProjectLabels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Labels with how many tickets carry each. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            label: string;
+                            uses: number;
+                        }[];
+                    };
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getProjectSetup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Each step and whether it is done. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectSetup"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getHandover: {
+        parameters: {
+            query?: {
+                client_id?: number;
+            };
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The live modules and menus, each with its own items. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Handover"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listReleases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The releases. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReleaseList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createRelease: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReleaseInput"];
+            };
+        };
+        responses: {
+            /** @description The new release. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Release"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateRelease: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReleaseInput"];
+            };
+        };
+        responses: {
+            /** @description The release. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Release"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    archiveProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The archived project. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Project"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    restoreProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The restored project. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Project"];
                 };
             };
             default: components["responses"]["Problem"];
@@ -4585,6 +5116,12 @@ export interface operations {
                 /** @description Closed tickets only when closed within this many days; the board asks for 14. */
                 closed_days?: number;
                 type?: components["schemas"]["TicketType"];
+                /** @description Tickets with this label (MSL-56). */
+                label?: string;
+                /** @description Tickets the client accepted (true) or not yet (false) (MSL-66). */
+                accepted?: boolean;
+                /** @description Tickets of this release (MSL-67). */
+                release_id?: number;
                 client_id?: number;
                 /** @description Only core work (no client). */
                 core?: boolean;
@@ -4700,6 +5237,56 @@ export interface operations {
         };
         responses: {
             /** @description The updated ticket; ETag carries its new version. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ticket"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    acceptTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptanceInput"];
+            };
+        };
+        responses: {
+            /** @description The ticket with its acceptance; ETag carries its version. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ticket"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    unacceptTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The ticket without an acceptance. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -5171,6 +5758,48 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["DecisionRecord"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    followTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Following. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    unfollowTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No longer following. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

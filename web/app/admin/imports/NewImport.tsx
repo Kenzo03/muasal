@@ -6,7 +6,8 @@ import { useTranslations } from "next-intl";
 import { button, cx, field, panel } from "@/lib/ui";
 
 // Upload a file into a new import; the server dry-runs it at once.
-export default function NewImport({ projects }: { projects: { key: string; name: string }[] }) {
+// defaultKey preselects the project a project's own "Import tickets" came from.
+export default function NewImport({ projects, defaultKey }: { projects: { key: string; name: string }[]; defaultKey?: string }) {
   const t = useTranslations("imports");
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -26,7 +27,7 @@ export default function NewImport({ projects }: { projects: { key: string; name:
     <form onSubmit={upload} aria-label={t("new")} className={cx(panel, "flex flex-wrap items-end gap-3 p-4")}>
       <label className={field.label}>
         {t("project")}
-        <select name="project_key" required className={field.input}>
+        <select name="project_key" required defaultValue={defaultKey} className={field.input}>
           {projects.map((p) => (
             <option key={p.key} value={p.key}>{p.key} · {p.name}</option>
           ))}

@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -55,6 +56,17 @@ func (s *Server) summaryScope(w http.ResponseWriter, r *http.Request, in Summary
 	if _, ok := names[in.NodeId]; !ok && in.NodeId != 0 { // 0 is the whole project (MSL-16)
 		fields = append(fields, FieldError{Field: "node_id", Code: "invalid", Message: "Choose a menu or module of this project"})
 	}
+	var release db.Release // MSL-67: one release's tickets
+	if in.ReleaseId != nil {
+		release, err = s.q.GetRelease(ctx, *in.ReleaseId)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			s.fail(w, r, err)
+			return projectCtx{}, db.Node{}, "", nil, false
+		}
+		if err != nil || release.ProjectID != pc.project.ID {
+			fields = append(fields, FieldError{Field: "release_id", Code: "invalid", Message: "Choose a release of this project"})
+		}
+	}
 	if len(fields) > 0 {
 		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields", fields...)
 		return projectCtx{}, db.Node{}, "", nil, false
@@ -71,6 +83,9 @@ func (s *Server) summaryScope(w http.ResponseWriter, r *http.Request, in Summary
 		}
 		ids = subtree(nodes, in.NodeId)
 	}
+	if in.ReleaseId != nil {
+		node.Name += " " + release.Name // "HRIS v1.0 changes for …"
+	}
 	clientName := ""
 	if in.ClientId != nil {
 		c, err := s.q.GetClient(ctx, *in.ClientId)
@@ -80,7 +95,7 @@ func (s *Server) summaryScope(w http.ResponseWriter, r *http.Request, in Summary
 		}
 		clientName = c.Name
 	}
-	items, err := s.summaryItems(ctx, pc, ids, in.ClientId, in.From.Time, in.To.Time, deref(in.IncludeCancelled), names)
+	items, err := s.summaryItems(ctx, pc, ids, in.NodeId == 0, in.ClientId, in.ReleaseId, in.From.Time, in.To.Time, deref(in.IncludeCancelled), names)
 	if err != nil {
 		s.fail(w, r, err)
 		return projectCtx{}, db.Node{}, "", nil, false
@@ -89,8 +104,10 @@ func (s *Server) summaryScope(w http.ResponseWriter, r *http.Request, in Summary
 }
 
 // summaryItems lists the visible closed tickets and decision notes on the nodes
-// ids between from and to, for one client with core work (clientID) or all.
-func (s *Server) summaryItems(ctx context.Context, pc projectCtx, ids []int64, clientID *int64, from, to time.Time, cancelled bool, names map[int64]string) ([]summaryItem, error) {
+// ids between from and to, for one client with core work (clientID) or all;
+// whole says ids are the whole project, which holds notes without a menu. A
+// release takes only its tickets, and no notes (MSL-67).
+func (s *Server) summaryItems(ctx context.Context, pc projectCtx, ids []int64, whole bool, clientID, releaseID *int64, from, to time.Time, cancelled bool, names map[int64]string) ([]summaryItem, error) {
 	rows, err := s.q.ListNodeTimeline(ctx, db.ListNodeTimelineParams{
 		ProjectID: pc.project.ID, NodeIds: ids, AllClients: pc.scope.AllClients, ClientIds: orEmpty(pc.scope.ClientIDs),
 		FromDate: &from, ToDate: &to, Lim: 2000,
@@ -99,7 +116,7 @@ func (s *Server) summaryItems(ctx context.Context, pc projectCtx, ids []int64, c
 		return nil, err
 	}
 	notes, err := s.q.ListNodeNotes(ctx, db.ListNodeNotesParams{
-		ProjectID: pc.project.ID, NodeIds: ids, AllClients: pc.scope.AllClients, ClientIds: orEmpty(pc.scope.ClientIDs),
+		ProjectID: pc.project.ID, NodeIds: ids, Whole: whole, AllClients: pc.scope.AllClients, ClientIds: orEmpty(pc.scope.ClientIDs),
 		FromDate: &from, ToDate: &to,
 	})
 	if err != nil {
@@ -111,7 +128,7 @@ func (s *Server) summaryItems(ctx context.Context, pc projectCtx, ids []int64, c
 	var items []summaryItem
 	for i := range rows {
 		t := &rows[i]
-		if !forClient(t.ClientID) {
+		if !forClient(t.ClientID) || releaseID != nil && (t.ReleaseID == nil || *t.ReleaseID != *releaseID) {
 			continue
 		}
 		isCancelled := t.Status.Category == string(StatusCategoryCancelled)
@@ -125,11 +142,14 @@ func (s *Server) summaryItems(ctx context.Context, pc projectCtx, ids []int64, c
 		if isCancelled {
 			it.api.Cancelled = ptr(true)
 		}
+		if t.AcceptedOn != nil { // MSL-66
+			it.api.AcceptedBy, it.api.AcceptedOn = t.AcceptedContactName, &openapi_types.Date{Time: *t.AcceptedOn}
+		}
 		items = append(items, it)
 		ticketIDs = append(ticketIDs, t.ID)
 	}
 	for _, n := range notes {
-		if !forClient(n.ClientID) {
+		if !forClient(n.ClientID) || releaseID != nil {
 			continue
 		}
 		items = append(items, summaryItem{noteID: n.ID, noteBody: n.Body, api: SummaryItem{
@@ -165,7 +185,8 @@ func (s *Server) summaryItems(ctx context.Context, pc projectCtx, ids []int64, c
 		if items[i].ticketID != 0 {
 			items[i].api.Menu = menuOf[fmt.Sprint("t", items[i].ticketID)]
 		} else {
-			items[i].api.Menu = menuOf[fmt.Sprint("n", items[i].noteID)]
+			// A note without a menu is about the whole project (MSL-59).
+			items[i].api.Menu = cmp.Or(menuOf[fmt.Sprint("n", items[i].noteID)], pc.project.Name)
 		}
 	}
 	slices.SortStableFunc(items, func(a, b summaryItem) int {
@@ -308,7 +329,10 @@ func (s *Server) summaryInputs(ctx context.Context, items []summaryItem, client 
 		}
 		inputs[i] = draft.Item{Key: it.api.Key, Kind: string(it.api.Kind), Title: it.api.Title, Menu: it.api.Menu,
 			Client: deref(it.api.Client), RequestedBy: deref(it.api.RequestedBy), Date: it.api.Date.Time,
-			Cancelled: deref(it.api.Cancelled), Text: b.String()}
+			Cancelled: deref(it.api.Cancelled), Text: b.String(), AcceptedBy: deref(it.api.AcceptedBy)}
+		if it.api.AcceptedOn != nil {
+			inputs[i].AcceptedOn = it.api.AcceptedOn.Time
+		}
 		if d := it.decision; d != nil && d.State != nil {
 			inputs[i].Change, inputs[i].Why, inputs[i].ReversedBy = deref(d.WhatChanged), deref(d.Why), deref(d.SupersededByKey)
 		}

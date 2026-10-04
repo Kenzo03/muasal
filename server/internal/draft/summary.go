@@ -22,6 +22,8 @@ type Item struct {
 	Cancelled                                   bool
 	Text                                        string
 	Change, Why, ReversedBy                     string
+	AcceptedBy                                  string // the client contact who accepted it (MSL-66)
+	AcceptedOn                                  time.Time
 }
 
 // Bullet is one validated line of a section.
@@ -107,6 +109,9 @@ func itemsText(items []Item, reverses map[string]string) string {
 		}
 		if it.ReversedBy != "" {
 			fmt.Fprintf(&b, " — reversed later by %s, no longer in force", it.ReversedBy)
+		}
+		if it.AcceptedBy != "" {
+			fmt.Fprintf(&b, " — accepted by the client (%s, %s)", it.AcceptedBy, it.AcceptedOn.Format("2006-01-02"))
 		}
 		fmt.Fprintf(&b, "\n%s\n\n", clip(it.Text, 2500))
 	}
@@ -283,9 +288,9 @@ func Title(node, client string, from, to time.Time, lang string) string {
 // an appendix table built from the items, not by the model (§12.1). Client
 // copies print keys without links, since clients cannot open the app.
 func Markdown(title string, s Summary, items []Item, lang string, client bool) string {
-	words := map[string]string{"why": "Why", "appendix": "Appendix: items", "key": "Key", "title": "Title", "date": "Date", "by": "Requested by", "none": "No changes were summarized."}
+	words := map[string]string{"why": "Why", "appendix": "Appendix: items", "key": "Key", "title": "Title", "date": "Date", "by": "Requested by", "accepted": "Accepted by the client", "none": "No changes were summarized."}
 	if lang == "id" {
-		words = map[string]string{"why": "Alasan", "appendix": "Lampiran: daftar item", "key": "Kunci", "title": "Judul", "date": "Tanggal", "by": "Diminta oleh", "none": "Tidak ada perubahan yang dirangkum."}
+		words = map[string]string{"why": "Alasan", "appendix": "Lampiran: daftar item", "key": "Kunci", "title": "Judul", "date": "Tanggal", "by": "Diminta oleh", "accepted": "Diterima klien", "none": "Tidak ada perubahan yang dirangkum."}
 	}
 	key := func(k string) string {
 		if client {
@@ -322,9 +327,13 @@ func Markdown(title string, s Summary, items []Item, lang string, client bool) s
 	if !wrote {
 		fmt.Fprintf(&b, "_%s_\n\n", words["none"])
 	}
-	fmt.Fprintf(&b, "## %s\n\n| %s | %s | %s | %s |\n|---|---|---|---|\n", words["appendix"], words["key"], words["title"], words["date"], words["by"])
+	fmt.Fprintf(&b, "## %s\n\n| %s | %s | %s | %s | %s |\n|---|---|---|---|---|\n", words["appendix"], words["key"], words["title"], words["date"], words["by"], words["accepted"])
 	for _, it := range items {
-		fmt.Fprintf(&b, "| %s | %s | %s | %s |\n", key(it.Key), cell(it.Title), Day(it.Date, lang), cell(it.RequestedBy))
+		accepted := ""
+		if it.AcceptedBy != "" {
+			accepted = it.AcceptedBy + ", " + Day(it.AcceptedOn, lang)
+		}
+		fmt.Fprintf(&b, "| %s | %s | %s | %s | %s |\n", key(it.Key), cell(it.Title), Day(it.Date, lang), cell(it.RequestedBy), cell(accepted))
 	}
 	return b.String()
 }

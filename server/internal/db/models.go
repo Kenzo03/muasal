@@ -336,11 +336,20 @@ type Project struct {
 	TicketSeq   int64
 	NoteSeq     int64
 	DocSeq      int64
+	ArchivedAt  *time.Time
 }
 
 type ProjectClient struct {
 	ProjectID int64
 	ClientID  int64
+}
+
+type Release struct {
+	ID         int64
+	ProjectID  int64
+	Name       string
+	ReleasedOn *time.Time
+	CreatedAt  time.Time
 }
 
 type Session struct {
@@ -426,11 +435,23 @@ type Ticket struct {
 	Source             string
 	ExternalRef        *string
 	ExternalMeta       []byte
+	EstimateHours      *float64
+	Labels             []string
+	AcceptedContactID  *int64
+	AcceptedOn         *time.Time
+	AcceptanceNote     string
+	ReleaseID          *int64
 }
 
 type TicketCommit struct {
 	TicketID int64
 	CommitID int64
+}
+
+type TicketFollower struct {
+	TicketID  int64
+	UserID    int64
+	CreatedAt time.Time
 }
 
 type TicketLink struct {

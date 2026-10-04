@@ -89,13 +89,16 @@ SELECT id, path::text[] AS path FROM up WHERE parent_id IS NULL ORDER BY id;
 
 -- name: ListNodeNotes :many
 -- The visible notes on these nodes for a node page, newest decision first
--- (§9.4, AC-DC-8); from_date and to_date filter on the decision date.
+-- (§9.4, AC-DC-8); from_date and to_date filter on the decision date. With
+-- whole, the nodes are the whole project, which also holds notes without a
+-- menu (MSL-59).
 SELECT n.id, n.key, n.title, n.decided_on, n.client_id, c.name AS client_name, n.attendees, n.body, u.name AS author_name
 FROM decision_notes n
 JOIN users u ON u.id = n.created_by
 LEFT JOIN clients c ON c.id = n.client_id
 WHERE n.project_id = sqlc.arg('project_id') AND n.archived_at IS NULL
-  AND EXISTS (SELECT 1 FROM decision_note_nodes dn WHERE dn.note_id = n.id AND dn.node_id = ANY (sqlc.arg('node_ids')::bigint[]))
+  AND (EXISTS (SELECT 1 FROM decision_note_nodes dn WHERE dn.note_id = n.id AND dn.node_id = ANY (sqlc.arg('node_ids')::bigint[]))
+       OR sqlc.arg('whole')::boolean AND NOT EXISTS (SELECT 1 FROM decision_note_nodes dn WHERE dn.note_id = n.id))
   AND (sqlc.arg('all_clients')::boolean OR n.client_id IS NULL OR n.client_id = ANY (sqlc.arg('client_ids')::bigint[]))
   AND (sqlc.narg('client_id')::bigint IS NULL OR n.client_id = sqlc.narg('client_id')::bigint)
   AND (NOT sqlc.arg('core_only')::boolean OR n.client_id IS NULL)

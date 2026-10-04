@@ -7,6 +7,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/kenzo03/muasal/server/internal/access"
 	"github.com/kenzo03/muasal/server/internal/ai"
 	"github.com/kenzo03/muasal/server/internal/db"
 )
@@ -129,6 +130,21 @@ func (s *Server) GetSetupStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ai": settings.Mode != ai.ModeOff, "invited": st.Invited, "project": st.Project,
 		"tree": st.Tree, "history": st.History, "first_project": st.FirstProject})
+}
+
+// GetProjectSetup tells a project admin how far the project is set up, for the
+// checklist on its board (MSL-48).
+func (s *Server) GetProjectSetup(w http.ResponseWriter, r *http.Request, key string) {
+	pc, ok := s.projectFor(w, r, key, access.Admin)
+	if !ok {
+		return
+	}
+	st, err := s.q.ProjectSetupStatus(r.Context(), pc.project.ID)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, ProjectSetup{Clients: st.Clients, Team: st.Team, Documents: st.Documents, Tree: st.Tree, Tickets: st.Tickets, Repos: st.Repos})
 }
 
 // ListMyUpdates serves Home's Recently updated (FSD §6.4): the tickets the

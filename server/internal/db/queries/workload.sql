@@ -9,7 +9,9 @@ SELECT t.assignee_id, a.name AS assignee_name,
        count(*) FILTER (WHERE t.due_date < sqlc.arg('today')::date) AS overdue,
        count(*) FILTER (WHERE t.due_date BETWEEN sqlc.arg('today')::date AND sqlc.arg('today')::date + 7) AS due_week,
        count(*) FILTER (WHERE t.updated_at < now() - make_interval(days => sqlc.arg('stale_days')::int)) AS stale,
-       count(*) FILTER (WHERE t.priority IN ('urgent', 'high')) AS high
+       count(*) FILTER (WHERE t.priority IN ('urgent', 'high')) AS high,
+       coalesce(sum(t.estimate_hours), 0)::double precision AS open_hours,
+       count(t.estimate_hours) AS estimated
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
 LEFT JOIN users a ON a.id = t.assignee_id

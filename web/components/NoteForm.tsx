@@ -9,8 +9,8 @@ import { useProblemText, type Client, type Node, type Note } from "@/lib/problem
 import { button, cx, field } from "@/lib/ui";
 
 // The decision note form (FSD §9.4): a decision made in a meeting, a call or an
-// email, dated, on one or more menus, with the body prefilled with Decision,
-// Why and Alternatives rejected.
+// email, dated, on menus or the whole project (MSL-59), with the body
+// prefilled with Decision, Why and Alternatives rejected.
 export default function NoteForm({ projectKey, note, clients, nodes }: { projectKey: string; note?: Note; clients: Client[]; nodes: Node[] }) {
   const t = useTranslations("notes");
   const locale = useLocale();
@@ -80,6 +80,7 @@ export default function NoteForm({ projectKey, note, clients, nodes }: { project
           else next.delete(id);
           setSelected(next);
         }} />
+        <span className={field.hint}>{t("menusHint")}</span>
       </div>
       <label className={field.label}>
         {t("tickets")}

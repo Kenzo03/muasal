@@ -118,8 +118,8 @@ func block(it indexer.Source, details bool, today time.Time) string {
 	fmt.Fprintf(&b, "Assigned to %s · priority %s", assignee, t.Priority)
 	if t.ClosedAt == nil && t.DueDate != nil {
 		fmt.Fprintf(&b, " · due %s", day(*t.DueDate))
-		if !today.IsZero() && t.DueDate.Before(today) {
-			b.WriteString(", overdue")
+		if !today.IsZero() {
+			b.WriteString(dueNote(*t.DueDate, today))
 		}
 	}
 	b.WriteString("\n")
@@ -247,3 +247,20 @@ func cut(s string, n int) string {
 }
 
 func day(t time.Time) string { return t.UTC().Format(time.DateOnly) }
+
+// dueNote says where a due date stands against the asker's today, so the model
+// never works lateness out from other dates (MSL-43).
+func dueNote(due, today time.Time) string {
+	switch n := int(due.Sub(today).Hours() / 24); {
+	case n < -1:
+		return fmt.Sprintf(", overdue by %d days", -n)
+	case n == -1:
+		return ", overdue by 1 day"
+	case n == 0:
+		return ", due today"
+	case n == 1:
+		return ", due tomorrow, not overdue"
+	default:
+		return fmt.Sprintf(", due in %d days, not overdue", n)
+	}
+}

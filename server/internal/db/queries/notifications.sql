@@ -97,3 +97,47 @@ LIMIT 500;
 
 -- name: MarkEmailed :exec
 UPDATE notifications SET emailed_at = now() WHERE id = ANY (sqlc.arg('ids')::bigint[]);
+
+-- name: NotifyDue :many
+-- MSL-52: from 08:00 in the assignee's timezone, once a day per ticket, their
+-- open tickets due today or tomorrow, or overdue since yesterday. Those who
+-- turned "due" off, or can no longer see the ticket, hear nothing.
+WITH ins AS (
+  INSERT INTO notifications (user_id, type, ticket_id, payload)
+  SELECT u.id, 'due', t.id,
+         jsonb_build_object('when', CASE t.due_date - d.today WHEN 0 THEN 'today' WHEN 1 THEN 'tomorrow' ELSE 'overdue' END,
+                            'due', t.due_date, 'on', d.today)
+  FROM tickets t
+  JOIN projects p ON p.id = t.project_id AND p.archived_at IS NULL -- MSL-64
+  JOIN users u ON u.id = t.assignee_id AND u.disabled_at IS NULL
+  CROSS JOIN LATERAL (
+    SELECT (sqlc.arg('now')::timestamptz AT TIME ZONE u.timezone)::date AS today,
+           extract(hour FROM sqlc.arg('now')::timestamptz AT TIME ZONE u.timezone) AS hour
+  ) d
+  WHERE t.closed_at IS NULL AND t.due_date - d.today IN (-1, 0, 1) AND d.hour >= 8
+    AND coalesce((u.notify_prefs ->> 'due')::boolean, true)
+    AND (u.is_admin OR EXISTS (
+          SELECT 1 FROM memberships m
+          WHERE m.user_id = u.id AND m.project_id = t.project_id
+            AND (m.all_clients OR t.client_id IS NULL OR EXISTS (
+                  SELECT 1 FROM membership_clients mc
+                  WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = t.client_id))))
+    AND NOT EXISTS (
+          SELECT 1 FROM notifications n
+          WHERE n.user_id = u.id AND n.ticket_id = t.id AND n.type = 'due' AND n.payload ->> 'on' = d.today::text)
+  RETURNING id, user_id
+)
+SELECT ins.id, ins.user_id, pg_notify('muasal_notifications', ins.user_id || ':' || ins.id)::text AS sent FROM ins;
+
+-- name: FollowTicket :exec
+INSERT INTO ticket_followers (ticket_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING;
+
+-- name: UnfollowTicket :exec
+DELETE FROM ticket_followers WHERE ticket_id = $1 AND user_id = $2;
+
+-- name: ListFollowers :many
+-- MSL-57: who follows a ticket; notify still checks each can see it.
+SELECT user_id FROM ticket_followers WHERE ticket_id = $1;
+
+-- name: IsFollowing :one
+SELECT EXISTS (SELECT 1 FROM ticket_followers WHERE ticket_id = $1 AND user_id = $2);

@@ -1,7 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { DndContext, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  pointerWithin,
+  rectIntersection,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type CollisionDetection,
+} from "@dnd-kit/core";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -26,14 +37,25 @@ type Props = {
 
 const closes = (s: Status) => s.category === "done" || s.category === "cancelled";
 
-// A status column that takes dropped cards.
+// A card lands in the column under the pointer. dnd-kit's default picks the
+// column the card overlaps most, which in narrow columns is the next one when
+// the card was grabbed near its left edge. Below a short column, or between
+// two, the overlap still decides.
+const dropTarget: CollisionDetection = (args) => {
+  const hits = pointerWithin(args);
+  return hits.length > 0 ? hits : rectIntersection(args);
+};
+
+// A status column that takes dropped cards. From 1024 px, five columns fit
+// beside the open sidebar (MSL-61): below 1280 px they drop the add button
+// (New ticket still adds) so status names fit; narrower screens scroll.
 function Column({ status, canEdit, children }: { status: Status; canEdit: boolean; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id: `status-${status.id}`, data: { statusId: status.id }, disabled: !canEdit });
   return (
     <section
       ref={setNodeRef}
       aria-label={status.name}
-      className={cx("flex min-w-[220px] flex-1 basis-0 flex-col gap-2 self-start rounded-2xl bg-sidebar p-2", isOver && "outline-2 -outline-offset-2 outline-accent")}
+      className={cx("flex min-w-[220px] flex-1 basis-0 flex-col gap-2 self-start rounded-2xl bg-sidebar p-2 lg:min-w-[136px] lg:max-xl:p-1.5", isOver && "outline-2 -outline-offset-2 outline-accent")}
     >
       {children}
     </section>
@@ -101,6 +123,7 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, s
       {error && <p role="alert" className={field.error}>{error}</p>}
       <DndContext
         sensors={sensors}
+        collisionDetection={dropTarget}
         onDragStart={(e) => setDragging(Number(e.active.id))}
         onDragCancel={() => setDragging(null)}
         onDragEnd={(e) => {
@@ -109,21 +132,21 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, s
           if (statusId !== undefined) move(Number(e.active.id), statusId);
         }}
       >
-        <div className="flex gap-3 overflow-x-auto pb-2">
+        <div className="flex gap-3 overflow-x-auto pb-2 lg:max-xl:gap-2">
           {statuses.map((s) => {
             const cards = items.filter((x) => x.status_id === s.id);
             const droppable = canEdit;
             return (
               <Column key={s.id} status={s} canEdit={canEdit}>
-                <h2 className="flex h-9 items-center gap-2 pl-2 pr-0.5 text-sm font-extrabold">
-                  <StatusDot color={s.color} className="size-2.5" />
-                  <span className="truncate">{s.name}</span>
+                <h2 className="flex min-h-9 items-center gap-2 pl-2 pr-0.5 text-sm font-extrabold leading-tight lg:max-xl:gap-1.5 lg:max-xl:pl-1">
+                  <StatusDot color={s.color} className="size-2.5 shrink-0" />
+                  <span className="min-w-0 break-words">{s.name}</span>
                   <span className="text-[13px] font-bold text-muted">{cards.length}</span>
                   {droppable && (
                     <Link
                       href={`/p/${projectKey}/tickets/new?status_id=${s.id}`}
                       aria-label={t("addHere", { status: s.name })}
-                      className="ml-auto inline-flex size-7 items-center justify-center rounded-lg text-ink-soft hover:bg-white hover:text-ink"
+                      className="ml-auto inline-flex size-7 shrink-0 items-center justify-center rounded-lg text-ink-soft lg:max-xl:hidden hover:bg-white hover:text-ink"
                     >
                       <Icon name="plus" />
                     </Link>
@@ -142,11 +165,11 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, s
                     key={c.id}
                     id={c.id}
                     canEdit={canEdit}
-                    className="flex flex-col gap-2 rounded-[14px] bg-white p-3.5 shadow-[0_1px_2px_rgba(43,36,32,0.06),0_0_0_1px_rgba(43,36,32,0.04)]"
+                    className="flex flex-col gap-2 rounded-[14px] bg-white p-3.5 lg:max-xl:p-2.5 shadow-[0_1px_2px_rgba(43,36,32,0.06),0_0_0_1px_rgba(43,36,32,0.04)]"
                   >
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-muted">
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold text-muted">
                       <TypeIcon type={c.type} label={tTypes(c.type)} />
-                      <span>{c.key}</span>
+                      <span className="whitespace-nowrap">{c.key}</span>
                       {(c.missing_reason || c.node_names.length === 0) && (
                         <span role="img" title={t("missing")} aria-label={t("missing")} className="size-[7px] rounded-full bg-[#D97706]" />
                       )}
@@ -167,6 +190,14 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, s
                     )}
                     <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
                       {showClients && <ClientChip client={c.client} coreLabel={t("noClient")} />}
+                      {c.labels?.map((l) => (
+                        <span key={l} className="rounded-full bg-well px-1.5 text-[11px] font-semibold text-ink-soft">{l}</span>
+                      ))}
+                      {c.checklist && (
+                        <span title={t("checklist")} className={c.checklist.done === c.checklist.total ? "font-semibold text-ok" : ""}>
+                          ☑ {c.checklist.done}/{c.checklist.total}
+                        </span>
+                      )}
                       {c.due_date && (
                         <span className={c.due_date < today ? "font-semibold text-danger" : ""}>{day(c.due_date, locale, c.due_date.slice(0, 4) !== today.slice(0, 4))}</span>
                       )}
@@ -175,7 +206,7 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, s
                           aria-label={t("moveTo", { key: c.key })}
                           value={c.status_id}
                           onChange={(e) => move(c.id, Number(e.target.value))}
-                          className="ml-auto h-7 max-w-32 cursor-pointer rounded-lg bg-well pl-2 text-xs font-semibold text-ink-soft hover:text-ink"
+                          className="ml-auto h-7 max-w-[min(8rem,100%)] cursor-pointer rounded-lg bg-well pl-2 text-xs font-semibold text-ink-soft hover:text-ink"
                         >
                           {statuses.map((o) => (
                             <option key={o.id} value={o.id}>{o.name}</option>

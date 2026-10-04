@@ -37,9 +37,9 @@ export default function UsersAdmin({ users, meId }: { users: User[]; meId: numbe
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [error, setError] = useState("");
   // MSL-20: every link made here stays listed until dismissed, newest first.
-  const [links, setLinks] = useState<{ name: string; url: string }[]>([]);
+  const [links, setLinks] = useState<{ name: string; url: string; emailedTo?: string }[]>([]);
   const [copied, setCopied] = useState("");
-  const addLink = (name: string, url: string) => setLinks((ls) => [{ name, url }, ...ls.filter((l) => l.name !== name)]);
+  const addLink = (name: string, url: string, emailedTo?: string) => setLinks((ls) => [{ name, url, emailedTo }, ...ls.filter((l) => l.name !== name)]);
 
   const counts = useMemo(() => {
     const c = { all: users.length, active: 0, invited: 0, disabled: 0 };
@@ -57,7 +57,7 @@ export default function UsersAdmin({ users, meId }: { users: User[]; meId: numbe
   async function newLink(u: User): Promise<string | undefined> {
     const { data, error } = await api.POST("/admin/users/{id}/setup-link", { params: { path: { id: u.id } } });
     if (error) return problemText(error);
-    addLink(u.name, data.url);
+    addLink(u.name, data.url, data.emailed_to);
     router.refresh();
   }
   async function runConfirm(c: Confirm) {
@@ -114,6 +114,8 @@ export default function UsersAdmin({ users, meId }: { users: User[]; meId: numbe
           <button type="button" aria-label={t("dismiss")} className={button.quiet} onClick={() => setLinks((ls) => ls.filter((l) => l.url !== link.url))}>
             <Icon name="x" className="size-3.5" />
           </button>
+          {/* MSL-50: with email set up, the link is on its way too. */}
+          {link.emailedTo && <span className="basis-full text-xs text-ink-soft">{t("emailedTo", { email: link.emailedTo })}</span>}
         </p>
       ))}
       {/* md:overflow-visible: the row menu would be clipped by the wrapper's scroll box; phones keep the sideways scroll. */}
@@ -182,9 +184,9 @@ export default function UsersAdmin({ users, meId }: { users: User[]; meId: numbe
           isMe={panel !== "new" && panel.id === meId}
           lastLogin={panel === "new" ? "" : lastLogin(panel)}
           onClose={() => setPanel(null)}
-          onCreated={(name, url) => {
+          onCreated={(name, url, emailedTo) => {
             setError("");
-            addLink(name, url);
+            addLink(name, url, emailedTo);
             setPanel(null);
             router.refresh();
           }}
@@ -217,7 +219,7 @@ type PanelProps = {
   isMe: boolean;
   lastLogin: string;
   onClose: () => void;
-  onCreated: (name: string, url: string) => void;
+  onCreated: (name: string, url: string, emailedTo?: string) => void;
   onSaved: () => void;
   onLink: (u: User) => void;
   onDisable: (u: User) => void;
@@ -241,7 +243,7 @@ function UserPanel({ user, isMe, lastLogin, onClose, onCreated, onSaved, onLink,
       const { data, error } = await api.POST("/admin/users", { body: { name, email, is_admin: admin } });
       setBusy(false);
       if (error) return setProblem(error);
-      return onCreated(data.user.name, data.setup_link.url);
+      return onCreated(data.user.name, data.setup_link.url, data.setup_link.emailed_to);
     }
     // Only the fields that changed, so a save never undoes someone else's edit.
     const body: { name?: string; is_admin?: boolean } = {};

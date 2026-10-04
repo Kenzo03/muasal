@@ -20,10 +20,13 @@ Press **c** anywhere to file a ticket. It needs a title, a type, the client (or 
 - **Comments** are Internal by default. Mark one Client-safe only when it may appear in a client-facing summary. Type **@** to mention a member.
 - **Links** say that a ticket reverses, extends or relates to another. A reversing ticket supersedes the older decision.
 - **The board** moves tickets between statuses by drag and drop.
+- **In the list,** tick tickets to change their assignee, priority, due date, release or status together, or to **Close out** several at once: their decision records are drafted with AI one after another, then each opens in the close dialog to confirm or edit, and closing one opens the next.
+- **Releases** (project settings) such as v1.0 group the tickets that ship together; the board and list filter by them.
+- **Client acceptance** on a ticket records who at the client accepted the work, as in UAT sign-off, and when; the list filters on it and summaries show it.
 
 **Closing** a ticket, by moving it to Done or Cancelled, opens the close dialog. It asks what changed, why, and what alternatives were rejected, prefilled from the ticket. **Draft with AI** fills these fields from the ticket's comments and linked commits. It leaves Why empty when the thread never says why, so you ask the requester instead of guessing. Nothing is saved until **Close ticket**.
 
-**Decision notes** record decisions made in meetings, calls or emails, outside any ticket. They appear on menu pages and in Ask, and are cited like `HRIS-DN7`.
+**Decision notes** record decisions made in meetings, calls or emails, outside any ticket. They appear on menu pages and in Ask, and are cited like `HRIS-DN7`. A note about the whole project, such as a kickoff, needs no menu; whole-project summaries include it. A note's action items each become a ticket from its page, or all at once with **Create all**.
 
 ## Ask
 
@@ -42,7 +45,15 @@ On the project's **Summaries** tab:
 3. Generate. The summary is editable Markdown with cited bullets and an appendix of the items.
 4. Print it (the browser saves A4 PDF), or copy it as Markdown.
 
-Client-facing summaries use decision records and Client-safe comments only, and never Internal comments.
+Client-facing summaries use decision records and Client-safe comments only, and never Internal comments. A summary can also cover one release: its closed tickets, without decision notes.
+
+Beside the summaries:
+- **Weekly status** lists what closed in the last 7 days, what is in progress, overdue, due in the next 7 days or without an assignee, for the whole project or one client, to print or copy into the client update.
+- **Handover** gathers, for every module and menu, its specification sections, the behaviours in force and what is still open, as one document to print or copy at the end of the project.
+
+## Finishing a project
+
+When the work is done, a project admin archives the project from its settings. It becomes read-only for everyone and leaves the project pickers, Home and reminders, but stays readable under **All projects**; its admins can restore it from the banner on any of its pages.
 
 ## Documents and tree drafts
 
@@ -60,7 +71,7 @@ Project admins connect GitHub, GitLab or Gitea repositories in project settings.
 
 ## Notifications
 
-The bell shows assignments, comments, mentions, status changes and finished imports or tree drafts, live while the app is open. Your profile turns each event on or off, and can turn on browser notifications, and, once your admin has set up email, an email of what you have not read after a couple of minutes.
+The bell shows assignments, comments, mentions, status changes and finished imports or tree drafts, live while the app is open. Each morning from 08:00 in your timezone it also reminds you of your open tickets due today or tomorrow, and of those that went overdue yesterday. Your profile turns each event on or off, and can turn on browser notifications, and, once your admin has set up email, an email of what you have not read after a couple of minutes.
 
 ## For scripts
 

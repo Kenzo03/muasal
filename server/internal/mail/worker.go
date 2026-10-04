@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
@@ -83,12 +84,14 @@ func Digest(locale, name string, items []Item, publicURL string) (subject, body 
 		"assigned": "%s assigned you %s", "comment": "%s commented on %s", "mention": "%s mentioned you on %s",
 		"status": "%s moved %s to %s", "job_done": "%s finished", "hello": "Hi %s,", "someone": "Someone",
 		"many": "Muasal: %d new notifications", "footer": "Choose which notifications reach you at %s/settings/profile.",
+		"due.today": "%s is due today", "due.tomorrow": "%s is due tomorrow", "due.overdue": "%s is overdue",
 	}
 	if locale == "id" {
 		words = map[string]string{
 			"assigned": "%s menugaskan %s kepada Anda", "comment": "%s berkomentar di %s", "mention": "%s menyebut Anda di %s",
 			"status": "%s memindahkan %s ke %s", "job_done": "%s selesai", "hello": "Halo %s,", "someone": "Seseorang",
 			"many": "Muasal: %d pemberitahuan baru", "footer": "Atur pemberitahuan yang Anda terima di %s/settings/profile.",
+			"due.today": "%s jatuh tempo hari ini", "due.tomorrow": "%s jatuh tempo besok", "due.overdue": "%s sudah lewat jatuh tempo",
 		}
 	}
 	var lines []string
@@ -110,6 +113,8 @@ func Digest(locale, name string, items []Item, publicURL string) (subject, body 
 			line = fmt.Sprintf(words["status"], actor, ticket, str("status"))
 		case "job_done":
 			line, link = fmt.Sprintf(words["job_done"], str("name")), str("link")
+		case "due": // MSL-52
+			line = fmt.Sprintf(words["due."+str("when")], ticket)
 		default:
 			line = fmt.Sprintf(words[it.Type], actor, ticket)
 		}
@@ -141,4 +146,16 @@ func deref(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+// Invite writes the email carrying a new user's setup link (MSL-50).
+func Invite(locale, name, inviter, url string, expires time.Time) (subject, body string) {
+	if f := strings.Fields(name); len(f) > 0 {
+		name = f[0]
+	}
+	until := expires.Format("2 Jan 2006 15:04 MST")
+	if locale == "id" {
+		return "Undangan ke Muasal", fmt.Sprintf("Halo %s,\n\n%s mengundang Anda ke Muasal. Atur kata sandi Anda lewat tautan ini, berlaku sampai %s:\n\n  %s\n\nJika tautannya sudah tidak berlaku, minta tautan baru kepada %s.\n", name, inviter, until, url, inviter)
+	}
+	return "You're invited to Muasal", fmt.Sprintf("Hi %s,\n\n%s invited you to Muasal. Set your password with this link, valid until %s:\n\n  %s\n\nIf the link has expired, ask %s for a new one.\n", name, inviter, until, url, inviter)
 }

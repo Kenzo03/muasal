@@ -203,7 +203,7 @@ func (s *Server) noteFor(w http.ResponseWriter, r *http.Request, key, need strin
 		return projectCtx{}, db.GetNoteByKeyRow{}, false
 	}
 	if !pc.scope.Allows(need) {
-		writeProblem(w, http.StatusForbidden, "forbidden", "Your project role does not allow this")
+		denyRole(w, pc)
 		return projectCtx{}, db.GetNoteByKeyRow{}, false
 	}
 	return pc, row, true
@@ -254,10 +254,9 @@ func (s *Server) checkNote(ctx context.Context, pc projectCtx, in NoteInput) (no
 	if err != nil {
 		return v, nil, err
 	}
-	switch {
-	case len(ids) == 0:
-		f = append(f, FieldError{Field: "node_ids", Code: "min_items", Message: "Link at least one menu or module"})
-	case !live:
+	// No menu is fine: a kickoff or weekly status meeting is about the whole
+	// project; Ask and search still find it (MSL-59).
+	if !live {
 		f = append(f, nodeIDsField)
 	}
 	v.nodeIDs = ids

@@ -38,10 +38,12 @@ export default function NewProjectForm({ templates }: { templates: { key: string
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3.5">
       <div className="grid gap-3.5 sm:grid-cols-[160px_minmax(0,1fr)]">
-        <label className={field.label}>
+        {/* Explicit label ids: some assistive tech misses wrapping labels (MSL-62). */}
+        <label htmlFor="np-key" className={field.label}>
           {t("key")}
           {/* The browser checks the server's rule first and points at this field. */}
           <input
+            id="np-key"
             name="key"
             value={key}
             onChange={(e) => {
@@ -57,9 +59,10 @@ export default function NewProjectForm({ templates }: { templates: { key: string
             className={cx(field.input, "font-mono uppercase")}
           />
         </label>
-        <label className={field.label}>
+        <label htmlFor="np-name" className={field.label}>
           {t("name")}
           <input
+            id="np-name"
             name="name"
             required
             maxLength={200}
@@ -70,15 +73,15 @@ export default function NewProjectForm({ templates }: { templates: { key: string
         </label>
       </div>
       <p id="key-hint" className={cx(field.hint, "-mt-2")}>{t("keyHint")}</p>
-      <label className={field.label}>
+      <label htmlFor="np-description" className={field.label}>
         {t("description")}
-        <textarea name="description" maxLength={2000} rows={3} aria-invalid={bad("description")} className={field.textarea} />
+        <textarea id="np-description" name="description" maxLength={2000} rows={3} aria-invalid={bad("description")} className={field.textarea} />
       </label>
       {templates.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <label className={field.label}>
+          <label htmlFor="np-template" className={field.label}>
             {t("template")}
-            <select name="template_key" defaultValue="" aria-invalid={bad("template_key")} aria-describedby="template-hint" className={field.input}>
+            <select id="np-template" name="template_key" defaultValue="" aria-invalid={bad("template_key")} aria-describedby="template-hint" className={field.input}>
               <option value="">{t("templateNone")}</option>
               {templates.map((p) => (
                 <option key={p.key} value={p.key}>{p.key} · {p.name}</option>

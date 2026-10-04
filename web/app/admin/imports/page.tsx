@@ -3,19 +3,22 @@ import { redirect } from "next/navigation";
 import { getLocale, getTimeZone, getTranslations } from "next-intl/server";
 import PageBar from "@/components/PageBar";
 import { dateTime } from "@/lib/format";
+import { active } from "@/lib/projects";
 import { getMe, getProjects, serverApi } from "@/lib/server-api";
 import { cx, table } from "@/lib/ui";
 import NewImport from "./NewImport";
 
-// Admin → Imports (FSD §14.2): one-time ticket imports from CSV or Jira.
-export default async function ImportsPage() {
+// Admin → Imports (FSD §14.2): one-time ticket imports from CSV or Jira, for
+// system admins and for project admins into their projects (MSL-49).
+export default async function ImportsPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
   const me = await getMe();
   if (!me) redirect("/login");
+  const { project } = await searchParams;
   const t = await getTranslations("imports");
   const locale = await getLocale();
   const timeZone = await getTimeZone();
-  const { data } = me.is_admin ? await (await serverApi()).GET("/imports") : { data: undefined };
-  const projects = me.is_admin ? await getProjects() : [];
+  const projects = active(await getProjects()).filter((p) => me.is_admin || p.role === "admin");
+  const { data } = projects.length > 0 ? await (await serverApi()).GET("/imports") : { data: undefined };
   return (
     <>
       <PageBar>
@@ -27,7 +30,7 @@ export default async function ImportsPage() {
         ) : (
           <>
             <p className="text-[13px] text-muted">{t("intro")}</p>
-            <NewImport projects={projects.map((p) => ({ key: p.key, name: p.name }))} />
+            <NewImport projects={projects.map((p) => ({ key: p.key, name: p.name }))} defaultKey={project} />
             {data.items.length > 0 && (
               <div className={table.wrap}>
                 <table className={table.table}>

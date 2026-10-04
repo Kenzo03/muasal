@@ -7,7 +7,7 @@ import { api } from "@/lib/api";
 import type { User } from "@/lib/problem";
 import { button, field } from "@/lib/ui";
 
-const events = ["assigned", "comment", "mention", "status", "job_done"] as const;
+const events = ["assigned", "comment", "mention", "status", "due", "job_done"] as const;
 
 // Settings → Profile → Notifications (FSD §8.10): each event on or off, and
 // browser notifications, which also ask the browser's permission.

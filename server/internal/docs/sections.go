@@ -78,13 +78,56 @@ func HeadingName(title string) (name, id string) {
 	return strings.TrimSpace(title), ""
 }
 
+// letterIDRe finds a trailing ID of capitals only, such as "(ATT)".
+var letterIDRe = regexp.MustCompile(`\s*\(([A-Z]{2,6})\)\s*$`)
+
+// Prefixes lists the letters that start the headings' IDs, such as ATT for
+// ATT-01 (MSL-46).
+func Prefixes(sections []Section) map[string]bool {
+	out := map[string]bool{}
+	for _, s := range sections {
+		if _, id := HeadingName(s.Title); id != "" {
+			if i := strings.IndexAny(id, "-_."); i > 0 {
+				out[id[:i]] = true
+			}
+		}
+	}
+	return out
+}
+
+// IDs lists every heading's ID, such as ATT-01, and each module ID its menus
+// start with, such as ATT (MSL-46).
+func IDs(sections []Section) map[string]bool {
+	prefixes, out := Prefixes(sections), map[string]bool{}
+	for _, s := range sections {
+		if _, id := NameIn(s.Title, prefixes); id != "" {
+			out[id] = true
+		}
+	}
+	return out
+}
+
+// NameIn is HeadingName that also takes a capitals-only ID, such as "(ATT)",
+// when other IDs start with it: a module's code. An acronym such as "(PDF)"
+// stays part of the name (MSL-46).
+func NameIn(title string, prefixes map[string]bool) (name, id string) {
+	if name, id = HeadingName(title); id != "" {
+		return name, id
+	}
+	if m := letterIDRe.FindStringSubmatchIndex(title); m != nil && prefixes[title[m[2]:m[3]]] {
+		return strings.TrimSpace(title[:m[0]]), title[m[2]:m[3]]
+	}
+	return name, ""
+}
+
 // SectionFor returns the number and trailing ID of the section whose heading
 // names name, ignoring case, spacing and IDs on either side; "" when none does.
 func SectionFor(sections []Section, name string) (number, id string) {
-	name, _ = HeadingName(name)
+	prefixes := Prefixes(sections)
+	name, _ = NameIn(name, prefixes)
 	name = strings.Join(strings.Fields(name), " ")
 	for _, s := range sections {
-		if n, id := HeadingName(s.Title); strings.EqualFold(strings.Join(strings.Fields(n), " "), name) {
+		if n, id := NameIn(s.Title, prefixes); strings.EqualFold(strings.Join(strings.Fields(n), " "), name) {
 			return s.Number, id
 		}
 	}

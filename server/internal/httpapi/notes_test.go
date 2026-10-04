@@ -37,7 +37,7 @@ func TestMembersRecordDecisionNotes(t *testing.T) {
 	for _, f := range *p.Errors {
 		fields = append(fields, f.Field+":"+f.Code)
 	}
-	if fmt.Sprint(fields) != "[title:invalid body:required node_ids:min_items]" {
+	if fmt.Sprint(fields) != "[title:invalid body:required]" {
 		t.Fatalf("field errors: %v", fields)
 	}
 
@@ -74,6 +74,35 @@ func TestMembersRecordDecisionNotes(t *testing.T) {
 	var list httpapi.NoteList
 	if e.call(w.pm, http.MethodGet, "/projects/HRIS/notes", nil, &list); len(list.Items) != 1 {
 		t.Fatalf("list: %+v", list)
+	}
+}
+
+// MSL-59: a kickoff is about the whole project, so its note needs no menu. It
+// is listed and found, and a summary of the whole project covers it under the
+// project's name; a menu's summary does not.
+func TestKickoffNotesNeedNoMenu(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	var n httpapi.Note
+	if code := e.call(w.pm, http.MethodPost, "/projects/HRIS/notes", noteBody("Kickoff: go-live on 1 March", "2025-11-04", nil, []int64{}), &n); code != http.StatusCreated || len(n.Nodes) != 0 {
+		t.Fatalf("create: %d %+v", code, n)
+	}
+	var list httpapi.NoteList
+	if e.call(w.pm, http.MethodGet, "/projects/HRIS/notes", nil, &list); len(list.Items) != 1 {
+		t.Fatalf("list: %+v", list)
+	}
+	var found httpapi.SearchResults
+	if e.call(w.pm, http.MethodGet, "/search?q=kickoff", nil, &found); len(found.Notes) != 1 {
+		t.Fatalf("search: %+v", found.Notes)
+	}
+	scope := map[string]any{"project_key": "HRIS", "node_id": 0, "from": "2025-11-01", "to": "2025-11-30", "language": "en", "audience": "internal"}
+	var prev httpapi.SummaryPreview
+	if code := e.call(w.pm, http.MethodPost, "/summaries/preview", scope, &prev); code != http.StatusOK || len(prev.Items) != 1 || prev.Items[0].Key != n.Key || prev.Items[0].Menu != "HRIS" {
+		t.Fatalf("whole project: %d %+v", code, prev)
+	}
+	scope["node_id"] = w.hr.ID
+	if e.call(w.pm, http.MethodPost, "/summaries/preview", scope, &prev); len(prev.Items) != 0 {
+		t.Fatalf("a menu's summary: %+v", prev.Items)
 	}
 }
 

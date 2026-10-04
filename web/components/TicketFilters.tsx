@@ -10,17 +10,19 @@ type Props = {
   clients: Client[];
   assignees: Ref[]; // who can own tickets, so a lead can look at one person's work
   statuses?: Status[]; // the list filters by status; the board shows every status anyway
+  labels?: string[]; // the project's labels, most used first (MSL-56)
+  releases?: { id: number; name: string }[]; // MSL-67
 };
 
 // The filter bar of the board and the list (FSD §8.4, §8.5). It is a GET form,
 // so every view is a URL people can share.
-export default async function TicketFilters({ action, values, clients, assignees, statuses }: Props) {
+export default async function TicketFilters({ action, values, clients, assignees, statuses, labels = [], releases = [] }: Props) {
   const t = await getTranslations("ticketFilters");
   const tTypes = await getTranslations("ticketTypes");
   // Each filter is a chip: its name, then a borderless select.
   const pick = "flex h-9 items-center gap-1 rounded-[10px] border border-line bg-white pl-3 text-[13.5px] font-semibold text-ink focus-within:border-accent";
   const select = "h-full cursor-pointer rounded-[10px] bg-transparent text-[13.5px] font-medium text-muted outline-none";
-  const set = ["client", "type", "assignee", "status", "due", "stale", "missing"].filter((k) => values[k]).length;
+  const set = ["client", "type", "assignee", "label", "release", "accepted", "status", "due", "stale", "missing"].filter((k) => values[k]).length;
   return (
     <form method="get" action={action} aria-label={t("label")} className="flex flex-wrap items-center gap-2">
       <label className="flex h-9 items-center gap-2 rounded-[10px] border border-line bg-white px-3 text-muted focus-within:border-accent">
@@ -35,9 +37,9 @@ export default async function TicketFilters({ action, values, clients, assignees
       </label>
       <div className="hidden w-full flex-wrap items-center gap-2 peer-checked:flex md:flex md:w-auto">
         {showsClients(clients) && (
-          <label className={pick}>
+          <label htmlFor={`${action}-client`} className={pick}>
             {t("client")}
-            <select name="client" defaultValue={values.client ?? ""} className={select}>
+            <select id={`${action}-client`} name="client" defaultValue={values.client ?? ""} className={select}>
               <option value="">{t("allClients")}</option>
               <option value="core">{t("core")}</option>
               {clients.map((c) => (
@@ -46,18 +48,18 @@ export default async function TicketFilters({ action, values, clients, assignees
             </select>
           </label>
         )}
-        <label className={pick}>
+        <label htmlFor={`${action}-type`} className={pick}>
           {t("type")}
-          <select name="type" defaultValue={values.type ?? ""} className={select}>
+          <select id={`${action}-type`} name="type" defaultValue={values.type ?? ""} className={select}>
             <option value="">{t("anyType")}</option>
             {(["bug", "change_request", "feature"] as const).map((ty) => (
               <option key={ty} value={ty}>{tTypes(ty)}</option>
             ))}
           </select>
         </label>
-        <label className={pick}>
+        <label htmlFor={`${action}-assignee`} className={pick}>
           {t("assignee")}
-          <select name="assignee" defaultValue={values.assignee ?? ""} className={select}>
+          <select id={`${action}-assignee`} name="assignee" defaultValue={values.assignee ?? ""} className={select}>
             <option value="">{t("anyone")}</option>
             <option value="me">{t("mine")}</option>
             <option value="none">{t("unassigned")}</option>
@@ -66,11 +68,33 @@ export default async function TicketFilters({ action, values, clients, assignees
             ))}
           </select>
         </label>
+        {labels.length > 0 && (
+          <label htmlFor={`${action}-label`} className={pick}>
+            {t("labelFilter")}
+            <select id={`${action}-label`} name="label" defaultValue={values.label ?? ""} className={select}>
+              <option value="">{t("anyLabel")}</option>
+              {labels.map((l) => (
+                <option key={l} value={l}>{l}</option>
+              ))}
+            </select>
+          </label>
+        )}
+        {releases.length > 0 && (
+          <label htmlFor={`${action}-release`} className={pick}>
+            {t("release")}
+            <select id={`${action}-release`} name="release" defaultValue={values.release ?? ""} className={select}>
+              <option value="">{t("anyRelease")}</option>
+              {releases.map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </select>
+          </label>
+        )}
         {statuses && (
           <>
-            <label className={pick}>
+            <label htmlFor={`${action}-status`} className={pick}>
               {t("status")}
-              <select name="status" defaultValue={values.status ?? ""} className={select}>
+              <select id={`${action}-status`} name="status" defaultValue={values.status ?? ""} className={select}>
                 <option value="">{t("anyStatus")}</option>
                 <option value="open">{t("openStatuses")}</option>
                 {statuses.map((s) => (
@@ -78,17 +102,25 @@ export default async function TicketFilters({ action, values, clients, assignees
                 ))}
               </select>
             </label>
-            <label className={pick}>
+            <label htmlFor={`${action}-due`} className={pick}>
               {t("due")}
-              <select name="due" defaultValue={values.due ?? ""} className={select}>
+              <select id={`${action}-due`} name="due" defaultValue={values.due ?? ""} className={select}>
                 <option value="">{t("anyDue")}</option>
                 <option value="overdue">{t("overdue")}</option>
                 <option value="week">{t("dueWeek")}</option>
               </select>
             </label>
-            <label className={pick}>
+            <label htmlFor={`${action}-accepted`} className={pick}>
+              {t("accepted")}
+              <select id={`${action}-accepted`} name="accepted" defaultValue={values.accepted ?? ""} className={select}>
+                <option value="">{t("anyAcceptance")}</option>
+                <option value="yes">{t("acceptedYes")}</option>
+                <option value="no">{t("acceptedNo")}</option>
+              </select>
+            </label>
+            <label htmlFor={`${action}-stale`} className={pick}>
               {t("stale")}
-              <select name="stale" defaultValue={values.stale ?? ""} className={select}>
+              <select id={`${action}-stale`} name="stale" defaultValue={values.stale ?? ""} className={select}>
                 <option value="">{t("anyActivity")}</option>
                 {/* A link from the workload page may carry another number of days. */}
                 {[...new Set([7, 14, 30, ...(/^\d+$/.test(values.stale ?? "") ? [Number(values.stale)] : [])])]
@@ -98,18 +130,18 @@ export default async function TicketFilters({ action, values, clients, assignees
                   ))}
               </select>
             </label>
-            <label className={pick}>
+            <label htmlFor={`${action}-missing`} className={pick}>
               {t("missing")}
-              <select name="missing" defaultValue={values.missing ?? ""} className={select}>
+              <select id={`${action}-missing`} name="missing" defaultValue={values.missing ?? ""} className={select}>
                 <option value="">{t("nothingMissing")}</option>
                 <option value="reason">{t("missingReason")}</option>
                 <option value="menus">{t("missingMenus")}</option>
                 <option value="weak_reason">{t("weakReason")}</option>
               </select>
             </label>
-            <label className={pick}>
+            <label htmlFor={`${action}-sort`} className={pick}>
               {t("sort")}
-              <select name="sort" defaultValue={values.sort ?? "updated"} className={select}>
+              <select id={`${action}-sort`} name="sort" defaultValue={values.sort ?? "updated"} className={select}>
                 <option value="updated">{t("sortUpdated")}</option>
                 <option value="created">{t("sortCreated")}</option>
                 <option value="key">{t("sortKey")}</option>

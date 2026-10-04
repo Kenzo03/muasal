@@ -47,7 +47,8 @@ export default async function WorkloadPage({ params }: { params: Promise<{ key: 
                 <th className={cx(table.th, "text-right")}>{t("overdue")}</th>
                 <th className={cx(table.th, "text-right")}>{t("dueWeek")}</th>
                 <th className={cx(table.th, "text-right")}>{t("stale", { days: staleDays })}</th>
-                <th className={cx(table.th, "pr-5 text-right")}>{t("high")}</th>
+                <th className={cx(table.th, "text-right")}>{t("high")}</th>
+                <th className={cx(table.th, "pr-5 text-right")}>{t("openHours")}</th>
               </tr>
             </thead>
             <tbody>
@@ -86,8 +87,12 @@ export default async function WorkloadPage({ params }: { params: Promise<{ key: 
                     <td className={cx(table.td, "py-3 text-right tabular-nums")}>
                       {count(r.stale, list(who, { stale: String(staleDays) }), "text-warn hover:text-warn")}
                     </td>
-                    <td className={cx(table.td, "py-3 pr-5 text-right tabular-nums")}>
+                    <td className={cx(table.td, "py-3 text-right tabular-nums")}>
                       {count(r.high, list(who, { status: "open", sort: "priority" }))}
+                    </td>
+                    {/* MSL-54: effort, not just ticket count; how many are estimated says how much to trust it. */}
+                    <td className={cx(table.td, "py-3 pr-5 text-right tabular-nums")} title={t("estimatedOf", { estimated: r.estimated, open: r.open })}>
+                      {r.estimated > 0 ? t("hours", { hours: r.open_hours }) : "—"}
                     </td>
                   </tr>
                 );

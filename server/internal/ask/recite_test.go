@@ -48,3 +48,46 @@ func TestReciteIgnoresOneDigitFigures(t *testing.T) {
 		t.Errorf("cites %v moved %+v, want the claim unchanged", got.Cites, moved)
 	}
 }
+
+// MSL-44: a one-digit figure with its unit is checked; the claim moves to the
+// section that states it, and a bare digit such as the 1 of H+1 still is not.
+func TestReciteChecksOneDigitFiguresWithUnits(t *testing.T) {
+	blocks := map[string]string{
+		"HRIS-DOC1/2.1": "[HRIS-DOC1/2.1] Pengajuan Lembur (OT-01)\nLembur diajukan sebelum dikerjakan. Maksimal 3 jam per hari dan 14 jam per minggu.",
+		"HRIS-DOC1/2.2": "[HRIS-DOC1/2.2] Persetujuan Lembur (OT-02)\nLembur disetujui oleh Kepala Toko, lalu Area Manager bila lebih dari 2 jam dalam satu hari.",
+		"HRIS-DOC1/3.1": "[HRIS-DOC1/3.1] Pengajuan Cuti (LV-01)\nHak cuti tahunan 12 hari; sisa cuti maksimal 3 hari dibawa.",
+	}
+	order := []string{"HRIS-DOC1/2.2", "HRIS-DOC1/3.1", "HRIS-DOC1/2.1"}
+	c := ask.Claim{Text: "Maksimal jam lembur per hari adalah 3 jam.", Cites: []string{"HRIS-DOC1/2.2"}}
+	if got, moved := ask.Recite(c, blocks, order); moved == nil || !slices.Equal(got.Cites, []string{"HRIS-DOC1/2.1"}) {
+		t.Errorf("cites %v moved %+v, want HRIS-DOC1/2.1 (3 jam, not 3 hari)", got.Cites, moved)
+	}
+	ok := ask.Claim{Text: "Area Manager menyetujui lembur lebih dari 2 jam.", Cites: []string{"HRIS-DOC1/2.2"}}
+	if got, moved := ask.Recite(ok, blocks, order); moved != nil || !slices.Equal(got.Cites, ok.Cites) {
+		t.Errorf("a right citation moved: %v %+v", got.Cites, moved)
+	}
+}
+
+// MSL-43: a claim that calls a ticket late whose due note says otherwise goes;
+// a true one, or one saying it isn't late, stays.
+func TestContradictsDue(t *testing.T) {
+	blocks := map[string]string{
+		"HRIS-8": "[HRIS-8] Bug · open\nAssigned to Fajar · priority urgent · due 2026-10-01, due tomorrow, not overdue\n",
+		"HRIS-6": "[HRIS-6] Bug · open\nAssigned to Fajar · priority urgent · due 2026-09-28, overdue by 2 days\n",
+	}
+	for text, want := range map[string]bool{
+		"Tiket HRIS-8 terlambat karena jatuh tempo besok.":  true,
+		"HRIS-6 is overdue by two days.":                    false,
+		"HRIS-8 belum terlambat; jatuh tempo besok.":        false,
+		"HRIS-8 dipegang Fajar Nugroho.":                    false,
+		"Both HRIS-6 and HRIS-8 are late, both with Fajar.": true,
+	} {
+		if got := ask.ContradictsDue(ask.Claim{Text: text}, blocks); got != want {
+			t.Errorf("%q: %v, want %v", text, got, want)
+		}
+	}
+	// The live answer's third claim named no key but cited the one not overdue.
+	if !ask.ContradictsDue(ask.Claim{Text: "Ketiga tiket terlambat tersebut dipegang oleh Fajar Nugroho.", Cites: []string{"HRIS-6", "HRIS-8"}}, blocks) {
+		t.Error("a cited not-overdue ticket should count")
+	}
+}

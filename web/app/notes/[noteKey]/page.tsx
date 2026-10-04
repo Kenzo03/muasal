@@ -8,8 +8,9 @@ import NoteForm from "@/components/NoteForm";
 import PageBar from "@/components/PageBar";
 import { actionItems } from "@/lib/actions";
 import { dateTime, day } from "@/lib/format";
-import { serverApi } from "@/lib/server-api";
+import { getProject, serverApi } from "@/lib/server-api";
 import { button, cx, panel, sectionTitle } from "@/lib/ui";
+import CreateAll from "./CreateAll";
 
 // One decision note (FSD §9.4). The author and project admins edit it; every
 // edit is in the audit log.
@@ -37,15 +38,23 @@ export default async function NotePage({ params, searchParams }: {
     return hits.length === 1 ? hits[0].id : undefined;
   };
   const filed = (task: string) => note.tickets.find((tk) => tk.title.toLowerCase() === task.toLowerCase());
+  // One action item as a new ticket: the form's defaults plus what the item says.
+  const draft = (a: (typeof actions)[number]) => ({
+    type: "change_request" as const, priority: "medium" as const, title: a.task.slice(0, 200),
+    reason: t("actionReason", { key: note.key, title: note.title }), note_key: note.key,
+    assignee_id: ownerId(a.owner), due_date: a.due, client_id: note.client?.id, node_ids: note.nodes.map((n) => n.id),
+  });
   const newTicket = (a: (typeof actions)[number]) => {
-    const q: Record<string, string> = { title: a.task, reason: t("actionReason", { key: note.key, title: note.title }), note: note.key };
-    const who = ownerId(a.owner);
-    if (who) q.assignee = String(who);
-    if (a.due) q.due = a.due;
-    if (note.client) q.client = String(note.client.id);
-    if (note.nodes.length > 0) q.nodes = note.nodes.map((n) => n.id).join(",");
+    const d = draft(a);
+    const q: Record<string, string> = { title: d.title, reason: d.reason, note: note.key };
+    if (d.assignee_id) q.assignee = String(d.assignee_id);
+    if (d.due_date) q.due = d.due_date;
+    if (d.client_id) q.client = String(d.client_id);
+    if (d.node_ids.length > 0) q.nodes = d.node_ids.join(",");
     return `/p/${note.project_key}/tickets/new?${new URLSearchParams(q)}`;
   };
+  const unfiled = actions.filter((a) => !filed(a.task)).map(draft);
+  const canFile = unfiled.length > 1 && (await getProject(note.project_key))?.role !== "viewer";
   let form: React.ReactNode = null;
   if (editing) {
     const path = { params: { path: { key: note.project_key } } };
@@ -94,6 +103,7 @@ export default async function NotePage({ params, searchParams }: {
                 </div>
                 <div>
                   <h2 className={sectionTitle}>{t("menus")}</h2>
+                  {note.nodes.length === 0 && <p>{t("wholeProject")}</p>}
                   <ul className="flex flex-wrap gap-1.5">
                     {note.nodes.map((n) => (
                       <li key={n.id}><Link href={`/p/${note.project_key}/modules/${n.id}`}>{n.name}</Link></li>
@@ -122,6 +132,7 @@ export default async function NotePage({ params, searchParams }: {
                         );
                       })}
                     </ul>
+                    {canFile && <CreateAll projectKey={note.project_key} tickets={unfiled} />}
                   </div>
                 )}
                 <div>

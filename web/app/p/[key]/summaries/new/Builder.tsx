@@ -16,10 +16,11 @@ type Preview = components["schemas"]["SummaryPreview"];
 // The summary builder (FSD §12.1): pick the scope, preview the closed tickets
 // and notes by menu, untick what should stay out, then generate. Unticked
 // items never reach the model.
-export default function Builder({ projectKey, clients, nodes, locale }: {
+export default function Builder({ projectKey, clients, nodes, releases, locale }: {
   projectKey: string;
   clients: Client[];
   nodes: Node[];
+  releases: { id: number; name: string }[];
   locale: "id" | "en";
 }) {
   const t = useTranslations("summaries");
@@ -91,6 +92,18 @@ export default function Builder({ projectKey, clients, nodes, locale }: {
             ))}
           </select>
         </label>
+        {releases.length > 0 && (
+          <label className={field.label}>
+            {t("release")}
+            {/* MSL-67: what went into one release, such as v1.0 */}
+            <select value={scope.release_id ?? ""} onChange={(e) => set({ release_id: e.target.value ? Number(e.target.value) : undefined })} className={field.input}>
+              <option value="">{t("anyRelease")}</option>
+              {releases.map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className={field.label}>
           {t("from")}
           <input type="date" required value={scope.from} onChange={(e) => set({ from: e.target.value })} className={field.input} />

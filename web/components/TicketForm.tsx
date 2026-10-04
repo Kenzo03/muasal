@@ -102,6 +102,16 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
     };
   }, [clientId]);
 
+  // MSL-67: the project's releases, when it has any.
+  const [releases, setReleases] = useState<{ id: number; name: string }[]>([]);
+  useEffect(() => {
+    let live = true;
+    api.GET("/projects/{key}/releases", { params: { path: { key: projectKey } } }).then(({ data }) => live && data && setReleases(data.items));
+    return () => {
+      live = false;
+    };
+  }, [projectKey]);
+
   // MSL-22: only people who may see the chosen client's tickets can own this one.
   const [people, setPeople] = useState(assignees);
   useEffect(() => {
@@ -146,6 +156,8 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
     const form = new FormData(formEl);
     if (requester === "contact" && contactId === null) return setError(t("chooseContact"));
     const due = String(form.get("due_date") ?? "");
+    const estimate = String(form.get("estimate_hours") ?? "");
+    const labels = String(form.get("labels") ?? "").split(",").map((l) => l.trim()).filter(Boolean); // MSL-56
     const assignee = String(form.get("assignee_id") ?? "");
     const body = {
       type: String(form.get("type")) as TicketType,
@@ -159,6 +171,10 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
       assignee_id: assignee ? Number(assignee) : undefined,
       priority: String(form.get("priority")) as Priority,
       due_date: due || undefined,
+      estimate_hours: estimate ? Number(estimate) : undefined, // MSL-54
+      labels,
+      // MSL-67: before the releases load there is no menu, so an edit keeps the ticket's.
+      release_id: form.has("release_id") ? Number(form.get("release_id")) || undefined : ticket?.release?.id,
     };
     if (ticket) {
       const { error } = await api.PUT("/tickets/{key}", {
@@ -215,12 +231,13 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
           </Row>
           <Row label={t("requestedBy")} id="tf-requester">
             <div role="radiogroup" aria-labelledby="tf-requester" className="flex flex-wrap gap-2">
-              <label className={choice}>
-                <input type="radio" name="requester" checked={requester === "user"} onChange={() => setRequester("user")} />
+              {/* Explicit label ids: some assistive tech misses wrapping labels (MSL-62). */}
+              <label htmlFor="tf-requester-user" className={choice}>
+                <input id="tf-requester-user" type="radio" name="requester" value="user" checked={requester === "user"} onChange={() => setRequester("user")} />
                 {userRequester?.name ?? t("me")}
               </label>
-              <label className={choice}>
-                <input type="radio" name="requester" checked={requester === "contact"} onChange={() => setRequester("contact")} />
+              <label htmlFor="tf-requester-contact" className={choice}>
+                <input id="tf-requester-contact" type="radio" name="requester" value="contact" checked={requester === "contact"} onChange={() => setRequester("contact")} />
                 {t("contact")}
               </label>
             </div>
@@ -296,8 +313,8 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
         <Row label={t("type")} id="tf-type">
           <div role="radiogroup" aria-labelledby="tf-type" className="flex flex-wrap gap-2" onChange={(e) => setType((e.target as HTMLInputElement).value as TicketType)}>
             {types.map((ty) => (
-              <label key={ty} className={choice}>
-                <input type="radio" name="type" value={ty} defaultChecked={(ticket?.type ?? "change_request") === ty} />
+              <label key={ty} htmlFor={`tf-type-${ty}`} className={choice}>
+                <input id={`tf-type-${ty}`} type="radio" name="type" value={ty} defaultChecked={(ticket?.type ?? "change_request") === ty} />
                 <Icon name={typeIcon[ty][0]} className={cx("size-3.5", typeIcon[ty][1])} />
                 {tTypes(ty)}
               </label>
@@ -341,35 +358,49 @@ export default function TicketForm({ projectKey, clients, nodes, assignees, tick
           />
           <p id="description-hint" className={field.hint}>{t(ticket ? "descriptionHint" : "descriptionHintNew")}</p>
         </Row>
-        <details className="group rounded-xl border border-line" open={Boolean(ticket?.assignee || ticket?.due_date || from?.assigneeId || from?.due)}>
-          <summary className="flex cursor-pointer items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-[13px] font-bold hover:bg-paper">
-            <Icon name="chevronRight" className="size-4 text-muted transition-transform group-open:rotate-90" />
-            {t("more")}
-          </summary>
-          <div className="grid gap-3 px-3.5 pb-3.5 pt-1 md:grid-cols-3">
-            <label className={field.label}>
-              {t("assignee")}
-              <select name="assignee_id" defaultValue={ticket?.assignee?.id ?? from?.assigneeId ?? ""} className={field.input}>
-                <option value="">{t("nobody")}</option>
-                {people.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name}</option>
+        {/* MSL-58: set on nearly every ticket, so in view rather than under "More". */}
+        <div className="grid gap-3 md:grid-cols-4">
+          <label htmlFor="tf-assignee" className={field.label}>
+            {t("assignee")}
+            <select id="tf-assignee" name="assignee_id" defaultValue={ticket?.assignee?.id ?? from?.assigneeId ?? ""} className={field.input}>
+              <option value="">{t("nobody")}</option>
+              {people.map((a) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+          </label>
+          <label htmlFor="tf-priority" className={field.label}>
+            {t("priority")}
+            <select id="tf-priority" name="priority" defaultValue={ticket?.priority ?? "medium"} className={field.input}>
+              {priorities.map((p) => (
+                <option key={p} value={p}>{tPri(p)}</option>
+              ))}
+            </select>
+          </label>
+          <label htmlFor="tf-due" className={field.label}>
+            {t("due")}
+            <input id="tf-due" type="date" name="due_date" defaultValue={ticket?.due_date ?? from?.due ?? ""} className={field.input} />
+          </label>
+          <label htmlFor="tf-estimate" className={field.label}>
+            {t("estimate")}
+            <input id="tf-estimate" type="number" name="estimate_hours" min={0} max={9999} step={0.5} defaultValue={ticket?.estimate_hours ?? ""} className={field.input} />
+          </label>
+          {releases.length > 0 && (
+            <label htmlFor="tf-release" className={field.label}>
+              {t("release")}
+              <select id="tf-release" name="release_id" defaultValue={ticket?.release?.id ?? ""} className={field.input}>
+                <option value="">{t("noRelease")}</option>
+                {releases.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
                 ))}
               </select>
             </label>
-            <label className={field.label}>
-              {t("priority")}
-              <select name="priority" defaultValue={ticket?.priority ?? "medium"} className={field.input}>
-                {priorities.map((p) => (
-                  <option key={p} value={p}>{tPri(p)}</option>
-                ))}
-              </select>
-            </label>
-            <label className={field.label}>
-              {t("due")}
-              <input type="date" name="due_date" defaultValue={ticket?.due_date ?? from?.due ?? ""} className={field.input} />
-            </label>
-          </div>
-        </details>
+          )}
+          <label htmlFor="tf-labels" className={cx(field.label, releases.length > 0 ? "md:col-span-3" : "md:col-span-4")}>
+            {t("labels")}
+            <input id="tf-labels" name="labels" defaultValue={ticket?.labels?.join(", ") ?? ""} placeholder={t("labelsHint")} className={field.input} />
+          </label>
+        </div>
         {error && (
           <p role="alert" className={field.error}>
             {error}{" "}

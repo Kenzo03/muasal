@@ -118,6 +118,8 @@ Muasal can email people what they have not read in the app, so assignments and m
 2. Give the app a route to the mail server: run with `-f compose.host-ai.yaml`, or use a relay on the `app` network.
 3. Restart: `docker compose up -d app`. Admin → System status shows Email as on.
 
+Once email is on, a new user's setup link, and every new link from Admin → Users, is also emailed to them in their language. The page still shows the link to copy.
+
 Each person then ticks **Also email me** in their profile. Every minute, Muasal sends each of them one email listing their notifications of the last day that are still unread after two minutes, each with a link; nothing is sent twice.
 
 ## Offline guarantees

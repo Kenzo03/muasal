@@ -374,6 +374,8 @@ paths:
     get:
       operationId: listProjects
       tags: [projects]
+      parameters:
+        - { name: archived, in: query, schema: { type: boolean }, description: "Also archived projects, as All projects lists them; pickers leave them out (MSL-64)." }
       responses:
         "200":
           description: The projects the user belongs to; system admins see every project.
@@ -533,6 +535,138 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/MemberList" }
+        default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/labels:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listProjectLabels
+      tags: [tickets]
+      description: The labels the project's tickets use, most used first (MSL-56).
+      responses:
+        "200":
+          description: Labels with how many tickets carry each.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [label, uses]
+                      properties:
+                        label: { type: string }
+                        uses: { type: integer }
+        default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/setup:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getProjectSetup
+      tags: [projects]
+      description: Project admins only. How far the project is set up, for the checklist on its board (MSL-48).
+      responses:
+        "200":
+          description: Each step and whether it is done.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProjectSetup" }
+        default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/handover:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getHandover
+      tags: [projects]
+      description: The handover pack's content for everyone who may see the project (MSL-68); with client_id, that client's items and the core work.
+      parameters:
+        - { name: client_id, in: query, schema: { type: integer, format: int64 } }
+      responses:
+        "200":
+          description: The live modules and menus, each with its own items.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Handover" }
+        default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/releases:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listReleases
+      tags: [projects]
+      description: The project's releases, unreleased ones first, then the latest (MSL-67).
+      responses:
+        "200":
+          description: The releases.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReleaseList" }
+        default: { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createRelease
+      tags: [projects]
+      description: Members and project admins add a release; names are unique in the project, ignoring case.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReleaseInput" }
+      responses:
+        "201":
+          description: The new release.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Release" }
+        default: { $ref: "#/components/responses/Problem" }
+  /releases/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    patch:
+      operationId: updateRelease
+      tags: [projects]
+      description: Members and project admins rename a release or set the day it shipped.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReleaseInput" }
+      responses:
+        "200":
+          description: The release.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Release" }
+        default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/archive:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: archiveProject
+      tags: [projects]
+      description: Project admins only. Archives a finished project (MSL-64); archiving an archived project changes nothing.
+      responses:
+        "200":
+          description: The archived project.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+        default: { $ref: "#/components/responses/Problem" }
+  /projects/{key}/restore:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: restoreProject
+      tags: [projects]
+      description: Project admins only. Brings an archived project back (MSL-64).
+      responses:
+        "200":
+          description: The restored project.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
         default: { $ref: "#/components/responses/Problem" }
   /projects/{key}/member-candidates:
     parameters:
@@ -901,6 +1035,9 @@ paths:
         - { name: open, in: query, schema: { type: boolean }, description: Only To do and In progress statuses. }
         - { name: closed_days, in: query, schema: { type: integer, format: int32, minimum: 1 }, description: Closed tickets only when closed within this many days; the board asks for 14. }
         - { name: type, in: query, schema: { $ref: "#/components/schemas/TicketType" } }
+        - { name: label, in: query, schema: { type: string, maxLength: 30 }, description: Tickets with this label (MSL-56). }
+        - { name: accepted, in: query, schema: { type: boolean }, description: "Tickets the client accepted (true) or not yet (false) (MSL-66)." }
+        - { name: release_id, in: query, schema: { type: integer, format: int64 }, description: Tickets of this release (MSL-67). }
         - { name: client_id, in: query, schema: { type: integer, format: int64 } }
         - { name: core, in: query, schema: { type: boolean }, description: Only core work (no client). }
         - { name: assignee_id, in: query, schema: { type: integer, format: int64 } }
@@ -982,6 +1119,36 @@ paths:
       responses:
         "200":
           description: The updated ticket; ETag carries its new version.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Ticket" }
+        default: { $ref: "#/components/responses/Problem" }
+  /tickets/{key}/acceptance:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    put:
+      operationId: acceptTicket
+      tags: [tickets]
+      description: Members and project admins record who at the client accepted the ticket's work, and when (MSL-66); it replaces an earlier record.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AcceptanceInput" }
+      responses:
+        "200":
+          description: The ticket with its acceptance; ETag carries its version.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Ticket" }
+        default: { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: unacceptTicket
+      tags: [tickets]
+      description: Members and project admins remove a ticket's acceptance record, such as one recorded by mistake.
+      responses:
+        "200":
+          description: The ticket without an acceptance.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Ticket" }
@@ -1305,6 +1472,22 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DecisionRecord" }
+        default: { $ref: "#/components/responses/Problem" }
+  /tickets/{key}/follow:
+    parameters:
+      - { name: key, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: followTicket
+      tags: [tickets]
+      description: The caller follows the ticket and hears its comments and status changes (MSL-57).
+      responses:
+        "204": { description: Following. }
+        default: { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: unfollowTicket
+      tags: [tickets]
+      responses:
+        "204": { description: No longer following. }
         default: { $ref: "#/components/responses/Problem" }
   /tickets/{key}/links:
     parameters:
@@ -2003,6 +2186,7 @@ components:
       properties:
         url: { type: string }
         expires_at: { type: string, format: date-time }
+        emailed_to: { type: string, description: With email set up, where the link is being sent (MSL-50). }
     CreatedUser:
       type: object
       required: [user, setup_link]
@@ -2041,6 +2225,8 @@ components:
         description: { type: string }
         role: { $ref: "#/components/schemas/ProjectRole" }
         created_at: { type: string, format: date-time }
+        archived_at: { type: string, format: date-time, description: "When it was archived (MSL-64): an archived project is read-only, so role reads viewer for everyone until it is restored." }
+        can_restore: { type: boolean, description: The caller may archive or restore it (a project admin or system admin). }
     ProjectList:
       type: object
       required: [items]
@@ -2127,6 +2313,16 @@ components:
         client_ids:
           type: array
           items: { type: integer, format: int64 }
+    ProjectSetup:
+      type: object
+      required: [clients, team, documents, tree, tickets, repos]
+      properties:
+        clients: { type: boolean, description: A client is linked. }
+        team: { type: boolean, description: Someone besides the creator is a member. }
+        documents: { type: boolean, description: A specification is uploaded. }
+        tree: { type: boolean, description: The module tree has a node. }
+        tickets: { type: boolean, description: There is a ticket. }
+        repos: { type: boolean, description: A repository is connected (optional). }
     Person:
       type: object
       required: [id, name, email]
@@ -2465,6 +2661,11 @@ components:
         assignee: { $ref: "#/components/schemas/Ref" }
         priority: { $ref: "#/components/schemas/Priority" }
         due_date: { type: string, format: date, nullable: true }
+        estimate_hours: { type: number, format: double, nullable: true, description: The effort estimate in hours (MSL-54). }
+        labels: { type: array, items: { type: string }, description: "Free-text labels, lowercased (MSL-56)." }
+        following: { type: boolean, description: The caller follows the ticket (MSL-57). }
+        acceptance: { $ref: "#/components/schemas/TicketAcceptance" }
+        release: { $ref: "#/components/schemas/Ref" }
         nodes:
           type: array
           items: { $ref: "#/components/schemas/NodeRef" }
@@ -2498,6 +2699,9 @@ components:
         assignee_id: { type: integer, format: int64 }
         priority: { $ref: "#/components/schemas/Priority" }
         due_date: { type: string, format: date }
+        estimate_hours: { type: number, format: double, minimum: 0, maximum: 9999, description: Hours of effort; omitted means no estimate (MSL-54). }
+        labels: { type: array, maxItems: 10, items: { type: string, maxLength: 30 }, description: "Up to 10 labels of 1 to 30 characters; omitted means none (MSL-56)." }
+        release_id: { type: integer, format: int64, description: "A release of this project; omitted means none (MSL-67)." }
         status_id: { type: integer, format: int64, description: An open status; omitted means the project's default. }
         note_key: { type: string, description: "A decision note of this project the caller may see, e.g. HRIS-DN7: the ticket joins its tickets, as when filed from one of its action items (MSL-11)." }
     TicketUpdate:
@@ -2518,6 +2722,9 @@ components:
         assignee_id: { type: integer, format: int64 }
         priority: { $ref: "#/components/schemas/Priority" }
         due_date: { type: string, format: date }
+        estimate_hours: { type: number, format: double, minimum: 0, maximum: 9999, description: Hours of effort; omitted means no estimate (MSL-54). }
+        labels: { type: array, maxItems: 10, items: { type: string, maxLength: 30 }, description: "Up to 10 labels of 1 to 30 characters; omitted means none (MSL-56)." }
+        release_id: { type: integer, format: int64, description: "A release of this project; omitted means none (MSL-67)." }
     TransitionRequest:
       type: object
       required: [status_id]
@@ -2652,6 +2859,7 @@ components:
         project_key: { type: string }
         node_id: { type: integer, format: int64, description: "The node, with its sub-nodes; 0 covers the whole project, as a weekly summary does." }
         client_id: { type: integer, format: int64, description: One client; omitted for all. }
+        release_id: { type: integer, format: int64, description: "Only this release's tickets, without decision notes (MSL-67)." }
         from: { type: string, format: date }
         to: { type: string, format: date }
         include_cancelled: { type: boolean }
@@ -2672,6 +2880,8 @@ components:
         client: { type: string }
         requested_by: { type: string }
         cancelled: { type: boolean }
+        accepted_by: { type: string, description: The client contact who accepted it (MSL-66). }
+        accepted_on: { type: string, format: date }
     SummaryPreview:
       type: object
       required: [items, model, cloud]
@@ -2746,7 +2956,7 @@ components:
         items: { type: array, items: { $ref: "#/components/schemas/SummarySchedule" } }
     WorkloadRow:
       type: object
-      required: [open, in_progress, overdue, due_week, stale, high]
+      required: [open, in_progress, overdue, due_week, stale, high, open_hours, estimated]
       properties:
         assignee: { $ref: "#/components/schemas/Ref" }
         open: { type: integer, description: To do and In progress. }
@@ -2755,6 +2965,8 @@ components:
         due_week: { type: integer, description: Due from today through 7 days ahead. }
         stale: { type: integer, description: Unchanged for stale_days or more. }
         high: { type: integer, description: Urgent or high priority. }
+        open_hours: { type: number, format: double, description: The open tickets' estimates added up (MSL-54). }
+        estimated: { type: integer, description: How many of the open tickets have an estimate. }
     Workload:
       type: object
       required: [rows, stale_days]
@@ -2805,6 +3017,77 @@ components:
         title: { type: string }
         status: { $ref: "#/components/schemas/Status" }
         closed_at: { type: string, format: date-time, nullable: true }
+    Handover:
+      type: object
+      description: "The project as it stands, per module and menu in tree order: the spec sections in force, the behaviours in force and the open tickets (MSL-68)."
+      required: [nodes]
+      properties:
+        nodes:
+          type: array
+          items: { $ref: "#/components/schemas/HandoverNode" }
+    HandoverNode:
+      type: object
+      required: [id, name, type, depth, sections, behaviors, open]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        code: { type: string }
+        type: { type: string, enum: [module, menu] }
+        depth: { type: integer, description: 0 for a top module. }
+        sections:
+          type: array
+          items: { $ref: "#/components/schemas/TimelineSection" }
+        behaviors:
+          type: array
+          items: { $ref: "#/components/schemas/Behavior" }
+        open:
+          type: array
+          items: { $ref: "#/components/schemas/HandoverTicket" }
+    HandoverTicket:
+      type: object
+      required: [key, title, status]
+      properties:
+        key: { type: string }
+        title: { type: string }
+        status: { type: string }
+        assignee: { type: string }
+        due_date: { type: string, format: date }
+    Release:
+      type: object
+      description: A project release, such as v1.0 (MSL-67).
+      required: [id, name]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        released_on: { type: string, format: date, description: Omitted while it is still to ship. }
+    ReleaseList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Release" }
+    ReleaseInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 50 }
+        released_on: { type: string, format: date }
+    TicketAcceptance:
+      type: object
+      description: Who at the client accepted the ticket's work, as in UAT sign-off, and when (MSL-66).
+      required: [contact, accepted_on, note]
+      properties:
+        contact: { $ref: "#/components/schemas/Ref" }
+        accepted_on: { type: string, format: date }
+        note: { type: string }
+    AcceptanceInput:
+      type: object
+      required: [contact_id, accepted_on]
+      properties:
+        contact_id: { type: integer, format: int64, description: "A contact of the ticket's client; any client's contact for core work." }
+        accepted_on: { type: string, format: date, description: Today or earlier. }
+        note: { type: string, maxLength: 2000 }
     TicketSummary:
       type: object
       required: [id, key, title, type, priority, due_date, status_id, requester_name, node_names, missing_reason, updated_at]
@@ -2823,6 +3106,16 @@ components:
           type: array
           items: { type: string }
         missing_reason: { type: boolean }
+        labels: { type: array, items: { type: string } }
+        accepted_on: { type: string, format: date, description: When the client accepted it (MSL-66). }
+        release: { type: string, description: Its release's name (MSL-67). }
+        checklist:
+          type: object
+          description: The description's task list, when it has one (MSL-55).
+          required: [done, total]
+          properties:
+            done: { type: integer }
+            total: { type: integer }
         updated_at: { type: string, format: date-time }
     TicketPage:
       type: object
@@ -2899,7 +3192,7 @@ components:
         attendees: { type: string, maxLength: 500 }
         node_ids:
           type: array
-          description: One or more menus or modules of the project.
+          description: Menus or modules of the project; none makes a project-wide note, such as a kickoff (MSL-59).
           items: { type: integer, format: int64 }
         ticket_keys:
           type: array
@@ -3107,6 +3400,7 @@ components:
         mention: { type: boolean }
         status: { type: boolean }
         job_done: { type: boolean }
+        due: { type: boolean, description: The morning reminder of tickets due today or tomorrow, or just overdue (MSL-52). }
         browser: { type: boolean }
         email: { type: boolean, description: "Also by email, a digest of what is still unread after two minutes, when the server has SMTP set up (MSL-10). Off until chosen." }
     Notification:
@@ -3114,7 +3408,7 @@ components:
       required: [id, type, payload, created_at, read]
       properties:
         id: { type: integer, format: int64 }
-        type: { type: string, enum: [assigned, comment, mention, status, job_done] }
+        type: { type: string, enum: [assigned, comment, mention, status, job_done, due], description: "due (MSL-52): payload.when is today, tomorrow or overdue, payload.due the date." }
         ticket_key: { type: string }
         ticket_title: { type: string }
         actor: { $ref: "#/components/schemas/Ref" }

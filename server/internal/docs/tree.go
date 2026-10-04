@@ -53,17 +53,18 @@ func FromHeadings(sections []Section) []Candidate {
 		return nil
 	}
 	top := levels[0]
+	prefixes := Prefixes(sections)
 	var out []Candidate
 	var module string
 	for _, s := range sections {
 		switch {
 		case s.Number == "0":
 		case s.Level == top:
-			name, id := HeadingName(s.Title)
+			name, id := NameIn(s.Title, prefixes)
 			module = name
 			out = append(out, Candidate{Path: []string{name}, Type: "module", Section: s.Number, Code: id})
 		case len(levels) > 1 && s.Level == levels[1] && module != "":
-			name, id := HeadingName(s.Title)
+			name, id := NameIn(s.Title, prefixes)
 			out = append(out, Candidate{Path: []string{module, name}, Type: "menu", Section: s.Number, Code: id})
 		}
 	}

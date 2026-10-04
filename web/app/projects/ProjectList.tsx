@@ -8,7 +8,7 @@ import Icon from "@/components/Icon";
 import { matchProjects } from "@/lib/projects";
 import { chip, cx, panel } from "@/lib/ui";
 
-type Row = { key: string; name: string; description: string; role: "admin" | "member" | "viewer" };
+type Row = { key: string; name: string; description: string; role: "admin" | "member" | "viewer"; archived: boolean };
 
 const roleLabel = { admin: "roleAdmin", member: "roleMember", viewer: "roleViewer" } as const;
 
@@ -49,7 +49,11 @@ export default function ProjectList({ projects, open }: { projects: Row[]; open:
                   </span>
                 </span>
                 {(open[p.key] ?? 0) > 0 && <span className={cx(chip, "bg-accent-soft text-accent-strong")}>{th("yourTickets", { count: open[p.key] })}</span>}
-                <span className={cx(chip, "bg-well text-ink-soft")}>{ts(roleLabel[p.role])}</span>
+                {p.archived ? (
+                  <span className={cx(chip, "bg-well text-muted")}>{t("archived")}</span>
+                ) : (
+                  <span className={cx(chip, "bg-well text-ink-soft")}>{ts(roleLabel[p.role])}</span>
+                )}
               </Link>
             </li>
           ))}

@@ -15,6 +15,7 @@ import (
 
 	"github.com/kenzo03/muasal/server/internal/auth"
 	"github.com/kenzo03/muasal/server/internal/db"
+	outmail "github.com/kenzo03/muasal/server/internal/mail"
 )
 
 const setupLinkTTL = 72 * time.Hour // FSD §15.1
@@ -65,11 +66,13 @@ func (s *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 	var out CreatedUser
+	var created db.User
 	err := s.inTx(ctx, func(q *db.Queries) error {
 		u, err := q.CreateUser(ctx, params)
 		if err != nil {
 			return err
 		}
+		created = u
 		link, err := s.issueSetupLink(ctx, q, u.ID)
 		if err != nil {
 			return err
@@ -87,6 +90,7 @@ func (s *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, err)
 		return
 	}
+	s.emailLink(&out.SetupLink, created, admin.Name)
 	writeJSON(w, http.StatusCreated, out)
 }
 
@@ -154,8 +158,10 @@ func (s *Server) CreateSetupLink(w http.ResponseWriter, r *http.Request, id int6
 	}
 	ctx := r.Context()
 	var link SetupLink
+	var user db.User
 	err := s.inTx(ctx, func(q *db.Queries) error {
-		if _, err := q.GetUserByID(ctx, id); err != nil {
+		var err error
+		if user, err = q.GetUserByID(ctx, id); err != nil {
 			return err
 		}
 		if err := q.SetPasswordHash(ctx, db.SetPasswordHashParams{ID: id, PasswordHash: nil}); err != nil {
@@ -167,7 +173,6 @@ func (s *Server) CreateSetupLink(w http.ResponseWriter, r *http.Request, id int6
 		if err := q.RevokeUserAPITokens(ctx, id); err != nil {
 			return err
 		}
-		var err error
 		if link, err = s.issueSetupLink(ctx, q, id); err != nil {
 			return err
 		}
@@ -181,6 +186,7 @@ func (s *Server) CreateSetupLink(w http.ResponseWriter, r *http.Request, id int6
 		s.fail(w, r, err)
 		return
 	}
+	s.emailLink(&link, user, admin.Name)
 	writeJSON(w, http.StatusCreated, link)
 }
 
@@ -357,6 +363,22 @@ func (s *Server) CreateAdmin(ctx context.Context, email, name string) (string, e
 		return "", fmt.Errorf("a user with email %s already exists", email)
 	}
 	return link.Url, err
+}
+
+// emailLink sends a setup link to its user when email is set up, in the
+// background so a slow mail server never holds the admin's request; a failure
+// is logged, and the page still shows the link to copy (MSL-50).
+func (s *Server) emailLink(link *SetupLink, u db.User, inviter string) {
+	if !s.cfg.SMTP.On() {
+		return
+	}
+	subject, body := outmail.Invite(u.Locale, u.Name, inviter, link.Url, link.ExpiresAt.In(userTZ(&u)))
+	go func() {
+		if err := s.send(s.cfg.SMTP, u.Email, subject, body); err != nil {
+			s.log.Warn("setup link email failed", "user", u.ID, "err", err)
+		}
+	}()
+	link.EmailedTo = &u.Email
 }
 
 // issueSetupLink voids the user's older links and returns a new one.

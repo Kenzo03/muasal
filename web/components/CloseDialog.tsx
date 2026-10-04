@@ -7,6 +7,7 @@ import Icon from "./Icon";
 import NodePicker from "./NodePicker";
 import { api } from "@/lib/api";
 import { nodePaths } from "@/lib/nodes";
+import type { components } from "@/lib/api-types";
 import { useProblemText, type Node, type Problem, type Status, type Ticket } from "@/lib/problem";
 import { button, cx, field } from "@/lib/ui";
 import { isWeak } from "@/lib/weak";
@@ -17,6 +18,7 @@ type Props = {
   nodes: Node[]; // the project's menus, for a ticket without any
   onDone: () => void; // closed; the caller refreshes
   onCancel: () => void; // nothing changed
+  draft?: components["schemas"]["DecisionDraft"]; // an AI draft made beforehand, as the close-out queue makes them (MSL-65)
 };
 
 // The words for a length error, by the field the server names.
@@ -31,7 +33,7 @@ const lengths: Record<string, string> = {
 // changed, why and what was rejected, prefilled so it takes seconds (Goal 2),
 // plus a reason and menus when the ticket has none. Nothing changes until
 // "Close ticket"; Cancel, Escape and × leave the ticket as it was.
-export default function CloseDialog({ ticket, status, nodes, onDone, onCancel }: Props) {
+export default function CloseDialog({ ticket, status, nodes, onDone, onCancel, draft }: Props) {
   const t = useTranslations("close");
   const tt = useTranslations("ticket");
   const problemText = useProblemText();
@@ -60,6 +62,8 @@ export default function CloseDialog({ ticket, status, nodes, onDone, onCancel }:
   };
   useEffect(() => {
     if (!ref.current?.open) ref.current?.showModal();
+    if (draft) applyDraft(draft);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- a draft from before the dialog fills it once
   }, []);
 
   // AC-DC-2: "Close ticket" waits until every required field has text.
@@ -87,6 +91,10 @@ export default function CloseDialog({ ticket, status, nodes, onDone, onCancel }:
     setDrafting(false);
     if (error) return setProblem(error);
     setProblem(undefined);
+    applyDraft(data);
+  }
+
+  function applyDraft(data: components["schemas"]["DecisionDraft"]) {
     const fill = (name: string, value: string, current: string, set: (v: string) => void) => {
       if (!typed.has(name) || current.trim() === "") set(value);
     };
@@ -164,7 +172,7 @@ export default function CloseDialog({ ticket, status, nodes, onDone, onCancel }:
             onChange={typing("what", setWhatChanged)}
             max={1000}
             rows={2}
-            hint={prior ? t("fromRecord") : done ? t("fromTitle") : undefined}
+            hint={drafted ? undefined : prior ? t("fromRecord") : done ? t("fromTitle") : undefined}
             error={serverError("decision.what_changed")}
           />
           <Area

@@ -4,14 +4,17 @@ UPDATE projects SET ticket_seq = ticket_seq + 1 WHERE id = $1 RETURNING ticket_s
 
 -- name: CreateTicket :one
 INSERT INTO tickets (project_id, number, key, type, title, description, reason, status_id, client_id,
-                     requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                     requester_contact_id, requester_user_id, reporter_id, assignee_id, priority, due_date, estimate_hours, labels, release_id)
+VALUES (sqlc.arg('project_id'), sqlc.arg('number'), sqlc.arg('key'), sqlc.arg('type'), sqlc.arg('title'), sqlc.arg('description'),
+        sqlc.arg('reason'), sqlc.arg('status_id'), sqlc.narg('client_id'), sqlc.narg('requester_contact_id'), sqlc.narg('requester_user_id'),
+        sqlc.arg('reporter_id'), sqlc.narg('assignee_id'), sqlc.arg('priority'), sqlc.narg('due_date'), sqlc.narg('estimate_hours'),
+        coalesce(sqlc.narg('labels')::text[], '{}'), sqlc.narg('release_id'))
 RETURNING *;
 
 -- name: GetTicketByKey :one
 SELECT sqlc.embed(t), sqlc.embed(s), p.key AS project_key, rp.name AS reporter_name, c.name AS client_name,
        rc.name AS requester_contact_name, rc.title AS requester_contact_title,
-       ru.name AS requester_user_name, a.name AS assignee_name
+       ru.name AS requester_user_name, a.name AS assignee_name, ac.name AS accepted_contact_name, rl.name AS release_name
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
 JOIN projects p ON p.id = t.project_id
@@ -20,14 +23,26 @@ LEFT JOIN clients c ON c.id = t.client_id
 LEFT JOIN contacts rc ON rc.id = t.requester_contact_id
 LEFT JOIN users ru ON ru.id = t.requester_user_id
 LEFT JOIN users a ON a.id = t.assignee_id
+LEFT JOIN contacts ac ON ac.id = t.accepted_contact_id
+LEFT JOIN releases rl ON rl.id = t.release_id
 WHERE t.key = $1;
+
+-- name: SetTicketAcceptance :one
+-- MSL-66: records or clears the client's acceptance; like any edit it moves
+-- the version on (FSD §8.6).
+UPDATE tickets SET accepted_contact_id = sqlc.narg('contact_id'), accepted_on = sqlc.narg('accepted_on'),
+  acceptance_note = sqlc.arg('note'), version = version + 1, updated_at = now()
+WHERE id = sqlc.arg('id') AND version = sqlc.arg('version')
+RETURNING *;
 
 -- name: UpdateTicket :one
 -- Optimistic locking: no row comes back when the version moved on (FSD §8.6).
-UPDATE tickets SET type = $3, title = $4, description = $5, reason = $6, client_id = $7,
-  requester_contact_id = $8, requester_user_id = $9, assignee_id = $10, priority = $11, due_date = $12,
-  version = version + 1, updated_at = now()
-WHERE id = $1 AND version = $2
+UPDATE tickets SET type = sqlc.arg('type'), title = sqlc.arg('title'), description = sqlc.arg('description'),
+  reason = sqlc.arg('reason'), client_id = sqlc.narg('client_id'), requester_contact_id = sqlc.narg('requester_contact_id'),
+  requester_user_id = sqlc.narg('requester_user_id'), assignee_id = sqlc.narg('assignee_id'), priority = sqlc.arg('priority'),
+  due_date = sqlc.narg('due_date'), estimate_hours = sqlc.narg('estimate_hours'), labels = coalesce(sqlc.narg('labels')::text[], '{}'),
+  release_id = sqlc.narg('release_id'), version = version + 1, updated_at = now()
+WHERE id = sqlc.arg('id') AND version = sqlc.arg('version')
 RETURNING *;
 
 -- name: SetTicketStatus :one
@@ -64,10 +79,15 @@ SELECT t.id, t.key, t.title, t.type, t.priority, t.due_date, t.status_id, t.clie
        t.assignee_id, a.name AS assignee_name, coalesce(rc.name, ru.name, '')::text AS requester_name,
        t.reason = '' AS missing_reason, t.updated_at,
        ARRAY(SELECT n.name FROM ticket_nodes tn JOIN nodes n ON n.id = tn.node_id
-             WHERE tn.ticket_id = t.id ORDER BY lower(n.name), n.id)::text[] AS node_names
+             WHERE tn.ticket_id = t.id ORDER BY lower(n.name), n.id)::text[] AS node_names,
+       -- MSL-55: the description's task list, "- [ ] step" and "- [x] step".
+       (SELECT count(*) FROM regexp_matches(t.description, '^[ \t]*(?:[-*+]|[0-9]+[.)])[ \t]+\[[ xX]\]', 'gn'))::int AS checklist_total,
+       (SELECT count(*) FROM regexp_matches(t.description, '^[ \t]*(?:[-*+]|[0-9]+[.)])[ \t]+\[[xX]\]', 'gn'))::int AS checklist_done,
+       t.labels, t.accepted_on, rl.name AS release_name
 FROM tickets t
 JOIN statuses s ON s.id = t.status_id
 LEFT JOIN clients c ON c.id = t.client_id
+LEFT JOIN releases rl ON rl.id = t.release_id
 LEFT JOIN users a ON a.id = t.assignee_id
 LEFT JOIN contacts rc ON rc.id = t.requester_contact_id
 LEFT JOIN users ru ON ru.id = t.requester_user_id
@@ -78,6 +98,9 @@ WHERE t.project_id = sqlc.arg('project_id')
   AND (NOT sqlc.arg('open_only')::boolean OR s.category IN ('todo', 'in_progress'))
   AND (sqlc.narg('closed_days')::int IS NULL OR t.closed_at IS NULL OR t.closed_at >= now() - make_interval(days => sqlc.narg('closed_days')::int))
   AND (sqlc.narg('type')::text IS NULL OR t.type = sqlc.narg('type')::text)
+  AND (sqlc.narg('label')::text IS NULL OR sqlc.narg('label')::text = ANY (t.labels))
+  AND (sqlc.narg('accepted')::boolean IS NULL OR (t.accepted_on IS NOT NULL) = sqlc.narg('accepted')::boolean)
+  AND (sqlc.narg('release_id')::bigint IS NULL OR t.release_id = sqlc.narg('release_id')::bigint)
   AND (sqlc.narg('client_id')::bigint IS NULL OR t.client_id = sqlc.narg('client_id')::bigint)
   AND (NOT sqlc.arg('core_only')::boolean OR t.client_id IS NULL)
   AND (sqlc.narg('assignee_id')::bigint IS NULL OR t.assignee_id = sqlc.narg('assignee_id')::bigint)
@@ -104,3 +127,12 @@ ORDER BY
   CASE WHEN sqlc.arg('sort')::text = 'created' THEN t.number END DESC,
   t.number
 LIMIT sqlc.arg('lim') OFFSET sqlc.arg('off');
+
+-- name: ListProjectLabels :many
+-- MSL-56: the labels a project's tickets use, most used first, for filters and the form.
+SELECT l::text AS label, count(*) AS uses
+FROM tickets t, unnest(t.labels) AS l
+WHERE t.project_id = sqlc.arg('project_id')
+GROUP BY l
+ORDER BY count(*) DESC, l
+LIMIT 200;
