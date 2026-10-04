@@ -225,6 +225,7 @@ func (s *Server) mcpServer(c *apiCaller) *mcp.Server {
 			return jsonResult(raw)
 		})
 
+	addTreeTools(srv, c)
 	return srv
 }
 
