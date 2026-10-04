@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- The sidebar's logo tile: the Icon "logo" mark in white on terracotta, drawn a little larger and bolder to read at 16px. -->
+  <rect width="32" height="32" rx="9" fill="#b5482a"/>
+  <path transform="translate(6 6) scale(1.25)" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"
+        d="M8 2v5M8 7c-2.8 0-4.5 2-4.5 4.5M8 7c2.8 0 4.5 2 4.5 4.5M3.5 11.5V14M12.5 11.5V14M8 7v7"/>
+</svg>
