@@ -14,7 +14,10 @@ theme:
     - content.code.copy
     - search.highlight
   palette:
-    primary: deep orange
+    primary: custom # docs/stylesheets/extra.css
+    accent: custom
+extra_css:
+  - stylesheets/extra.css
 markdown_extensions:
   - admonition
   - attr_list # buttons on the home page

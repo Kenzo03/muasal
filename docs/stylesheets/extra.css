@@ -1,0 +1,7 @@
+/* Muasal's terracotta from the app (web/app/globals.css: --color-accent). */
+:root {
+  --md-primary-fg-color: #b5482a;
+  --md-primary-fg-color--light: #c8603f;
+  --md-primary-fg-color--dark: #9e3d22;
+  --md-accent-fg-color: #9e3d22;
+}
