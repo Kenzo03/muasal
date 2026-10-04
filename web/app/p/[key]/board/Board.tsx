@@ -1,7 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { DndContext, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  pointerWithin,
+  rectIntersection,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type CollisionDetection,
+} from "@dnd-kit/core";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -25,6 +36,15 @@ type Props = {
 };
 
 const closes = (s: Status) => s.category === "done" || s.category === "cancelled";
+
+// A card lands in the column under the pointer. dnd-kit's default picks the
+// column the card overlaps most, which in narrow columns is the next one when
+// the card was grabbed near its left edge. Below a short column, or between
+// two, the overlap still decides.
+const dropTarget: CollisionDetection = (args) => {
+  const hits = pointerWithin(args);
+  return hits.length > 0 ? hits : rectIntersection(args);
+};
 
 // A status column that takes dropped cards. From 1024 px, five columns fit
 // beside the open sidebar (MSL-61): below 1280 px they drop the add button
@@ -103,6 +123,7 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, s
       {error && <p role="alert" className={field.error}>{error}</p>}
       <DndContext
         sensors={sensors}
+        collisionDetection={dropTarget}
         onDragStart={(e) => setDragging(Number(e.active.id))}
         onDragCancel={() => setDragging(null)}
         onDragEnd={(e) => {
