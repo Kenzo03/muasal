@@ -26,5 +26,6 @@ nav:
   - Hardware guide: hardware.md
   - Running Muasal: operations.md
   - User guide: user-guide.md
+  - MCP for AI agents: mcp.md
   - Pilot kit: pilot.md
   - Security review: security/asvs-l1.md
