@@ -5,8 +5,6 @@ repo_url: https://github.com/Kenzo03/muasal
 edit_uri: edit/main/docs/
 docs_dir: docs
 strict: true
-exclude_docs: |
-  superpowers/
 theme:
   name: material
   features:
@@ -26,5 +24,6 @@ nav:
   - Hardware guide: hardware.md
   - Running Muasal: operations.md
   - User guide: user-guide.md
+  - MCP for AI agents: mcp.md
   - Pilot kit: pilot.md
   - Security review: security/asvs-l1.md

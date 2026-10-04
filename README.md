@@ -2,7 +2,7 @@
 
 **Know why every screen is the way it is.** Muasal is a self-hosted ticketing tool that remembers the reason behind every change to every menu. Ask it "why does this screen work like this?" and it answers with links to the tickets behind it.
 
-[![Watch the 22-second intro: a closed ticket records why, a menu keeps its history, and Ask answers with the ticket behind it](docs/images/muasal-intro.jpg)](docs/images/muasal-intro.mp4)
+[![Watch the 22-second intro: a closed ticket records why, a menu keeps its history, and Ask answers with the ticket behind it](docs/images/muasal-intro.jpg)](https://kenzo03.github.io/muasal/images/muasal-intro.mp4)
 
 ![A closed ticket with its decision record: what changed, why, and the alternative that was rejected](docs/images/ticket.png)
 
@@ -33,7 +33,7 @@ Also included:
 - **Clients:** per-client behaviour, with members scoped to the clients they serve.
 - **Imports:** from Jira and CSV, and a module tree drafted from your specification document.
 - **Summaries:** change summaries per client or menu, printable as PDF.
-- **Connections:** Git webhooks ("Fixes DEMO-12" moves the ticket to review), in-app and email notifications, and API tokens for scripts.
+- **Connections:** Git webhooks ("Fixes DEMO-12" moves the ticket to review), in-app and email notifications, API tokens for scripts, and an MCP endpoint so AI agents such as Claude Code can work with tickets ([how](docs/mcp.md)).
 - **Admin:** users, clients, AI settings, an audit log, the Ask log, backups and system status.
 
 ![Admin › Clients with a client's side panel open: name, code, aliases as chips, and archive](docs/images/admin-clients.png)

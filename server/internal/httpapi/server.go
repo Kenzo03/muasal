@@ -103,6 +103,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /readyz", s.readyz)
 	mux.HandleFunc("GET /metrics", s.metrics)
 	mux.HandleFunc("POST /webhooks/git/{repo_id}", s.gitWebhook)
+	mux.HandleFunc("GET /.well-known/oauth-protected-resource", s.protectedResource)
+	mux.HandleFunc("GET /.well-known/oauth-protected-resource/mcp", s.protectedResource)
+	mux.HandleFunc("GET /.well-known/oauth-authorization-server", s.authServerMetadata)
+	mux.HandleFunc("POST /oauth/register", s.registerClient)
+	mux.HandleFunc("POST /oauth/token", s.exchangeCode)
 	HandlerWithOptions(s, StdHTTPServerOptions{
 		BaseURL:    "/api/v1",
 		BaseRouter: mux,
@@ -112,7 +117,10 @@ func (s *Server) Handler() http.Handler {
 			writeProblem(w, http.StatusBadRequest, "invalid_parameter", err.Error())
 		},
 	})
-	return securityHeaders(s.requestContext(mux))
+	root := securityHeaders(s.requestContext(mux))
+	// The MCP tools call the API through root, so they get its middleware too.
+	mux.Handle("POST /mcp", s.mcpHandler(root))
+	return root
 }
 
 // securityHeaders sets FSD §18.2's headers on every response. The API serves
