@@ -56,6 +56,12 @@ func (s *Server) mcpUnauthorized(w http.ResponseWriter, sent bool) {
 	writeProblem(w, http.StatusUnauthorized, "invalid_token", "Sign in to Muasal to use this endpoint")
 }
 
+// rawBody is a body already encoded, such as a multipart form.
+type rawBody struct {
+	contentType string
+	data        []byte
+}
+
 // apiCaller sends a tool's requests to /api/v1 in-process, as the MCP caller.
 type apiCaller struct {
 	root              http.Handler
@@ -67,7 +73,10 @@ type apiCaller struct {
 // returns to the agent as a tool error.
 func (c *apiCaller) call(ctx context.Context, method, path string, headers map[string]string, body, out any) (http.Header, error) {
 	var rd io.Reader
-	if body != nil {
+	contentType := "application/json"
+	if raw, ok := body.(rawBody); ok {
+		rd, contentType = bytes.NewReader(raw.data), raw.contentType
+	} else if body != nil {
 		b, err := json.Marshal(body)
 		if err != nil {
 			return nil, err
@@ -80,7 +89,7 @@ func (c *apiCaller) call(ctx context.Context, method, path string, headers map[s
 	}
 	req.RemoteAddr = c.remote
 	req.Header.Set("Authorization", c.auth)
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", contentType)
 	if c.xff != "" {
 		req.Header.Set("X-Forwarded-For", c.xff)
 	}
