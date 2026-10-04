@@ -6,7 +6,8 @@ hide:
 
 # Muasal
 
-**Know why every screen is the way it is.**
+**The why behind every screen.**
+*Setiap layar punya alasan.*
 
 Muasal is a self-hosted ticketing tool for teams that build and maintain software for several clients. Every ticket is linked to the menus it changes, and closing it records what changed and why. A year later, anyone can open a menu and read its history, or ask "why does overtime approval skip the supervisor for Client A?" and get an answer that cites the ticket behind every claim.
 

@@ -1,6 +1,8 @@
 # Muasal
 
-**Know why every screen is the way it is.** Muasal is a self-hosted ticketing tool that remembers the reason behind every change to every menu. Ask it "why does this screen work like this?" and it answers with links to the tickets behind it.
+**The why behind every screen.** *Setiap layar punya alasan.*
+
+Muasal is a self-hosted ticketing tool that remembers the reason behind every change to every menu. Ask it "why does this screen work like this?" and it answers with links to the tickets behind it.
 
 [![Watch the 22-second intro: a closed ticket records why, a menu keeps its history, and Ask answers with the ticket behind it](docs/images/muasal-intro.jpg)](https://kenzo03.github.io/muasal/images/muasal-intro.mp4)
 
