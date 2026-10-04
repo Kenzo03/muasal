@@ -316,6 +316,7 @@ paths:
     post:
       operationId: createUser
       tags: [admin]
+      description: Creating any user needs a signed-in session; a token answers 403 session_required.
       requestBody:
         required: true
         content:
@@ -332,6 +333,7 @@ paths:
     patch:
       operationId: updateUser
       tags: [admin]
+      description: Making a user an admin needs a signed-in session (403 session_required).
       parameters:
         - name: id
           in: path
@@ -353,7 +355,9 @@ paths:
     post:
       operationId: createSetupLink
       tags: [admin]
-      description: Resets the password; the old one stops working and every session ends.
+      description: >-
+        Resets the password; the old one stops working and every session and API token ends. Needs a signed-in
+        session (403 session_required).
       parameters:
         - name: id
           in: path
@@ -937,7 +941,8 @@ paths:
           schema: { type: string, maxLength: 200 }
           description: >-
             A retry with the same key within 24 hours returns the ticket the first request created (200, with
-            Idempotent-Replayed true) instead of a second ticket (FSD §17.1).
+            Idempotent-Replayed true) instead of a second ticket (FSD §17.1). A key whose ticket is in another
+            project, or outside the caller's clients, answers 409 idempotency_conflict.
       requestBody:
         required: true
         content:
@@ -3371,11 +3376,10 @@ components:
       properties:
         ok: { type: boolean }
         latency_ms: { type: integer }
-        error: { type: string }
         reason:
           type: string
           enum: [unknown_host, refused, timeout, tls, unauthorized, not_found, no_model]
-          description: The failure's likely cause, which the page says in plain words above the raw error (MSL-31).
+          description: The failure's likely cause, which the page says in plain words (MSL-31). The server's own answer is never returned.
         models:
           type: array
           items: { type: string }

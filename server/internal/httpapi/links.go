@@ -84,6 +84,17 @@ func (s *Server) CreateLink(w http.ResponseWriter, r *http.Request, key string) 
 			FieldError{Field: "key", Code: "self_link", Message: "A ticket cannot link to itself"})
 		return
 	}
+	if in.Type == LinkTypeReverses { // it supersedes the other ticket's decision
+		scope, _, err := access.ForProject(ctx, s.q, pc.user, other.Ticket.ProjectID)
+		if err != nil {
+			s.fail(w, r, err)
+			return
+		}
+		if !scope.Allows(access.Member) {
+			writeProblem(w, http.StatusForbidden, "forbidden", "Your role in the other ticket's project does not allow this")
+			return
+		}
+	}
 	var out TicketLink
 	err = s.inJobTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		l, err := q.CreateLink(ctx, db.CreateLinkParams{FromID: row.Ticket.ID, ToID: other.Ticket.ID, Type: string(in.Type), CreatedBy: pc.user.ID})
@@ -114,9 +125,10 @@ func (s *Server) CreateLink(w http.ResponseWriter, r *http.Request, key string) 
 	writeJSON(w, http.StatusCreated, out)
 }
 
-// DeleteLink removes a link. Members of the linking ticket's project may; the
-// other ticket's decision is current again unless another reverses link still
-// points at it (R-TK-7).
+// DeleteLink removes a link. Members of the linking ticket's project may, and
+// for a reverses link members of the other ticket's project too; the other
+// ticket's decision is current again unless another reverses link still points
+// at it (R-TK-7).
 func (s *Server) DeleteLink(w http.ResponseWriter, r *http.Request, id int64) {
 	u := s.requireUser(w, r)
 	if u == nil {
@@ -145,6 +157,17 @@ func (s *Server) DeleteLink(w http.ResponseWriter, r *http.Request, id int64) {
 	if err != nil {
 		s.fail(w, r, err)
 		return
+	}
+	if l.Type == string(LinkTypeReverses) { // the other decision becomes current again
+		scope, _, err := access.ForProject(ctx, s.q, pc.user, to.ProjectID)
+		if err != nil {
+			s.fail(w, r, err)
+			return
+		}
+		if !scope.Allows(access.Member) {
+			writeProblem(w, http.StatusForbidden, "forbidden", "Your role in the other ticket's project does not allow this")
+			return
+		}
 	}
 	err = s.inJobTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		if err := q.DeleteLink(ctx, l.ID); err != nil {

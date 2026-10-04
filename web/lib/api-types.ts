@@ -305,6 +305,7 @@ export interface paths {
         };
         get: operations["listUsers"];
         put?: never;
+        /** @description Creating any user needs a signed-in session; a token answers 403 session_required. */
         post: operations["createUser"];
         delete?: never;
         options?: never;
@@ -325,6 +326,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /** @description Making a user an admin needs a signed-in session (403 session_required). */
         patch: operations["updateUser"];
         trace?: never;
     };
@@ -337,7 +339,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Resets the password; the old one stops working and every session ends. */
+        /** @description Resets the password; the old one stops working and every session and API token ends. Needs a signed-in session (403 session_required). */
         post: operations["createSetupLink"];
         delete?: never;
         options?: never;
@@ -2888,9 +2890,8 @@ export interface components {
         AIProbe: {
             ok: boolean;
             latency_ms: number;
-            error?: string;
             /**
-             * @description The failure's likely cause, which the page says in plain words above the raw error (MSL-31).
+             * @description The failure's likely cause, which the page says in plain words (MSL-31). The server's own answer is never returned.
              * @enum {string}
              */
             reason?: "unknown_host" | "refused" | "timeout" | "tls" | "unauthorized" | "not_found" | "no_model";
@@ -4632,7 +4633,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /** @description A retry with the same key within 24 hours returns the ticket the first request created (200, with Idempotent-Replayed true) instead of a second ticket (FSD §17.1). */
+                /** @description A retry with the same key within 24 hours returns the ticket the first request created (200, with Idempotent-Replayed true) instead of a second ticket (FSD §17.1). A key whose ticket is in another project, or outside the caller's clients, answers 409 idempotency_conflict. */
                 "Idempotency-Key"?: string;
             };
             path: {

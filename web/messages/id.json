@@ -18,7 +18,6 @@
     "password": "Kata sandi",
     "submit": "Masuk",
     "failed": "Email atau kata sandi salah",
-    "locked": "Terlalu banyak percobaan, coba lagi dalam 15 menit",
     "rateLimited": "Terlalu banyak percobaan masuk dari jaringan ini. Tunggu satu menit."
   },
   "setup": {
@@ -30,7 +29,8 @@
     "submit": "Simpan kata sandi",
     "done": "Kata sandi tersimpan. Silakan masuk.",
     "toLogin": "Ke halaman masuk",
-    "forAccount": "Untuk {name} ({email})"
+    "forAccount": "Untuk {name} ({email})",
+    "rateLimited": "Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi."
   },
   "nav": {
     "label": "Utama",

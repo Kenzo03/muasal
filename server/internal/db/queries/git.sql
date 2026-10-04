@@ -24,7 +24,7 @@ DELETE FROM git_repos WHERE id = $1;
 INSERT INTO webhook_deliveries (repo_id, event, payload) VALUES ($1, $2, $3) RETURNING id;
 
 -- name: GetDelivery :one
-SELECT d.*, r.provider FROM webhook_deliveries d JOIN git_repos r ON r.id = d.repo_id WHERE d.id = $1;
+SELECT d.*, r.provider, r.project_id FROM webhook_deliveries d JOIN git_repos r ON r.id = d.repo_id WHERE d.id = $1;
 
 -- name: DeleteDelivery :exec
 DELETE FROM webhook_deliveries WHERE id = $1;
@@ -51,8 +51,8 @@ INSERT INTO ticket_commits (ticket_id, commit_id) VALUES ($1, $2) ON CONFLICT DO
 INSERT INTO ticket_merge_requests (ticket_id, mr_id) VALUES ($1, $2) ON CONFLICT DO NOTHING;
 
 -- name: TicketIDsByKeys :many
--- Keys that name an existing ticket; a key counts only when the project and the ticket exist (§14.1).
-SELECT id FROM tickets WHERE key = ANY (sqlc.arg('keys')::text[]);
+-- Keys that name an existing ticket in the repository's project (§14.1).
+SELECT id FROM tickets WHERE project_id = sqlc.arg('project_id') AND key = ANY (sqlc.arg('keys')::text[]);
 
 -- name: ListTicketCommits :many
 SELECT c.*, r.name AS repo_name FROM ticket_commits tc
@@ -70,7 +70,8 @@ SELECT id FROM users WHERE lower(email) = ANY (sqlc.arg('emails')::text[]);
 -- name: MoveFixedTickets :many
 -- MSL-29: "Fixes KEY" in a pushed commit moves the open ticket to its
 -- project's last working status, In review by default. Never back, and never
--- closed: closing needs a decision record.
+-- closed: closing needs a decision record. Only tickets in the repository's
+-- project move.
 WITH review AS (
   SELECT DISTINCT ON (project_id) project_id, id, name, position FROM statuses
   WHERE category = 'in_progress' ORDER BY project_id, position DESC
@@ -79,7 +80,7 @@ WITH review AS (
   FROM tickets t
   JOIN statuses cur ON cur.id = t.status_id
   JOIN review r ON r.project_id = t.project_id
-  WHERE t.key = ANY (sqlc.arg('keys')::text[]) AND t.closed_at IS NULL
+  WHERE t.project_id = sqlc.arg('project_id') AND t.key = ANY (sqlc.arg('keys')::text[]) AND t.closed_at IS NULL
     AND cur.category IN ('todo', 'in_progress') AND cur.position < r.position
 )
 UPDATE tickets t SET status_id = m.review_id, version = t.version + 1, updated_at = now()

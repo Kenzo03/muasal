@@ -22,25 +22,30 @@ type Client struct {
 	http             *http.Client
 }
 
-// New returns a client; key may be empty for a local server without auth.
+// New returns a client; key may be empty for a local server without auth. It
+// never follows a redirect, so the key goes only to baseURL's server.
 func New(baseURL, model, key string, hc *http.Client) *Client {
 	if hc == nil {
 		hc = http.DefaultClient
 	}
-	return &Client{base: strings.TrimRight(baseURL, "/"), model: model, key: key, http: hc}
+	noRedirect := *hc
+	noRedirect.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	return &Client{base: strings.TrimRight(baseURL, "/"), model: model, key: key, http: &noRedirect}
 }
 
 // Model names the model this client uses.
 func (c *Client) Model() string { return c.model }
 
-// APIError is a non-2xx answer; Body is cut to 500 bytes and never holds our key.
+// APIError is a non-2xx answer; Body is cut to 500 bytes and never holds our
+// key. Error leaves Body out, so the server's own words never reach a page or
+// a stored job error.
 type APIError struct {
 	Status int
 	Body   string
 }
 
 func (e *APIError) Error() string {
-	return fmt.Sprintf("model server answered %d: %s", e.Status, e.Body)
+	return fmt.Sprintf("model server answered %d %s", e.Status, http.StatusText(e.Status))
 }
 
 // Models lists the model ids the server offers (Test connection, §13.4).
@@ -169,7 +174,7 @@ func streamContent(body io.ReadCloser) io.ReadCloser {
 				return
 			}
 			if chunk.Error != nil {
-				pw.CloseWithError(errors.New("model server: " + chunk.Error.Message))
+				pw.CloseWithError(errors.New("model server reported an error in the stream"))
 				return
 			}
 			for _, ch := range chunk.Choices {

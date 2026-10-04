@@ -114,3 +114,25 @@ func TestClientListNamesTheirProjects(t *testing.T) {
 		t.Fatalf("project clients must not carry projects: %d %+v", code, linked)
 	}
 }
+
+func TestClientListShowsOnlyTheCallersProjects(t *testing.T) {
+	e := newEnv(t)
+	a := e.seedClient("Client A")
+	e.seedProject("PAY", a)
+	hris := e.seedProject("HRIS", a)
+	pa, u := e.signedIn("pa@example.com", false)
+	e.seedMember(u, hris, "admin")
+	admin, _ := e.signedIn("admin@example.com", true)
+	for _, tc := range []struct {
+		who  *http.Client
+		want []string
+	}{{pa, []string{"HRIS"}}, {admin, []string{"HRIS", "PAY"}}} {
+		var list httpapi.ClientList
+		if code := e.call(tc.who, http.MethodGet, "/clients", nil, &list); code != http.StatusOK || len(list.Items) != 1 {
+			t.Fatalf("list: %d %+v", code, list)
+		}
+		if got := list.Items[0].Projects; got == nil || !slices.Equal(*got, tc.want) {
+			t.Fatalf("projects: %v, want %v", got, tc.want)
+		}
+	}
+}

@@ -4,11 +4,24 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 // follows the user's profile language, and new users start with `id`.
 
 export async function setPassword(page: Page, link: string, password: string) {
-  await page.goto(link);
-  await page.getByLabel("Kata sandi baru").fill(password);
-  await page.getByLabel("Ulangi kata sandi").fill(password);
-  await page.getByRole("button", { name: "Simpan kata sandi" }).click();
-  await expect(page.getByRole("status")).toHaveText("Kata sandi tersimpan. Silakan masuk.");
+  for (let tries = 0; ; tries++) {
+    await page.goto(link);
+    await page.getByLabel("Kata sandi baru").fill(password);
+    await page.getByLabel("Ulangi kata sandi").fill(password);
+    const answer = page.waitForResponse((r) => r.url().endsWith("/auth/setup"));
+    await page.getByRole("button", { name: "Simpan kata sandi" }).click();
+    const res = await answer;
+    // The setup-link endpoints share a limit of 20 requests a minute per
+    // address, and a full run opens more links than that, so a limited attempt
+    // waits for the next minute and tries once more.
+    if (tries === 0 && res.status() === 429 && (await res.json()).code === "rate_limited") {
+      test.info().setTimeout(test.info().timeout + 65_000);
+      await page.waitForTimeout(61_000);
+      continue;
+    }
+    await expect(page.getByRole("status")).toHaveText("Kata sandi tersimpan. Silakan masuk.");
+    return;
+  }
 }
 
 export async function signIn(page: Page, email: string, password: string) {

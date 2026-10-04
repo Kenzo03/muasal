@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"regexp"
 	"slices"
 	"strings"
@@ -100,7 +101,7 @@ func Parse(provider, event string, payload []byte) (commits []Commit, mr *MergeR
 			return nil, nil, "", err
 		}
 		for _, c := range p.Commits {
-			commits = append(commits, Commit{SHA: c.ID, Message: c.Message, AuthorName: c.Author.Name, AuthorEmail: c.Author.Email, URL: c.URL, At: c.Timestamp})
+			commits = append(commits, Commit{SHA: c.ID, Message: c.Message, AuthorName: c.Author.Name, AuthorEmail: c.Author.Email, URL: webURL(c.URL), At: c.Timestamp})
 		}
 		return commits, nil, strings.TrimPrefix(p.Ref, "refs/heads/"), nil
 	case "merge_request":
@@ -120,7 +121,7 @@ func Parse(provider, event string, payload []byte) (commits []Commit, mr *MergeR
 				return nil, nil, "", err
 			}
 			a := p.Attrs
-			m := &MergeRequest{Number: a.IID, Title: a.Title, Body: a.Description, State: a.State, URL: a.URL, Branch: a.SourceBranch}
+			m := &MergeRequest{Number: a.IID, Title: a.Title, Body: a.Description, State: a.State, URL: webURL(a.URL), Branch: a.SourceBranch}
 			if a.State == "merged" {
 				if t, err := time.Parse("2006-01-02 15:04:05 MST", a.UpdatedAt); err == nil {
 					m.MergedAt = &t
@@ -148,13 +149,21 @@ func Parse(provider, event string, payload []byte) (commits []Commit, mr *MergeR
 			return nil, nil, "", err
 		}
 		pr := p.PR
-		m := &MergeRequest{Number: pr.Number, Title: pr.Title, Body: pr.Body, State: pr.State, URL: pr.HTMLURL, Branch: pr.Head.Ref, MergedAt: pr.MergedAt}
+		m := &MergeRequest{Number: pr.Number, Title: pr.Title, Body: pr.Body, State: pr.State, URL: webURL(pr.HTMLURL), Branch: pr.Head.Ref, MergedAt: pr.MergedAt}
 		if pr.Merged {
 			m.State = "merged"
 		}
 		return nil, m, "", nil
 	}
 	return nil, nil, "", nil
+}
+
+// webURL returns s when it is an http or https address, else "".
+func webURL(s string) string {
+	if u, err := url.Parse(s); err == nil && (u.Scheme == "http" || u.Scheme == "https") {
+		return s
+	}
+	return ""
 }
 
 // keyRe is §14.1's ticket key pattern.

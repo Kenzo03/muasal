@@ -316,7 +316,8 @@ func (s *Server) summaryInputs(ctx context.Context, items []summaryItem, client 
 	return inputs, outItems, nil
 }
 
-// summaryFor loads a summary for its creator or a project admin; anyone else gets 404.
+// summaryFor loads a summary for its creator, while still a member of its
+// project, or a project admin; anyone else gets 404.
 func (s *Server) summaryFor(w http.ResponseWriter, r *http.Request, id int64) (db.GetSummaryRow, bool) {
 	u := s.requireUser(w, r)
 	if u == nil {
@@ -332,13 +333,17 @@ func (s *Server) summaryFor(w http.ResponseWriter, r *http.Request, id int64) (d
 		s.fail(w, r, err)
 		return db.GetSummaryRow{}, false
 	}
-	if row.Summary.CreatedBy != u.ID && !u.IsAdmin {
+	if !u.IsAdmin {
 		scope, member, err := access.ForProject(ctx, s.q, u, row.Summary.ProjectID)
 		if err != nil {
 			s.fail(w, r, err)
 			return db.GetSummaryRow{}, false
 		}
-		if !member || !scope.Allows(access.Admin) {
+		need := access.Admin
+		if row.Summary.CreatedBy == u.ID {
+			need = access.Member
+		}
+		if !member || !scope.Allows(need) {
 			writeProblem(w, http.StatusNotFound, "not_found", "Summary not found")
 			return db.GetSummaryRow{}, false
 		}

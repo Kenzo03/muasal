@@ -7,6 +7,7 @@ UPDATE setup_tokens SET used_at = now() WHERE user_id = $1 AND used_at IS NULL;
 -- name: UseSetupToken :one
 UPDATE setup_tokens SET used_at = now()
 WHERE token_hash = $1 AND used_at IS NULL AND expires_at > now()
+  AND user_id IN (SELECT id FROM users WHERE disabled_at IS NULL)
 RETURNING user_id;
 
 -- name: GetSetupTokenUser :one

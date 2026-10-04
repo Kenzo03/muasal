@@ -3,9 +3,12 @@ package httpapi_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/kenzo03/muasal/server/internal/config"
@@ -101,7 +104,7 @@ func TestBYOKNeedsTheAcknowledgementAndHidesTheKey(t *testing.T) {
 }
 
 // MSL-31: a failed probe names its likely cause, which the page says in plain
-// words above the raw error.
+// words.
 func TestConnectionTestExplainsFailures(t *testing.T) {
 	e := newEnv(t)
 	admin, _ := e.signedIn("admin@example.com", true)
@@ -130,8 +133,8 @@ func TestConnectionTestExplainsFailures(t *testing.T) {
 			}
 			return *p.Reason
 		}
-		if reason(res.Chat) != c.chat || reason(res.Embed) != c.embed || res.Embed.Error == nil {
-			t.Errorf("%s: chat %q, embed %q, embed error %v", c.name, reason(res.Chat), reason(res.Embed), res.Embed.Error != nil)
+		if reason(res.Chat) != c.chat || reason(res.Embed) != c.embed || res.Embed.Ok {
+			t.Errorf("%s: chat %q, embed %q, embed ok %v", c.name, reason(res.Chat), reason(res.Embed), res.Embed.Ok)
 		}
 	}
 }
@@ -162,12 +165,100 @@ func TestConnectionTestReportsEachEndpoint(t *testing.T) {
 	}
 	fake.Set(func(s *llmtest.Server) { s.Down = true })
 	if code := e.call(admin, http.MethodPost, "/admin/ai/test", aiUpdate("local", fake.BaseURL()), &res); code != http.StatusOK ||
-		res.Chat.Ok || res.Chat.Error == nil || res.Embed.Ok {
+		res.Chat.Ok || res.Embed.Ok {
 		t.Fatalf("a stopped server: %d %+v", code, res)
 	}
 	var got httpapi.AISettings
 	e.call(admin, http.MethodGet, "/admin/settings/ai", nil, &got)
 	if got.Mode != httpapi.AIModeOff {
 		t.Fatalf("a test must not save: %+v", got)
+	}
+}
+
+// A saved key goes only to the server it was saved for: a new scheme, host or
+// port without a key drops it, in Test and in Save; a new path keeps it.
+func TestASavedKeyStaysWithItsHost(t *testing.T) {
+	e := newEnvWith(t, withSecretKey)
+	admin, _ := e.signedIn("admin@example.com", true)
+	provider := llmtest.New(t)
+	provider.Key = "sk-secret-123"
+	var mu sync.Mutex
+	var seen []string
+	other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		seen = append(seen, r.Header.Get("Authorization"))
+		mu.Unlock()
+		http.NotFound(w, r)
+	}))
+	defer other.Close()
+
+	body := aiUpdate("byok", provider.BaseURL())
+	body["provider"], body["acknowledged"] = "Example Cloud", true
+	body["chat"].(map[string]any)["api_key"] = "sk-secret-123"
+	body["embed"].(map[string]any)["api_key"] = "sk-secret-123"
+	var got httpapi.AISettings
+	if code := e.call(admin, http.MethodPut, "/admin/settings/ai", body, &got); code != http.StatusOK || !got.Chat.ApiKeySet {
+		t.Fatalf("save with a key: %d %+v", code, got)
+	}
+	moved := aiUpdate("byok", provider.Server.URL+"/api/v1")
+	moved["provider"], moved["acknowledged"] = "Example Cloud", true
+	if code := e.call(admin, http.MethodPut, "/admin/settings/ai", moved, &got); code != http.StatusOK || !got.Chat.ApiKeySet || !got.Embed.ApiKeySet {
+		t.Fatalf("a new path on the same server: %d %+v", code, got)
+	}
+
+	if code := e.call(admin, http.MethodPost, "/admin/ai/test", aiUpdate("local", other.URL+"/v1"), nil); code != http.StatusOK {
+		t.Fatalf("test against a new host: %d", code)
+	}
+	if code := e.call(admin, http.MethodPut, "/admin/settings/ai", aiUpdate("local", other.URL+"/v1"), &got); code != http.StatusOK ||
+		got.Chat.ApiKeySet || got.Embed.ApiKeySet {
+		t.Fatalf("save with a new host: %d %+v", code, got)
+	}
+	if code := e.call(admin, http.MethodPost, "/admin/ai/test", aiUpdate("local", other.URL+"/v1"), nil); code != http.StatusOK {
+		t.Fatalf("test after the save: %d", code)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(seen) == 0 {
+		t.Fatal("the new host was never called")
+	}
+	for _, a := range seen {
+		if a != "" {
+			t.Fatalf("the new host got Authorization %q", a)
+		}
+	}
+}
+
+// An endpoint URL is a base URL: a query or a fragment is refused.
+func TestEndpointURLsHaveNoQueryOrFragment(t *testing.T) {
+	e := newEnv(t)
+	admin, _ := e.signedIn("admin@example.com", true)
+	for _, u := range []string{"http://model:11434/v1?x", "http://model:11434/v1?", "http://model:11434/v1#x"} {
+		var p httpapi.Problem
+		if code := e.call(admin, http.MethodPut, "/admin/settings/ai", aiUpdate("local", u), &p); code != http.StatusUnprocessableEntity ||
+			firstError(p).Field != "chat.url" {
+			t.Errorf("%s: %d %+v", u, code, p)
+		}
+		// Test with Off tries the server as Local, so the same check applies.
+		p = httpapi.Problem{}
+		if code := e.call(admin, http.MethodPost, "/admin/ai/test", aiUpdate("off", u), &p); code != http.StatusUnprocessableEntity ||
+			firstError(p).Field != "chat.url" {
+			t.Errorf("test with Off, %s: %d %+v", u, code, p)
+		}
+	}
+}
+
+// Test connection names the cause, never the server's answer.
+func TestConnectionTestHidesTheServersAnswer(t *testing.T) {
+	e := newEnv(t)
+	admin, _ := e.signedIn("admin@example.com", true)
+	failing := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "SECRET", http.StatusInternalServerError)
+	}))
+	defer failing.Close()
+	var raw json.RawMessage
+	var res httpapi.AITestResult
+	if code := e.call(admin, http.MethodPost, "/admin/ai/test", aiUpdate("local", failing.URL+"/v1"), &raw); code != http.StatusOK ||
+		json.Unmarshal(raw, &res) != nil || res.Chat.Ok || res.Embed.Ok || strings.Contains(string(raw), "SECRET") {
+		t.Fatalf("a failing server: %d %s", code, raw)
 	}
 }

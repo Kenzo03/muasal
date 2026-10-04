@@ -119,13 +119,13 @@ func (s *Server) TestAI(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, err)
 		return
 	}
+	if in.Mode == AIModeOff {
+		in.Mode = AIModeLocal // Off still lets the admin try a server before switching to it, checked as Local
+	}
 	next, fields := s.aiSettingsFrom(cur, in)
 	if len(fields) > 0 {
 		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields", fields...)
 		return
-	}
-	if next.Mode == ai.ModeOff {
-		next.Mode = ai.ModeLocal // Off still lets the admin try a server before switching to it
 	}
 	chat, err := s.ai.ChatClient(next)
 	if err != nil {
@@ -161,7 +161,7 @@ func probeChat(ctx context.Context, c *llm.Client) AIProbe {
 		p.Models = &models
 	}
 	if err != nil {
-		p.Error, p.Reason = ptr(err.Error()), probeReason(err)
+		p.Reason = probeReason(err)
 	}
 	return p
 }
@@ -173,15 +173,15 @@ func probeEmbed(ctx context.Context, c *llm.Client) AIProbe {
 	vecs, err := c.Embed(ctx, []string{"Muasal connection test"})
 	p := AIProbe{Ok: err == nil, LatencyMs: int(time.Since(start).Milliseconds())}
 	if err != nil {
-		p.Error, p.Reason = ptr(err.Error()), probeReason(err)
+		p.Reason = probeReason(err)
 	} else {
 		p.Dim = ptr(len(vecs[0]))
 	}
 	return p
 }
 
-// probeReason names a failed probe's likely cause (MSL-31), or nil when the
-// raw error is all there is to say.
+// probeReason names a failed probe's likely cause (MSL-31), or nil when there
+// is none to name. The server's own answer is never passed on.
 func probeReason(err error) *AIProbeReason {
 	var dns *net.DNSError
 	var cert *tls.CertificateVerificationError
@@ -211,8 +211,9 @@ func probeReason(err error) *AIProbeReason {
 	return &r
 }
 
-// aiSettingsFrom applies an update to the current settings: keys left out stay,
-// an empty key is removed, a new key is sealed with APP_SECRET_KEY.
+// aiSettingsFrom applies an update to the current settings: keys left out stay
+// unless the URL's scheme, host or port changes, an empty key is removed, a new
+// key is sealed with APP_SECRET_KEY.
 func (s *Server) aiSettingsFrom(cur ai.Settings, in AISettingsUpdate) (ai.Settings, []FieldError) {
 	next := cur
 	next.Mode, next.Provider, next.Acknowledged = ai.Mode(in.Mode), deref(in.Provider), deref(in.Acknowledged)
@@ -228,8 +229,11 @@ func (s *Server) aiSettingsFrom(cur ai.Settings, in AISettingsUpdate) (ai.Settin
 		dst  *ai.Endpoint
 		in   AIEndpointUpdate
 	}{{"chat", &next.Chat, in.Chat}, {"embed", &next.Embed, in.Embed}} {
+		moved := !ai.SameServer(e.dst.URL, e.in.Url)
 		e.dst.URL, e.dst.Model = e.in.Url, e.in.Model
 		switch {
+		case e.in.ApiKey == nil && moved:
+			e.dst.SealedKey = nil // a saved key goes only to the server it was saved for
 		case e.in.ApiKey == nil:
 		case *e.in.ApiKey == "":
 			e.dst.SealedKey = nil

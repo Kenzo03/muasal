@@ -57,9 +57,16 @@ SELECT c.id, c.name, c.code, c.aliases, c.archived_at,
 FROM clients c
 LEFT JOIN project_clients pc ON pc.client_id = c.id
 LEFT JOIN projects p ON p.id = pc.project_id
+  AND ($1::bool
+       OR EXISTS (SELECT 1 FROM memberships m WHERE m.project_id = p.id AND m.user_id = $2))
 GROUP BY c.id
 ORDER BY lower(c.name), c.id
 `
+
+type ListClientsParams struct {
+	IsAdmin bool
+	UserID  int64
+}
 
 type ListClientsRow struct {
 	Client   Client
@@ -67,9 +74,10 @@ type ListClientsRow struct {
 }
 
 // The admin list (GET /clients): each client with the keys of the projects
-// linked to it, in key order; none gives an empty array.
-func (q *Queries) ListClients(ctx context.Context) ([]ListClientsRow, error) {
-	rows, err := q.db.Query(ctx, listClients)
+// linked to it, in key order; none gives an empty array. Unless the caller is
+// a system admin, only projects the caller belongs to are listed.
+func (q *Queries) ListClients(ctx context.Context, arg ListClientsParams) ([]ListClientsRow, error) {
+	rows, err := q.db.Query(ctx, listClients, arg.IsAdmin, arg.UserID)
 	if err != nil {
 		return nil, err
 	}

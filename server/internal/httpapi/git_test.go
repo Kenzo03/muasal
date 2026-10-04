@@ -88,7 +88,7 @@ func TestGitHubPushLinksCommits(t *testing.T) {
 	if rejected != 1 {
 		t.Fatalf("rejections audited: %d", rejected)
 	}
-	if code := e.deliver(999999, map[string]string{"X-GitHub-Event": "push"}, push); code != http.StatusNotFound {
+	if code := e.deliver(999999, map[string]string{"X-GitHub-Event": "push"}, push); code != http.StatusUnauthorized {
 		t.Fatalf("unknown repo: %d", code)
 	}
 	if code := e.deliver(repo.Id, map[string]string{"X-GitHub-Event": "push"}, bytes.Repeat([]byte("x"), 5<<20+1)); code != http.StatusRequestEntityTooLarge {
@@ -169,5 +169,94 @@ func TestGitLabMergeRequestLinks(t *testing.T) {
 	e.call(w.pm, http.MethodGet, "/tickets/"+tk.Key, nil, &got)
 	if got.Code == nil || len(got.Code.MergeRequests) != 1 || got.Code.MergeRequests[0].Number != 12 || got.Code.MergeRequests[0].State != "merged" || got.Code.MergeRequests[0].MergedAt == nil {
 		t.Fatalf("code: %+v", got.Code)
+	}
+}
+
+// A delivery links and moves only tickets in its repository's project; a
+// commit URL that is not http or https is stored empty.
+func TestWebhookTouchesOnlyItsProject(t *testing.T) {
+	e := newEnvWith(t, func(c *config.Config) { c.SecretKey = bytes.Repeat([]byte{7}, 32) })
+	w := newHRIS(e)
+	ops := e.seedProject("OPS")
+	admin, _ := e.signedIn("admin@example.com", true)
+	mine := e.seedTicket(w.p, w.pmUser, "Supervisor skip", &w.a, w.ot)
+	other := e.seedTicket(ops, w.pmUser, "Disk full", nil)
+	var repo httpapi.Repo
+	if code := e.call(admin, http.MethodPost, "/projects/HRIS/repos", map[string]any{"provider": "github", "name": "hris-app", "web_url": "https://github.com/acme/hris-app"}, &repo); code != http.StatusCreated {
+		t.Fatalf("repo: %d", code)
+	}
+	push := []byte(`{"ref":"refs/heads/main","commits":[{"id":"abc1234def","message":"Fixes HRIS-1 and OPS-1","url":"javascript:alert(1)","author":{"name":"PM","email":"pm@example.com"}}]}`)
+	if code := e.deliver(repo.Id, map[string]string{"X-GitHub-Event": "push", "X-Hub-Signature-256": sign(*repo.Secret, push)}, push); code != http.StatusAccepted {
+		t.Fatalf("delivery: %d", code)
+	}
+	e.processAll()
+	var mineStatus, otherStatus string
+	var mineLinks, otherLinks int
+	q := `SELECT s.name, (SELECT count(*) FROM ticket_commits tc WHERE tc.ticket_id = t.id) FROM tickets t JOIN statuses s ON s.id = t.status_id WHERE t.id = $1`
+	if err := e.d.Pool.QueryRow(t.Context(), q, mine.ID).Scan(&mineStatus, &mineLinks); err != nil || mineStatus != "In review" || mineLinks != 1 {
+		t.Fatalf("own ticket: %v %q %d", err, mineStatus, mineLinks)
+	}
+	if err := e.d.Pool.QueryRow(t.Context(), q, other.ID).Scan(&otherStatus, &otherLinks); err != nil || otherStatus == "In review" || otherLinks != 0 {
+		t.Fatalf("other project's ticket: %v %q %d", err, otherStatus, otherLinks)
+	}
+	var url *string
+	if err := e.d.Pool.QueryRow(t.Context(), "SELECT url FROM commits WHERE sha = 'abc1234def'").Scan(&url); err != nil || (url != nil && *url != "") {
+		t.Fatalf("commit url: %v %v", err, url)
+	}
+}
+
+// An unknown repository answers like a bad signature; rejections are audited
+// once a minute per repository; over 60 rejected requests a minute from one
+// address answers 429 and audits nothing, while a correctly signed delivery
+// from that address is still taken.
+func TestWebhookLimits(t *testing.T) {
+	e := newEnvWith(t, func(c *config.Config) { c.SecretKey = bytes.Repeat([]byte{7}, 32) })
+	newHRIS(e)
+	admin, _ := e.signedIn("admin@example.com", true)
+	var repo httpapi.Repo
+	if code := e.call(admin, http.MethodPost, "/projects/HRIS/repos", map[string]any{"provider": "github", "name": "hris-app", "web_url": "https://github.com/acme/hris-app"}, &repo); code != http.StatusCreated {
+		t.Fatalf("repo: %d", code)
+	}
+	bad := map[string]string{"X-GitHub-Event": "push", "X-Hub-Signature-256": "sha256=00"}
+	body := []byte(`{}`)
+	rejected := func() int {
+		var n int
+		e.d.Pool.QueryRow(t.Context(), "SELECT count(*) FROM audit_events WHERE action = 'webhook_rejected'").Scan(&n)
+		return n
+	}
+	for range 2 {
+		if code := e.deliver(repo.Id, bad, body); code != http.StatusUnauthorized {
+			t.Fatalf("bad signature: %d", code)
+		}
+	}
+	if n := rejected(); n != 1 {
+		t.Fatalf("rejections audited: %d", n)
+	}
+	big := bytes.Repeat([]byte("x"), 5<<20+1)
+	if known, unknown := e.deliver(repo.Id, bad, big), e.deliver(999999, bad, big); known != unknown {
+		t.Fatalf("oversized body: known repo %d, unknown repo %d", known, unknown)
+	}
+	res, err := http.Post(e.url+"/webhooks/git/abc", "application/json", bytes.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if res.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("non-numeric repo id: %d", res.StatusCode)
+	}
+	for i := 6; i <= 60; i++ {
+		if code := e.deliver(999999, bad, body); code != http.StatusUnauthorized {
+			t.Fatalf("unknown repo, request %d: %d", i, code)
+		}
+	}
+	if code := e.deliver(repo.Id, bad, body); code != http.StatusTooManyRequests {
+		t.Fatalf("61st rejected request: %d", code)
+	}
+	if n := rejected(); n != 1 {
+		t.Fatalf("rejections audited after the limit: %d", n)
+	}
+	good := map[string]string{"X-GitHub-Event": "push", "X-Hub-Signature-256": sign(*repo.Secret, body)}
+	if code := e.deliver(repo.Id, good, body); code != http.StatusAccepted {
+		t.Fatalf("signed delivery after the limit: %d", code)
 	}
 }

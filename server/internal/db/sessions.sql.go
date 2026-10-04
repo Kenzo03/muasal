@@ -36,7 +36,7 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) er
 }
 
 const deleteOtherSessions = `-- name: DeleteOtherSessions :exec
-DELETE FROM sessions WHERE user_id = $1 AND token_hash <> $2
+DELETE FROM sessions WHERE user_id = $1 AND token_hash IS DISTINCT FROM $2
 `
 
 type DeleteOtherSessionsParams struct {
@@ -44,6 +44,7 @@ type DeleteOtherSessionsParams struct {
 	TokenHash []byte
 }
 
+// A NULL hash (a request made with an API token) ends every session.
 func (q *Queries) DeleteOtherSessions(ctx context.Context, arg DeleteOtherSessionsParams) error {
 	_, err := q.db.Exec(ctx, deleteOtherSessions, arg.UserID, arg.TokenHash)
 	return err

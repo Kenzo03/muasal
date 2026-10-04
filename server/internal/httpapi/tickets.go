@@ -19,6 +19,8 @@ import (
 
 var errStale = errors.New("the ticket changed since it was read")
 
+var errIdempotencyConflict = errors.New("the idempotency key belongs to another project's or a hidden ticket")
+
 var clientIDField = FieldError{Field: "client_id", Code: "invalid", Message: "Choose a client of this project in your scope"}
 
 var nodeIDsField = FieldError{Field: "node_ids", Code: "invalid", Message: "Choose menus and modules of this project"}
@@ -96,8 +98,12 @@ func (s *Server) CreateTicket(w http.ResponseWriter, r *http.Request, key string
 			}
 			prev, err := q.GetIdempotentTicket(ctx, db.GetIdempotentTicketParams{UserID: pc.user.ID, Key: idem})
 			if err == nil {
+				// The key answers only in its ticket's project, while the caller still sees it.
+				if prev.ProjectID != pc.project.ID || !pc.scope.Sees(prev.ClientID) {
+					return errIdempotencyConflict
+				}
 				replayed = true
-				out, err = readTicket(ctx, q, prev, pc.user)
+				out, err = readTicket(ctx, q, prev.Key, pc.user)
 				return err
 			}
 			if !errors.Is(err, pgx.ErrNoRows) {
@@ -142,6 +148,10 @@ func (s *Server) CreateTicket(w http.ResponseWriter, r *http.Request, key string
 		}
 		return audit(ctx, q, webMeta(r).inProject(pc.project.ID), &pc.user.ID, "ticket", created.ID, "create", ticketAudit(out))
 	})
+	if errors.Is(err, errIdempotencyConflict) {
+		writeProblem(w, http.StatusConflict, "idempotency_conflict", "This Idempotency-Key belongs to a ticket you cannot reach here")
+		return
+	}
 	if constraintOf(err) == "tickets_client_linked" {
 		ticketClientInvalid(w)
 		return

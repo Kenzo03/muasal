@@ -7,7 +7,7 @@ import { api } from "@/lib/api";
 import { safeNext } from "@/lib/next";
 import { button, cx, field } from "@/lib/ui";
 
-const messageFor: Record<string, string> = { account_locked: "locked", rate_limited: "rateLimited" };
+const messageFor: Record<string, string> = { rate_limited: "rateLimited" };
 
 export default function LoginForm({ email, next }: { email?: string; next?: string }) {
   const t = useTranslations("login");
