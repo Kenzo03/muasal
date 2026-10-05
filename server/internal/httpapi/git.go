@@ -15,10 +15,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/kenzo03/muasal/server/internal/access"
-	"github.com/kenzo03/muasal/server/internal/db"
-	"github.com/kenzo03/muasal/server/internal/gitlink"
-	"github.com/kenzo03/muasal/server/internal/secret"
+	"github.com/kenzo03/zettra/server/internal/access"
+	"github.com/kenzo03/zettra/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/gitlink"
+	"github.com/kenzo03/zettra/server/internal/secret"
 )
 
 // webhookMaxBytes is the largest delivery the webhook takes (§14.1).
@@ -190,7 +190,7 @@ func (s *Server) gitWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 	event := gitlink.Event(repo.Provider, r.Header)
 	if event == "" {
-		w.WriteHeader(http.StatusAccepted) // a ping or an event Muasal does not use
+		w.WriteHeader(http.StatusAccepted) // a ping or an event Zettra does not use
 		return
 	}
 	err = s.inJobTx(ctx, func(q *db.Queries, tx pgx.Tx) error {

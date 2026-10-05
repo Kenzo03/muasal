@@ -6,7 +6,7 @@ import (
 
 	"github.com/riverqueue/river"
 
-	"github.com/kenzo03/muasal/server/internal/indexer"
+	"github.com/kenzo03/zettra/server/internal/indexer"
 )
 
 // DueReminders asks for the morning's due-date reminders; `app serve` runs it

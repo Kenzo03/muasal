@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kenzo03/muasal/server/internal/ask"
-	"github.com/kenzo03/muasal/server/internal/db"
-	"github.com/kenzo03/muasal/server/internal/indexer"
-	"github.com/kenzo03/muasal/server/internal/llm/llmtest"
+	"github.com/kenzo03/zettra/server/internal/ask"
+	"github.com/kenzo03/zettra/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/indexer"
+	"github.com/kenzo03/zettra/server/internal/llm/llmtest"
 )
 
 var hybrid = ask.Tuning{EmbedModel: "bge-m3", MinSimilarity: 0.3, ExhaustiveMax: 0} // always rank

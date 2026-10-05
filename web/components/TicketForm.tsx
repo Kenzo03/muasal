@@ -34,7 +34,7 @@ export type Prefill = { title?: string; assigneeId?: number; due?: string; clien
 
 const types: TicketType[] = ["change_request", "bug", "feature"];
 const priorities: Priority[] = ["low", "medium", "high", "urgent"];
-const lastClientKey = (projectKey: string) => `muasal:last-client:${projectKey}`;
+const lastClientKey = (projectKey: string) => `zettra:last-client:${projectKey}`;
 
 // One labeled field of the form: the label above, the field and its hints below.
 function Row({ label, htmlFor, id, children }: { label: string; htmlFor?: string; id?: string; children: React.ReactNode }) {

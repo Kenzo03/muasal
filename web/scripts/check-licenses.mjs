@@ -1,5 +1,5 @@
 // Fails when a package the web app ships (production dependencies, all
-// levels) has a licence Muasal may not ship under Apache-2.0 (FSD §18:
+// levels) has a licence Zettra may not ship under Apache-2.0 (FSD §18:
 // licence scan in CI). SPDX "OR" needs one allowed choice; "AND" needs all.
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";

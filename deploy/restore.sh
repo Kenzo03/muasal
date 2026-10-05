@@ -11,9 +11,9 @@ dc exec -T backup test -f "/backups/$(basename "$dump")" || { echo "restore: /ba
 echo "Stopping app and web…"
 dc stop app web
 echo "Restoring the database…"
-dc exec -T backup pg_restore -h db -U owner -d muasal --clean --if-exists --no-owner --role=owner "/backups/$(basename "$dump")"
+dc exec -T backup pg_restore -h db -U owner -d zettra --clean --if-exists --no-owner --role=owner "/backups/$(basename "$dump")"
 echo "Restoring attachments…"
-dc run --rm --no-deps --entrypoint sh -v muasal_attachments:/data/attachments backup -c 'cp -Rn /backups/attachments/. /data/attachments/'
+dc run --rm --no-deps --entrypoint sh -v zettra_attachments:/data/attachments backup -c 'cp -Rn /backups/attachments/. /data/attachments/'
 echo "Starting app and web…"
 dc up -d --wait app web
 dc exec -T app /app admin reindex --all

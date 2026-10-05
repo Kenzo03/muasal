@@ -8,7 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/auth"
+	"github.com/kenzo03/zettra/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
 )
 
 // bearer sends a request with a token and no cookie or Origin, as a script would.
@@ -39,7 +41,7 @@ func TestTokensActAsTheirOwner(t *testing.T) {
 
 	var tok httpapi.APITokenCreated
 	if code := e.call(w.pm, http.MethodPost, "/me/tokens", map[string]any{"name": "Sync script", "read_only": false}, &tok); code != http.StatusCreated ||
-		!strings.HasPrefix(tok.Token, "msl_") || len(tok.Token) < 40 || tok.ReadOnly {
+		!strings.HasPrefix(tok.Token, "ztr_") || len(tok.Token) < 40 || tok.ReadOnly {
 		t.Fatalf("create: %d %+v", code, tok)
 	}
 	var list httpapi.APITokenList
@@ -82,8 +84,26 @@ func TestTokensActAsTheirOwner(t *testing.T) {
 	if code := e.bearer(tok.Token, http.MethodGet, "/me", nil, &p); code != http.StatusUnauthorized || p.Code != "invalid_token" {
 		t.Fatalf("a revoked token: %d %+v", code, p)
 	}
-	if code := e.bearer("msl_not-a-real-token", http.MethodGet, "/me", nil, &p); code != http.StatusUnauthorized {
+	if code := e.bearer("ztr_not-a-real-token", http.MethodGet, "/me", nil, &p); code != http.StatusUnauthorized {
 		t.Fatalf("an unknown token: %d", code)
+	}
+}
+
+// A token made while the product was called Muasal starts with msl_ and still
+// works; any other prefix is refused before the lookup.
+func TestLegacyTokensStillWork(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	for _, c := range []struct {
+		secret string
+		want   int
+	}{{"msl_made-before-the-rename", http.StatusOK}, {"xyz_not-ours", http.StatusUnauthorized}} {
+		if _, err := e.q.CreateAPIToken(t.Context(), db.CreateAPITokenParams{UserID: w.pmUser.ID, Name: c.secret, TokenHash: auth.HashToken(c.secret)}); err != nil {
+			t.Fatal(err)
+		}
+		if code := e.bearer(c.secret, http.MethodGet, "/me", nil, nil); code != c.want {
+			t.Fatalf("%s: got %d, want %d", c.secret, code, c.want)
+		}
 	}
 }
 

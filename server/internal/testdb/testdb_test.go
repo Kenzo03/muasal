@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/kenzo03/muasal/server/internal/testdb"
+	"github.com/kenzo03/zettra/server/internal/testdb"
 )
 
 // go test runs packages in parallel against one server, and roles are

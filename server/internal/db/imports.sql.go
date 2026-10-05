@@ -435,7 +435,7 @@ type UpdateImportedTicketParams struct {
 	ID           int64
 }
 
-// A re-import updates what the old tool owns and leaves Muasal's own work
+// A re-import updates what the old tool owns and leaves Zettra's own work
 // (reason, menus added by hand, decision records) alone.
 func (q *Queries) UpdateImportedTicket(ctx context.Context, arg UpdateImportedTicketParams) (Ticket, error) {
 	row := q.db.QueryRow(ctx, updateImportedTicket,

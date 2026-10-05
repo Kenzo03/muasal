@@ -1,5 +1,5 @@
 {
-  "name": "muasal-web",
+  "name": "zettra-web",
   "private": true,
   "scripts": {
     "dev": "next dev",

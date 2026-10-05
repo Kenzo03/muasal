@@ -20,7 +20,7 @@ WITH ins AS (
                   WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = t.client_id))))
   RETURNING id, user_id
 )
-SELECT ins.id, ins.user_id, pg_notify('muasal_notifications', ins.user_id || ':' || ins.id)::text AS sent FROM ins;
+SELECT ins.id, ins.user_id, pg_notify('zettra_notifications', ins.user_id || ':' || ins.id)::text AS sent FROM ins;
 
 -- name: NotifyJobDone :exec
 -- An import (or a later tree draft or re-index) finished: its starter hears.
@@ -30,7 +30,7 @@ WITH ins AS (
   WHERE u.id = sqlc.arg('user_id') AND coalesce((u.notify_prefs ->> 'job_done')::boolean, true)
   RETURNING id, user_id
 )
-SELECT pg_notify('muasal_notifications', ins.user_id || ':' || ins.id) FROM ins;
+SELECT pg_notify('zettra_notifications', ins.user_id || ':' || ins.id) FROM ins;
 
 -- name: ListNotifications :many
 -- The latest 50, each checked against the ticket's visibility now (§8.10).
@@ -127,7 +127,7 @@ WITH ins AS (
           WHERE n.user_id = u.id AND n.ticket_id = t.id AND n.type = 'due' AND n.payload ->> 'on' = d.today::text)
   RETURNING id, user_id
 )
-SELECT ins.id, ins.user_id, pg_notify('muasal_notifications', ins.user_id || ':' || ins.id)::text AS sent FROM ins;
+SELECT ins.id, ins.user_id, pg_notify('zettra_notifications', ins.user_id || ':' || ins.id)::text AS sent FROM ins;
 
 -- name: FollowTicket :exec
 INSERT INTO ticket_followers (ticket_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING;

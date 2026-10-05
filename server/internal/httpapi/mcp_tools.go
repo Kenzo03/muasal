@@ -16,7 +16,7 @@ import (
 // mcpServer builds the tool set for one request. ponytail: schemas are
 // inferred per request; cache the server per token if profiles show it.
 func (s *Server) mcpServer(c *apiCaller) *mcp.Server {
-	srv := mcp.NewServer(&mcp.Implementation{Name: "muasal", Version: "0.1"}, nil)
+	srv := mcp.NewServer(&mcp.Implementation{Name: "zettra", Version: "0.1"}, nil)
 
 	mcp.AddTool(srv, &mcp.Tool{Name: "get_project", Description: "A project's statuses (with category todo, in_progress, done or cancelled), menu tree (flat node list with parent ids; tickets attach to menus by id), clients and assignees. Call it first for the ids the other tools take."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, in projectIn) (*mcp.CallToolResult, any, error) {
@@ -183,7 +183,7 @@ func (s *Server) mcpServer(c *apiCaller) *mcp.Server {
 			return jsonResult(raw)
 		})
 
-	mcp.AddTool(srv, &mcp.Tool{Name: "cancel_ticket", Description: "Muasal never deletes tickets: this closes one as Cancelled and records why, so the history stays. reason and why are required."},
+	mcp.AddTool(srv, &mcp.Tool{Name: "cancel_ticket", Description: "Zettra never deletes tickets: this closes one as Cancelled and records why, so the history stays. reason and why are required."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, in cancelIn) (*mcp.CallToolResult, any, error) {
 			path := "/tickets/" + url.PathEscape(in.Key)
 			var cur Ticket

@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kenzo03/muasal/server/internal/ai"
-	"github.com/kenzo03/muasal/server/internal/ask"
-	"github.com/kenzo03/muasal/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/ai"
+	"github.com/kenzo03/zettra/server/internal/ask"
+	"github.com/kenzo03/zettra/server/internal/db"
 )
 
 // enumOf reads the citation enum from a request's schema.

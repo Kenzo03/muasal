@@ -1,6 +1,6 @@
-# Contributing to Muasal
+# Contributing to Zettra
 
-Thank you for helping. Muasal is a self-hosted ticketing tool that records why every screen works the way it does. The behaviour it must have is specified in the FSD, and code comments cite its sections, such as "FSD §9.3" or "AC-DC-6".
+Thank you for helping. Zettra is a self-hosted ticketing tool that records why every screen works the way it does. The behaviour it must have is specified in the FSD, and code comments cite its sections, such as "FSD §9.3" or "AC-DC-6".
 
 ## Report first
 
@@ -64,7 +64,7 @@ Commit messages use a short imperative subject with a type, such as `feat:`, `fi
 
 ## Licence
 
-Muasal is licensed under Apache-2.0. By contributing, you agree that your contribution is licensed under the same terms (inbound = outbound), as section 5 of the licence says.
+Zettra is licensed under Apache-2.0. By contributing, you agree that your contribution is licensed under the same terms (inbound = outbound), as section 5 of the licence says.
 
 ## Releases
 

@@ -9,8 +9,8 @@ import (
 
 	"github.com/riverqueue/river"
 
-	"github.com/kenzo03/muasal/server/internal/db"
-	"github.com/kenzo03/muasal/server/internal/testdb"
+	"github.com/kenzo03/zettra/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/testdb"
 )
 
 func TestDigest(t *testing.T) {
@@ -18,17 +18,17 @@ func TestDigest(t *testing.T) {
 		{Type: "assigned", Actor: "Rina Kusuma", Key: "DMS-1", Title: "Turunkan batas persetujuan"},
 		{Type: "mention", Actor: "Rina Kusuma", Key: "DMS-1", Title: "Turunkan batas persetujuan", Payload: map[string]any{"excerpt": "@bayu tolong cek"}},
 		{Type: "status", Actor: "Rina Kusuma", Key: "DMS-6", Title: "Batas kredit", Payload: map[string]any{"status": "In progress"}},
-	}, "https://muasal.example.com")
-	for _, want := range []string{"Halo Bayu,", "• Rina Kusuma menugaskan DMS-1 Turunkan batas persetujuan kepada Anda", "  https://muasal.example.com/t/DMS-1",
+	}, "https://zettra.example.com")
+	for _, want := range []string{"Halo Bayu,", "• Rina Kusuma menugaskan DMS-1 Turunkan batas persetujuan kepada Anda", "  https://zettra.example.com/t/DMS-1",
 		"menyebut Anda di DMS-1 Turunkan batas persetujuan: “@bayu tolong cek”", "memindahkan DMS-6 Batas kredit ke In progress", "/settings/profile"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("body lacks %q:\n%s", want, body)
 		}
 	}
-	if subject != "Muasal: 3 pemberitahuan baru" {
+	if subject != "Zettra: 3 pemberitahuan baru" {
 		t.Errorf("subject %q", subject)
 	}
-	if subject, _ := Digest("en", "Dewi", []Item{{Type: "job_done", Payload: map[string]any{"name": "jira.csv", "link": "/admin/imports/1"}}}, "http://x"); subject != "Muasal: jira.csv finished" {
+	if subject, _ := Digest("en", "Dewi", []Item{{Type: "job_done", Payload: map[string]any{"name": "jira.csv", "link": "/admin/imports/1"}}}, "http://x"); subject != "Zettra: jira.csv finished" {
 		t.Errorf("one item: %q", subject)
 	}
 }
@@ -83,12 +83,12 @@ func TestSend(t *testing.T) {
 		}
 	}()
 	port := ln.Addr().(*net.TCPAddr).Port
-	c := Config{Host: "127.0.0.1", Port: port, From: "muasal@example.com", TLS: "none"}
-	if err := Send(c, "bayu@example.com", "Muasal: 1 pemberitahuan", "Halo Bayu,\n\n• baris"); err != nil {
+	c := Config{Host: "127.0.0.1", Port: port, From: "zettra@example.com", TLS: "none"}
+	if err := Send(c, "bayu@example.com", "Zettra: 1 pemberitahuan", "Halo Bayu,\n\n• baris"); err != nil {
 		t.Fatal(err)
 	}
 	msg := <-got
-	for _, want := range []string{"From: muasal@example.com\r\n", "To: bayu@example.com\r\n", "Content-Type: text/plain; charset=utf-8\r\n", "Halo Bayu,\r\n", "• baris\r\n"} {
+	for _, want := range []string{"From: zettra@example.com\r\n", "To: bayu@example.com\r\n", "Content-Type: text/plain; charset=utf-8\r\n", "Halo Bayu,\r\n", "• baris\r\n"} {
 		if !strings.Contains(msg, want) {
 			t.Errorf("message lacks %q:\n%s", want, msg)
 		}
@@ -132,7 +132,7 @@ func TestWorkerSendsOneDigestPerUser(t *testing.T) {
 			n.user, n.name, n.since, n.read)
 	}
 	var sent []string
-	w := &Worker{Pool: d.Pool, Config: Config{Host: "smtp.example.com", From: "muasal@example.com"}, PublicURL: "https://m.example.com",
+	w := &Worker{Pool: d.Pool, Config: Config{Host: "smtp.example.com", From: "zettra@example.com"}, PublicURL: "https://m.example.com",
 		Send: func(_ Config, to, subject, body string) error {
 			sent = append(sent, to+"|"+subject+"|"+body)
 			return nil
@@ -142,7 +142,7 @@ func TestWorkerSendsOneDigestPerUser(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if len(sent) != 1 || !strings.HasPrefix(sent[0], "bayu@example.com|Muasal: 2 pemberitahuan baru|") ||
+	if len(sent) != 1 || !strings.HasPrefix(sent[0], "bayu@example.com|Zettra: 2 pemberitahuan baru|") ||
 		!strings.Contains(sent[0], "a.csv selesai") || !strings.Contains(sent[0], "b.csv selesai") || strings.Contains(sent[0], "fresh.csv") {
 		t.Fatalf("sent: %q", sent)
 	}
@@ -151,7 +151,7 @@ func TestWorkerSendsOneDigestPerUser(t *testing.T) {
 // MSL-52: a due reminder reads as one.
 func TestDigestDue(t *testing.T) {
 	subject, body := Digest("id", "Fajar Nugroho", []Item{{Type: "due", Key: "HRIS-8", Title: "Cut-off payroll", Payload: map[string]any{"when": "tomorrow"}}}, "https://m.example")
-	if subject != "Muasal: HRIS-8 Cut-off payroll jatuh tempo besok" || !strings.Contains(body, "https://m.example/t/HRIS-8") {
+	if subject != "Zettra: HRIS-8 Cut-off payroll jatuh tempo besok" || !strings.Contains(body, "https://m.example/t/HRIS-8") {
 		t.Fatalf("%q\n%s", subject, body)
 	}
 }

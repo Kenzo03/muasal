@@ -3,7 +3,7 @@
 -- 5 clients, 200 contacts and 50 members. Chunks carry no vectors: the load
 -- test runs Ask on the keyword path. It prints one session token per member,
 -- for k6, since sign-in allows 20 attempts per IP per minute.
---   psql -U owner -d muasal -v tickets=100000 -f seed.sql > tokens.txt
+--   psql -U owner -d zettra -v tickets=100000 -f seed.sql > tokens.txt
 \set ON_ERROR_STOP on
 \set QUIET on
 \if :{?tickets}

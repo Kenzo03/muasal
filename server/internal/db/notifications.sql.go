@@ -258,7 +258,7 @@ WITH ins AS (
           WHERE n.user_id = u.id AND n.ticket_id = t.id AND n.type = 'due' AND n.payload ->> 'on' = d.today::text)
   RETURNING id, user_id
 )
-SELECT ins.id, ins.user_id, pg_notify('muasal_notifications', ins.user_id || ':' || ins.id)::text AS sent FROM ins
+SELECT ins.id, ins.user_id, pg_notify('zettra_notifications', ins.user_id || ':' || ins.id)::text AS sent FROM ins
 `
 
 type NotifyDueRow struct {
@@ -297,7 +297,7 @@ WITH ins AS (
   WHERE u.id = $2 AND coalesce((u.notify_prefs ->> 'job_done')::boolean, true)
   RETURNING id, user_id
 )
-SELECT pg_notify('muasal_notifications', ins.user_id || ':' || ins.id) FROM ins
+SELECT pg_notify('zettra_notifications', ins.user_id || ':' || ins.id) FROM ins
 `
 
 type NotifyJobDoneParams struct {
@@ -330,7 +330,7 @@ WITH ins AS (
                   WHERE mc.user_id = m.user_id AND mc.project_id = m.project_id AND mc.client_id = t.client_id))))
   RETURNING id, user_id
 )
-SELECT ins.id, ins.user_id, pg_notify('muasal_notifications', ins.user_id || ':' || ins.id)::text AS sent FROM ins
+SELECT ins.id, ins.user_id, pg_notify('zettra_notifications', ins.user_id || ':' || ins.id)::text AS sent FROM ins
 `
 
 type NotifyTicketParams struct {

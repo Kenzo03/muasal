@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
 )
 
 // rawJSON posts JSON to a path outside /api/v1 and decodes the reply.
@@ -199,7 +199,7 @@ func TestOAuthTokenExchange(t *testing.T) {
 	code := codeFrom(e, to)
 	status, out := exchange(e, tokenForm(id, redirect, code))
 	tok, _ := out["access_token"].(string)
-	if status != http.StatusOK || !strings.HasPrefix(tok, "msl_") || out["token_type"] != "Bearer" {
+	if status != http.StatusOK || !strings.HasPrefix(tok, "ztr_") || out["token_type"] != "Bearer" {
 		t.Fatalf("exchange: %d %v", status, out)
 	}
 	var page httpapi.TicketPage

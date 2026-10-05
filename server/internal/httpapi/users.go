@@ -13,9 +13,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/kenzo03/muasal/server/internal/auth"
-	"github.com/kenzo03/muasal/server/internal/db"
-	outmail "github.com/kenzo03/muasal/server/internal/mail"
+	"github.com/kenzo03/zettra/server/internal/auth"
+	"github.com/kenzo03/zettra/server/internal/db"
+	outmail "github.com/kenzo03/zettra/server/internal/mail"
 )
 
 const setupLinkTTL = 72 * time.Hour // FSD §15.1

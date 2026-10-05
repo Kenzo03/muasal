@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kenzo03/muasal/server/internal/indexer"
+	"github.com/kenzo03/zettra/server/internal/indexer"
 )
 
 var typeNames = map[string]string{"bug": "Bug", "change_request": "Change request", "feature": "Feature"}

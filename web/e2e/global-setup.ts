@@ -25,7 +25,7 @@ export default async function globalSetup() {
     } catch {
       // not up yet
     }
-    if (Date.now() > deadline) throw new Error(`Muasal is not answering at ${baseURL}; run \`make up\` first`);
+    if (Date.now() > deadline) throw new Error(`Zettra is not answering at ${baseURL}; run \`make up\` first`);
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
   const signin = createAdmin("E2E Admin");

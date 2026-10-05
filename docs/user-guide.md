@@ -1,6 +1,6 @@
 # User guide
 
-Muasal has three roles in a project. **Viewers** read. **Members** file, comment on and close tickets. **Project admins** also manage the tree, members, statuses, repositories and documents. A member can be limited to some clients; they then see only those clients' tickets and menus, and core work.
+Zettra has three roles in a project. **Viewers** read. **Members** file, comment on and close tickets. **Project admins** also manage the tree, members, statuses, repositories and documents. A member can be limited to some clients; they then see only those clients' tickets and menus, and core work.
 
 ## The module tree
 
@@ -32,7 +32,7 @@ Press **c** anywhere to file a ticket. It needs a title, a type, the client (or 
 
 Open Ask from the top bar, a menu page or a ticket, and ask in Indonesian or English.
 
-- **Chips** above the question narrow the scope: project, menu, client, dates and person. Muasal also detects chips in the question.
+- **Chips** above the question narrow the scope: project, menu, client, dates and person. Zettra also detects chips in the question.
 - **Every claim** ends with citation chips. Hover to see the source; click to open it. Sources can be tickets, decision notes (`HRIS-DN7`) and document sections (`HRIS-DOC1/7.4`).
 - **When nothing in scope answers the question,** Ask says "Not enough information" and shows the closest items instead of guessing.
 - **Thumbs up or down** tell admins which answers to improve.

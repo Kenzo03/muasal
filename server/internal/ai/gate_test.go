@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kenzo03/muasal/server/internal/ai"
+	"github.com/kenzo03/zettra/server/internal/ai"
 )
 
 // §11.7: with one slot, a second question waits, is told it has one question

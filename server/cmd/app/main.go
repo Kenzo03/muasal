@@ -1,4 +1,4 @@
-// Command app is Muasal's single server binary (FSD §4).
+// Command app is Zettra's single server binary (FSD §4).
 package main
 
 import (
@@ -19,18 +19,18 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 
-	"github.com/kenzo03/muasal/server/internal/ai"
-	"github.com/kenzo03/muasal/server/internal/ask"
-	"github.com/kenzo03/muasal/server/internal/config"
-	"github.com/kenzo03/muasal/server/internal/db"
-	"github.com/kenzo03/muasal/server/internal/draft"
-	"github.com/kenzo03/muasal/server/internal/eval"
-	"github.com/kenzo03/muasal/server/internal/gitlink"
-	"github.com/kenzo03/muasal/server/internal/httpapi"
-	"github.com/kenzo03/muasal/server/internal/indexer"
-	"github.com/kenzo03/muasal/server/internal/mail"
-	"github.com/kenzo03/muasal/server/internal/migrate"
-	"github.com/kenzo03/muasal/server/internal/ticketimport"
+	"github.com/kenzo03/zettra/server/internal/ai"
+	"github.com/kenzo03/zettra/server/internal/ask"
+	"github.com/kenzo03/zettra/server/internal/config"
+	"github.com/kenzo03/zettra/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/draft"
+	"github.com/kenzo03/zettra/server/internal/eval"
+	"github.com/kenzo03/zettra/server/internal/gitlink"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/indexer"
+	"github.com/kenzo03/zettra/server/internal/mail"
+	"github.com/kenzo03/zettra/server/internal/migrate"
+	"github.com/kenzo03/zettra/server/internal/ticketimport"
 )
 
 const usage = `usage:

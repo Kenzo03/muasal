@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kenzo03/muasal/server/internal/ai"
-	"github.com/kenzo03/muasal/server/internal/llm"
+	"github.com/kenzo03/zettra/server/internal/ai"
+	"github.com/kenzo03/zettra/server/internal/llm"
 )
 
 // Error is a model failure the API answers with its code: ai_off,

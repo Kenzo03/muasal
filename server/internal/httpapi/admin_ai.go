@@ -15,11 +15,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/kenzo03/muasal/server/internal/ai"
-	"github.com/kenzo03/muasal/server/internal/db"
-	"github.com/kenzo03/muasal/server/internal/indexer"
-	"github.com/kenzo03/muasal/server/internal/llm"
-	"github.com/kenzo03/muasal/server/internal/secret"
+	"github.com/kenzo03/zettra/server/internal/ai"
+	"github.com/kenzo03/zettra/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/indexer"
+	"github.com/kenzo03/zettra/server/internal/llm"
+	"github.com/kenzo03/zettra/server/internal/secret"
 )
 
 // GetAISettings shows Admin → AI (FSD §13.4). Keys are never returned (R-AI-3).
@@ -170,7 +170,7 @@ func probeEmbed(ctx context.Context, c *llm.Client) AIProbe {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	start := time.Now()
-	vecs, err := c.Embed(ctx, []string{"Muasal connection test"})
+	vecs, err := c.Embed(ctx, []string{"Zettra connection test"})
 	p := AIProbe{Ok: err == nil, LatencyMs: int(time.Since(start).Milliseconds())}
 	if err != nil {
 		p.Reason = probeReason(err)

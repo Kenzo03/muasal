@@ -6,7 +6,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
 )
 
 // R-MR-6: merging a duplicate moves its tickets, notes and sub-nodes to the

@@ -1,6 +1,6 @@
 # Pilot kit
 
-Iteration 6 prepares the first pilot (FSD §21). Its exit is the MVP exit of PRD Phase 1: one team uses Muasal daily for a month. This kit lists what to set up, how to run the usability sessions, what to watch, and when the pilot counts as passed.
+Iteration 6 prepares the first pilot (FSD §21). Its exit is the MVP exit of PRD Phase 1: one team uses Zettra daily for a month. This kit lists what to set up, how to run the usability sessions, what to watch, and when the pilot counts as passed.
 
 ## Before day one
 
@@ -29,7 +29,7 @@ Note for each task:
 | --- | --- | --- |
 | 1 | "A client just called about overtime approval. Log their request." (story 3) | A ticket exists with client, requester, menu and reason |
 | 2 | "Find out why overtime approval skips the supervisor for Client A." (story 1) | They open the menu's page, or ask, and name the ticket behind it |
-| 3 | "Ask Muasal the same question in your own words." (story 2) | They read an answer and open a cited ticket, or see "Not enough information" and know what to try next |
+| 3 | "Ask Zettra the same question in your own words." (story 2) | They read an answer and open a cited ticket, or see "Not enough information" and know what to try next |
 | 4 | "The request is done. Close it." | The close dialog is filled and the decision record is confirmed |
 | 5 | "Move a menu to the module where it belongs." | It is moved by dragging or with the parent picker |
 | 6 | (Admin) "Check that last night's backup ran." | They find the time and size in Admin → Backups |
@@ -51,7 +51,7 @@ Afterwards, ask:
 ## Exit
 
 The pilot passes when, over one month:
-- the team uses Muasal on at least 18 of about 22 working days;
+- the team uses Zettra on at least 18 of about 22 working days;
 - the success metrics in FSD §15.5 are at or near their targets, measured from the database;
 - the team wants to keep it.
 

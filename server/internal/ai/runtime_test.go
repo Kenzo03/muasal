@@ -6,9 +6,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/kenzo03/muasal/server/internal/ai"
-	"github.com/kenzo03/muasal/server/internal/llm/llmtest"
-	"github.com/kenzo03/muasal/server/internal/secret"
+	"github.com/kenzo03/zettra/server/internal/ai"
+	"github.com/kenzo03/zettra/server/internal/llm/llmtest"
+	"github.com/kenzo03/zettra/server/internal/secret"
 )
 
 // R-AI-3: a sealed key is opened only to build the client; Off builds none.

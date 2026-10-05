@@ -8,12 +8,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/kenzo03/muasal/server/internal/auth"
-	"github.com/kenzo03/muasal/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/auth"
+	"github.com/kenzo03/zettra/server/internal/db"
 )
 
 // dummyHash makes sign-in for an unknown email as slow as for a known one.
-var dummyHash = auth.HashPassword("muasal-timing-equalizer")
+var dummyHash = auth.HashPassword("zettra-timing-equalizer")
 
 func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 	var in LoginRequest

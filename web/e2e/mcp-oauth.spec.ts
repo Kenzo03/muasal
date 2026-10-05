@@ -18,7 +18,7 @@ test("an AI agent is allowed, then denied, through the approval page", async ({ 
   await signIn(page, process.env.E2E_MCP_ADMIN_EMAIL!, password);
 
   await page.goto(authorize);
-  await expect(page.getByText("E2E Agent ingin memakai Muasal atas nama Anda.")).toBeVisible();
+  await expect(page.getByText("E2E Agent ingin memakai Zettra atas nama Anda.")).toBeVisible();
   await expect(page.getByText("127.0.0.1:9")).toBeVisible();
   // The redirect target has no server; catch the navigation instead of loading it.
   await page.route(`${redirect}**`, (route) => route.fulfill({ status: 200, body: "ok" }));

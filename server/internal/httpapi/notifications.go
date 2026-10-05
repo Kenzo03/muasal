@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kenzo03/muasal/server/internal/access"
-	"github.com/kenzo03/muasal/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/access"
+	"github.com/kenzo03/zettra/server/internal/db"
 )
 
 // hub fans notifications out to each user's open streams. One LISTEN
@@ -52,7 +52,7 @@ func (h *hub) publish(userID, id int64) {
 	}
 }
 
-// listen holds one connection on LISTEN muasal_notifications and publishes
+// listen holds one connection on LISTEN zettra_notifications and publishes
 // each "user:id" payload, reconnecting after a failure.
 func (s *Server) listen(ctx context.Context) {
 	for ctx.Err() == nil {
@@ -62,7 +62,7 @@ func (s *Server) listen(ctx context.Context) {
 				return err
 			}
 			defer conn.Release()
-			if _, err := conn.Exec(ctx, "LISTEN muasal_notifications"); err != nil {
+			if _, err := conn.Exec(ctx, "LISTEN zettra_notifications"); err != nil {
 				return err
 			}
 			for {

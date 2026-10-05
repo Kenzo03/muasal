@@ -65,7 +65,7 @@ test("an admin imports the tree, merges a duplicate, exports tickets and scripts
   await form.getByLabel("Akses").selectOption({ label: "Baca dan tulis" });
   await form.getByRole("button", { name: "Buat token" }).click();
   const writeToken = (await page.getByLabel("Token", { exact: true }).textContent())!.trim();
-  expect(writeToken).toMatch(/^msl_/);
+  expect(writeToken).toMatch(/^ztr_/);
   await expect(page.getByRole("cell", { name: "Sync script" })).toBeVisible();
   await form.getByLabel("Nama").fill("Reporting");
   await form.getByRole("button", { name: "Buat token" }).click();

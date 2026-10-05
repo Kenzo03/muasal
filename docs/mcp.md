@@ -9,19 +9,19 @@ An agent sees only what you can see, and the same permissions, validation and au
 ## Connect Claude Code
 
 ```bash
-claude mcp add --transport http muasal https://muasal.example.com/mcp
+claude mcp add --transport http zettra https://zettra.example.com/mcp
 ```
 
-Use your own address in place of `muasal.example.com`. Then run `/mcp` in Claude Code, pick **muasal**, and sign in. A Muasal page asks you to approve the agent.
+Use your own address in place of `zettra.example.com`. Then run `/mcp` in Claude Code, pick **zettra**, and sign in. A Zettra page asks you to approve the agent.
 
 ## Other clients
 
 Any MCP client that supports streamable HTTP and OAuth sign-in works. The URL is `<PUBLIC_URL>/mcp`. Two limits apply today:
 
 - Redirect URIs must be `https`, or `http` on localhost. Clients that use custom URL schemes cannot register yet.
-- Browser-based clients are not supported, because Muasal sends no CORS headers.
+- Browser-based clients are not supported, because Zettra sends no CORS headers.
 
-**Claude Desktop and claude.ai.** Add Muasal as a custom connector with the `/mcp` URL. claude.ai connects from Anthropic's servers, so Muasal must be reachable at a public HTTPS `PUBLIC_URL`.
+**Claude Desktop and claude.ai.** Add Zettra as a custom connector with the `/mcp` URL. claude.ai connects from Anthropic's servers, so Zettra must be reachable at a public HTTPS `PUBLIC_URL`.
 
 Every tool call counts toward the token's 60 requests a minute, and `get_project` makes several API calls.
 
@@ -54,7 +54,7 @@ Open **Settings › API tokens** and revoke the token named after the agent, wit
 
 ## Why there is no delete
 
-Muasal keeps why every change happened. `cancel_ticket` closes a ticket as Cancelled with its decision record, so the history stays.
+Zettra keeps why every change happened. `cancel_ticket` closes a ticket as Cancelled with its decision record, so the history stays.
 
 ## Behind your own proxy
 

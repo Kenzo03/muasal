@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
 )
 
 // §10.3 and §10.6: a thread shows each answer's evidence again, so its

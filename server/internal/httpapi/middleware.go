@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kenzo03/muasal/server/internal/auth"
-	"github.com/kenzo03/muasal/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/auth"
+	"github.com/kenzo03/zettra/server/internal/db"
 )
 
 type ctxKey int
@@ -23,9 +23,13 @@ const (
 	tokenKey
 )
 
-// tokenPrefix marks Muasal's personal access tokens, so secret scanners spot a
-// leaked one (FSD §14.3).
-const tokenPrefix = "msl_"
+// tokenPrefix marks Zettra's personal access tokens, so secret scanners spot a
+// leaked one (FSD §14.3). Tokens made before the rename from Muasal start
+// with legacyTokenPrefix and keep working.
+const (
+	tokenPrefix       = "ztr_"
+	legacyTokenPrefix = "msl_"
+)
 
 const (
 	sessionCookie   = "sid"
@@ -75,7 +79,7 @@ func requestIDFrom(ctx context.Context) string {
 }
 
 // authenticate attaches the signed-in user when the sid cookie names a live
-// session, or when an Authorization: Bearer msl_… header names a live token
+// session, or when an Authorization: Bearer ztr_… header names a live token
 // (FSD §14.3, R-AC-9). Handlers decide whether a user is required. A bearer
 // header is taken alone: a bad token gets 401 whatever cookie comes with it.
 func (s *Server) authenticate(next http.Handler) http.Handler {
@@ -132,7 +136,7 @@ func (s *Server) sessionUser(ctx context.Context, hash []byte) *db.User {
 // tokenUser returns a live token and its user, or nils when the token is
 // unknown, revoked, expired or owned by a disabled user.
 func (s *Server) tokenUser(ctx context.Context, token string) (*db.ApiToken, *db.User) {
-	if !strings.HasPrefix(token, tokenPrefix) {
+	if !strings.HasPrefix(token, tokenPrefix) && !strings.HasPrefix(token, legacyTokenPrefix) {
 		return nil, nil
 	}
 	row, err := s.q.GetAPITokenUser(ctx, auth.HashToken(token))

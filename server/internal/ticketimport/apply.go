@@ -13,7 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/kenzo03/muasal/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/db"
 )
 
 // Project is what an import resolves values against: the project's statuses,
@@ -43,7 +43,7 @@ func LoadProject(ctx context.Context, q *db.Queries, id int64) (Project, error) 
 	return out, err
 }
 
-// Resolved is a record's values in Muasal's terms.
+// Resolved is a record's values in Zettra's terms.
 type Resolved struct {
 	Type, Priority string
 	Status         db.Status

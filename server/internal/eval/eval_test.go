@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kenzo03/muasal/server/internal/ai"
-	"github.com/kenzo03/muasal/server/internal/ask"
-	"github.com/kenzo03/muasal/server/internal/db"
-	"github.com/kenzo03/muasal/server/internal/llm/llmtest"
-	"github.com/kenzo03/muasal/server/internal/testdb"
+	"github.com/kenzo03/zettra/server/internal/ai"
+	"github.com/kenzo03/zettra/server/internal/ask"
+	"github.com/kenzo03/zettra/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/llm/llmtest"
+	"github.com/kenzo03/zettra/server/internal/testdb"
 )
 
 // The embedded golden set follows §11.8: 10 unanswerable questions, at least

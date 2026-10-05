@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kenzo03/muasal/server/internal/config"
-	"github.com/kenzo03/muasal/server/internal/httpapi"
-	"github.com/kenzo03/muasal/server/internal/llm/llmtest"
+	"github.com/kenzo03/zettra/server/internal/config"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/llm/llmtest"
 )
 
 // FSD §18.3: Admin → System status shows the database size, the job queue,
@@ -65,7 +65,7 @@ func TestMetrics(t *testing.T) {
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
-	for _, want := range []string{"# TYPE muasal_database_bytes gauge", "muasal_disk_total_bytes{volume=\"attachments\"}", "muasal_ask_queries{status=\"answered\"} 0"} {
+	for _, want := range []string{"# TYPE zettra_database_bytes gauge", "zettra_disk_total_bytes{volume=\"attachments\"}", "zettra_ask_queries{status=\"answered\"} 0"} {
 		if !strings.Contains(string(body), want) {
 			t.Errorf("missing %q in:\n%s", want, body)
 		}

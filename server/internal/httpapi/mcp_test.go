@@ -57,7 +57,7 @@ func TestMCPNeedsAToken(t *testing.T) {
 		res.Header.Get("WWW-Authenticate") != `Bearer resource_metadata="`+origin+`/.well-known/oauth-protected-resource/mcp"` {
 		t.Fatalf("no token: %d %q", res.StatusCode, res.Header.Get("WWW-Authenticate"))
 	}
-	if res, _ := mcpPost(e, "msl_nope", hello); res.StatusCode != http.StatusUnauthorized ||
+	if res, _ := mcpPost(e, "ztr_nope", hello); res.StatusCode != http.StatusUnauthorized ||
 		!strings.Contains(res.Header.Get("WWW-Authenticate"), `error="invalid_token"`) ||
 		!strings.Contains(res.Header.Get("WWW-Authenticate"), `resource_metadata="`+origin+`/.well-known/oauth-protected-resource/mcp"`) {
 		t.Fatalf("bad token: %d %q", res.StatusCode, res.Header.Get("WWW-Authenticate"))

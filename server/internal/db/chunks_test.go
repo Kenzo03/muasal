@@ -7,8 +7,8 @@ import (
 
 	"github.com/pgvector/pgvector-go"
 
-	"github.com/kenzo03/muasal/server/internal/db"
-	"github.com/kenzo03/muasal/server/internal/testdb"
+	"github.com/kenzo03/zettra/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/testdb"
 )
 
 // FSD §13.2 at the database: an unchanged chunk keeps its vector, a changed

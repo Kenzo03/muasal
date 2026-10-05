@@ -38,7 +38,7 @@ export default function Bell({ browser }: { browser: boolean }) {
       setItems((xs) => [n, ...xs.filter((x) => x.id !== n.id)].slice(0, 50));
       setUnread((u) => u + 1);
       if (browser && document.hidden && "Notification" in window && Notification.permission === "granted") {
-        const os = new Notification(t("title"), { body: text(n), tag: `muasal-${n.id}` });
+        const os = new Notification(t("title"), { body: text(n), tag: `zettra-${n.id}` });
         os.onclick = () => {
           window.focus();
           open([n]);

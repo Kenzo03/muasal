@@ -11,9 +11,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/kenzo03/muasal/server/internal/config"
-	"github.com/kenzo03/muasal/server/internal/httpapi"
-	"github.com/kenzo03/muasal/server/internal/llm/llmtest"
+	"github.com/kenzo03/zettra/server/internal/config"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/llm/llmtest"
 )
 
 // aiUpdate is a complete Admin → AI form for mode against one fake server.

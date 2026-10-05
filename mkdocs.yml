@@ -1,7 +1,7 @@
-site_name: Muasal
+site_name: Zettra
 site_description: "The why behind every screen: self-hosted ticketing that records the reason for every change."
-site_url: https://kenzo03.github.io/muasal/
-repo_url: https://github.com/Kenzo03/muasal
+site_url: https://zettra.dev/
+repo_url: https://github.com/Kenzo03/zettra
 edit_uri: edit/main/docs/
 docs_dir: docs
 strict: true
@@ -29,7 +29,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Hardware guide: hardware.md
-  - Running Muasal: operations.md
+  - Running Zettra: operations.md
   - User guide: user-guide.md
   - MCP for AI agents: mcp.md
   - Pilot kit: pilot.md

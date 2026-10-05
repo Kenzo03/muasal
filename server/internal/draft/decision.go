@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kenzo03/muasal/server/internal/ai"
-	"github.com/kenzo03/muasal/server/internal/llm"
+	"github.com/kenzo03/zettra/server/internal/ai"
+	"github.com/kenzo03/zettra/server/internal/llm"
 )
 
 // Thread is what "Draft with AI" sends about a ticket (§9.3).

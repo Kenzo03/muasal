@@ -1,4 +1,4 @@
-module github.com/kenzo03/muasal/server
+module github.com/kenzo03/zettra/server
 
 go 1.27.1
 

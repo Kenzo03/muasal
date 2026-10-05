@@ -11,8 +11,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/kenzo03/muasal/server/internal/httpapi"
-	"github.com/kenzo03/muasal/server/internal/ticketimport"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/ticketimport"
 )
 
 const jiraFile = `Summary,Issue key,Issue Type,Status,Reporter,Created,Resolved,Component/s,Comment

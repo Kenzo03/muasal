@@ -3,7 +3,7 @@ package ai_test
 import (
 	"testing"
 
-	"github.com/kenzo03/muasal/server/internal/ai"
+	"github.com/kenzo03/zettra/server/internal/ai"
 )
 
 // A fresh install runs without AI until the installer picks a mode (§13.4).

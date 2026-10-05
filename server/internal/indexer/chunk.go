@@ -12,7 +12,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/kenzo03/muasal/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/db"
 )
 
 // Chunk sizes (§13.1): about 400 tokens with a 50-token overlap, with tokens

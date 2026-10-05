@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kenzo03/muasal/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/db"
 )
 
 // Asker is who asks: grants come from the database in each query (§11.1).
