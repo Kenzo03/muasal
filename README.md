@@ -10,11 +10,11 @@ Zettra is a self-hosted ticketing tool that remembers the reason behind every ch
 
 **Documentation:** https://kenzo03.github.io/zettra/
 
-> **Status: alpha (v0.1).** Zettra is looking for its first pilot teams. It is not yet production-ready: the first pilot has not run and the code has had no external security review. Try it on test data. Report problems as issues, and vulnerabilities privately as [SECURITY.md](SECURITY.md) explains. Until 1.0, an upgrade may need manual steps; each release's notes will name them. Zettra was called Muasal until 0.2; [moving a Muasal install](docs/operations.md#from-muasal-01) takes a few steps.
+> **Status: alpha (v0.2).** Zettra is looking for its first pilot teams. It is not yet production-ready: the first pilot has not run and the code has had no external security review. Try it on test data. Report problems as issues, and vulnerabilities privately as [SECURITY.md](SECURITY.md) explains. Until 1.0, an upgrade may need manual steps; each release's notes will name them. Zettra was called Muasal until 0.2; [moving a Muasal install](docs/operations.md#from-muasal-01) takes a few steps.
 
 ## Why Zettra
 
-A product that serves many clients collects small decisions. One client wants approval to skip the supervisor, another wants two levels, a third wants a batch number on every overtime request. A year later nobody remembers why the menu behaves the way it does. The answer is buried in a chat, an email, or a ticket closed without a note.
+Any software project that runs longer than a year collects small decisions. Overtime approval skips the supervisor, a batch number becomes mandatory, a report starts rounding differently. Serve several clients and each one wants its own variant. A year later nobody remembers why the menu behaves the way it does, and the person who decided may have left. The answer is buried in a chat, an email, or a ticket closed without a note.
 
 Zettra keeps that answer next to the screen it explains:
 - Closing a ticket asks what changed and why.
