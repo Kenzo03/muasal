@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Zettra API
-  version: 0.1.0
+  version: 0.2.0
   description: >-
     The API the web app uses, open to scripts through personal access tokens (FSD §14.3). Send
     `Authorization: Bearer ztr_…`; a token acts with its owner's visibility and role, a read-only token only reads
