@@ -4,11 +4,11 @@
 
 Zettra is a self-hosted ticketing tool that remembers the reason behind every change to every menu. Ask it "why does this screen work like this?" and it answers with links to the tickets behind it.
 
-[![Watch the 22-second intro: a closed ticket records why, a menu keeps its history, and Ask answers with the ticket behind it](docs/images/zettra-intro.jpg)](https://zettra.dev/images/zettra-intro.mp4)
+[![Watch the 22-second intro: a closed ticket records why, a menu keeps its history, and Ask answers with the ticket behind it](docs/images/zettra-intro.jpg)](https://kenzo03.github.io/zettra/images/zettra-intro.mp4)
 
 ![A closed ticket with its decision record: what changed, why, and the alternative that was rejected](docs/images/ticket.png)
 
-**Documentation:** https://zettra.dev/
+**Documentation:** https://kenzo03.github.io/zettra/
 
 > **Status: alpha (v0.1).** Zettra is looking for its first pilot teams. It is not yet production-ready: the first pilot has not run and the code has had no external security review. Try it on test data. Report problems as issues, and vulnerabilities privately as [SECURITY.md](SECURITY.md) explains. Until 1.0, an upgrade may need manual steps; each release's notes will name them. Zettra was called Muasal until 0.2; [moving a Muasal install](docs/operations.md#from-muasal-01) takes a few steps.
 
