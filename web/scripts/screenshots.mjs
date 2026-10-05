@@ -36,6 +36,7 @@ await page.getByRole("button", { name: "Masuk" }).click();
 await page.waitForURL(`${base}/`);
 const headers = { Origin: new URL(base).origin };
 await page.request.patch("/api/v1/me", { data: { locale: "en" }, headers });
+await page.context().addCookies([{ name: "locale", value: "en", url: base }]); // the web app reads the language from this cookie, set at sign-in
 
 async function shoot(name, path, ready) {
   await page.goto(path);
