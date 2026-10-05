@@ -1,0 +1,27 @@
+name: screenshots
+# Temporary: retakes docs/images/*.png on the rename branch. Removed once the
+# shots are in.
+on:
+  push:
+    branches: [feat/rename-zettra]
+    paths: [.github/workflows/screenshots.yml, web/scripts/screenshots.mjs]
+
+jobs:
+  shots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: cp deploy/.env.example deploy/.env
+      - run: docker compose -f deploy/compose.yaml --env-file deploy/.env up -d --build --wait
+      - working-directory: web
+        run: npm ci && npx playwright install --with-deps chromium && node scripts/screenshots.mjs
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: screenshots
+          path: docs/images/*.png

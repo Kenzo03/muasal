@@ -1,7 +1,7 @@
 TEST_DATABASE_URL ?= postgres://owner:owner@localhost:55432/postgres?sslmode=disable
 COMPOSE = docker compose -f deploy/compose.yaml --env-file deploy/.env
 
-.PHONY: generate testdb test up down logs admin e2e
+.PHONY: generate testdb test up down logs admin e2e screenshots
 
 generate: ## regenerate Go stubs, sqlc code and TypeScript API types
 	cd server && go generate ./...
@@ -28,3 +28,6 @@ admin: ## make admin EMAIL=you@example.com NAME="Your Name"
 
 e2e:
 	cd web && npx playwright test
+
+screenshots: ## retake docs/images/*.png on a fresh `make up` stack
+	cd web && node scripts/screenshots.mjs
