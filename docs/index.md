@@ -9,7 +9,7 @@ hide:
 **The why behind every screen.**
 *Setiap layar punya alasan.*
 
-Zettra is a self-hosted ticketing tool for teams that build and maintain software for several clients. Every ticket is linked to the menus it changes, and closing it records what changed and why. A year later, anyone can open a menu and read its history, or ask "why does overtime approval skip the supervisor for Client A?" and get an answer that cites the ticket behind every claim.
+Zettra is a self-hosted ticketing tool for teams that maintain software for more than a year, for one client or many. Every ticket is linked to the menus it changes, and closing it records what changed and why. A year later, anyone can open a menu and read its history, or ask "why does overtime approval skip the supervisor for Client A?" and get an answer that cites the ticket behind every claim.
 
 [Install it](operations.md#install){ .md-button .md-button--primary }
 [Source on GitHub](https://github.com/Kenzo03/zettra){ .md-button }
@@ -22,7 +22,7 @@ Zettra is a self-hosted ticketing tool for teams that build and maintain softwar
 
 ## Why
 
-A product that serves many clients collects small decisions. One client wants approval to skip the supervisor, another wants two levels, a third wants a batch number on every overtime request. A year later nobody remembers why the menu behaves the way it does. The answer is buried in a chat, an email, or a ticket closed without a note.
+Any software project that runs longer than a year collects small decisions. Overtime approval skips the supervisor, a batch number becomes mandatory, a report starts rounding differently. Serve several clients and each one wants its own variant. A year later nobody remembers why the menu behaves the way it does, and the person who decided may have left. The answer is buried in a chat, an email, or a ticket closed without a note.
 
 Zettra keeps that answer next to the screen it explains.
 
@@ -72,7 +72,7 @@ Also included: imports from Jira and CSV, a module tree drafted from your specif
 - **Indonesian and English** interface.
 - **Open source** under Apache-2.0.
 
-!!! note "Alpha (v0.1)"
+!!! note "Alpha (v0.2)"
     Zettra is looking for its first pilot teams. It is not yet production-ready: try it on test data. Report problems as [GitHub issues](https://github.com/Kenzo03/zettra/issues), and vulnerabilities privately as the [security policy](https://github.com/Kenzo03/zettra/security/policy) explains.
 
 ## Get started
