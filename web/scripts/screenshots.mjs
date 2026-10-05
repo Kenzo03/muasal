@@ -56,7 +56,7 @@ await shoot("module-tree", "/p/DEMO/modules", () => page.getByText("Overtime App
 await shoot("ask", "/ask", async () => {
   await page.getByPlaceholder("Ask about tickets, menus or decisions…").fill("Why does overtime approval skip the supervisor for Arunika?");
   await page.getByRole("button", { name: "Ask", exact: true }).last().click();
-  await page.getByText("Keyword results").waitFor({ timeout: 30_000 });
+  await page.getByText("Keyword results").first().waitFor({ timeout: 30_000 });
 });
 await shoot("admin-clients", "/admin/clients", async () => {
   await page.getByText("Arunika Retail").first().click();
