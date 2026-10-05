@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/kenzo03/muasal/server/internal/llm"
-	"github.com/kenzo03/muasal/server/internal/secret"
+	"github.com/kenzo03/zettra/server/internal/llm"
+	"github.com/kenzo03/zettra/server/internal/secret"
 )
 
 // ErrOff means AI is switched off, so no client exists (§13.4).

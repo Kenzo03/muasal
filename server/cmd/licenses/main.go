@@ -1,5 +1,5 @@
 // Command licenses checks that every Go module the server builds with has a
-// licence Muasal may ship under Apache-2.0 (FSD §18: licence scan in CI).
+// licence Zettra may ship under Apache-2.0 (FSD §18: licence scan in CI).
 //
 //	go run ./cmd/licenses          lists modules and licences; exit 1 on a problem
 package main

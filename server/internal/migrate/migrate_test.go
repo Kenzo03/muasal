@@ -7,8 +7,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/kenzo03/muasal/server/internal/migrate"
-	"github.com/kenzo03/muasal/server/internal/testdb"
+	"github.com/kenzo03/zettra/server/internal/migrate"
+	"github.com/kenzo03/zettra/server/internal/testdb"
 )
 
 func TestUpIsIdempotentAndTheAuditLogIsAppendOnly(t *testing.T) {

@@ -2883,7 +2883,7 @@ export interface components {
             redirect_url: string;
         };
         APITokenCreated: components["schemas"]["APIToken"] & {
-            /** @description The secret, e.g. msl_…; shown once. */
+            /** @description The secret, e.g. ztr_…; shown once. */
             token: string;
         };
         NodeImportResult: {
@@ -3035,7 +3035,7 @@ export interface components {
             provider: components["schemas"]["RepoProvider"];
             name: string;
             web_url: string;
-            /** @example https://muasal.example.com/webhooks/git/3 */
+            /** @example https://zettra.example.com/webhooks/git/3 */
             webhook_url: string;
             /** @description Only when just created or replaced. */
             secret?: string;

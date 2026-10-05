@@ -1,12 +1,12 @@
 #!/bin/sh
-# install.sh (FSD §19.3): installs Muasal from this folder, the unpacked
+# install.sh (FSD §19.3): installs Zettra from this folder, the unpacked
 # offline bundle. It loads the images, writes .env with fresh secrets, copies
 # the model files for local AI, starts the stack, creates the first admin and
 # prints their setup link. After that the server needs no internet in local
 # or off AI mode.
 #
 #   ./install.sh                      asks for the host, AI mode, tier and admin
-#   ./install.sh --yes --url https://muasal.example.co.id --ai local --tier recommended \
+#   ./install.sh --yes --url https://zettra.example.co.id --ai local --tier recommended \
 #                --admin-email it@example.co.id --admin-name "IT Admin"
 #   ./install.sh --online ...         pulls the signed release images and models instead
 #                                     of the bundle; run it from the release's deploy files
@@ -56,10 +56,10 @@ ask email "First admin's email" "admin@example.com"
 ask name "First admin's name" "Admin"
 
 version=$(cat VERSION 2>/dev/null || echo dev)
-prefix=muasal
+prefix=zettra
 if $online; then
-  [ "$version" != dev ] || fail "--online needs a release's deploy files (muasal-deploy-<version>.tar.gz), which carry VERSION"
-  prefix=${MUASAL_IMAGES:-ghcr.io/kenzo03/muasal}
+  [ "$version" != dev ] || fail "--online needs a release's deploy files (zettra-deploy-<version>.tar.gz), which carry VERSION"
+  prefix=${ZETTRA_IMAGES:-ghcr.io/kenzo03/zettra}
   echo "Pulling images for $version…"
   IMAGE_PREFIX=$prefix VERSION=$version docker compose --env-file .env.example pull --ignore-buildable
   # Release images are signed by the release workflow with Sigstore keyless
@@ -67,7 +67,7 @@ if $online; then
   if command -v cosign >/dev/null; then
     for c in app web; do
       cosign verify "$prefix-$c:$version" --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-        --certificate-identity-regexp '^https://github.com/[Kk]enzo03/muasal/\.github/workflows/release\.yml@refs/tags/v' >/dev/null ||
+        --certificate-identity-regexp '^https://github.com/[Kk]enzo03/zettra/\.github/workflows/release\.yml@refs/tags/v' >/dev/null ||
         fail "the signature of $prefix-$c:$version does not verify"
     done
     echo "Image signatures verified."
@@ -123,13 +123,13 @@ if [ "$ai" = local ]; then
   profile="--profile local-ai"
   if [ -d models ] && ! $online; then
     echo "Copying the model files into the models volume…"
-    docker volume create muasal_models >/dev/null
-    docker run --rm --entrypoint /bin/sh -v muasal_models:/root/.ollama -v "$PWD/models:/src:ro" \
+    docker volume create zettra_models >/dev/null
+    docker run --rm --entrypoint /bin/sh -v zettra_models:/root/.ollama -v "$PWD/models:/src:ro" \
       "$(grep -o 'ollama/ollama:[^ ]*' compose.yaml | head -1)" -c 'cp -a /src/. /root/.ollama/'
   fi
 fi
 
-echo "Starting Muasal…"
+echo "Starting Zettra…"
 # shellcheck disable=SC2086
 docker compose --env-file .env $profile up -d --wait --pull never
 
@@ -146,4 +146,4 @@ fi
 echo
 echo "$link"
 [ "$ai" = byok ] && echo "Then open Admin → AI to enter your provider's URL and key."
-echo "Muasal is running at $url."
+echo "Zettra is running at $url."

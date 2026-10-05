@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kenzo03/muasal/server/internal/httpapi"
-	"github.com/kenzo03/muasal/server/internal/indexer"
-	"github.com/kenzo03/muasal/server/internal/llm/llmtest"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/indexer"
+	"github.com/kenzo03/zettra/server/internal/llm/llmtest"
 )
 
 // indexNow indexes tickets the way the workers would.

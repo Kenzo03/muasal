@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/kenzo03/muasal/server/internal/access"
-	"github.com/kenzo03/muasal/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/access"
+	"github.com/kenzo03/zettra/server/internal/db"
 )
 
 // GetNode reads one node for its page (FSD §7.4), archived or not, with its

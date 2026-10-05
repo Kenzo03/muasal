@@ -10,9 +10,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/kenzo03/muasal/server/internal/db"
-	"github.com/kenzo03/muasal/server/internal/testdb"
-	"github.com/kenzo03/muasal/server/internal/ticketimport"
+	"github.com/kenzo03/zettra/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/testdb"
+	"github.com/kenzo03/zettra/server/internal/ticketimport"
 )
 
 // A Jira "Export Excel CSV (all fields)" in miniature: repeated Comment,

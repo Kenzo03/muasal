@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kenzo03/muasal/server/internal/llm"
-	"github.com/kenzo03/muasal/server/internal/llm/llmtest"
+	"github.com/kenzo03/zettra/server/internal/llm"
+	"github.com/kenzo03/zettra/server/internal/llm/llmtest"
 )
 
 func TestModelsAndEmbeddings(t *testing.T) {

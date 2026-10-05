@@ -1,10 +1,10 @@
 openapi: 3.0.3
 info:
-  title: Muasal API
+  title: Zettra API
   version: 0.1.0
   description: >-
     The API the web app uses, open to scripts through personal access tokens (FSD §14.3). Send
-    `Authorization: Bearer msl_…`; a token acts with its owner's visibility and role, a read-only token only reads
+    `Authorization: Bearer ztr_…`; a token acts with its owner's visibility and role, a read-only token only reads
     (and may ask), and each token takes 60 requests a minute, bursting to 120. Browser sessions use the sid cookie
     and must send the app's Origin on writes.
   license:
@@ -3303,7 +3303,7 @@ components:
         - type: object
           required: [token]
           properties:
-            token: { type: string, description: "The secret, e.g. msl_…; shown once." }
+            token: { type: string, description: "The secret, e.g. ztr_…; shown once." }
     NodeImportResult:
       type: object
       required: [applied, created, changed, unchanged, missing, problems]
@@ -3458,7 +3458,7 @@ components:
         provider: { $ref: "#/components/schemas/RepoProvider" }
         name: { type: string }
         web_url: { type: string }
-        webhook_url: { type: string, example: "https://muasal.example.com/webhooks/git/3" }
+        webhook_url: { type: string, example: "https://zettra.example.com/webhooks/git/3" }
         secret: { type: string, description: Only when just created or replaced. }
         created_at: { type: string, format: date-time }
     RepoList:

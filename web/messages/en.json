@@ -1,7 +1,7 @@
 {
   "oauth": {
     "title": "Connect an AI agent",
-    "asks": "{client} wants to use Muasal as you.",
+    "asks": "{client} wants to use Zettra as you.",
     "account": "Signed in as {name} ({email})",
     "can": "It can read the tickets you can see, and create, edit and close tickets unless you tick Read only.",
     "returnsTo": "After you answer, your browser returns to {host}.",
@@ -13,7 +13,7 @@
     "failed": "Could not save your answer. Try again."
   },
   "login": {
-    "title": "Sign in to Muasal",
+    "title": "Sign in to Zettra",
     "email": "Email",
     "password": "Password",
     "submit": "Sign in",
@@ -145,8 +145,8 @@
       "stale": "{count} unchanged for 7+ days"
     },
     "setup": {
-      "title": "Set up Muasal",
-      "hint": "Five steps before the team uses Muasal every day.",
+      "title": "Set up Zettra",
+      "hint": "Five steps before the team uses Zettra every day.",
       "ai": "Choose an AI mode and test it",
       "invited": "Invite the team and share their setup links",
       "project": "Create the first project",
@@ -568,7 +568,7 @@
     "ai_unavailable": "The AI server is unavailable.",
     "ai_busy": "The AI server is busy; try again in a moment.",
     "ai_timeout": "The AI server did not respond in time.",
-    "ai_invalid": "The AI server gave an answer Muasal could not use; try again."
+    "ai_invalid": "The AI server gave an answer Zettra could not use; try again."
   },
   "ticketTypes": {
     "bug": "Bug",
@@ -1160,7 +1160,7 @@
     "when": "When",
     "restoreTitle": "Restoring a backup",
     "schedule": "The database is backed up daily at 01:00 server time, without the vectors (they can be rebuilt); backups are kept for 14 days.",
-    "restore1": "Sign in to the server and go to the Muasal install folder.",
+    "restore1": "Sign in to the server and go to the Zettra install folder.",
     "restore2": "Run",
     "restore3": "The script stops the app, restores the database and the attachments, starts it again and re-indexes.",
     "offsite": "Copying the backups folder off the server (NAS or tape) is up to you.",
@@ -1206,7 +1206,7 @@
   },
   "tokens": {
     "title": "API tokens",
-    "intro": "Personal access tokens let scripts use the API as you, with your projects and clients. Send one as Authorization: Bearer msl_…",
+    "intro": "Personal access tokens let scripts use the API as you, with your projects and clients. Send one as Authorization: Bearer ztr_…",
     "new": "New token",
     "name": "Name",
     "namePlaceholder": "e.g. Jira sync",
@@ -1590,7 +1590,7 @@
     "tooLarge": "The file is larger than 20 MB.",
     "converting": "Reading the file…",
     "uploading": "Uploading…",
-    "unreadable": "Muasal could not read text from this file.",
+    "unreadable": "Zettra could not read text from this file.",
     "uploadHint": "The file is read in your browser; its headings become sections. Scanned PDFs without text cannot be read.",
     "uploadTitle": "Upload a document",
     "drop": "Drop a file here, or click to choose",

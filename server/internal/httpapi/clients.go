@@ -7,8 +7,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/kenzo03/muasal/server/internal/access"
-	"github.com/kenzo03/muasal/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/access"
+	"github.com/kenzo03/zettra/server/internal/db"
 )
 
 var aliasesError = FieldError{Field: "aliases", Code: "invalid", Message: "Use at most 20 aliases of at most 100 characters each"}

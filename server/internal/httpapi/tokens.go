@@ -10,8 +10,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/kenzo03/muasal/server/internal/auth"
-	"github.com/kenzo03/muasal/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/auth"
+	"github.com/kenzo03/zettra/server/internal/db"
 )
 
 // ListTokens lists the caller's live API tokens (FSD §14.3).
@@ -32,7 +32,7 @@ func (s *Server) ListTokens(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, out)
 }
 
-// CreateToken makes a personal access token: msl_ and 32 random bytes. The
+// CreateToken makes a personal access token: ztr_ and 32 random bytes. The
 // secret leaves the server once, in this response.
 func (s *Server) CreateToken(w http.ResponseWriter, r *http.Request) {
 	u, ok := s.sessionOnly(w, r)

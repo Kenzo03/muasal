@@ -5,9 +5,9 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/kenzo03/muasal/server/internal/access"
-	"github.com/kenzo03/muasal/server/internal/db"
-	"github.com/kenzo03/muasal/server/internal/testdb"
+	"github.com/kenzo03/zettra/server/internal/access"
+	"github.com/kenzo03/zettra/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/testdb"
 )
 
 func TestRolesRankViewerMemberAdmin(t *testing.T) {

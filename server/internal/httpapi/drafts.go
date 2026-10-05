@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/kenzo03/muasal/server/internal/access"
-	"github.com/kenzo03/muasal/server/internal/draft"
+	"github.com/kenzo03/zettra/server/internal/access"
+	"github.com/kenzo03/zettra/server/internal/draft"
 )
 
 // DraftDecision drafts a ticket's decision record with the chat model from

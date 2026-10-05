@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// The scanner names a licence from its text and flags what Muasal may not ship.
+// The scanner names a licence from its text and flags what Zettra may not ship.
 func TestClassify(t *testing.T) {
 	for want, text := range map[string]string{
 		"MIT":             "Permission is hereby granted, free of charge, to any person obtaining a copy",

@@ -7,8 +7,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/kenzo03/muasal/server/internal/db"
-	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
 )
 
 // FSD §6.1–6.2: search finds tickets by key, by words or by part of a title,

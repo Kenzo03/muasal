@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/kenzo03/muasal/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/db"
 )
 
 // Search finds the tickets, nodes and decision notes the user may open, across their projects

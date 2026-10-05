@@ -16,12 +16,12 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 
-	"github.com/kenzo03/muasal/server/internal/ai"
-	"github.com/kenzo03/muasal/server/internal/ask"
-	"github.com/kenzo03/muasal/server/internal/auth"
-	"github.com/kenzo03/muasal/server/internal/config"
-	"github.com/kenzo03/muasal/server/internal/db"
-	"github.com/kenzo03/muasal/server/internal/mail"
+	"github.com/kenzo03/zettra/server/internal/ai"
+	"github.com/kenzo03/zettra/server/internal/ask"
+	"github.com/kenzo03/zettra/server/internal/auth"
+	"github.com/kenzo03/zettra/server/internal/config"
+	"github.com/kenzo03/zettra/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/mail"
 )
 
 // Server implements the generated ServerInterface.

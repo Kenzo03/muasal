@@ -9,8 +9,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/kenzo03/muasal/server/internal/access"
-	"github.com/kenzo03/muasal/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/access"
+	"github.com/kenzo03/zettra/server/internal/db"
 )
 
 var errMergeTarget = errors.New("merge target is the node or below it")

@@ -1,6 +1,6 @@
 # Hardware guide
 
-Which server to buy, or rent, for Muasal (FSD §18.1, §21 Iteration 6). Muasal runs on one Linux server with Docker. How fast Ask answers depends almost entirely on the model server. Everything else is modest.
+Which server to buy, or rent, for Zettra (FSD §18.1, §21 Iteration 6). Zettra runs on one Linux server with Docker. How fast Ask answers depends almost entirely on the model server. Everything else is modest.
 
 ## Pick a tier
 

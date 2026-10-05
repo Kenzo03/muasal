@@ -1,6 +1,6 @@
 // Documents are converted to Markdown in the browser (FSD §7.7), so the
 // server never parses PDF or Word files: pdf.js reads PDF text, mammoth reads
-// DOCX, and headings become the sections Muasal stores.
+// DOCX, and headings become the sections Zettra stores.
 
 export const documentExtensions = [".pdf", ".docx", ".md", ".markdown"];
 

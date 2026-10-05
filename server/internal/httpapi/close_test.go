@@ -9,7 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
 )
 
 // statusID finds one of HRIS's statuses by name.

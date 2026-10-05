@@ -13,7 +13,7 @@ while true; do
     ts=$(date +%Y%m%d-%H%M)
     skip="--exclude-table-data=chunks" # vectors are rebuildable
     [ "${BACKUP_INCLUDE_VECTORS:-false}" = "true" ] && skip=""
-    if pg_dump -h db -U owner -d muasal -Fc $skip -f "/backups/db-$ts.dump.tmp"; then
+    if pg_dump -h db -U owner -d zettra -Fc $skip -f "/backups/db-$ts.dump.tmp"; then
       mv "/backups/db-$ts.dump.tmp" "/backups/db-$ts.dump"
       cp -Rn /data/attachments/. /backups/attachments/ # files are immutable, named by hash
       find /backups -maxdepth 1 -name 'db-*.dump' -mtime +14 -delete

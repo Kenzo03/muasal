@@ -4,7 +4,7 @@
 # restore the pre-upgrade backup with ./restore.sh and start the old images.
 set -eu
 cd "$(dirname "$0")"
-bundle=${1:?usage: ./upgrade.sh muasal-<version>.tar}
+bundle=${1:?usage: ./upgrade.sh zettra-<version>.tar}
 dc() { docker compose --env-file .env "$@"; }
 before=$(dc exec -T backup sh -c 'ls /backups/db-*.dump 2>/dev/null | wc -l')
 echo "Taking a backup first…"

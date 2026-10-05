@@ -16,11 +16,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/kenzo03/muasal/server/internal/auth"
-	"github.com/kenzo03/muasal/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/auth"
+	"github.com/kenzo03/zettra/server/internal/db"
 )
 
-// MCP sign-in (MCP spec): Muasal is the authorization server for its own
+// MCP sign-in (MCP spec): Zettra is the authorization server for its own
 // /mcp endpoint. Clients register themselves, a signed-in user approves them on
 // /oauth/authorize, and the code they get back buys an ordinary API token.
 
@@ -139,7 +139,7 @@ func (s *Server) GetOAuthClient(w http.ResponseWriter, r *http.Request, id strin
 }
 
 // ApproveOAuth records the signed-in user's answer. It redirects only to a
-// URI the client registered, so a bad request never leaves Muasal.
+// URI the client registered, so a bad request never leaves Zettra.
 func (s *Server) ApproveOAuth(w http.ResponseWriter, r *http.Request) {
 	u, ok := s.sessionOnly(w, r)
 	if !ok {

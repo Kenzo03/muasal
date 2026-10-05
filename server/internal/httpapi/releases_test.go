@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
 )
 
 // MSL-67: a PM adds v1.0 and v1.1, files tickets into them, finds v1.0's

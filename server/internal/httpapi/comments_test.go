@@ -6,7 +6,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
 )
 
 func activity(e *env, c *http.Client, key string) []httpapi.ActivityItem {

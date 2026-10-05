@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/kenzo03/muasal/server/internal/db"
-	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
 )
 
 // callWith sends a request with extra headers and returns the status and the response headers.

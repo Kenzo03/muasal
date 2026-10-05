@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kenzo03/muasal/server/internal/config"
-	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/config"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
 )
 
 // FSD §15.6: the Backups page lists the dumps newest first with size and time,

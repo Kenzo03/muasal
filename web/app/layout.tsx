@@ -11,7 +11,7 @@ import "./globals.css";
 const sans = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta" });
 const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["500", "600"], variable: "--font-plex-mono" });
 
-export const metadata: Metadata = { title: "Muasal" };
+export const metadata: Metadata = { title: "Zettra" };
 
 // modal is the parallel route of the create-ticket modal (@modal), which opens
 // over the current page (FSD §8.3).

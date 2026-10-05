@@ -1,7 +1,7 @@
 {
   "oauth": {
     "title": "Hubungkan agen AI",
-    "asks": "{client} ingin memakai Muasal atas nama Anda.",
+    "asks": "{client} ingin memakai Zettra atas nama Anda.",
     "account": "Masuk sebagai {name} ({email})",
     "can": "Agen dapat membaca tiket yang Anda lihat, serta membuat, mengubah, dan menutup tiket, kecuali Anda mencentang Hanya baca.",
     "returnsTo": "Setelah Anda menjawab, browser kembali ke {host}.",
@@ -13,7 +13,7 @@
     "failed": "Jawaban Anda tidak tersimpan. Coba lagi."
   },
   "login": {
-    "title": "Masuk ke Muasal",
+    "title": "Masuk ke Zettra",
     "email": "Email",
     "password": "Kata sandi",
     "submit": "Masuk",
@@ -145,8 +145,8 @@
       "stale": "{count} tidak bergerak 7+ hari"
     },
     "setup": {
-      "title": "Siapkan Muasal",
-      "hint": "Lima langkah sebelum tim mulai memakai Muasal setiap hari.",
+      "title": "Siapkan Zettra",
+      "hint": "Lima langkah sebelum tim mulai memakai Zettra setiap hari.",
       "ai": "Pilih mode AI dan uji koneksinya",
       "invited": "Undang tim dan bagikan tautan pengaturannya",
       "project": "Buat proyek pertama",
@@ -568,7 +568,7 @@
     "ai_unavailable": "Server AI tidak tersedia.",
     "ai_busy": "Server AI sedang sibuk; coba lagi sebentar lagi.",
     "ai_timeout": "Server AI tidak menjawab tepat waktu.",
-    "ai_invalid": "Server AI memberi jawaban yang tidak dapat dipakai Muasal; coba lagi."
+    "ai_invalid": "Server AI memberi jawaban yang tidak dapat dipakai Zettra; coba lagi."
   },
   "ticketTypes": {
     "bug": "Bug",
@@ -1160,7 +1160,7 @@
     "when": "Waktu",
     "restoreTitle": "Memulihkan cadangan",
     "schedule": "Basis data dicadangkan setiap hari pukul 01.00 waktu server, tanpa vektor (dapat dibangun ulang); cadangan disimpan 14 hari.",
-    "restore1": "Masuk ke server, ke folder instalasi Muasal.",
+    "restore1": "Masuk ke server, ke folder instalasi Zettra.",
     "restore2": "Jalankan",
     "restore3": "Skrip menghentikan aplikasi, memulihkan basis data dan lampiran, menyalakannya lagi, lalu mengindeks ulang.",
     "offsite": "Menyalin folder cadangan ke luar server (NAS atau pita) adalah tanggung jawab Anda.",
@@ -1206,7 +1206,7 @@
   },
   "tokens": {
     "title": "Token API",
-    "intro": "Token akses pribadi memungkinkan skrip memakai API sebagai Anda, dengan proyek dan klien Anda. Kirim sebagai Authorization: Bearer msl_…",
+    "intro": "Token akses pribadi memungkinkan skrip memakai API sebagai Anda, dengan proyek dan klien Anda. Kirim sebagai Authorization: Bearer ztr_…",
     "new": "Token baru",
     "name": "Nama",
     "namePlaceholder": "mis. sinkron Jira",
@@ -1590,7 +1590,7 @@
     "tooLarge": "Berkas lebih besar dari 20 MB.",
     "converting": "Membaca berkas…",
     "uploading": "Mengunggah…",
-    "unreadable": "Muasal tidak dapat membaca teks dari berkas ini.",
+    "unreadable": "Zettra tidak dapat membaca teks dari berkas ini.",
     "uploadHint": "Berkas dibaca di peramban Anda; judul-judulnya menjadi bagian. PDF hasil pindai tanpa teks tidak dapat dibaca.",
     "uploadTitle": "Unggah dokumen",
     "drop": "Tarik berkas ke sini, atau klik untuk memilih",

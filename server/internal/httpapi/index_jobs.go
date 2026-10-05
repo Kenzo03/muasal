@@ -6,7 +6,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
 
-	"github.com/kenzo03/muasal/server/internal/indexer"
+	"github.com/kenzo03/zettra/server/internal/indexer"
 )
 
 // index queues one index job per ticket in the change's transaction, so the

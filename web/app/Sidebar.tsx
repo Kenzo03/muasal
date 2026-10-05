@@ -124,7 +124,7 @@ export default function Sidebar({ me, projects, project, recent, rail, drawer, o
         <span className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-accent text-white">
           <Icon name="logo" className="size-[18px]" />
         </span>
-        <span className={cx("text-[17px] font-extrabold tracking-[-0.015em]", hide)}>Muasal</span>
+        <span className={cx("text-[17px] font-extrabold tracking-[-0.015em]", hide)}>Zettra</span>
       </Link>
 
       <Menu

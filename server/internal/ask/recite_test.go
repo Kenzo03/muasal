@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/kenzo03/muasal/server/internal/ask"
+	"github.com/kenzo03/zettra/server/internal/ask"
 )
 
 // §11.5: a claim's figures decide what it may cite. A cited item holding none

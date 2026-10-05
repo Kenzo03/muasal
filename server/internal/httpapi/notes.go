@@ -13,9 +13,9 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/riverqueue/river"
 
-	"github.com/kenzo03/muasal/server/internal/access"
-	"github.com/kenzo03/muasal/server/internal/db"
-	"github.com/kenzo03/muasal/server/internal/indexer"
+	"github.com/kenzo03/zettra/server/internal/access"
+	"github.com/kenzo03/zettra/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/indexer"
 )
 
 // ListNotes lists a project's decision notes the reader may see, newest

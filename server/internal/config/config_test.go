@@ -7,17 +7,17 @@ func env(m map[string]string) func(string) string {
 }
 
 func TestLoad(t *testing.T) {
-	c, err := Load(env(map[string]string{"DATABASE_URL": "postgres://x", "PUBLIC_URL": "https://muasal.test/"}))
+	c, err := Load(env(map[string]string{"DATABASE_URL": "postgres://x", "PUBLIC_URL": "https://zettra.test/"}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.ListenAddr != ":8080" || c.PublicURL != "https://muasal.test" || !c.SecureCookies() {
+	if c.ListenAddr != ":8080" || c.PublicURL != "https://zettra.test" || !c.SecureCookies() {
 		t.Fatalf("unexpected config: %+v", c)
 	}
 }
 
 func TestLoadRejectsMissingAndInvalidValues(t *testing.T) {
-	for _, publicURL := range []string{"", "muasal.test", "https://muasal.test/app"} {
+	for _, publicURL := range []string{"", "zettra.test", "https://zettra.test/app"} {
 		if _, err := Load(env(map[string]string{"PUBLIC_URL": publicURL})); err == nil {
 			t.Errorf("PUBLIC_URL %q with no DATABASE_URL: want an error", publicURL)
 		}
@@ -83,7 +83,7 @@ func TestAskLogRetention(t *testing.T) {
 // MSL-10: email is off without SMTP_HOST; with it, a sender is required and
 // the port follows the TLS mode unless set.
 func TestSMTP(t *testing.T) {
-	base := map[string]string{"DATABASE_URL": "postgres://x", "PUBLIC_URL": "https://muasal.test"}
+	base := map[string]string{"DATABASE_URL": "postgres://x", "PUBLIC_URL": "https://zettra.test"}
 	with := func(kv ...string) map[string]string {
 		m := map[string]string{}
 		for k, v := range base {
@@ -97,7 +97,7 @@ func TestSMTP(t *testing.T) {
 	if c, err := Load(env(base)); err != nil || c.SMTP.On() {
 		t.Fatalf("off by default: %+v %v", c.SMTP, err)
 	}
-	if c, err := Load(env(with("SMTP_HOST", "smtp.example.com", "SMTP_FROM", "muasal@example.com"))); err != nil || c.SMTP.Port != 587 || c.SMTP.TLS != "starttls" {
+	if c, err := Load(env(with("SMTP_HOST", "smtp.example.com", "SMTP_FROM", "zettra@example.com"))); err != nil || c.SMTP.Port != 587 || c.SMTP.TLS != "starttls" {
 		t.Fatalf("defaults: %+v %v", c.SMTP, err)
 	}
 	if c, err := Load(env(with("SMTP_HOST", "smtp.example.com", "SMTP_FROM", "m@example.com", "SMTP_TLS", "TLS"))); err != nil || c.SMTP.Port != 465 {

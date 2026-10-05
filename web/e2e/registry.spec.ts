@@ -36,7 +36,7 @@ test("an admin builds the HRIS tree and a member scoped to one client sees only 
   }
 
   // The project; creating it opens its settings.
-  await page.getByRole("link", { name: "Muasal" }).click();
+  await page.getByRole("link", { name: "Zettra" }).click();
   await page.getByRole("link", { name: "Proyek baru" }).click();
   await page.getByLabel("Kunci").fill(key);
   await page.getByLabel("Nama").fill(`HRIS ${run}`);
@@ -51,7 +51,7 @@ test("an admin builds the HRIS tree and a member scoped to one client sees only 
   await expect(links.getByRole("status")).toHaveText("Tersimpan");
 
   // The client list now shows the project key on the linked client.
-  await page.getByRole("link", { name: "Muasal" }).click();
+  await page.getByRole("link", { name: "Zettra" }).click();
   await page.getByRole("link", { name: "Klien", exact: true }).click();
   await expect(page.locator("tbody tr").filter({ hasText: clientA })).toContainText(key);
   await page.goto(`/p/${key}/settings`);

@@ -1128,7 +1128,7 @@ type APITokenCreated struct {
 	Name       string     `json:"name"`
 	ReadOnly   bool       `json:"read_only"`
 
-	// Token The secret, e.g. msl_…; shown once.
+	// Token The secret, e.g. ztr_…; shown once.
 	Token string `json:"token"`
 }
 
@@ -2476,7 +2476,7 @@ type Repo struct {
 	Secret *string `json:"secret,omitempty"`
 	WebUrl string  `json:"web_url"`
 
-	// WebhookUrl Example: https://muasal.example.com/webhooks/git/3
+	// WebhookUrl Example: https://zettra.example.com/webhooks/git/3
 	WebhookUrl string `json:"webhook_url"`
 }
 

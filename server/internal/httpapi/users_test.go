@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kenzo03/muasal/server/internal/auth"
-	"github.com/kenzo03/muasal/server/internal/db"
-	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/auth"
+	"github.com/kenzo03/zettra/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
 )
 
 func setupToken(t *testing.T, link string) string {
@@ -201,7 +201,7 @@ func TestResetAndSetupRevokeAPITokens(t *testing.T) {
 		t.Fatalf("a token survived the reset: %d", code)
 	}
 	// A token that exists when the link is redeemed stops working too.
-	secret := "msl_made-between-reset-and-setup"
+	secret := "ztr_made-between-reset-and-setup"
 	if _, err := e.q.CreateAPIToken(t.Context(), db.CreateAPITokenParams{UserID: budiUser.ID, Name: "Late", TokenHash: auth.HashToken(secret)}); err != nil {
 		t.Fatal(err)
 	}

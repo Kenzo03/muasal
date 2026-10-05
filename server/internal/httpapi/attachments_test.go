@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
 )
 
 // upload posts one file the way a browser form does.

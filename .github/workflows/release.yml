@@ -28,7 +28,7 @@ jobs:
         id: names
         run: |
           echo "version=${GITHUB_REF_NAME#v}" >>"$GITHUB_OUTPUT"
-          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/muasal-${{ matrix.component }}" >>"$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/zettra-${{ matrix.component }}" >>"$GITHUB_OUTPUT"
           echo "context=${{ matrix.component == 'app' && 'server' || 'web' }}" >>"$GITHUB_OUTPUT"
       - uses: docker/setup-buildx-action@v4
       - uses: docker/login-action@v4
@@ -73,7 +73,7 @@ jobs:
         id: names
         run: |
           echo "version=${GITHUB_REF_NAME#v}" >>"$GITHUB_OUTPUT"
-          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/muasal-${{ matrix.component }}" >>"$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/zettra-${{ matrix.component }}" >>"$GITHUB_OUTPUT"
       - uses: actions/download-artifact@v8
         with:
           pattern: digests-${{ matrix.component }}-*
@@ -108,26 +108,26 @@ jobs:
       - name: Offline bundle and deploy files
         run: |
           version=${GITHUB_REF_NAME#v}
-          prefix=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/muasal
+          prefix=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/zettra
           for c in app web; do
             docker pull --platform linux/amd64 "$prefix-$c:$version"
-            docker tag "$prefix-$c:$version" "muasal-$c:$version"
+            docker tag "$prefix-$c:$version" "zettra-$c:$version"
           done
           deploy/make-bundle.sh "$version"
-          mkdir -p "dist/muasal-deploy-$version"
-          grep -v '^    build: ' deploy/compose.yaml >"dist/muasal-deploy-$version/compose.yaml"
+          mkdir -p "dist/zettra-deploy-$version"
+          grep -v '^    build: ' deploy/compose.yaml >"dist/zettra-deploy-$version/compose.yaml"
           cp deploy/compose.host-ai.yaml deploy/Caddyfile deploy/.env.example deploy/install.sh deploy/upgrade.sh \
-            deploy/backup.sh deploy/restore.sh "dist/muasal-deploy-$version/"
-          cp docs/operations.md "dist/muasal-deploy-$version/README.md"
-          echo "$version" >"dist/muasal-deploy-$version/VERSION"
-          tar -C dist -czf "dist/muasal-deploy-$version.tar.gz" "muasal-deploy-$version"
+            deploy/backup.sh deploy/restore.sh "dist/zettra-deploy-$version/"
+          cp docs/operations.md "dist/zettra-deploy-$version/README.md"
+          echo "$version" >"dist/zettra-deploy-$version/VERSION"
+          tar -C dist -czf "dist/zettra-deploy-$version.tar.gz" "zettra-deploy-$version"
           cd dist
-          sha256sum "muasal-$version.tar" "muasal-deploy-$version.tar.gz" >SHA256SUMS
+          sha256sum "zettra-$version.tar" "zettra-deploy-$version.tar.gz" >SHA256SUMS
           cosign sign-blob --yes --bundle SHA256SUMS.sigstore.json SHA256SUMS
       - name: GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           version=${GITHUB_REF_NAME#v}
-          gh release create "$GITHUB_REF_NAME" --title "Muasal $version" --generate-notes \
-            "dist/muasal-$version.tar" "dist/muasal-deploy-$version.tar.gz" dist/SHA256SUMS dist/SHA256SUMS.sigstore.json
+          gh release create "$GITHUB_REF_NAME" --title "Zettra $version" --generate-notes \
+            "dist/zettra-$version.tar" "dist/zettra-deploy-$version.tar.gz" dist/SHA256SUMS dist/SHA256SUMS.sigstore.json

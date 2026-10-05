@@ -6,7 +6,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
 )
 
 // AC-TK-8, R-TK-5 and R-TK-7: HRIS-2 reverses HRIS-1, so HRIS-1's decision is

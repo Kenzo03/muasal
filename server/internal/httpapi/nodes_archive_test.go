@@ -7,8 +7,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/kenzo03/muasal/server/internal/db"
-	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
 )
 
 // R-MR-4, AC-MR-5: a linked node is archived, never deleted; it leaves the tree

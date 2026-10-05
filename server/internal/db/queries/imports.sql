@@ -42,7 +42,7 @@ VALUES (sqlc.arg('project_id'), sqlc.arg('number'), sqlc.arg('key'), sqlc.arg('t
 RETURNING *;
 
 -- name: UpdateImportedTicket :one
--- A re-import updates what the old tool owns and leaves Muasal's own work
+-- A re-import updates what the old tool owns and leaves Zettra's own work
 -- (reason, menus added by hand, decision records) alone.
 UPDATE tickets SET type = sqlc.arg('type'), title = sqlc.arg('title'), description = sqlc.arg('description'),
   status_id = sqlc.arg('status_id'), priority = sqlc.arg('priority'), assignee_id = sqlc.narg('assignee_id'),

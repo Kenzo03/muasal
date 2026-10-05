@@ -14,17 +14,17 @@ import (
 	"testing"
 
 	"fmt"
-	"github.com/kenzo03/muasal/server/internal/auth"
-	"github.com/kenzo03/muasal/server/internal/config"
-	"github.com/kenzo03/muasal/server/internal/db"
-	"github.com/kenzo03/muasal/server/internal/httpapi"
-	"github.com/kenzo03/muasal/server/internal/mail"
-	"github.com/kenzo03/muasal/server/internal/testdb"
+	"github.com/kenzo03/zettra/server/internal/auth"
+	"github.com/kenzo03/zettra/server/internal/config"
+	"github.com/kenzo03/zettra/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/mail"
+	"github.com/kenzo03/zettra/server/internal/testdb"
 	"time"
 )
 
 const (
-	origin = "http://muasal.test"
+	origin = "http://zettra.test"
 	pw     = "kopi-susu-di-kantor-7"
 )
 
@@ -180,7 +180,7 @@ func TestDisabledAndPasswordlessLoginsAreInvalidCredentials(t *testing.T) {
 		t.Fatal(err)
 	}
 	// the password behind the stand-in hash must not open an account that has none
-	if code, p := login(e, e.client(), "rina@example.com", "muasal-timing-equalizer"); code != http.StatusUnauthorized || p.Code != "invalid_credentials" {
+	if code, p := login(e, e.client(), "rina@example.com", "zettra-timing-equalizer"); code != http.StatusUnauthorized || p.Code != "invalid_credentials" {
 		t.Fatalf("no password: %d %s", code, p.Code)
 	}
 }
@@ -258,7 +258,7 @@ func TestHealthChecks(t *testing.T) {
 // their language; the response says where, and the link stays to copy.
 func TestSetupLinksAreEmailed(t *testing.T) {
 	e := newEnvWith(t, func(c *config.Config) {
-		c.SMTP = mail.Config{Host: "smtp.example.test", Port: 587, From: "muasal@example.test", TLS: "starttls"}
+		c.SMTP = mail.Config{Host: "smtp.example.test", Port: 587, From: "zettra@example.test", TLS: "starttls"}
 	})
 	sent := make(chan [3]string, 2)
 	e.api.SetSendMail(func(_ mail.Config, to, subject, body string) error {
@@ -273,7 +273,7 @@ func TestSetupLinksAreEmailed(t *testing.T) {
 	}
 	select {
 	case m := <-sent:
-		if m[0] != "budi@example.com" || m[1] != "Undangan ke Muasal" || !strings.Contains(m[2], "Halo Budi") || !strings.Contains(m[2], out.SetupLink.Url) {
+		if m[0] != "budi@example.com" || m[1] != "Undangan ke Zettra" || !strings.Contains(m[2], "Halo Budi") || !strings.Contains(m[2], out.SetupLink.Url) {
 			t.Fatalf("email: %q", m)
 		}
 	case <-time.After(5 * time.Second):

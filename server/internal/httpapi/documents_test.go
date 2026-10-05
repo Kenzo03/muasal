@@ -15,10 +15,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/kenzo03/muasal/server/internal/draft"
-	"github.com/kenzo03/muasal/server/internal/httpapi"
-	"github.com/kenzo03/muasal/server/internal/indexer"
-	"github.com/kenzo03/muasal/server/internal/llm/llmtest"
+	"github.com/kenzo03/zettra/server/internal/draft"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/indexer"
+	"github.com/kenzo03/zettra/server/internal/llm/llmtest"
 )
 
 func (e *env) uploadDoc(c *http.Client, fields map[string]string, name, content string) (int, httpapi.Document) {
@@ -281,8 +281,8 @@ func TestDocumentTreeFromTheModelAndAskCitesIt(t *testing.T) {
 			return `{"claims":[]}`
 		}
 	})
-	md := "# Muasal FSD\n\n## 7. Module registry\n\nThe tree of modules.\n\n### 7.4 Node page\n\nThe Behaviors by client tab shows the decisions in force for each client.\n"
-	code, doc := e.uploadDoc(lead, map[string]string{"title": "Muasal FSD", "markdown": md}, "fsd.docx", "PK-docx-bytes")
+	md := "# Zettra FSD\n\n## 7. Module registry\n\nThe tree of modules.\n\n### 7.4 Node page\n\nThe Behaviors by client tab shows the decisions in force for each client.\n"
+	code, doc := e.uploadDoc(lead, map[string]string{"title": "Zettra FSD", "markdown": md}, "fsd.docx", "PK-docx-bytes")
 	if code != http.StatusCreated {
 		t.Fatalf("upload: %d", code)
 	}

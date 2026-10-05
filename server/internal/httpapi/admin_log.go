@@ -12,8 +12,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	"github.com/kenzo03/muasal/server/internal/ask"
-	"github.com/kenzo03/muasal/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/ask"
+	"github.com/kenzo03/zettra/server/internal/db"
 )
 
 // loggedEvidence is one row of ask_queries.evidence: a ticket or a note.

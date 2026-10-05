@@ -13,10 +13,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/kenzo03/muasal/server/internal/config"
-	"github.com/kenzo03/muasal/server/internal/gitlink"
-	"github.com/kenzo03/muasal/server/internal/httpapi"
-	"github.com/kenzo03/muasal/server/internal/indexer"
+	"github.com/kenzo03/zettra/server/internal/config"
+	"github.com/kenzo03/zettra/server/internal/gitlink"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/indexer"
 )
 
 func (e *env) deliver(repoID int64, headers map[string]string, body []byte) int {

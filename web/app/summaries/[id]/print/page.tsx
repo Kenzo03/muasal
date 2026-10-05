@@ -17,7 +17,7 @@ export default async function PrintSummaryPage({ params }: { params: Promise<{ i
   return (
     <main className="summary-print mx-auto max-w-[210mm] bg-white px-[16mm] py-[12mm] text-ink print:p-0">
       <div className="mb-4 flex items-center gap-3 border-b border-line pb-2 text-xs text-muted">
-        <span className="font-semibold">Muasal · {data.project_key}</span>
+        <span className="font-semibold">Zettra · {data.project_key}</span>
         <span className="ml-auto">{data.title}</span>
         <PrintButton label={t("printNow")} />
       </div>

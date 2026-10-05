@@ -11,10 +11,10 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/kenzo03/muasal/server/internal/ai"
-	"github.com/kenzo03/muasal/server/internal/db"
-	"github.com/kenzo03/muasal/server/internal/indexer"
-	"github.com/kenzo03/muasal/server/internal/llm"
+	"github.com/kenzo03/zettra/server/internal/ai"
+	"github.com/kenzo03/zettra/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/indexer"
+	"github.com/kenzo03/zettra/server/internal/llm"
 )
 
 // NotEnough is the one wording for an answer without evidence (§10.4). It

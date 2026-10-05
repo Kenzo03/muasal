@@ -18,7 +18,7 @@ import (
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 	"github.com/riverqueue/river/rivermigrate"
 
-	"github.com/kenzo03/muasal/server/migrations"
+	"github.com/kenzo03/zettra/server/migrations"
 )
 
 // Up applies pending migrations as the owner role under an advisory lock, then

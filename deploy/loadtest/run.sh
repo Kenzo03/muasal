@@ -5,9 +5,9 @@ set -eu
 cd "$(dirname "$0")/.."
 n=${1:-100000}
 dc() { docker compose --env-file .env "$@"; }
-if [ "$(dc exec -T db psql -U owner -d muasal -Atc "SELECT count(*) FROM projects WHERE key = 'LOAD'")" = 0 ]; then
+if [ "$(dc exec -T db psql -U owner -d zettra -Atc "SELECT count(*) FROM projects WHERE key = 'LOAD'")" = 0 ]; then
   echo "Seeding $n tickets…"
-  dc exec -T db psql -U owner -d muasal -v tickets="$n" -f - <loadtest/seed.sql >loadtest/tokens.txt
+  dc exec -T db psql -U owner -d zettra -v tickets="$n" -f - <loadtest/seed.sql >loadtest/tokens.txt
 fi
 url=$(grep '^PUBLIC_URL=' .env | cut -d= -f2)
 docker run --rm --network host -v "$PWD/loadtest:/scripts:ro" -w /scripts grafana/k6:1.3.0 \

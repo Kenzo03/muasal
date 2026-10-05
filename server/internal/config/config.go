@@ -9,14 +9,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kenzo03/muasal/server/internal/mail"
+	"github.com/kenzo03/zettra/server/internal/mail"
 )
 
 // Config holds every setting the binary reads at start.
 type Config struct {
 	DatabaseURL         string      // app role (least privilege)
 	MigrateDatabaseURL  string      // owner role; only migrations use it
-	PublicURL           string      // the origin users open, e.g. https://muasal.example.com
+	PublicURL           string      // the origin users open, e.g. https://zettra.example.com
 	ListenAddr          string      // default ":8080"
 	AttachmentsDir      string      // ATTACHMENTS_DIR, default /data/attachments
 	BackupsDir          string      // BACKUPS_DIR, default /backups: the backup service's volume (FSD §19.4)
@@ -81,13 +81,13 @@ func Load(getenv func(string) string) (Config, error) {
 		c.SMTP.Port = n
 	}
 	if c.SMTP.On() && (c.SMTP.From == "" || !strings.Contains(c.SMTP.From, "@")) {
-		errs = append(errs, errors.New("SMTP_FROM must be the sender address, e.g. muasal@example.com, when SMTP_HOST is set"))
+		errs = append(errs, errors.New("SMTP_FROM must be the sender address, e.g. zettra@example.com, when SMTP_HOST is set"))
 	}
 	if c.SMTP.TLS != "starttls" && c.SMTP.TLS != "tls" && c.SMTP.TLS != "none" {
 		errs = append(errs, fmt.Errorf("SMTP_TLS is starttls, tls or none, got %q", c.SMTP.TLS))
 	}
 	if u, err := url.Parse(c.PublicURL); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.Path != "" {
-		errs = append(errs, fmt.Errorf("PUBLIC_URL must be an origin such as https://muasal.example.com, got %q", c.PublicURL))
+		errs = append(errs, fmt.Errorf("PUBLIC_URL must be an origin such as https://zettra.example.com, got %q", c.PublicURL))
 	}
 	return c, errors.Join(errs...)
 }

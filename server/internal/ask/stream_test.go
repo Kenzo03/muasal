@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kenzo03/muasal/server/internal/ask"
+	"github.com/kenzo03/zettra/server/internal/ask"
 )
 
 // §11.5: each claim is emitted as soon as its object closes, however the

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kenzo03/muasal/server/internal/docs"
+	"github.com/kenzo03/zettra/server/internal/docs"
 )
 
 // The outline sent with every part indents by level and stops at outlineChars.
@@ -65,7 +65,7 @@ func TestUnwrapDropsAnUnnamedSharedRoot(t *testing.T) {
 	}
 	// A module the headings word differently is not the product's name.
 	other := []docs.Candidate{{Path: []string{"Registry", "Node page"}}}
-	if got := unwrap(other, sections, "Muasal FSD"); len(got) != 1 || len(got[0].Path) != 2 {
+	if got := unwrap(other, sections, "Zettra FSD"); len(got) != 1 || len(got[0].Path) != 2 {
 		t.Fatalf("a module not in the title was dropped: %+v", got)
 	}
 }

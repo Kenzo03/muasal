@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kenzo03/muasal/server/internal/db"
-	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
 )
 
 // MSL-66: a member records that Budi of Client A accepted the ticket's work;

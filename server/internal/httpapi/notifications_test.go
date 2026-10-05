@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
 )
 
 func notes(e *env, c *http.Client) httpapi.NotificationList {

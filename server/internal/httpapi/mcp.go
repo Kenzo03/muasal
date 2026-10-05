@@ -22,7 +22,7 @@ func (s *Server) mcpHandler(root http.Handler) http.Handler {
 	h := mcp.NewStreamableHTTPHandler(func(r *http.Request) *mcp.Server {
 		return s.mcpServer(&apiCaller{root: root, auth: r.Header.Get("Authorization"), remote: r.RemoteAddr, xff: r.Header.Get("X-Forwarded-For")})
 	}, &mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true,
-		// Muasal sits behind Caddy (Host is the public name) and checks the token itself.
+		// Zettra sits behind Caddy (Host is the public name) and checks the token itself.
 		DisableLocalhostProtection: true})
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Only a token: a session cookie would let any web page drive the tools.
@@ -53,7 +53,7 @@ func (s *Server) mcpUnauthorized(w http.ResponseWriter, sent bool) {
 		hdr += `error="invalid_token", `
 	}
 	w.Header().Set("WWW-Authenticate", hdr+`resource_metadata="`+s.cfg.PublicURL+`/.well-known/oauth-protected-resource/mcp"`)
-	writeProblem(w, http.StatusUnauthorized, "invalid_token", "Sign in to Muasal to use this endpoint")
+	writeProblem(w, http.StatusUnauthorized, "invalid_token", "Sign in to Zettra to use this endpoint")
 }
 
 // rawBody is a body already encoded, such as a multipart form.
@@ -83,7 +83,7 @@ func (c *apiCaller) call(ctx context.Context, method, path string, headers map[s
 		}
 		rd = bytes.NewReader(b)
 	}
-	req, err := http.NewRequestWithContext(ctx, method, "http://muasal.internal/api/v1"+path, rd)
+	req, err := http.NewRequestWithContext(ctx, method, "http://zettra.internal/api/v1"+path, rd)
 	if err != nil {
 		return nil, err
 	}

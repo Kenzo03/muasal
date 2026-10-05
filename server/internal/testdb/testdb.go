@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/kenzo03/muasal/server/internal/migrate"
+	"github.com/kenzo03/zettra/server/internal/migrate"
 )
 
 // DB is a throwaway database that is dropped when the test ends.
@@ -68,7 +68,7 @@ func New(t *testing.T) DB {
 func newName() string {
 	var b [8]byte
 	rand.Read(b[:]) // never fails since Go 1.24
-	return "muasal_test_" + hex.EncodeToString(b[:])
+	return "zettra_test_" + hex.EncodeToString(b[:])
 }
 
 func withDatabase(raw, name string) string {

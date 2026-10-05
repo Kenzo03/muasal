@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kenzo03/muasal/server/internal/ai"
-	"github.com/kenzo03/muasal/server/internal/llm"
+	"github.com/kenzo03/zettra/server/internal/ai"
+	"github.com/kenzo03/zettra/server/internal/llm"
 )
 
 // systemFigures is what System status and /metrics show (FSD §18.3).
@@ -138,28 +138,28 @@ func (s *Server) metrics(w http.ResponseWriter, r *http.Request) {
 	}
 	var b strings.Builder
 	gauge := func(name, help string) { fmt.Fprintf(&b, "# HELP %s %s\n# TYPE %s gauge\n", name, help, name) }
-	gauge("muasal_database_bytes", "Size of the database.")
-	fmt.Fprintf(&b, "muasal_database_bytes %d\n", f.dbBytes)
-	gauge("muasal_jobs", "Background jobs by state.")
+	gauge("zettra_database_bytes", "Size of the database.")
+	fmt.Fprintf(&b, "zettra_database_bytes %d\n", f.dbBytes)
+	gauge("zettra_jobs", "Background jobs by state.")
 	states := make([]string, 0, len(f.jobs))
 	for st := range f.jobs {
 		states = append(states, st)
 	}
 	slices.Sort(states)
 	for _, st := range states {
-		fmt.Fprintf(&b, "muasal_jobs{state=%q} %d\n", st, f.jobs[st])
+		fmt.Fprintf(&b, "zettra_jobs{state=%q} %d\n", st, f.jobs[st])
 	}
-	gauge("muasal_ask_queries", "Questions in the Ask log by status.")
+	gauge("zettra_ask_queries", "Questions in the Ask log by status.")
 	for _, st := range askStatuses {
-		fmt.Fprintf(&b, "muasal_ask_queries{status=%q} %d\n", st, f.asks[st])
+		fmt.Fprintf(&b, "zettra_ask_queries{status=%q} %d\n", st, f.asks[st])
 	}
-	gauge("muasal_disk_used_bytes", "Used bytes on the volume's filesystem.")
+	gauge("zettra_disk_used_bytes", "Used bytes on the volume's filesystem.")
 	for _, d := range f.disks {
-		fmt.Fprintf(&b, "muasal_disk_used_bytes{volume=%q} %d\n", d.Volume, d.UsedBytes)
+		fmt.Fprintf(&b, "zettra_disk_used_bytes{volume=%q} %d\n", d.Volume, d.UsedBytes)
 	}
-	gauge("muasal_disk_total_bytes", "Size of the volume's filesystem.")
+	gauge("zettra_disk_total_bytes", "Size of the volume's filesystem.")
 	for _, d := range f.disks {
-		fmt.Fprintf(&b, "muasal_disk_total_bytes{volume=%q} %d\n", d.Volume, d.TotalBytes)
+		fmt.Fprintf(&b, "zettra_disk_total_bytes{volume=%q} %d\n", d.Volume, d.TotalBytes)
 	}
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 	_, _ = w.Write([]byte(b.String()))

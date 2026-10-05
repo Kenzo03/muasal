@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kenzo03/muasal/server/internal/db"
-	"github.com/kenzo03/muasal/server/internal/httpapi"
-	"github.com/kenzo03/muasal/server/internal/llm/llmtest"
+	"github.com/kenzo03/zettra/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/llm/llmtest"
 )
 
 // §9.3, AC-DC-6, AC-DC-7: "Draft with AI" drafts from the thread only, saves

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/kenzo03/muasal/server/internal/secret"
+	"github.com/kenzo03/zettra/server/internal/secret"
 )
 
 func TestSealAndOpen(t *testing.T) {

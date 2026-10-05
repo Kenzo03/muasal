@@ -1,4 +1,4 @@
-name: muasal
+name: zettra
 services:
   caddy:
     image: caddy:2
@@ -17,7 +17,7 @@ services:
 
   web:
     build: ../web
-    image: ${IMAGE_PREFIX:-muasal}-web:${VERSION:-dev}
+    image: ${IMAGE_PREFIX:-zettra}-web:${VERSION:-dev}
     environment:
       API_INTERNAL_URL: http://app:8080
       NEXT_TELEMETRY_DISABLED: "1"
@@ -26,11 +26,11 @@ services:
 
   app:
     build: ../server
-    image: ${IMAGE_PREFIX:-muasal}-app:${VERSION:-dev}
+    image: ${IMAGE_PREFIX:-zettra}-app:${VERSION:-dev}
     command: ["serve"]
     environment:
-      DATABASE_URL: postgres://app:${DB_APP_PASSWORD}@db:5432/muasal?sslmode=disable
-      MIGRATE_DATABASE_URL: postgres://owner:${DB_OWNER_PASSWORD}@db:5432/muasal?sslmode=disable
+      DATABASE_URL: postgres://app:${DB_APP_PASSWORD}@db:5432/zettra?sslmode=disable
+      MIGRATE_DATABASE_URL: postgres://owner:${DB_OWNER_PASSWORD}@db:5432/zettra?sslmode=disable
       PUBLIC_URL: ${PUBLIC_URL}
       APP_SECRET_KEY: ${APP_SECRET_KEY:-} # seals AI API keys (BYOK); `openssl rand -base64 32`
       ASK_LOG_RETENTION_DAYS: ${ASK_LOG_RETENTION_DAYS:-365} # 0 keeps the Ask log for good
@@ -58,12 +58,12 @@ services:
     # more compiling short queries than it saves.
     command: ["postgres", "-c", "shared_buffers=${PG_SHARED_BUFFERS:-512MB}", "-c", "effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-2GB}", "-c", "jit=off"]
     environment:
-      POSTGRES_DB: muasal
+      POSTGRES_DB: zettra
       POSTGRES_USER: owner
       POSTGRES_PASSWORD: ${DB_OWNER_PASSWORD}
     volumes: [pgdata:/var/lib/postgresql]
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "owner", "-d", "muasal"]
+      test: ["CMD", "pg_isready", "-U", "owner", "-d", "zettra"]
       interval: 5s
       retries: 20
     networks: [app]

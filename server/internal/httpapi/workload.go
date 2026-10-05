@@ -6,8 +6,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/kenzo03/muasal/server/internal/access"
-	"github.com/kenzo03/muasal/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/access"
+	"github.com/kenzo03/zettra/server/internal/db"
 )
 
 // GetWorkload counts each person's open tickets for the project's lead:

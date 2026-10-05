@@ -6,7 +6,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
 )
 
 // FSD §8.1: the menu picker puts the caller's recently used menus first: those

@@ -8,7 +8,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/kenzo03/muasal/server/internal/httpapi"
+	"github.com/kenzo03/zettra/server/internal/httpapi"
 )
 
 func (e *env) importTree(c *http.Client, key, csv string, dryRun bool) (int, httpapi.NodeImportResult) {

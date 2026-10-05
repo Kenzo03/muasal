@@ -19,12 +19,12 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
 
-	"github.com/kenzo03/muasal/server/internal/access"
-	"github.com/kenzo03/muasal/server/internal/ai"
-	"github.com/kenzo03/muasal/server/internal/db"
-	"github.com/kenzo03/muasal/server/internal/docs"
-	"github.com/kenzo03/muasal/server/internal/draft"
-	"github.com/kenzo03/muasal/server/internal/indexer"
+	"github.com/kenzo03/zettra/server/internal/access"
+	"github.com/kenzo03/zettra/server/internal/ai"
+	"github.com/kenzo03/zettra/server/internal/db"
+	"github.com/kenzo03/zettra/server/internal/docs"
+	"github.com/kenzo03/zettra/server/internal/draft"
+	"github.com/kenzo03/zettra/server/internal/indexer"
 )
 
 // documentMaxBytes bounds an uploaded document (FSD §7.7).
@@ -121,7 +121,7 @@ func (s *Server) UploadDocument(w http.ResponseWriter, r *http.Request, key stri
 	}
 	sections := docs.Split(markdown, title)
 	if len(sections) == 0 {
-		fields = append(fields, FieldError{Field: "markdown", Code: "required", Message: "The file has no text Muasal can read"})
+		fields = append(fields, FieldError{Field: "markdown", Code: "required", Message: "The file has no text Zettra can read"})
 	}
 	if len(fields) > 0 {
 		writeProblem(w, http.StatusUnprocessableEntity, "validation_failed", "Check the highlighted fields", fields...)

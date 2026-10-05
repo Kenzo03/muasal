@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-const fsd = `# FSD — Muasal
+const fsd = `# FSD — Zettra
 
 Intro text.
 
@@ -32,7 +32,7 @@ func TestSplit(t *testing.T) {
 	for _, x := range s {
 		got += fmt.Sprintf("%s|%s|%d;", x.Number, x.Title, x.Level)
 	}
-	want := "s1|FSD — Muasal|1;7|F1 — Module registry|2;7.4|Overtime Approval|3;7.4-2|Overtime Approvals|3;s5|Ticketing|2;s6|Ticket fields|3;"
+	want := "s1|FSD — Zettra|1;7|F1 — Module registry|2;7.4|Overtime Approval|3;7.4-2|Overtime Approvals|3;s5|Ticketing|2;s6|Ticket fields|3;"
 	if got != want {
 		t.Fatalf("\n got %s\nwant %s", got, want)
 	}
