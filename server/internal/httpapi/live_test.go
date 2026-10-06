@@ -274,3 +274,30 @@ func TestEventsResyncAfterReconnect(t *testing.T) {
 		t.Fatal("no resync after the listener reconnected")
 	}
 }
+
+// Review #1: a webhook updating a merge request (merged, closed) must reach
+// the open page of every ticket it is linked to, though the link row itself
+// is not written again.
+func TestMergeRequestChangesSignal(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	tk := e.seedTicket(w.p, w.pmUser, "Overtime rounding", &w.a, w.ot)
+	ctx := context.Background()
+	var repo, mr int64
+	if err := e.d.Pool.QueryRow(ctx, "INSERT INTO git_repos (project_id, provider, name, web_url, secret_enc) VALUES ($1, 'gitlab', 'hris', 'https://git.example.com/hris', decode('00', 'hex')) RETURNING id", w.p.ID).Scan(&repo); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.d.Pool.QueryRow(ctx, "INSERT INTO merge_requests (repo_id, number, title, state) VALUES ($1, 34, 'Round overtime', 'opened') RETURNING id", repo).Scan(&mr); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.d.Pool.Exec(ctx, "INSERT INTO ticket_merge_requests (ticket_id, mr_id) VALUES ($1, $2)", tk.ID, mr); err != nil {
+		t.Fatal(err)
+	}
+	collect := listenTickets(t, e.d.Pool)
+	if _, err := e.d.Pool.Exec(ctx, "UPDATE merge_requests SET state = 'merged', merged_at = now() WHERE id = $1", mr); err != nil {
+		t.Fatal(err)
+	}
+	if got := collect(time.Second); !slices.Equal(got, []string{fmt.Sprintf("%d:%d", w.p.ID, tk.ID)}) {
+		t.Fatalf("merge request merged: %v", got)
+	}
+}

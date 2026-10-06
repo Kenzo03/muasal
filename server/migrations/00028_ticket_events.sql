@@ -13,6 +13,10 @@ BEGIN
     RETURN NULL;
   ELSIF TG_TABLE_NAME = 'ticket_links' THEN
     ids := ARRAY[(r->>'from_id')::bigint, (r->>'to_id')::bigint];
+  ELSIF TG_TABLE_NAME = 'merge_requests' THEN -- a webhook marks it merged or closed
+    ids := ARRAY(SELECT ticket_id FROM ticket_merge_requests WHERE mr_id = (r->>'id')::bigint);
+  ELSIF TG_TABLE_NAME = 'commits' THEN
+    ids := ARRAY(SELECT ticket_id FROM ticket_commits WHERE commit_id = (r->>'id')::bigint);
   ELSE
     ids := ARRAY[(r->>'ticket_id')::bigint]; -- NULL (an attachment elsewhere) matches no ticket
   END IF;
@@ -29,8 +33,14 @@ CREATE TRIGGER decision_records_notify AFTER INSERT OR UPDATE OR DELETE ON decis
 CREATE TRIGGER ticket_commits_notify AFTER INSERT OR UPDATE OR DELETE ON ticket_commits FOR EACH ROW EXECUTE FUNCTION notify_ticket_change();
 CREATE TRIGGER ticket_merge_requests_notify AFTER INSERT OR UPDATE OR DELETE ON ticket_merge_requests FOR EACH ROW EXECUTE FUNCTION notify_ticket_change();
 CREATE TRIGGER ticket_links_notify AFTER INSERT OR UPDATE OR DELETE ON ticket_links FOR EACH ROW EXECUTE FUNCTION notify_ticket_change();
+-- A merge request or commit row changes only when a webhook updates one that
+-- tickets already link to; new links announce through the link tables above.
+CREATE TRIGGER merge_requests_notify AFTER UPDATE ON merge_requests FOR EACH ROW EXECUTE FUNCTION notify_ticket_change();
+CREATE TRIGGER commits_notify AFTER UPDATE ON commits FOR EACH ROW EXECUTE FUNCTION notify_ticket_change();
 
 -- +goose Down
+DROP TRIGGER commits_notify ON commits;
+DROP TRIGGER merge_requests_notify ON merge_requests;
 DROP TRIGGER ticket_links_notify ON ticket_links;
 DROP TRIGGER ticket_merge_requests_notify ON ticket_merge_requests;
 DROP TRIGGER ticket_commits_notify ON ticket_commits;
