@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTimeZone, useTranslations } from "next-intl";
 import Icon from "./Icon";
+import { useNotifications } from "./LiveEvents";
 import Menu from "./Menu";
 import { api } from "@/lib/api";
 import type { components } from "@/lib/api-types";
@@ -14,8 +15,8 @@ import { button, cx } from "@/lib/ui";
 type Notification = components["schemas"]["Notification"];
 
 // The notification bell (FSD §8.10): an unread count, the latest 50, live
-// updates over SSE while a tab is open, and an OS notification when the tab is
-// hidden and the user opted in.
+// updates from the tab's LiveEvents stream, and an OS notification when the
+// tab is hidden and the user opted in.
 export default function Bell({ browser }: { browser: boolean }) {
   const t = useTranslations("bell");
   const locale = useLocale();
@@ -32,25 +33,22 @@ export default function Bell({ browser }: { browser: boolean }) {
         setUnread(data.unread);
       }
     });
-    const es = new EventSource("/api/v1/notifications/stream");
-    es.addEventListener("notification", (e) => {
-      const n = JSON.parse((e as MessageEvent).data) as Notification;
-      setItems((xs) => [n, ...xs.filter((x) => x.id !== n.id)].slice(0, 50));
-      setUnread((u) => u + 1);
-      if (browser && document.hidden && "Notification" in window && Notification.permission === "granted") {
-        const os = new Notification(t("title"), { body: text(n), tag: `zettra-${n.id}` });
-        os.onclick = () => {
-          window.focus();
-          open([n]);
-        };
-      }
-    });
     return () => {
       live = false;
-      es.close();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [browser]);
+  }, []);
+
+  useNotifications((n) => {
+    setItems((xs) => [n, ...xs.filter((x) => x.id !== n.id)].slice(0, 50));
+    setUnread((u) => u + 1);
+    if (browser && document.hidden && "Notification" in window && Notification.permission === "granted") {
+      const os = new Notification(t("title"), { body: text(n), tag: `zettra-${n.id}` });
+      os.onclick = () => {
+        window.focus();
+        open([n]);
+      };
+    }
+  });
 
   function text(n: Notification): string {
     const who = n.actor?.name ?? t("someone");

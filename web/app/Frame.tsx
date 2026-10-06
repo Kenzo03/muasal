@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
+import LiveEvents from "@/components/LiveEvents";
 import type { Project, User } from "@/lib/problem";
 import { active } from "@/lib/projects";
 import Sidebar from "./Sidebar";
@@ -84,24 +85,26 @@ export default function Frame({ me, projects, rail: railCookie, recent: recentCo
   if (/^\/(login|setup)(\/|$)/.test(path)) return children;
 
   return (
-    <div className="flex min-h-screen">
-      {drawer && (
-        <button type="button" aria-label={t("closeMenu")} onClick={() => setDrawer(false)} className="fixed inset-0 z-30 cursor-default bg-ink/30 md:hidden" />
-      )}
-      <Sidebar
-        me={me}
-        projects={inUse}
-        project={project}
-        recent={recent}
-        rail={rail}
-        drawer={drawer}
-        onNavigate={() => setDrawer(false)}
-        onToggleRail={toggleRail}
-      />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar me={me} projects={inUse} project={project} recent={recent} drawer={drawer} onMenu={() => setDrawer(true)} />
-        <PageProject.Provider value={setPageKey}>{children}</PageProject.Provider>
+    <LiveEvents projectKey={project?.key}>
+      <div className="flex min-h-screen">
+        {drawer && (
+          <button type="button" aria-label={t("closeMenu")} onClick={() => setDrawer(false)} className="fixed inset-0 z-30 cursor-default bg-ink/30 md:hidden" />
+        )}
+        <Sidebar
+          me={me}
+          projects={inUse}
+          project={project}
+          recent={recent}
+          rail={rail}
+          drawer={drawer}
+          onNavigate={() => setDrawer(false)}
+          onToggleRail={toggleRail}
+        />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <TopBar me={me} projects={inUse} project={project} recent={recent} drawer={drawer} onMenu={() => setDrawer(true)} />
+          <PageProject.Provider value={setPageKey}>{children}</PageProject.Provider>
+        </div>
       </div>
-    </div>
+    </LiveEvents>
   );
 }
