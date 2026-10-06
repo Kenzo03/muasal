@@ -51,3 +51,55 @@ export function refresher(refresh: () => void, gapMs = 500, clock: Clock = realC
     },
   };
 }
+
+// Source is the part of EventSource the tab's stream uses.
+export type Source = {
+  readyState: number;
+  onopen: ((e: never) => unknown) | null;
+  onerror: ((e: never) => unknown) | null;
+  addEventListener(type: string, f: (e: { data: string }) => void): void;
+  close(): void;
+};
+
+const CLOSED = 2; // EventSource.CLOSED
+
+// liveStream keeps the tab's event stream open (spec: live ticket updates).
+// EventSource retries a dropped connection by itself but gives up for good on
+// a non-200 answer, such as Caddy's 502 while the app restarts; then this
+// opens a new one after 5 s, doubling to at most 60 s while it keeps failing.
+// Every open after the first calls reopened, since changes may have been
+// missed meanwhile. It returns stop.
+export function liveStream(
+  open: () => Source,
+  types: string[],
+  on: { reopened(): void; event(type: string, data: string): void },
+  clock: Clock = realClock,
+): () => void {
+  let source: Source;
+  let opened = false;
+  let failures = 0;
+  let timer: unknown;
+  let stopped = false;
+  const connect = () => {
+    timer = undefined;
+    source = open();
+    source.onopen = () => {
+      if (opened) on.reopened();
+      opened = true;
+      failures = 0;
+    };
+    source.onerror = () => {
+      if (source.readyState !== CLOSED || stopped) return;
+      source.close();
+      timer = clock.later(connect, Math.min(60_000, 5_000 * 2 ** failures));
+      failures++;
+    };
+    for (const type of types) source.addEventListener(type, (e) => on.event(type, e.data));
+  };
+  connect();
+  return () => {
+    stopped = true;
+    if (timer !== undefined) clock.cancel(timer);
+    source.close();
+  };
+}

@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { components } from "@/lib/api-types";
-import { refresher } from "@/lib/live";
+import { liveStream, refresher } from "@/lib/live";
 
 type Notification = components["schemas"]["Notification"];
 type TicketChange = number[] | "all";
@@ -18,23 +18,22 @@ const Live = createContext<Listeners | null>(null);
 export default function LiveEvents({ projectKey, children }: { projectKey?: string; children: React.ReactNode }) {
   const [listeners] = useState<Listeners>(() => ({ notes: new Set(), tickets: new Set() }));
   useEffect(() => {
-    const es = new EventSource("/api/v1/events" + (projectKey ? `?project=${encodeURIComponent(projectKey)}` : ""));
-    let opened = false;
+    const url = "/api/v1/events" + (projectKey ? `?project=${encodeURIComponent(projectKey)}` : "");
     const all = () => listeners.tickets.forEach((f) => f("all"));
-    es.onopen = () => {
-      if (opened) all(); // a reconnect may have missed changes
-      opened = true;
-    };
-    es.addEventListener("notification", (e) => {
-      const n = JSON.parse((e as MessageEvent).data) as Notification;
-      listeners.notes.forEach((f) => f(n));
+    return liveStream(() => new EventSource(url), ["notification", "tickets", "resync"], {
+      reopened: all, // changes may have been missed while it was away
+      event(type, data) {
+        if (type === "notification") {
+          const n = JSON.parse(data) as Notification;
+          listeners.notes.forEach((f) => f(n));
+        } else if (type === "tickets") {
+          const { tickets } = JSON.parse(data) as { tickets: number[] };
+          listeners.tickets.forEach((f) => f(tickets));
+        } else {
+          all();
+        }
+      },
     });
-    es.addEventListener("tickets", (e) => {
-      const { tickets } = JSON.parse((e as MessageEvent).data) as { tickets: number[] };
-      listeners.tickets.forEach((f) => f(tickets));
-    });
-    es.addEventListener("resync", all);
-    return () => es.close();
   }, [projectKey, listeners]);
   return <Live.Provider value={listeners}>{children}</Live.Provider>;
 }
