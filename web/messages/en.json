@@ -736,7 +736,7 @@
   },
   "ticket": {
     "liveUpdated": "This ticket was updated.",
-    "liveReload": "Reload now",
+    "liveLoad": "Load the changes",
     "edit": "Edit",
     "status": "Status",
     "core": "All clients (core)",

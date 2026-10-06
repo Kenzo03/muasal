@@ -736,7 +736,7 @@
   },
   "ticket": {
     "liveUpdated": "Tiket ini diperbarui.",
-    "liveReload": "Muat ulang sekarang",
+    "liveLoad": "Muat perubahan",
     "edit": "Ubah",
     "status": "Status",
     "core": "Semua klien (inti)",

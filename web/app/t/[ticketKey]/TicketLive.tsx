@@ -20,20 +20,21 @@ export function useEditing(active: boolean) {
 
 // TicketLive refreshes the ticket page when this ticket changes elsewhere
 // (spec: live ticket updates). While an editor is open it holds the refresh
-// and says the ticket changed; closing the editor refreshes, and "Reload
-// now" drops the edit.
+// and says the ticket changed; closing the editor refreshes. "Load the
+// changes" refreshes at once and keeps the edit, so its save carries the new
+// version instead of being refused as stale (AC-TK-5 keeps the typed text).
 export default function TicketLive({ ticketId, children }: { ticketId: number; children: React.ReactNode }) {
   const t = useTranslations("ticket");
   const [editors, setEditors] = useState(0);
   const [count] = useState(() => (delta: number) => setEditors((n) => n + delta));
-  const stale = useLiveRefresh({ ticketId, paused: editors > 0 });
+  const { stale, refreshNow } = useLiveRefresh({ ticketId, paused: editors > 0 });
   return (
     <Editing.Provider value={count}>
       {stale && (
         <p role="status" className="mx-4 mt-3 flex items-center gap-3 rounded-xl bg-accent-soft px-4 py-2 text-sm md:mx-5">
           {t("liveUpdated")}
-          <button type="button" className={button.secondary} onClick={() => window.location.reload()}>
-            {t("liveReload")}
+          <button type="button" className={button.secondary} onClick={refreshNow}>
+            {t("liveLoad")}
           </button>
         </p>
       )}

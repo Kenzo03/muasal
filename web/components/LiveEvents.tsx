@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { components } from "@/lib/api-types";
 import { liveStream, refresher } from "@/lib/live";
@@ -67,8 +67,12 @@ export function useTicketChanges(fn: (c: TicketChange) => void) {
 
 // useLiveRefresh refreshes the page's server data when its tickets change:
 // all of the project's, or one ticket's. While paused it holds the refresh
-// and returns stale = true; resuming runs it.
-export function useLiveRefresh({ ticketId, paused = false }: { ticketId?: number; paused?: boolean } = {}): boolean {
+// and reports stale; resuming runs it, and refreshNow runs it at once without
+// resuming.
+export function useLiveRefresh({ ticketId, paused = false }: { ticketId?: number; paused?: boolean } = {}): {
+  stale: boolean;
+  refreshNow: () => void;
+} {
   const router = useRouter();
   const routerRef = useRef(router);
   useEffect(() => {
@@ -103,7 +107,15 @@ export function useLiveRefresh({ ticketId, paused = false }: { ticketId?: number
     if (pausedRef.current) setStale(true);
     r.signal();
   });
-  return stale;
+  // As a transition, so stale clears together with the fresh data: an edit
+  // saved right after then carries the new version.
+  const [, startTransition] = useTransition();
+  const refreshNow = () =>
+    startTransition(() => {
+      setStale(false);
+      router.refresh();
+    });
+  return { stale, refreshNow };
 }
 
 // LiveRefresh gives a server page live updates for its project's tickets.

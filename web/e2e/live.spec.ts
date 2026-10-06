@@ -36,19 +36,33 @@ test("an open board and ticket page follow changes made elsewhere", async ({ pag
   await page.goto(`/t/${ticket.key}`);
   await page.getByRole("button", { name: "Ubah", exact: true }).first().click();
   // PUT replaces every editable field; this ticket only has a requester besides these.
-  const current = await agent.get(`/api/v1/tickets/${ticket.key}`);
-  const { requester } = (await current.json()) as { requester: { kind: string; id: number } };
-  const renamed = await agent.put(`/api/v1/tickets/${ticket.key}`, {
-    data: {
-      type: "bug", title: "Renamed by the agent", node_ids: [node.id],
-      [requester.kind === "user" ? "requester_user_id" : "requester_contact_id"]: requester.id,
-    },
-    headers: { "If-Match": current.headers()["etag"] },
-  });
-  expect(renamed.ok(), `rename: ${renamed.status()}`).toBeTruthy();
+  const rename = async (title: string) => {
+    const current = await agent.get(`/api/v1/tickets/${ticket.key}`);
+    const { requester } = (await current.json()) as { requester: { kind: string; id: number } };
+    const renamed = await agent.put(`/api/v1/tickets/${ticket.key}`, {
+      data: {
+        type: "bug", title, node_ids: [node.id],
+        [requester.kind === "user" ? "requester_user_id" : "requester_contact_id"]: requester.id,
+      },
+      headers: { "If-Match": current.headers()["etag"] },
+    });
+    expect(renamed.ok(), `rename: ${renamed.status()}`).toBeTruthy();
+  };
+  await rename("Renamed by the agent");
   await expect(page.getByText("Tiket ini diperbarui.")).toBeVisible({ timeout: 5_000 });
   await page.getByRole("button", { name: "Batal" }).click();
   await expect(page.getByText("Tiket ini diperbarui.")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Renamed by the agent" })).toBeVisible();
+
+  // Review #3: the bar's button loads the change but keeps the edit, and the
+  // save that follows carries the new version, so it is not refused as stale.
+  await page.getByRole("button", { name: "Ubah", exact: true }).first().click();
+  await rename("Renamed again");
+  await expect(page.getByText("Tiket ini diperbarui.")).toBeVisible({ timeout: 5_000 });
+  await page.getByRole("button", { name: "Muat perubahan" }).click();
+  await expect(page.getByText("Tiket ini diperbarui.")).toHaveCount(0);
+  await page.getByRole("button", { name: "Simpan", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Simpan", exact: true })).toHaveCount(0);
+  await expect(page.getByText("Seseorang baru saja mengubah tiket ini", { exact: false })).toHaveCount(0); // not refused as stale
   await agent.dispose();
 });
