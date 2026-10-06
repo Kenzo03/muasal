@@ -15,8 +15,9 @@ import (
 	"github.com/kenzo03/zettra/server/internal/db"
 )
 
-// hub fans notifications out to each user's open streams. One LISTEN
-// connection feeds it (FSD §8.10); it starts with the first stream.
+// hub fans IDs out to the open streams subscribed under a key: notifications
+// by user ID (FSD §8.10), and ticket changes by project ID (spec: live ticket
+// updates). One LISTEN connection feeds both; it starts with the first stream.
 type hub struct {
 	mu    sync.Mutex
 	subs  map[int64]map[chan int64]struct{}
@@ -52,9 +53,27 @@ func (h *hub) publish(userID, id int64) {
 	}
 }
 
-// listen holds one connection on LISTEN zettra_notifications and publishes
-// each "user:id" payload, reconnecting after a failure.
+// all sends id to every subscriber of every key, skipping stuck ones; the
+// listener sends 0 after a reconnect so open pages resync.
+func (h *hub) all(id int64) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for _, chans := range h.subs {
+		for ch := range chans {
+			select {
+			case ch <- id:
+			default:
+			}
+		}
+	}
+}
+
+// listen holds one connection on LISTEN zettra_notifications and
+// zettra_tickets and publishes each "key:id" payload to its hub, reconnecting
+// after a failure. Signals sent while it was away are lost, so after each
+// reconnect it asks every open stream to resync.
 func (s *Server) listen(ctx context.Context) {
+	first := true
 	for ctx.Err() == nil {
 		err := func() error {
 			conn, err := s.pool.Acquire(ctx)
@@ -62,19 +81,28 @@ func (s *Server) listen(ctx context.Context) {
 				return err
 			}
 			defer conn.Release()
-			if _, err := conn.Exec(ctx, "LISTEN zettra_notifications"); err != nil {
+			if _, err := conn.Exec(ctx, "LISTEN zettra_notifications; LISTEN zettra_tickets"); err != nil {
 				return err
 			}
+			if !first {
+				s.tickets.all(0)
+			}
+			first = false
 			for {
 				n, err := conn.Conn().WaitForNotification(ctx)
 				if err != nil {
 					return err
 				}
-				user, id, ok := strings.Cut(n.Payload, ":")
-				uid, err1 := strconv.ParseInt(user, 10, 64)
-				nid, err2 := strconv.ParseInt(id, 10, 64)
-				if ok && err1 == nil && err2 == nil {
-					s.hub.publish(uid, nid)
+				key, id, ok := strings.Cut(n.Payload, ":")
+				k, err1 := strconv.ParseInt(key, 10, 64)
+				v, err2 := strconv.ParseInt(id, 10, 64)
+				if !ok || err1 != nil || err2 != nil {
+					continue
+				}
+				if n.Channel == "zettra_tickets" {
+					s.tickets.publish(k, v)
+				} else {
+					s.hub.publish(k, v)
 				}
 			}
 		}()
