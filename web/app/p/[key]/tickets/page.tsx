@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getLocale, getTimeZone, getTranslations } from "next-intl/server";
 import { Avatar, ClientChip, PriorityChip, StatusDot, TypeIcon, showsClients } from "@/components/Chips";
 import Icon from "@/components/Icon";
+import { LiveRefresh } from "@/components/LiveEvents";
 import PageBar from "@/components/PageBar";
 import TicketFilters from "@/components/TicketFilters";
 import { dateIn, dateTime, day, dayOf } from "@/lib/format";
@@ -72,6 +73,7 @@ export default async function TicketsPage({
         )}
       </PageBar>
       <main className="flex flex-col gap-3 px-4 py-4 md:px-5">
+        <LiveRefresh />
         {canEdit && items.length > 0 && <BulkBar people={assignees.data?.items ?? []} statuses={statuses.data?.items ?? []} releases={releases.data?.items ?? []} />}
         {items.length === 0 ? (
           <p className="text-muted">{t("none")}</p>
