@@ -40,6 +40,9 @@ export default async function globalSetup() {
   const tickets = createAdmin("Ticket Admin");
   process.env.E2E_TICKET_ADMIN_EMAIL = tickets.email;
   process.env.E2E_TICKET_ADMIN_LINK = tickets.link;
+  const live = createAdmin("Live Admin");
+  process.env.E2E_LIVE_ADMIN_EMAIL = live.email;
+  process.env.E2E_LIVE_ADMIN_LINK = live.link;
   const decisions = createAdmin("Decision Admin");
   process.env.E2E_DECISION_ADMIN_EMAIL = decisions.email;
   process.env.E2E_DECISION_ADMIN_LINK = decisions.link;

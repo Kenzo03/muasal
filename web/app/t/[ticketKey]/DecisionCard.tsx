@@ -9,6 +9,7 @@ import { api } from "@/lib/api";
 import { dateTime } from "@/lib/format";
 import { useProblemText, type DecisionRecord } from "@/lib/problem";
 import { button, chip, cx, field, panel } from "@/lib/ui";
+import { useEditing } from "./TicketLive";
 
 // The decision record on the ticket page (FSD §8.6, §9): what changed, why and
 // what was rejected. Project admins and the confirmer reword a confirmed record
@@ -20,6 +21,7 @@ export default function DecisionCard({ ticketKey, decision, canEdit }: { ticketK
   const router = useRouter();
   const problemText = useProblemText();
   const [editing, setEditing] = useState(false);
+  useEditing(editing);
   const [error, setError] = useState("");
   const confirmed = decision.state === "confirmed";
   const implemented = decision.outcome === "implemented";

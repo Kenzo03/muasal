@@ -735,6 +735,8 @@
     "noRelease": "None"
   },
   "ticket": {
+    "liveUpdated": "This ticket was updated.",
+    "liveReload": "Reload now",
     "edit": "Edit",
     "status": "Status",
     "core": "All clients (core)",

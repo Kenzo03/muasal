@@ -735,6 +735,8 @@
     "noRelease": "Tidak ada"
   },
   "ticket": {
+    "liveUpdated": "Tiket ini diperbarui.",
+    "liveReload": "Muat ulang sekarang",
     "edit": "Ubah",
     "status": "Status",
     "core": "Semua klien (inti)",

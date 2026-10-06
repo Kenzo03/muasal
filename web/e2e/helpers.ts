@@ -13,8 +13,9 @@ export async function setPassword(page: Page, link: string, password: string) {
     const res = await answer;
     // The setup-link endpoints share a limit of 20 requests a minute per
     // address, and a full run opens more links than that, so a limited attempt
-    // waits for the next minute and tries once more.
-    if (tries === 0 && res.status() === 429 && (await res.json()).code === "rate_limited") {
+    // waits for the next minute and tries again, up to three times: parallel
+    // specs can fill the next minute too.
+    if (tries < 3 && res.status() === 429 && (await res.json()).code === "rate_limited") {
       test.info().setTimeout(test.info().timeout + 65_000);
       await page.waitForTimeout(61_000);
       continue;
