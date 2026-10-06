@@ -3208,6 +3208,12 @@ type ListContactsParams struct {
 	Internal *bool `form:"internal,omitempty" json:"internal,omitempty"`
 }
 
+// StreamEventsParams defines parameters for StreamEvents.
+type StreamEventsParams struct {
+	// Project A project key; needs the Viewer role.
+	Project *string `form:"project,omitempty" json:"project,omitempty"`
+}
+
 // CreateImportMultipartBody defines parameters for CreateImport.
 type CreateImportMultipartBody struct {
 	File openapi_types.File `json:"file"`
@@ -3699,6 +3705,9 @@ type ServerInterface interface {
 
 	// (POST /documents/{key}/tree-drafts)
 	StartTreeDraft(w http.ResponseWriter, r *http.Request, key string)
+
+	// (GET /events)
+	StreamEvents(w http.ResponseWriter, r *http.Request, params StreamEventsParams)
 
 	// (GET /imports)
 	ListImports(w http.ResponseWriter, r *http.Request)
@@ -5017,6 +5026,39 @@ func (siw *ServerInterfaceWrapper) StartTreeDraft(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.StartTreeDraft(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StreamEvents operation middleware
+func (siw *ServerInterfaceWrapper) StreamEvents(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params StreamEventsParams
+
+	// ------------- Optional query parameter "project" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "project", r.URL.Query(), &params.Project, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "project"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StreamEvents(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -7920,6 +7962,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/notifications", wrapper.ListNotifications)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/notifications/read", wrapper.MarkNotificationsRead)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/notifications/stream", wrapper.StreamNotifications)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/events", wrapper.StreamEvents)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/tickets/{key}/mentionable", wrapper.ListMentionable)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/users", wrapper.ListUsers)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/admin/users", wrapper.CreateUser)

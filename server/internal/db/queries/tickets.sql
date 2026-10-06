@@ -136,3 +136,8 @@ WHERE t.project_id = sqlc.arg('project_id')
 GROUP BY l
 ORDER BY count(*) DESC, l
 LIMIT 200;
+
+-- name: TicketClients :many
+-- The client of each changed ticket still in the project, for the live-update
+-- visibility check (spec: live ticket updates); deleted tickets are absent.
+SELECT id, client_id FROM tickets WHERE project_id = sqlc.arg('project_id') AND id = ANY (sqlc.arg('ids')::bigint[]);

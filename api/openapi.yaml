@@ -288,6 +288,24 @@ paths:
             text/event-stream:
               schema: { type: string }
         default: { $ref: "#/components/responses/Problem" }
+  /events:
+    get:
+      operationId: streamEvents
+      tags: [me]
+      description: >-
+        One server-sent event stream per browser tab. `notification` carries each new Notification, as
+        /notifications/stream does. With `project`, `tickets` carries {"tickets":[ids]}: the tickets of that project that
+        changed and the caller may see, merged over 300 ms; `resync` asks the page to reload everything. A comment line
+        every 15 seconds keeps proxies open.
+      parameters:
+        - { name: project, in: query, required: false, schema: { type: string }, description: A project key; needs the Viewer role. }
+      responses:
+        "200":
+          description: The stream.
+          content:
+            text/event-stream:
+              schema: { type: string }
+        default: { $ref: "#/components/responses/Problem" }
   /tickets/{key}/mentionable:
     parameters:
       - { name: key, in: path, required: true, schema: { type: string } }
