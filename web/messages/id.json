@@ -639,7 +639,14 @@
     "showRecent": "14 hari terakhir",
     "moveTo": "Status {key}",
     "noClient": "Inti",
-    "checklist": "Langkah checklist yang selesai"
+    "checklist": "Langkah checklist yang selesai",
+    "sortBy": "Urutkan {status}",
+    "sort": {
+      "priority": "Prioritas tertinggi",
+      "priority-low": "Prioritas terendah",
+      "newest": "Terbaru",
+      "oldest": "Terlama"
+    }
   },
   "tickets": {
     "new": "Tiket baru",

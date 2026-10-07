@@ -639,7 +639,14 @@
     "showRecent": "Last 14 days",
     "moveTo": "Status of {key}",
     "noClient": "Core",
-    "checklist": "Checklist steps done"
+    "checklist": "Checklist steps done",
+    "sortBy": "Sort {status}",
+    "sort": {
+      "priority": "Highest priority",
+      "priority-low": "Lowest priority",
+      "newest": "Newest",
+      "oldest": "Oldest"
+    }
   },
   "tickets": {
     "new": "New ticket",
