@@ -25,7 +25,11 @@ test("an open board and ticket page follow changes made elsewhere", async ({ pag
   const agent = await request.newContext({ baseURL: origin, extraHTTPHeaders: { Authorization: `Bearer ${token}` } });
 
   // The board: the agent moves the ticket; the card changes column, no reload.
+  // The agent acts once the board listens: a change in the moment before its
+  // stream opens is not sent to it (a known gap, see PR #19's review).
+  const listening = page.waitForResponse((r) => r.url().includes(`/api/v1/events?project=${key}`));
   await page.goto(`/p/${key}/board`);
+  await listening;
   const column = page.getByRole("region", { name: "In progress" });
   await expect(column.getByRole("article")).toHaveCount(0);
   const moved = await agent.post(`/api/v1/tickets/${ticket.key}/transition`, { data: { status_id: inProgress } });
@@ -33,7 +37,9 @@ test("an open board and ticket page follow changes made elsewhere", async ({ pag
   await expect(column.getByRole("article")).toContainText(ticket.key, { timeout: 5_000 });
 
   // The ticket page, editing: the bar appears; cancelling shows the change.
+  const listeningAgain = page.waitForResponse((r) => r.url().includes(`/api/v1/events?project=${key}`));
   await page.goto(`/t/${ticket.key}`);
+  await listeningAgain;
   await page.getByRole("button", { name: "Ubah", exact: true }).first().click();
   // PUT replaces every editable field; this ticket only has a requester besides these.
   const rename = async (title: string) => {
