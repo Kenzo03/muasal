@@ -49,7 +49,9 @@ const dropTarget: CollisionDetection = (args) => {
 };
 
 // A status column that takes dropped cards. It is at most a screen tall and
-// its cards scroll inside it, so a long column does not scroll the page.
+// its cards scroll inside it, so a long column does not scroll the page. Only
+// the card list may shrink: the title, the sort and the closed note keep
+// their height (shrink-0).
 // From 1024 px, five columns fit
 // beside the open sidebar (MSL-61): below 1280 px they drop the add button
 // (New ticket still adds) so status names fit; narrower screens scroll.
@@ -169,7 +171,7 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, s
             const droppable = canEdit;
             return (
               <Column key={s.id} status={s} canEdit={canEdit}>
-                <h2 className="flex min-h-9 items-center gap-2 pl-2 pr-0.5 text-sm font-extrabold leading-tight lg:max-xl:gap-1.5 lg:max-xl:pl-1">
+                <h2 className="flex min-h-9 shrink-0 items-center gap-2 pl-2 pr-0.5 text-sm font-extrabold leading-tight lg:max-xl:gap-1.5 lg:max-xl:pl-1">
                   <StatusDot color={s.color} className="size-2.5 shrink-0" />
                   <span className="min-w-0 break-words">{s.name}</span>
                   <span className="text-[13px] font-bold text-muted">{cards.length}</span>
@@ -187,14 +189,14 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, s
                   aria-label={t("sortBy", { status: s.name })}
                   value={sort}
                   onChange={(e) => chooseSort(s.id, e.target.value as BoardSort)}
-                  className="mx-1 h-7 cursor-pointer rounded-lg bg-white/60 px-2 text-xs font-semibold text-ink-soft hover:text-ink"
+                  className="mx-1 h-7 shrink-0 cursor-pointer rounded-lg bg-white/60 px-2 text-xs font-semibold text-ink-soft hover:text-ink"
                 >
                   {boardSorts.map((o) => (
                     <option key={o} value={o}>{t(`sort.${o}`)}</option>
                   ))}
                 </select>
                 {closes(s) && (
-                  <p className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 pb-1 text-[13px] text-ink-soft">
+                  <p className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 px-2 pb-1 text-[13px] text-ink-soft">
                     {showAll ? t("allClosed") : t("recentClosed")}
                     <Link href={`?${new URLSearchParams(showAll ? recent : { ...query, closed: "all" })}`} className="ml-auto">
                       {showAll ? t("showRecent") : t("showAll")}
