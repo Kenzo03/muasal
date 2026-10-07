@@ -41,6 +41,7 @@ type Server struct {
 	askRate *auth.Limiter
 	tokRate *auth.Limiter
 	hub     hub
+	tickets hub                                                 // ticket changes by project ID, fed by the same listener
 	bg      context.Context                                     // lives until Close: the notification listener runs in it
 	stop    context.CancelFunc                                  //
 	send    func(c mail.Config, to, subject, body string) error // mail.Send unless a test swaps it

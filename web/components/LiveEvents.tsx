@@ -1,0 +1,125 @@
+"use client";
+
+import { createContext, useContext, useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import type { components } from "@/lib/api-types";
+import { liveStream, refresher } from "@/lib/live";
+
+type Notification = components["schemas"]["Notification"];
+type TicketChange = number[] | "all";
+type Listeners = { notes: Set<(n: Notification) => void>; tickets: Set<(c: TicketChange) => void> };
+
+const Live = createContext<Listeners | null>(null);
+
+// LiveEvents holds the tab's one event stream (spec: live ticket updates):
+// the bell's notifications and, inside a project, which tickets changed. One
+// stream per tab keeps plain-HTTP installs under the browser's six-connection
+// limit.
+export default function LiveEvents({ projectKey, children }: { projectKey?: string; children: React.ReactNode }) {
+  const [listeners] = useState<Listeners>(() => ({ notes: new Set(), tickets: new Set() }));
+  useEffect(() => {
+    const url = "/api/v1/events" + (projectKey ? `?project=${encodeURIComponent(projectKey)}` : "");
+    const all = () => listeners.tickets.forEach((f) => f("all"));
+    return liveStream(() => new EventSource(url), ["notification", "tickets", "resync"], {
+      reopened: all, // changes may have been missed while it was away
+      event(type, data) {
+        if (type === "notification") {
+          const n = JSON.parse(data) as Notification;
+          listeners.notes.forEach((f) => f(n));
+        } else if (type === "tickets") {
+          const { tickets } = JSON.parse(data) as { tickets: number[] };
+          listeners.tickets.forEach((f) => f(tickets));
+        } else {
+          all();
+        }
+      },
+    });
+  }, [projectKey, listeners]);
+  return <Live.Provider value={listeners}>{children}</Live.Provider>;
+}
+
+// useListen subscribes fn to one kind of event, always calling the latest fn.
+function useListen<T>(pick: (l: Listeners) => Set<(v: T) => void>, fn: (v: T) => void) {
+  const listeners = useContext(Live);
+  const latest = useRef(fn);
+  useEffect(() => {
+    latest.current = fn;
+  });
+  useEffect(() => {
+    if (!listeners) return;
+    const set = pick(listeners);
+    const h = (v: T) => latest.current(v);
+    set.add(h);
+    return () => {
+      set.delete(h);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listeners]);
+}
+
+export function useNotifications(fn: (n: Notification) => void) {
+  useListen((l) => l.notes, fn);
+}
+
+export function useTicketChanges(fn: (c: TicketChange) => void) {
+  useListen((l) => l.tickets, fn);
+}
+
+// useLiveRefresh refreshes the page's server data when its tickets change:
+// all of the project's, or one ticket's. While paused it holds the refresh
+// and reports stale; resuming runs it, and refreshNow runs it at once without
+// resuming.
+export function useLiveRefresh({ ticketId, paused = false }: { ticketId?: number; paused?: boolean } = {}): {
+  stale: boolean;
+  refreshNow: () => void;
+} {
+  const router = useRouter();
+  const routerRef = useRef(router);
+  useEffect(() => {
+    routerRef.current = router;
+  });
+  const [stale, setStale] = useState(false);
+  const [r] = useState(() =>
+    refresher(() => {
+      setStale(false);
+      routerRef.current.refresh();
+    }),
+  );
+  useEffect(() => {
+    r.pause(paused);
+    if (!paused) setStale(false);
+  }, [r, paused]);
+  useEffect(() => {
+    const onVisibility = () => r.visible(!document.hidden);
+    onVisibility();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      r.dispose();
+    };
+  }, [r]);
+  const pausedRef = useRef(paused);
+  useEffect(() => {
+    pausedRef.current = paused;
+  });
+  useTicketChanges((c) => {
+    if (c !== "all" && ticketId !== undefined && !c.includes(ticketId)) return;
+    if (pausedRef.current) setStale(true);
+    r.signal();
+  });
+  // As a transition, so stale clears together with the fresh data: an edit
+  // saved right after then carries the new version.
+  const [, startTransition] = useTransition();
+  const refreshNow = () =>
+    startTransition(() => {
+      setStale(false);
+      router.refresh();
+    });
+  return { stale, refreshNow };
+}
+
+// LiveRefresh gives a server page live updates for its project's tickets.
+export function LiveRefresh() {
+  useLiveRefresh();
+  return null;
+}

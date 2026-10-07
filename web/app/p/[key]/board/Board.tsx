@@ -19,6 +19,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Avatar, ClientChip, PriorityChip, StatusDot, TypeIcon } from "@/components/Chips";
 import CloseDialog from "@/components/CloseDialog";
 import Icon from "@/components/Icon";
+import { useLiveRefresh } from "@/components/LiveEvents";
 import { api } from "@/lib/api";
 import { day } from "@/lib/format";
 import { useProblemText, type Node, type Status, type Ticket, type TicketSummary } from "@/lib/problem";
@@ -94,6 +95,9 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, s
   const showAll = query.closed === "all";
   const { closed: _closed, ...recent } = query;
   useEffect(() => setItems(tickets), [tickets]); // fresh server data wins
+  // Live updates (spec: live ticket updates): changes made elsewhere move the
+  // cards; not mid-drag or while the close dialog is open.
+  useLiveRefresh({ paused: dragging !== null || closing !== null });
 
   async function move(ticketId: number, statusId: number) {
     const card = items.find((x) => x.id === ticketId);

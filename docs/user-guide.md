@@ -20,6 +20,7 @@ Press **c** anywhere to file a ticket. It needs a title, a type, the client (or 
 - **Comments** are Internal by default. Mark one Client-safe only when it may appear in a client-facing summary. Type **@** to mention a member.
 - **Links** say that a ticket reverses, extends or relates to another. A reversing ticket supersedes the older decision.
 - **The board** moves tickets between statuses by drag and drop.
+- **Live updates:** the board, the ticket list and an open ticket follow changes made elsewhere, by a teammate, an AI agent or a Git commit, without a reload. While you are editing a ticket, it says "This ticket was updated" instead of changing under you, and refreshes when you save or cancel.
 - **In the list,** tick tickets to change their assignee, priority, due date, release or status together, or to **Close out** several at once: their decision records are drafted with AI one after another, then each opens in the close dialog to confirm or edit, and closing one opens the next.
 - **Releases** (project settings) such as v1.0 group the tickets that ship together; the board and list filter by them.
 - **Client acceptance** on a ticket records who at the client accepted the work, as in UAT sign-off, and when; the list filters on it and summaries show it.

@@ -597,6 +597,42 @@ func (q *Queries) SetTicketStatus(ctx context.Context, arg SetTicketStatusParams
 	return i, err
 }
 
+const ticketClients = `-- name: TicketClients :many
+SELECT id, client_id FROM tickets WHERE project_id = $1 AND id = ANY ($2::bigint[])
+`
+
+type TicketClientsParams struct {
+	ProjectID int64
+	Ids       []int64
+}
+
+type TicketClientsRow struct {
+	ID       int64
+	ClientID *int64
+}
+
+// The client of each changed ticket still in the project, for the live-update
+// visibility check (spec: live ticket updates); deleted tickets are absent.
+func (q *Queries) TicketClients(ctx context.Context, arg TicketClientsParams) ([]TicketClientsRow, error) {
+	rows, err := q.db.Query(ctx, ticketClients, arg.ProjectID, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TicketClientsRow
+	for rows.Next() {
+		var i TicketClientsRow
+		if err := rows.Scan(&i.ID, &i.ClientID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateTicket = `-- name: UpdateTicket :one
 UPDATE tickets SET type = $1, title = $2, description = $3,
   reason = $4, client_id = $5, requester_contact_id = $6,

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getMe, getProject, serverApi } from "@/lib/server-api";
 import Activity from "./Activity";
 import Attachments from "./Attachments";
+import TicketLive from "./TicketLive";
 import TicketView from "./TicketView";
 
 // The ticket page (FSD §8.6): the target of every citation and link to a ticket.
@@ -24,19 +25,21 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketK
   const people = mentionable.data?.items ?? [];
   const canEdit = project.role !== "viewer";
   return (
-    <TicketView
-      ticket={ticket}
-      statuses={statuses.data?.items ?? []}
-      clients={clients.data?.items ?? []}
-      nodes={nodes.data?.items ?? []}
-      assignees={assignees.data?.items ?? []}
-      canEdit={canEdit}
-      canEditDecision={project.role === "admin" || ticket.decision?.confirmed_by?.id === me.id}
-      people={people}
-      activity={<Activity ticketKey={ticket.key} items={activity.data?.items ?? []} meId={me.id} canComment={canEdit} people={people} />}
-      attachments={
-        <Attachments ticketKey={ticket.key} files={ticket.attachments} meId={me.id} isProjectAdmin={project.role === "admin"} canUpload={canEdit} />
-      }
-    />
+    <TicketLive ticketId={ticket.id}>
+      <TicketView
+        ticket={ticket}
+        statuses={statuses.data?.items ?? []}
+        clients={clients.data?.items ?? []}
+        nodes={nodes.data?.items ?? []}
+        assignees={assignees.data?.items ?? []}
+        canEdit={canEdit}
+        canEditDecision={project.role === "admin" || ticket.decision?.confirmed_by?.id === me.id}
+        people={people}
+        activity={<Activity ticketKey={ticket.key} items={activity.data?.items ?? []} meId={me.id} canComment={canEdit} people={people} />}
+        attachments={
+          <Attachments ticketKey={ticket.key} files={ticket.attachments} meId={me.id} isProjectAdmin={project.role === "admin"} canUpload={canEdit} />
+        }
+      />
+    </TicketLive>
   );
 }

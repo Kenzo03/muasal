@@ -277,6 +277,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description One server-sent event stream per browser tab. `notification` carries each new Notification, as /notifications/stream does. With `project`, `tickets` carries {"tickets":[ids]}: the tickets of that project that changed and the caller may see, merged over 300 ms; `resync` asks the page to reload everything. A comment line every 15 seconds keeps proxies open. */
+        get: operations["streamEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tickets/{key}/mentionable": {
         parameters: {
             query?: never;
@@ -3956,6 +3973,30 @@ export interface operations {
     streamNotifications: {
         parameters: {
             query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The stream. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    streamEvents: {
+        parameters: {
+            query?: {
+                /** @description A project key; needs the Viewer role. */
+                project?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;

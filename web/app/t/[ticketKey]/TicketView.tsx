@@ -18,6 +18,7 @@ import { button, cx, field, panel, sectionTitle } from "@/lib/ui";
 import Acceptance from "./Acceptance";
 import Code from "./Code";
 import DecisionCard from "./DecisionCard";
+import { useEditing } from "./TicketLive";
 import Links from "./Links";
 import type { Person } from "@/lib/mentions";
 import { updateBody } from "@/lib/bulk";
@@ -70,6 +71,7 @@ export default function TicketView({ ticket, statuses, clients, nodes, assignees
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState("");
   const [closingTo, setClosingTo] = useState<Status | null>(null);
+  useEditing(editing || closingTo !== null);
   const pathOf = useMemo(() => nodePaths(nodes), [nodes]);
 
   // Open moves go straight through; Done and Cancelled open the close dialog (FSD §9.1).
