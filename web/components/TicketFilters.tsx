@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import AutoApplyForm from "@/components/AutoApplyForm";
 import { showsClients } from "@/components/Chips";
 import Icon from "@/components/Icon";
 import type { Client, Ref, Status } from "@/lib/problem";
@@ -14,8 +15,8 @@ type Props = {
   releases?: { id: number; name: string }[]; // MSL-67
 };
 
-// The filter bar of the board and the list (FSD §8.4, §8.5). It is a GET form,
-// so every view is a URL people can share.
+// The filter bar of the board and the list (FSD §8.4, §8.5). It is a GET form
+// that applies as it changes, so every view is a URL people can share.
 export default async function TicketFilters({ action, values, clients, assignees, statuses, labels = [], releases = [] }: Props) {
   const t = await getTranslations("ticketFilters");
   const tTypes = await getTranslations("ticketTypes");
@@ -24,7 +25,7 @@ export default async function TicketFilters({ action, values, clients, assignees
   const select = "h-full cursor-pointer rounded-[10px] bg-transparent text-[13.5px] font-medium text-muted outline-none";
   const set = ["client", "type", "assignee", "label", "release", "accepted", "status", "due", "stale", "missing"].filter((k) => values[k]).length;
   return (
-    <form method="get" action={action} aria-label={t("label")} className="flex flex-wrap items-center gap-2">
+    <AutoApplyForm action={action} aria-label={t("label")} className="flex flex-wrap items-center gap-2">
       <label className="flex h-9 items-center gap-2 rounded-[10px] border border-line bg-white px-3 text-muted focus-within:border-accent">
         <Icon name="search" />
         <input name="q" defaultValue={values.q} aria-label={t("q")} placeholder={t("qPlaceholder")} className="w-40 bg-transparent text-[13.5px] text-ink outline-none placeholder:text-muted" />
@@ -151,9 +152,8 @@ export default async function TicketFilters({ action, values, clients, assignees
             </label>
           </>
         )}
-        <button className={button.secondary}>{t("apply")}</button>
         <a href={action} className={button.quiet}>{t("reset")}</a>
       </div>
-    </form>
+    </AutoApplyForm>
   );
 }

@@ -2,7 +2,9 @@ import { expect, test } from "@playwright/test";
 import { setPassword, signIn } from "./helpers";
 
 // The board: a project admin can close the setup steps for good (in this
-// browser), and a long status column scrolls on its own, not the page.
+// browser), a long status column scrolls on its own, not the page, every card
+// shows its priority, each column keeps its own sort, and the filters apply
+// as they change.
 test("the setup steps close and a long column scrolls by itself", async ({ page }) => {
   const run = Date.now().toString(36).toUpperCase();
   const key = `B${run.slice(-6)}`;
@@ -18,7 +20,7 @@ test("the setup steps close and a long column scrolls by itself", async ({ page 
   await call("POST", "/projects", { key, name: `Board ${run}` });
   const node = await call("POST", `/projects/${key}/nodes`, { type: "module", name: "Board" });
   for (let i = 1; i <= 15; i++) {
-    await call("POST", `/projects/${key}/tickets`, { type: "bug", title: `Long column ${i}`, node_ids: [node.id] });
+    await call("POST", `/projects/${key}/tickets`, { type: "bug", title: `Long column ${i}`, node_ids: [node.id], priority: i === 1 ? "low" : "medium" });
   }
 
   // The setup steps show for a new project until closed; closed stays closed.
@@ -40,4 +42,22 @@ test("the setup steps close and a long column scrolls by itself", async ({ page 
   expect(scrolls, "a card list inside the column scrolls").toBeTruthy();
   const pageScrolls = await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight + 1);
   expect(pageScrolls, "the page itself does not scroll").toBeFalsy();
+
+  // Every priority shows, Medium and Low included.
+  await expect(todo.getByRole("article").filter({ hasText: `${key}-1` }).getByText("Rendah")).toBeVisible();
+  await expect(todo.getByRole("article").filter({ hasText: `${key}-2` }).getByText("Sedang")).toBeVisible();
+
+  // The default puts the Low ticket last; Oldest puts it first, and stays.
+  await expect(todo.getByRole("article").last()).toContainText(`${key}-1`);
+  await page.getByLabel("Urutkan To do").selectOption({ label: "Terlama" });
+  await expect(todo.getByRole("article").first()).toContainText(`${key}-1`);
+  await page.reload();
+  await expect(page.getByLabel("Urutkan To do")).toHaveValue("oldest");
+  await expect(todo.getByRole("article").first()).toContainText(`${key}-1`);
+
+  // A filter applies as soon as it changes: no Apply button.
+  await expect(page.getByRole("button", { name: "Terapkan" })).toHaveCount(0);
+  await page.getByRole("combobox", { name: "Jenis", exact: true }).selectOption({ label: "Fitur" });
+  await expect(page).toHaveURL(/[?&]type=feature/);
+  await expect(todo.getByRole("article")).toHaveCount(0);
 });

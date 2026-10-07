@@ -21,6 +21,7 @@ import CloseDialog from "@/components/CloseDialog";
 import Icon from "@/components/Icon";
 import { useLiveRefresh } from "@/components/LiveEvents";
 import { api } from "@/lib/api";
+import { boardSorts, sortCards, type BoardSort } from "@/lib/board-sort";
 import { day } from "@/lib/format";
 import { useProblemText, type Node, type Status, type Ticket, type TicketSummary } from "@/lib/problem";
 import { cx, field } from "@/lib/ui";
@@ -97,6 +98,29 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, s
   const showAll = query.closed === "all";
   const { closed: _closed, ...recent } = query;
   useEffect(() => setItems(tickets), [tickets]); // fresh server data wins
+  // Each column's order, remembered in this browser; read after the first
+  // render so the server's and the browser's first render match.
+  const [sorts, setSorts] = useState<Record<number, BoardSort>>({});
+  useEffect(() => {
+    const saved: Record<number, BoardSort> = {};
+    for (const s of statuses) {
+      try {
+        const v = localStorage.getItem(`zettra:board-sort:${s.id}`);
+        if ((boardSorts as readonly (string | null)[]).includes(v)) saved[s.id] = v as BoardSort;
+      } catch {
+        // storage blocked: the default order
+      }
+    }
+    setSorts(saved);
+  }, [statuses]);
+  function chooseSort(statusId: number, sort: BoardSort) {
+    setSorts((x) => ({ ...x, [statusId]: sort }));
+    try {
+      localStorage.setItem(`zettra:board-sort:${statusId}`, sort);
+    } catch {
+      // storage blocked: the choice lasts until the page closes
+    }
+  }
   // Live updates (spec: live ticket updates): changes made elsewhere move the
   // cards; not mid-drag or while the close dialog is open.
   useLiveRefresh({ paused: dragging !== null || closing !== null });
@@ -140,7 +164,8 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, s
       >
         <div className="flex gap-3 overflow-x-auto pb-2 lg:max-xl:gap-2">
           {statuses.map((s) => {
-            const cards = items.filter((x) => x.status_id === s.id);
+            const sort = sorts[s.id] ?? "priority";
+            const cards = sortCards(items.filter((x) => x.status_id === s.id), sort);
             const droppable = canEdit;
             return (
               <Column key={s.id} status={s} canEdit={canEdit}>
@@ -158,6 +183,16 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, s
                     </Link>
                   )}
                 </h2>
+                <select
+                  aria-label={t("sortBy", { status: s.name })}
+                  value={sort}
+                  onChange={(e) => chooseSort(s.id, e.target.value as BoardSort)}
+                  className="mx-1 h-7 cursor-pointer rounded-lg bg-white/60 px-2 text-xs font-semibold text-ink-soft hover:text-ink"
+                >
+                  {boardSorts.map((o) => (
+                    <option key={o} value={o}>{t(`sort.${o}`)}</option>
+                  ))}
+                </select>
                 {closes(s) && (
                   <p className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 pb-1 text-[13px] text-ink-soft">
                     {showAll ? t("allClosed") : t("recentClosed")}
@@ -180,7 +215,7 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, s
                         {(c.missing_reason || c.node_names.length === 0) && (
                           <span role="img" title={t("missing")} aria-label={t("missing")} className="size-[7px] rounded-full bg-[#D97706]" />
                         )}
-                        {(c.priority === "high" || c.priority === "urgent") && <PriorityChip priority={c.priority} label={tPri(c.priority)} />}
+                        <PriorityChip priority={c.priority} label={tPri(c.priority)} />
                         {c.assignee && <Avatar name={c.assignee.name} className="ml-auto size-6 bg-accent-soft text-[10px] font-bold text-accent-strong" />}
                       </div>
                       <Link href={`/t/${c.key}`} className="text-sm font-bold leading-snug text-ink no-underline hover:text-ink hover:underline">
