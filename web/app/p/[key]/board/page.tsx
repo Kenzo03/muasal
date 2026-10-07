@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTimeZone, getTranslations } from "next-intl/server";
@@ -10,6 +11,7 @@ import { getProject, serverApi } from "@/lib/server-api";
 import { one, ticketQuery } from "@/lib/ticket-query";
 import { cx, panel } from "@/lib/ui";
 import Board from "./Board";
+import SetupClose from "./SetupClose";
 
 // The board (FSD §8.4): one column per status, cards by priority, due date, then key.
 export default async function BoardPage({
@@ -54,6 +56,8 @@ export default async function BoardPage({
       ] as const)
     : [];
   const ts = await getTranslations("project.setup");
+  // Closed in this browser with SetupClose (option A: a cookie, per project).
+  const setupHidden = decodeURIComponent((await cookies()).get("setup-hidden")?.value ?? "").split(",").includes(key);
   return (
     <>
       <PageBar>
@@ -69,11 +73,14 @@ export default async function BoardPage({
         />
       </PageBar>
       <main className="px-4 py-4 md:px-5">
-        {st && !(st.clients && st.team && st.tree && st.tickets) && (
+        {st && !setupHidden && !(st.clients && st.team && st.tree && st.tickets) && (
           <section aria-labelledby="project-setup" className={cx(panel, "mb-4 flex flex-col gap-3 px-5 py-4")}>
-            <div className="flex flex-col gap-0.5">
-              <h2 id="project-setup" className="text-base font-extrabold">{ts("title")}</h2>
-              <span className="text-[13px] text-muted">{ts("hint")}</span>
+            <div className="flex items-start gap-3">
+              <div className="flex flex-1 flex-col gap-0.5">
+                <h2 id="project-setup" className="text-base font-extrabold">{ts("title")}</h2>
+                <span className="text-[13px] text-muted">{ts("hint")}</span>
+              </div>
+              <SetupClose projectKey={key} />
             </div>
             <ol className="flex flex-col gap-1.5">
               {steps.map(([name, done, href]) => (

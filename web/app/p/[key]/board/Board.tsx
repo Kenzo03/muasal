@@ -47,7 +47,9 @@ const dropTarget: CollisionDetection = (args) => {
   return hits.length > 0 ? hits : rectIntersection(args);
 };
 
-// A status column that takes dropped cards. From 1024 px, five columns fit
+// A status column that takes dropped cards. It is at most a screen tall and
+// its cards scroll inside it, so a long column does not scroll the page.
+// From 1024 px, five columns fit
 // beside the open sidebar (MSL-61): below 1280 px they drop the add button
 // (New ticket still adds) so status names fit; narrower screens scroll.
 function Column({ status, canEdit, children }: { status: Status; canEdit: boolean; children: React.ReactNode }) {
@@ -56,7 +58,7 @@ function Column({ status, canEdit, children }: { status: Status; canEdit: boolea
     <section
       ref={setNodeRef}
       aria-label={status.name}
-      className={cx("flex min-w-[220px] flex-1 basis-0 flex-col gap-2 self-start rounded-2xl bg-sidebar p-2 lg:min-w-[136px] lg:max-xl:p-1.5", isOver && "outline-2 -outline-offset-2 outline-accent")}
+      className={cx("flex max-h-[calc(100dvh-12rem)] min-w-[220px] flex-1 basis-0 flex-col gap-2 self-start rounded-2xl bg-sidebar p-2 lg:min-w-[136px] lg:max-xl:p-1.5", isOver && "outline-2 -outline-offset-2 outline-accent")}
     >
       {children}
     </section>
@@ -164,62 +166,64 @@ export default function Board({ projectKey, statuses, tickets, nodes, canEdit, s
                     </Link>
                   </p>
                 )}
-                {cards.map((c) => (
-                  <Card
-                    key={c.id}
-                    id={c.id}
-                    canEdit={canEdit}
-                    className="flex flex-col gap-2 rounded-[14px] bg-white p-3.5 lg:max-xl:p-2.5 shadow-[0_1px_2px_rgba(43,36,32,0.06),0_0_0_1px_rgba(43,36,32,0.04)]"
-                  >
-                    <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold text-muted">
-                      <TypeIcon type={c.type} label={tTypes(c.type)} />
-                      <span className="whitespace-nowrap">{c.key}</span>
-                      {(c.missing_reason || c.node_names.length === 0) && (
-                        <span role="img" title={t("missing")} aria-label={t("missing")} className="size-[7px] rounded-full bg-[#D97706]" />
-                      )}
-                      {(c.priority === "high" || c.priority === "urgent") && <PriorityChip priority={c.priority} label={tPri(c.priority)} />}
-                      {c.assignee && <Avatar name={c.assignee.name} className="ml-auto size-6 bg-accent-soft text-[10px] font-bold text-accent-strong" />}
-                    </div>
-                    <Link href={`/t/${c.key}`} className="text-sm font-bold leading-snug text-ink no-underline hover:text-ink hover:underline">
-                      {c.title}
-                    </Link>
-                    {c.node_names.length > 0 && (
-                      <span className="flex min-w-0 items-center gap-1.5 text-[12.5px] text-muted">
-                        <Icon name="screen" className="size-3.5" />
-                        <span className="truncate">
-                          {c.node_names[0]}
-                          {c.node_names.length > 1 ? ` +${c.node_names.length - 1}` : ""}
-                        </span>
-                      </span>
-                    )}
-                    <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
-                      {showClients && <ClientChip client={c.client} coreLabel={t("noClient")} />}
-                      {c.labels?.map((l) => (
-                        <span key={l} className="rounded-full bg-well px-1.5 text-[11px] font-semibold text-ink-soft">{l}</span>
-                      ))}
-                      {c.checklist && (
-                        <span title={t("checklist")} className={c.checklist.done === c.checklist.total ? "font-semibold text-ok" : ""}>
-                          ☑ {c.checklist.done}/{c.checklist.total}
+                <div className="-mx-0.5 flex min-h-0 flex-col gap-2 overflow-y-auto px-0.5 pb-0.5">
+                  {cards.map((c) => (
+                    <Card
+                      key={c.id}
+                      id={c.id}
+                      canEdit={canEdit}
+                      className="flex flex-col gap-2 rounded-[14px] bg-white p-3.5 lg:max-xl:p-2.5 shadow-[0_1px_2px_rgba(43,36,32,0.06),0_0_0_1px_rgba(43,36,32,0.04)]"
+                    >
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold text-muted">
+                        <TypeIcon type={c.type} label={tTypes(c.type)} />
+                        <span className="whitespace-nowrap">{c.key}</span>
+                        {(c.missing_reason || c.node_names.length === 0) && (
+                          <span role="img" title={t("missing")} aria-label={t("missing")} className="size-[7px] rounded-full bg-[#D97706]" />
+                        )}
+                        {(c.priority === "high" || c.priority === "urgent") && <PriorityChip priority={c.priority} label={tPri(c.priority)} />}
+                        {c.assignee && <Avatar name={c.assignee.name} className="ml-auto size-6 bg-accent-soft text-[10px] font-bold text-accent-strong" />}
+                      </div>
+                      <Link href={`/t/${c.key}`} className="text-sm font-bold leading-snug text-ink no-underline hover:text-ink hover:underline">
+                        {c.title}
+                      </Link>
+                      {c.node_names.length > 0 && (
+                        <span className="flex min-w-0 items-center gap-1.5 text-[12.5px] text-muted">
+                          <Icon name="screen" className="size-3.5" />
+                          <span className="truncate">
+                            {c.node_names[0]}
+                            {c.node_names.length > 1 ? ` +${c.node_names.length - 1}` : ""}
+                          </span>
                         </span>
                       )}
-                      {c.due_date && (
-                        <span className={c.due_date < today ? "font-semibold text-danger" : ""}>{day(c.due_date, locale, c.due_date.slice(0, 4) !== today.slice(0, 4))}</span>
-                      )}
-                      {canEdit && (
-                        <select
-                          aria-label={t("moveTo", { key: c.key })}
-                          value={c.status_id}
-                          onChange={(e) => move(c.id, Number(e.target.value))}
-                          className="ml-auto h-7 max-w-[min(8rem,100%)] cursor-pointer rounded-lg bg-well pl-2 text-xs font-semibold text-ink-soft hover:text-ink"
-                        >
-                          {statuses.map((o) => (
-                            <option key={o.id} value={o.id}>{o.name}</option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-                  </Card>
-                ))}
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
+                        {showClients && <ClientChip client={c.client} coreLabel={t("noClient")} />}
+                        {c.labels?.map((l) => (
+                          <span key={l} className="rounded-full bg-well px-1.5 text-[11px] font-semibold text-ink-soft">{l}</span>
+                        ))}
+                        {c.checklist && (
+                          <span title={t("checklist")} className={c.checklist.done === c.checklist.total ? "font-semibold text-ok" : ""}>
+                            ☑ {c.checklist.done}/{c.checklist.total}
+                          </span>
+                        )}
+                        {c.due_date && (
+                          <span className={c.due_date < today ? "font-semibold text-danger" : ""}>{day(c.due_date, locale, c.due_date.slice(0, 4) !== today.slice(0, 4))}</span>
+                        )}
+                        {canEdit && (
+                          <select
+                            aria-label={t("moveTo", { key: c.key })}
+                            value={c.status_id}
+                            onChange={(e) => move(c.id, Number(e.target.value))}
+                            className="ml-auto h-7 max-w-[min(8rem,100%)] cursor-pointer rounded-lg bg-well pl-2 text-xs font-semibold text-ink-soft hover:text-ink"
+                          >
+                            {statuses.map((o) => (
+                              <option key={o.id} value={o.id}>{o.name}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
               </Column>
             );
           })}

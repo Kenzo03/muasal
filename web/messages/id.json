@@ -248,6 +248,7 @@
     "setup": {
       "title": "Siapkan proyek ini",
       "hint": "Yang dibutuhkan tim sebelum kerja harian; hilang setelah klien, tim, pohon modul, dan tiket pertama siap.",
+      "hide": "Sembunyikan langkah persiapan",
       "clients": "Tautkan klien yang dilayani proyek ini",
       "team": "Tambahkan tim dan atur cakupan kliennya",
       "documents": "Unggah spesifikasi dari klien",
