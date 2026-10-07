@@ -146,7 +146,9 @@ var askErrors = map[string]string{
 func startSSE(w http.ResponseWriter) (send func(event string, data any), stop func()) {
 	h := w.Header()
 	h.Set("Content-Type", "text/event-stream")
-	h.Set("Cache-Control", "no-cache")
+	// no-transform: a gzipping proxy, such as the Next.js dev server in front of
+	// the API, would otherwise hold small events in its buffer.
+	h.Set("Cache-Control", "no-cache, no-transform")
 	h.Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)
 	// The controller reaches Flush through the middleware's wrappers (Unwrap);
