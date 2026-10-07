@@ -42,6 +42,10 @@ test("the setup steps close and a long column scrolls by itself", async ({ page 
   expect(scrolls, "a card list inside the column scrolls").toBeTruthy();
   const pageScrolls = await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight + 1);
   expect(pageScrolls, "the page itself does not scroll").toBeFalsy();
+  // Only the card list gives way to the height limit: the sort control keeps
+  // its full 28 px (h-7) while the cards scroll.
+  const sortHeight = await page.getByLabel("Urutkan To do").evaluate((el) => el.getBoundingClientRect().height);
+  expect(sortHeight, "the sort control is not squeezed").toBeGreaterThanOrEqual(27.5);
 
   // Every priority shows, Medium and Low included.
   await expect(todo.getByRole("article").filter({ hasText: `${key}-1` }).getByText("Rendah")).toBeVisible();
