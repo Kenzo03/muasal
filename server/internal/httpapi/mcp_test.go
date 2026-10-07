@@ -214,3 +214,29 @@ func TestMCPTreeTools(t *testing.T) {
 		t.Fatalf("member create: %v %s", isErr, text)
 	}
 }
+
+// Agents learn the board's workflow when they connect: start a ticket by
+// moving it to In progress, and only move it to review when the work is
+// ready, without skipping statuses.
+func TestMCPTellsAgentsTheWorkflow(t *testing.T) {
+	e := newEnv(t)
+	w := newHRIS(e)
+	tok := mcpToken(e, w.pm, false)
+	_, body := mcpPost(e, tok, map[string]any{"jsonrpc": "2.0", "id": 1, "method": "initialize",
+		"params": map[string]any{"protocolVersion": "2025-06-18", "capabilities": map[string]any{}, "clientInfo": map[string]any{"name": "t", "version": "1"}}})
+	var out struct {
+		Result struct{ Instructions string } `json:"result"`
+	}
+	if err := json.Unmarshal(body, &out); err != nil {
+		t.Fatalf("initialize: %v %s", err, body)
+	}
+	for _, want := range []string{"in_progress", "start", "skip"} {
+		if !strings.Contains(strings.ToLower(out.Result.Instructions), want) {
+			t.Fatalf("instructions miss %q: %q", want, out.Result.Instructions)
+		}
+	}
+	res, body := mcpPost(e, tok, map[string]any{"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
+	if res.StatusCode != http.StatusOK || !strings.Contains(string(body), "in_progress status first") {
+		t.Fatalf("transition_ticket does not say to start in an in_progress status: %s", body)
+	}
+}

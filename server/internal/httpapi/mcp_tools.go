@@ -13,10 +13,21 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// mcpInstructions reach the agent when it connects: the board's workflow,
+// which the tools alone do not show, so an agent does not jump a ticket from
+// To do straight to review.
+const mcpInstructions = `Zettra keeps the reason behind every change to every screen. A project's statuses have a category: todo, in_progress, done or cancelled (get_project lists them in board order).
+
+Work on tickets the way the team does:
+1. When you start work on a ticket, first move it to an in_progress status, usually "In progress", with transition_ticket.
+2. Move it on, for example to "In review", only when the work is ready for someone to check.
+3. Don't skip statuses: a ticket goes from To do through In progress before review or done.
+4. Closing it (a done or cancelled status) needs a reason, at least one menu and the decision record: what changed and why.`
+
 // mcpServer builds the tool set for one request. ponytail: schemas are
 // inferred per request; cache the server per token if profiles show it.
 func (s *Server) mcpServer(c *apiCaller) *mcp.Server {
-	srv := mcp.NewServer(&mcp.Implementation{Name: "zettra", Version: "0.1"}, nil)
+	srv := mcp.NewServer(&mcp.Implementation{Name: "zettra", Version: "0.1"}, &mcp.ServerOptions{Instructions: mcpInstructions})
 
 	mcp.AddTool(srv, &mcp.Tool{Name: "get_project", Description: "A project's statuses (with category todo, in_progress, done or cancelled), menu tree (flat node list with parent ids; tickets attach to menus by id), clients and assignees. Call it first for the ids the other tools take."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, in projectIn) (*mcp.CallToolResult, any, error) {
@@ -170,7 +181,7 @@ func (s *Server) mcpServer(c *apiCaller) *mcp.Server {
 			return jsonResult(raw)
 		})
 
-	mcp.AddTool(srv, &mcp.Tool{Name: "transition_ticket", Description: "Move a ticket to a status (ids from get_project). Moving to a done or cancelled status closes it and needs reason, at least one menu and decision {what_changed, why}. Leaving a closed status reopens it."},
+	mcp.AddTool(srv, &mcp.Tool{Name: "transition_ticket", Description: "Move a ticket to a status (ids from get_project). Follow the board's order: when you start work on a ticket, move it to an in_progress status first, and move it on (for example to In review) only when the work is ready, never skipping a status. Moving to a done or cancelled status closes it and needs reason, at least one menu and decision {what_changed, why}. Leaving a closed status reopens it."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, in transitionIn) (*mcp.CallToolResult, any, error) {
 			req := TransitionRequest{StatusId: in.StatusID, Reason: in.Reason, NodeIds: in.NodeIDs}
 			if in.Decision != nil {
